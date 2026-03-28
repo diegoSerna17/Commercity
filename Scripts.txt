@@ -3,10 +3,6 @@
 - npm run preview - Preview del build
 - npm run lint - Linting
 
-Actualizar Documentación
-npm run generate:docs
-# o
-node scripts/generate-architecture.cjs
 
 
 # 1. Ver qué archivos cambiaste
