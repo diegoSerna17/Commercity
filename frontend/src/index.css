@@ -1,1 +1,7 @@
 @import "tailwindcss";
+@source "./constants/**/*.css";
+
+@import "./constants/colors.css";
+@import "./constants/typography.css";
+@import "./constants/spacing.css";
+@import "./constants/shadows.css";

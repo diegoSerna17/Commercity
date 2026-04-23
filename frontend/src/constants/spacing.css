@@ -1,0 +1,43 @@
+@theme {
+  /* Anchos de contenedor */
+  --spacing-container: 94%;
+  --spacing-container-lg: 96%;
+
+  /* Encabezado/Navbar */
+  --header-height: 4rem;
+
+  /* Hero */
+  --hero-height: 85vh;
+  --hero-border-radius: 1.5rem;
+
+  /* Tarjetas */
+  --card-border-radius: 0.75rem;
+  --card-border-radius-lg: 1rem;
+
+  /* Botones */
+  --button-border-radius: 9999px;
+
+  /* Espacio entre elementos */
+  --gap-sm: 0.5rem;
+  --gap-md: 0.75rem;
+  --gap-lg: 1rem;
+  --gap-xl: 1.5rem;
+  --gap-2xl: 2rem;
+
+  /* Relleno (Padding) */
+  --padding-xs: 0.25rem;
+  --padding-sm: 0.5rem;
+  --padding-md: 0.75rem;
+  --padding-lg: 1rem;
+  --padding-xl: 1.5rem;
+  --padding-2xl: 2rem;
+
+  /* Escala de Z-Index */
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-modal-backdrop: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+}

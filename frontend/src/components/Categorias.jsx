@@ -32,7 +32,7 @@ const categories = [
         <section className="max-w-11/12 mx-auto px-4 md:px-8 py-2 pb-11">
 
         <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+            <h2 className="text-2xl md:text-3xl font-bold text-text-main">
             ¿Qué estás buscando?
             </h2>
             <a href="#" className="text-sm font-semibold text-primary hover:underline">
@@ -50,7 +50,7 @@ const categories = [
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className="group min-w-[120px] md:min-w-0 flex flex-col items-center gap-3 text-center"
             >
-                <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-sm group-hover:shadow-md transition-shadow duration-300">
+                <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-card group-hover:shadow-card-hover transition-shadow duration-300">
 
                 <img
                     src={cat.image}
@@ -61,7 +61,7 @@ const categories = [
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
                 </div>
 
-                <span className="text-xs md:text-sm font-medium text-gray-700 group-hover:text-primary transition-colors duration-200 leading-tight">
+                <span className="text-xs md:text-sm font-medium text-text-secondary group-hover:text-primary transition-colors duration-200 leading-tight">
                 {cat.label}
                 </span>
 
