@@ -1,34 +1,25 @@
 /**
  * buttons.css - Estilos de botones reutilizables
+ * 
+ * Usa @utility de Tailwind v4 para consistencia.
+ * 
+ * @author CommerCity Team
+ * @version 1.1.0
  */
 
-@layer components {
-  /**
-   * Botón primario - Gradiente primary a secondary
-   * Usado para acciones principales (Iniciar sesión)
-   */
-  .btn-primary {
-    @apply w-full py-4 px-6 text-white font-sans font-bold rounded-xl 
-           shadow-lg hover:opacity-90 transition-all text-lg mt-4 
-           bg-gradient-to-r from-primary to-secondary;
-  }
+@utility btn-primary {
+  @apply w-full py-4 px-6 text-white font-sans font-bold rounded-xl 
+         shadow-lg hover:opacity-90 transition-all text-lg mt-4 
+         bg-gradient-to-r from-primary to-secondary;
+}
 
-  /**
-   * Botón secundario - Fondo blanco con borde
-   * Usado para acciones secundarias (Entrar como invitado)
-   */
-  .btn-secondary {
-    @apply w-full py-4 px-6 bg-white border border-border-gray text-text-main 
-           font-sans font-semibold rounded-xl hover:bg-gray-50 transition-all 
-           flex items-center justify-center space-x-3;
-  }
+@utility btn-secondary {
+  @apply w-full py-4 px-6 bg-white border border-border-gray text-text-main 
+         font-sans font-semibold rounded-xl hover:bg-gray-50 transition-all 
+         flex items-center justify-center space-x-3;
+}
 
-  /**
-   * Enlace estilo botón - Texto con hover
-   * Usado para enlaces (¿Olvidaste tu contraseña?)
-   */
-  .btn-link {
-    @apply text-base font-medium text-primary hover:underline 
-           transition-colors cursor-pointer;
-  }
+@utility btn-link {
+  @apply text-base font-medium text-primary hover:underline 
+         transition-colors cursor-pointer;
 }

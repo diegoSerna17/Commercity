@@ -1,31 +1,22 @@
 /**
  * inputs.css - Estilos de inputs reutilizables
+ * 
+ * Usa @utility de Tailwind v4 para permitir composición de clases.
+ * 
+ * @author CommerCity Team
+ * @version 1.1.0
  */
 
-@layer components {
-  /**
-   * Input base - Estilo para campos de formulario
-   * Incluye estados focus, disabled y transición
-   */
-  .input-field {
-    @apply block w-full px-4 py-4 bg-white border border-border-gray 
-           rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent 
-           transition-all text-text-main placeholder-text-muted font-medium;
-  }
+@utility input-field {
+  @apply block w-full px-4 py-4 bg-white border border-border-gray 
+         rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent 
+         transition-all text-text-main placeholder-text-muted font-medium;
+}
 
-  /**
-   * Input con icono izquierdo
-   * Padding extra para acomodar el icono
-   */
-  .input-with-icon {
-    @apply input-field pl-12 pr-4;
-  }
+@utility input-with-icon {
+  @apply input-field pl-12 pr-4;
+}
 
-  /**
-   * Input de contraseña con toggle
-   * Padding extra a la derecha para el botón de mostrar/ocultar
-   */
-  .input-password {
-    @apply input-field pl-12 pr-12;
-  }
+@utility input-password {
+  @apply input-field pl-12 pr-12;
 }
