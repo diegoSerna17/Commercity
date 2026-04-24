@@ -1,0 +1,18 @@
+- npm run dev - Iniciar servidor de desarrollo
+- npm run build - Build de producción
+- npm run preview - Preview del build
+- npm run lint - Linting
+
+
+
+# 1. Ver qué archivos cambiaste
+git status
+
+# 2. Agregar todos los cambios
+git add .
+
+# 3. Guardar los cambios con un mensaje descriptivo
+git commit -m "descripción de lo que hiciste"
+
+# 4. Subir a GitHub
+git push

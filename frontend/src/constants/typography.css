@@ -1,0 +1,37 @@
+@theme {
+  /* Familias de fuentes */
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* Tamaños de Display / Hero */
+  --font-size-display: 5rem;
+  --font-size-display-md: 3.75rem;
+  --font-size-h1: 3rem;
+
+  /* Tamaños de encabezados */
+  --font-size-h2: 1.875rem;
+  --font-size-h3: 1.5rem;
+
+  /* Tamaños de cuerpo */
+  --font-size-base: 1rem;
+  --font-size-md: 0.875rem;
+  --font-size-sm: 0.75rem;
+  --font-size-xs: 0.625rem;
+  --font-size-badge: 0.5625rem;
+
+  /* Grosores de fuente */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-black: 900;
+
+  /* Alturas de línea */
+  --leading-tight: 1.05;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  /* Espaciado de letras */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+}
