@@ -18,12 +18,8 @@ const Navbar = () => {
 
         <div className="max-w-[94%] mx-auto h-full px-6 flex items-center gap-8">
 
-            <a href="#" className="text-xl text-accent-blue font-black tracking-tight shrink-0">
-            Commer
-            <span className="text-primary relative">
-                City
-                <span className="absolute -bottom-1 left-0 w-full h-[2px] bg-primary/40 blur-sm"></span>
-            </span>
+            <a href="#" className="text-xl font-extrabold text-secondary tracking-tight shrink-0">
+              Commer<span className="text-primary relative">City<span className="absolute -bottom-1 left-0 w-full h-[2px] bg-primary/40 blur-sm"></span></span>
             </a>
 
             <nav className="hidden md:flex items-center gap-8 text-sm font-medium flex-1">

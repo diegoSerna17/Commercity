@@ -63,14 +63,16 @@ const Login = () => {
         <div className="flex flex-col items-center justify-center w-full max-w-lg">
           {/* Logo + Nombre de marca */}
           <div className="text-center space-y-8 mb-6">
-            <div className="flex items-center justify-center space-x-6 mb-12">
+            <div className="flex items-center justify-center space-x-4 mb-12">
+              <Link to="/">
               <img 
                 alt="CommerCity Logo" 
-                className="w-24 h-24 object-contain" 
-                src="/Logo_Black.jpeg" 
+                className="w-44 h-44 object-contain cursor-pointer" 
+                src="/Logo_Black.png" 
               />
-              <h1 className="font-sans text-6xl font-extrabold text-white tracking-tight italic">
-                CommerCity
+            </Link>
+              <h1 className="font-sans text-6xl font-extrabold tracking-tight italic">
+                <span className="text-secondary">Commer</span><span className="text-primary">City</span>
               </h1>
             </div>
             
@@ -215,7 +217,7 @@ const Login = () => {
       {/* Footer fijo - Solo desktop */}
       <div className="fixed bottom-6 w-full text-center hidden lg:block pointer-events-none">
         <p className="text-[10px] text-text-muted uppercase tracking-widest">
-          © 2024 CommerCity. Todos los derechos reservados.
+          © 2026 CommerCity. Todos los derechos reservados.
         </p>
       </div>
     </main>
