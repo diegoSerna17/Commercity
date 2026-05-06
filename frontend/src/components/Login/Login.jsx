@@ -180,11 +180,14 @@ const Login = () => {
                 Iniciar sesión
               </button>
 
-              {/* Enlace: ¿Olvidaste tu contraseña? - usa clase .btn-link */}
+              {/* Enlace: ¿Olvidaste tu contraseña? */}
               <div className="text-center pt-4">
-                <a className="btn-link" href="#" aria-label="Recuperar contraseña">
+                <button 
+                  className="btn-link" 
+                  onClick={() => navigate('/recover')}
+                >
                   ¿Olvidaste tu contraseña?
-                </a>
+                </button>
               </div>
 
               {/* Separador visual */}
@@ -194,15 +197,15 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Botón: Entrar como invitado - usa clase .btn-secondary */}
-              <button
+              {/* Botón: Registrarte - usa clase .btn-secondary */}
+              <Link
                 className="btn-secondary"
-                type="button"
-                aria-label="Entrar como invitado"
+                to="/register"
+                aria-label="Registrarse en CommerCity"
               >
                 <UserPlus className="text-primary h-5 w-5" />
-                <span>Entrar como invitado</span>
-              </button>
+                <span>Registrate aquí</span>
+              </Link>
             </form>
 
             {/* Footer: Seguridad */}
