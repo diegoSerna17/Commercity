@@ -43,7 +43,7 @@ const Recover = () => {
           style={{ background: 'linear-gradient(to bottom, var(--color-primary) 30%, var(--color-bg-secondary) 30%)' }}>
       
       {/* Tarjeta de recuperación */}
-      <div className="w-full max-w-[550px] bg-white rounded-[2rem] shadow-2xl overflow-hidden p-12">
+      <div className="w-full max-w-[550px] bg-white rounded-[1rem] shadow-2xl overflow-hidden p-12">
         
         {/* Título */}
         <header className="text-center mb-6">

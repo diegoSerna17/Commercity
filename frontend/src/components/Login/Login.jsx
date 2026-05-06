@@ -106,7 +106,7 @@ const Login = () => {
       {/* Panel derecho - Formulario */}
       <section className="w-full lg:w-1/2 flex items-stretch justify-start bg-gray-100 lg:bg-black p-6 sm:p-12 lg:p-0">
         {/* Contenedor del formulario */}
-        <div className="w-full lg:m-12 lg:ml-0 bg-white rounded-[2rem] p-10 sm:p-16 lg:px-24 shadow-2xl flex flex-col justify-center">
+        <div className="w-full lg:m-12 lg:ml-0 bg-white rounded-[1rem] p-10 sm:p-16 lg:px-24 shadow-2xl flex flex-col justify-center">
           <div className="w-full max-w-lg mx-auto">
             {/* Título */}
             <div className="text-center mb-12">
