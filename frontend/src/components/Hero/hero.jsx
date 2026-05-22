@@ -25,7 +25,7 @@ const slides = [
     const swiperRef = useRef(null);
 
     return (
-        <section className="bg-bg-primary min-h-screen flex items-center justify-center mt-8 px-1 md:px-8 py-8">
+        <section className="bg-surface min-h-screen flex items-center justify-center mt-8 px-1 md:px-8 py-8">
 
         <div className="relative w-full max-w-[96%] h-[85vh] rounded-3xl overflow-hidden shadow-hero">
 

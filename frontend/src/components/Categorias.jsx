@@ -32,7 +32,7 @@ const categories = [
         <section className="max-w-11/12 mx-auto px-4 md:px-8 py-2 pb-11">
 
         <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-text-main">
+            <h2 className="text-2xl md:text-3xl font-bold text-on-surface">
             ¿Qué estás buscando?
             </h2>
             <a href="#" className="text-sm font-semibold text-primary hover:underline">
@@ -61,7 +61,7 @@ const categories = [
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
                 </div>
 
-                <span className="text-xs md:text-sm font-medium text-text-secondary group-hover:text-primary transition-colors duration-200 leading-tight">
+                <span className="text-xs md:text-sm font-medium text-on-secondary group-hover:text-primary transition-colors duration-200 leading-tight">
                 {cat.label}
                 </span>
 

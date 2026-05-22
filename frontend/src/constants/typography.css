@@ -1,38 +1,56 @@
 @theme {
-  /* Familias de fuentes */
-  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Familia de fuentes */
+  --font-sans: "Hanken Grotesk", sans-serif;
 
-  /* Tamaños de Display / Hero */
-  --font-size-display: 5rem;
-  --font-size-display-md: 3.75rem;
-  --font-size-h1: 3rem;
+  /* Display */
+  --font-size-display-lg: 48px;
+  --font-size-display-lg--lineHeight: 56px;
+  --font-size-display-lg--letterSpacing: -0.02em;
+  --font-size-display-lg--fontWeight: 700;
 
-  /* Tamaños de encabezados */
-  --font-size-h2: 1.875rem;
-  --font-size-h3: 1.5rem;
+  --font-size-display-lg-mobile: 32px;
+  --font-size-display-lg-mobile--lineHeight: 40px;
+  --font-size-display-lg-mobile--letterSpacing: -0.01em;
+  --font-size-display-lg-mobile--fontWeight: 700;
 
-  /* Tamaños de cuerpo */
-  --font-size-base: 1rem;
-  --font-size-md: 0.875rem;
-  --font-size-sm: 0.75rem;
-  --font-size-xs: 0.625rem;
-  --font-size-badge: 0.5625rem;
+  /* Headlines */
+  --font-size-headline-md: 24px;
+  --font-size-headline-md--lineHeight: 32px;
+  --font-size-headline-md--fontWeight: 600;
 
-  /* Grosores de fuente */
+  --font-size-headline-sm: 20px;
+  --font-size-headline-sm--lineHeight: 28px;
+  --font-size-headline-sm--fontWeight: 600;
+
+  /* Body */
+  --font-size-body-lg: 18px;
+  --font-size-body-lg--lineHeight: 28px;
+  --font-size-body-lg--fontWeight: 400;
+
+  --font-size-body-md: 16px;
+  --font-size-body-md--lineHeight: 24px;
+  --font-size-body-md--fontWeight: 400;
+
+  --font-size-body-sm: 14px;
+  --font-size-body-sm--lineHeight: 20px;
+  --font-size-body-sm--fontWeight: 400;
+
+  /* Labels */
+  --font-size-label-md: 14px;
+  --font-size-label-md--lineHeight: 16px;
+  --font-size-label-md--letterSpacing: 0.02em;
+  --font-size-label-md--fontWeight: 600;
+
+  --font-size-label-sm: 14px;
+  --font-size-label-sm--lineHeight: 18px;
+  --font-size-label-sm--letterSpacing: 0.01em;
+  --font-size-label-sm--fontWeight: 500;
+
+  /* Grosores */
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
   --font-weight-black: 900;
-
-  /* Alturas de línea */
-  --leading-tight: 1.05;
-  --leading-normal: 1.5;
-  --leading-relaxed: 1.625;
-
-  /* Espaciado de letras */
-  --tracking-tight: -0.02em;
-  --tracking-normal: 0;
-  --tracking-wide: 0.025em;
 }

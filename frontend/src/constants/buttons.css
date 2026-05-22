@@ -8,14 +8,14 @@
  */
 
 @utility btn-primary {
-  @apply w-full py-4 px-6 text-white font-sans font-bold rounded-xl 
-         shadow-lg hover:opacity-90 transition-all text-lg mt-4 
-         bg-gradient-to-r from-primary to-secondary;
+  @apply w-full py-4 px-6 text-white font-sans font-bold rounded-xl
+         shadow-lg hover:opacity-90 transition-all text-lg mt-4
+         bg-gradient-to-r from-primary-container to-secondary-container;
 }
 
 @utility btn-secondary {
-  @apply w-full py-4 px-6 bg-white border border-border-gray text-text-main 
-         font-sans font-semibold rounded-xl hover:bg-gray-50 transition-all 
+  @apply w-full py-4 px-6 bg-white border border-outline text-on-surface
+         font-sans font-semibold rounded-xl hover:bg-gray-50 transition-all
          flex items-center justify-center space-x-3;
 }
 

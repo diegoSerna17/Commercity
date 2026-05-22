@@ -1,0 +1,11 @@
+@theme {
+  --radius-DEFAULT: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
+
+  --radius-card: 0.75rem;
+  --radius-card-lg: 1rem;
+  --radius-button: 9999px;
+  --radius-hero: 1.5rem;
+}

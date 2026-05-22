@@ -1,38 +1,35 @@
 @theme {
-  /* Anchos de contenedor */
+  /* Contenedor */
   --spacing-container: 94%;
   --spacing-container-lg: 96%;
+  --spacing-container-max: 1280px;
 
-  /* Encabezado/Navbar */
-  --header-height: 4rem;
+  /* Margen mobile */
+  --spacing-margin-mobile: 16px;
 
-  /* Hero */
-  --hero-height: 85vh;
-  --hero-border-radius: 1.5rem;
+  /* Gap / Espaciado entre elementos */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+  --spacing-gutter: 24px;
 
-  /* Tarjetas */
-  --card-border-radius: 0.75rem;
-  --card-border-radius-lg: 1rem;
+  /* Padding */
+  --spacing-padding-xs: 4px;
+  --spacing-padding-sm: 8px;
+  --spacing-padding-md: 16px;
+  --spacing-padding-lg: 24px;
+  --spacing-padding-xl: 32px;
+  --spacing-padding-2xl: 48px;
 
-  /* Botones */
-  --button-border-radius: 9999px;
+  /* Alturas */
+  --spacing-header-height: 4rem;
+  --spacing-hero-height: 85vh;
 
-  /* Espacio entre elementos */
-  --gap-sm: 0.5rem;
-  --gap-md: 0.75rem;
-  --gap-lg: 1rem;
-  --gap-xl: 1.5rem;
-  --gap-2xl: 2rem;
-
-  /* Relleno (Padding) */
-  --padding-xs: 0.25rem;
-  --padding-sm: 0.5rem;
-  --padding-md: 0.75rem;
-  --padding-lg: 1rem;
-  --padding-xl: 1.5rem;
-  --padding-2xl: 2rem;
-
-  /* Escala de Z-Index */
+  /* Z-Index */
   --z-dropdown: 10;
   --z-sticky: 20;
   --z-fixed: 30;

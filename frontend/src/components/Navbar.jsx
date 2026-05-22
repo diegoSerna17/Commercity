@@ -13,7 +13,7 @@ const Navbar = () => {
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 h-16 
-        bg-bg-glass backdrop-blur-xl border-b border-border-light 
+        bg-bg-glass backdrop-blur-xl border-b border-border-subtle 
         shadow-navbar">
 
         <div className="max-w-[94%] mx-auto h-full px-6 flex items-center gap-8">
@@ -26,7 +26,7 @@ const Navbar = () => {
 
             <a
                 href="#"
-                className="relative text-text-main font-semibold"
+                className="relative text-on-surface font-semibold"
             >
                 Inicio
                 <span className="absolute -bottom-1 left-0 w-full h-[2px] bg-primary rounded-full"></span>
@@ -34,7 +34,7 @@ const Navbar = () => {
 
             <a
                 href="#"
-                className="text-text-muted hover:text-text-main transition-all duration-300 flex items-center gap-1 group"
+                className="text-on-surface-variant hover:text-on-surface transition-all duration-300 flex items-center gap-1 group"
             >
                 Categorías
                 <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-300" />
@@ -42,7 +42,7 @@ const Navbar = () => {
 
             <a
                 href="#"
-                className="text-text-muted hover:text-text-main transition-all duration-300 flex items-center gap-1 group"
+                className="text-on-surface-variant hover:text-on-surface transition-all duration-300 flex items-center gap-1 group"
             >
                 Opciones
                 <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-300" />
@@ -51,12 +51,12 @@ const Navbar = () => {
             </nav>
 
             <div className="hidden lg:flex items-center gap-2 
-            bg-bg-glass-light backdrop-blur-md border border-border-gray 
+            bg-bg-glass-light backdrop-blur-md border border-border-subtle 
             rounded-full px-4 py-2 flex-1 max-w-xs 
             focus-within:ring-2 focus-within:ring-accent-blue
             transition-all duration-300 shadow-card">
 
-            <Search size={16} className="text-text-light" />
+            <Search size={16} className="text-on-surface-variant" />
 
             <input
                 type="text"
@@ -69,7 +69,7 @@ const Navbar = () => {
             {search && (
                 <button
                 onClick={() => setSearch("")}
-                className="text-text-light hover:text-text-secondary text-xs transition"
+                className="text-on-surface-variant hover:text-on-secondary text-xs transition"
                 >
                 ✕
                 </button>
@@ -89,9 +89,9 @@ const Navbar = () => {
                         to="/login"
                         key={i}
                         className="relative w-10 h-10 rounded-full flex items-center justify-center 
-                        text-text-secondary 
-                        bg-bg-glass-light backdrop-blur-md border border-border-gray 
-                        hover:bg-bg-primary hover:shadow-card hover:-translate-y-[1px] 
+                        text-on-secondary 
+                        bg-bg-glass-light backdrop-blur-md border border-border-subtle 
+                        hover:bg-surface hover:shadow-card hover:-translate-y-[1px] 
                         transition-all duration-300"
                     >
                         {item.icon}
@@ -100,9 +100,9 @@ const Navbar = () => {
                 <button
                     key={i}
                     className={`relative w-10 h-10 rounded-full flex items-center justify-center 
-                    text-text-secondary 
-                    bg-bg-glass-light backdrop-blur-md border border-border-gray 
-                    hover:bg-bg-primary hover:shadow-card hover:-translate-y-[1px] 
+                    text-on-secondary 
+                    bg-bg-glass-light backdrop-blur-md border border-border-subtle 
+                    hover:bg-surface hover:shadow-card hover:-translate-y-[1px] 
                     transition-all duration-300 
                     ${item.mobile ? "lg:hidden" : ""}`}
                 >
