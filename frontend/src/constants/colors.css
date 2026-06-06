@@ -93,4 +93,13 @@
 
   /* Focus */
   --color-border-focus: rgba(245, 166, 35, 0.5);
+
+  /* Restore Auth Component Extras */
+  --color-auth-card-bg: #12121A;
+  --color-brand-muted-text: #797998;
+  --color-brand-orange: #EF9918;
+  --color-brand-dark-text: #12121A;
+  --color-icon-gray-500: #6b7280;
+  --color-placeholder-gray-600: #4b5563;
+  --color-input-bg: #1A1A26;
 }

@@ -121,7 +121,7 @@ const Register = () => {
       <div className="fixed bottom-0 left-0 w-full h-[50px] bg-surface border-t border-border-subtle z-fixed">
         <div className="h-full flex items-center justify-center px-margin-mobile">
           <p className="text-on-surface-variant opacity-60 text-label-sm text-center">
-            Copyright © 2024 Registro MVP. Todos los derechos reservados. <span className="hover:text-primary-container cursor-pointer transition-colors">Política de privacidad</span>
+            Copyright © 2026 Registro MVP. Todos los derechos reservados. <span className="hover:text-primary-container cursor-pointer transition-colors">Política de privacidad</span>
           </p>
         </div>
       </div>

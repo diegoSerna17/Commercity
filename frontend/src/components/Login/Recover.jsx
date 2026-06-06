@@ -4,14 +4,14 @@ import { Mail, ArrowLeft } from "lucide-react";
 const Recover = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle password recovery logic
+    // Manejar lógica de recuperación de contraseña
     console.log("Sending recovery email...");
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-surface-container-lowest font-sans">
       <main className="w-full max-w-[648px] bg-surface rounded-[24px] p-10 md:p-16 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-border-subtle">
-        {/* Heading Section */}
+        {/* Sección de Encabezado */}
         <div className="mb-10">
           <h1 className="text-on-surface text-[32px] leading-tight font-bold mb-4">
             Recuperar contraseña
@@ -21,9 +21,9 @@ const Recover = () => {
           </p>
         </div>
 
-        {/* Form Section */}
+        {/* Sección de Formulario */}
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Email Field */}
+          {/* Campo de Correo Electrónico */}
           <div className="space-y-2">
             <label
               className="block text-sm font-medium text-on-surface-variant"
@@ -46,7 +46,7 @@ const Recover = () => {
             </div>
           </div>
 
-          {/* Action Button */}
+          {/* Botón de Acción */}
           <button
             type="submit"
             className="w-full h-[60px] bg-primary-container hover:brightness-110 active:scale-[0.99] transition-all text-background font-bold rounded-xl text-lg flex items-center justify-center shadow-button"
@@ -54,10 +54,10 @@ const Recover = () => {
             Enviar enlace
           </button>
 
-          {/* Divider Decoration */}
+          {/* Separador Decorativo */}
           <div className="border-t border-border-subtle pt-8"></div>
 
-          {/* Navigation Link */}
+          {/* Enlace de Navegación */}
           <div className="flex justify-center">
             <Link
               to="/login"
@@ -73,10 +73,10 @@ const Recover = () => {
         </form>
       </main>
 
-      {/* Footer Info */}
+      {/* Información del Pie de Página */}
       <footer className="fixed bottom-8 w-full text-center">
         <p className="text-on-surface-variant text-xs opacity-50">
-          © 2024 Todos los derechos reservados.
+          © 2026 Todos los derechos reservados.
         </p>
       </footer>
     </div>
