@@ -16,7 +16,7 @@ const Recover = () => {
           <h1 className="text-on-surface text-[32px] leading-tight font-bold mb-4">
             Recuperar contraseña
           </h1>
-          <p className="text-on-surface-variant text-[14px] leading-relaxed max-w-none">
+          <p className="text-brand-muted-text text-[14px] leading-relaxed max-w-none">
             Ingresa el correo electrónico asociado a tu cuenta para recibir un código de recuperación.
           </p>
         </div>
@@ -26,14 +26,14 @@ const Recover = () => {
           {/* Campo de Correo Electrónico */}
           <div className="space-y-2">
             <label
-              className="block text-sm font-medium text-on-surface-variant"
+              className="block text-sm font-medium text-brand-muted-text"
               htmlFor="email"
             >
               Correo electrónico
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Mail size={20} className="text-on-surface-variant opacity-60" />
+                <Mail size={20} className="text-icon-gray-500" />
               </div>
               <input
                 id="email"
@@ -41,7 +41,7 @@ const Recover = () => {
                 type="email"
                 required
                 placeholder="ejemplo@correo.com"
-                className="block w-full h-[56px] pl-12 pr-4 bg-[#1a1a26] border border-border-subtle rounded-xl text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                className="block w-full h-[56px] pl-12 pr-4 bg-input-bg border border-border-subtle rounded-xl text-on-surface placeholder-placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-brand-orange focus:border-brand-orange transition-all"
               />
             </div>
           </div>
@@ -49,7 +49,7 @@ const Recover = () => {
           {/* Botón de Acción */}
           <button
             type="submit"
-            className="w-full h-[60px] bg-primary-container hover:brightness-110 active:scale-[0.99] transition-all text-background font-bold rounded-xl text-lg flex items-center justify-center shadow-button"
+            className="w-full h-[60px] bg-brand-orange hover:brightness-110 active:scale-[0.99] transition-all text-brand-dark-text font-bold rounded-xl text-lg flex items-center justify-center shadow-button"
           >
             Enviar enlace
           </button>
@@ -61,7 +61,7 @@ const Recover = () => {
           <div className="flex justify-center">
             <Link
               to="/login"
-              className="flex items-center gap-3 text-primary-container font-medium hover:underline group transition-colors"
+              className="flex items-center gap-3 text-brand-orange font-medium hover:underline group transition-colors"
             >
               <ArrowLeft
                 size={24}
@@ -75,7 +75,7 @@ const Recover = () => {
 
       {/* Información del Pie de Página */}
       <footer className="fixed bottom-8 w-full text-center">
-        <p className="text-on-surface-variant text-xs opacity-50">
+        <p className="text-brand-muted-text text-xs opacity-50">
           © 2026 Todos los derechos reservados.
         </p>
       </footer>

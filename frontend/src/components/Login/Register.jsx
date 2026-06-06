@@ -25,47 +25,49 @@ const Register = () => {
           {/* Nombre completo */}
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none">
-              <User size={20} className="text-on-surface-variant opacity-60" />
+              <User size={20} className="text-icon-gray-500" />
             </div>
             <input
               name="full-name"
               type="text"
               required
               placeholder="Nombre completo"
-              className="block w-full bg-[#1a1a26] border border-border-subtle rounded-2xl py-md pl-3xl pr-md text-on-surface placeholder-on-surface-variant/50 transition-all focus:ring-1 focus:ring-primary focus:border-primary outline-none h-12 text-body-md"
+              className="block w-full bg-input-bg border border-border-subtle rounded-2xl py-md pl-3xl pr-md text-on-surface placeholder-placeholder-gray-600 transition-all focus:ring-1 focus:ring-brand-orange focus:border-brand-orange outline-none h-12 text-body-md"
             />
           </div>
 
           {/* Correo electrónico */}
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none">
-              <Mail size={20} className="text-on-surface-variant opacity-60" />
+              <Mail size={20} className="text-icon-gray-500" />
             </div>
             <input
               name="email"
               type="email"
               required
               placeholder="Correo electrónico"
-              className="block w-full bg-[#1a1a26] border border-border-subtle rounded-2xl py-md pl-3xl pr-md text-on-surface placeholder-on-surface-variant/50 transition-all focus:ring-1 focus:ring-primary focus:border-primary outline-none h-12 text-body-md"
+              className="block w-full bg-input-bg border border-border-subtle rounded-2xl py-md pl-3xl pr-md text-on-surface placeholder-placeholder-gray-600 transition-all focus:ring-1 focus:ring-brand-orange focus:border-brand-orange outline-none h-12 text-body-md"
             />
           </div>
 
           {/* Contraseña */}
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none">
-              <Lock size={20} className="text-on-surface-variant opacity-60" />
+              <Lock size={20} className="text-icon-gray-500" />
             </div>
             <input
               name="password"
               type={showPassword ? "text" : "password"}
               required
               placeholder="Contraseña"
-              className="block w-full bg-[#1a1a26] border border-border-subtle rounded-2xl py-md pl-3xl pr-3xl text-on-surface placeholder-on-surface-variant/50 transition-all focus:ring-1 focus:ring-primary focus:border-primary outline-none h-12 text-body-md"
+              className="block w-full bg-input-bg border border-border-subtle rounded-2xl py-md pl-3xl pr-3xl text-on-surface placeholder-placeholder-gray-600 transition-all focus:ring-1 focus:ring-brand-orange focus:border-brand-orange outline-none h-12 text-body-md"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-md flex items-center text-on-surface-variant opacity-60 hover:text-primary transition-colors"
+              className={`absolute inset-y-0 right-0 pr-md flex items-center transition-colors ${
+                showPassword ? "text-brand-orange" : "text-icon-gray-500 hover:text-on-surface"
+              }`}
             >
               {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
             </button>
@@ -80,17 +82,17 @@ const Register = () => {
                   checked={acceptedTerms}
                   onChange={() => setAcceptedTerms(!acceptedTerms)}
                   required
-                  className="w-5 h-5 rounded-lg border-surface-variant bg-[#1a1a26] checked:bg-primary-container checked:border-primary-container focus:ring-primary focus:ring-offset-0 focus:ring-offset-transparent transition-colors cursor-pointer appearance-none"
+                  className="w-5 h-5 rounded-lg border-surface-variant bg-input-bg checked:bg-brand-orange checked:border-brand-orange focus:ring-brand-orange focus:ring-offset-0 focus:ring-offset-transparent transition-colors cursor-pointer appearance-none"
                 />
                 <Check
                   size={14}
-                  className={`absolute text-background font-bold pointer-events-none transition-opacity ${
+                  className={`absolute text-brand-dark-text font-bold pointer-events-none transition-opacity ${
                     acceptedTerms ? "opacity-100" : "opacity-0"
                   }`}
                 />
               </div>
-              <span className="text-body-sm text-on-surface-variant leading-tight">
-                Acepto los <span className="text-primary-container font-medium hover:underline cursor-pointer transition-colors">términos y condiciones</span> de privacidad
+              <span className="text-body-sm text-brand-muted-text leading-tight">
+                Acepto los <span className="text-brand-orange font-medium hover:underline cursor-pointer transition-colors">términos y condiciones</span> de privacidad
               </span>
             </label>
           </div>
@@ -99,7 +101,7 @@ const Register = () => {
           <div className="pt-lg pb-md">
             <button
               type="submit"
-              className="w-full h-[68px] bg-primary-container rounded-[16px] text-background font-bold text-label-lg uppercase tracking-wider transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_10px_15px_-3px_rgba(0,0,0,0.1)] flex items-center justify-center hover:brightness-110"
+              className="w-full h-[68px] bg-brand-orange rounded-[16px] text-brand-dark-text font-bold text-label-lg uppercase tracking-wider transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-button flex items-center justify-center hover:brightness-110"
             >
               Registrarse
             </button>
@@ -108,9 +110,9 @@ const Register = () => {
 
         {/* Links de pie de página del form */}
         <footer className="mt-lg pt-lg border-t border-border-subtle text-center">
-          <p className="text-on-surface-variant text-body-sm">
+          <p className="text-brand-muted-text text-body-sm">
             ¿Ya tienes cuenta?
-            <Link to="/login" className="text-primary-container font-semibold hover:underline ml-xs transition-colors">
+            <Link to="/login" className="text-brand-orange font-semibold hover:underline ml-xs transition-colors">
               Inicia sesión
             </Link>
           </p>
@@ -120,8 +122,8 @@ const Register = () => {
       {/* Footer Nav simulado */}
       <div className="fixed bottom-0 left-0 w-full h-[50px] bg-surface border-t border-border-subtle z-fixed">
         <div className="h-full flex items-center justify-center px-margin-mobile">
-          <p className="text-on-surface-variant opacity-60 text-label-sm text-center">
-            Copyright © 2026 Registro MVP. Todos los derechos reservados. <span className="hover:text-primary-container cursor-pointer transition-colors">Política de privacidad</span>
+          <p className="text-brand-muted-text opacity-60 text-label-sm text-center">
+            Copyright © 2026 Registro MVP. Todos los derechos reservados. <span className="hover:text-brand-orange cursor-pointer transition-colors">Política de privacidad</span>
           </p>
         </div>
       </div>

@@ -32,7 +32,7 @@ const Login = () => {
           {/* Capa de degradado oscuro sobre la imagen */}
           <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0f]/80 to-[#1a1a26]/90 flex flex-col items-center justify-center p-2xl">
             {/* Nombre de la plataforma */}
-            <h1 className="text-[50px] text-primary-container mb-md tracking-tighter leading-none font-semibold">
+            <h1 className="text-[50px] text-brand-orange mb-md tracking-tighter leading-none font-semibold">
               CommerCity
             </h1>
             <p className="text-[20px] text-on-surface mb-xl text-center leading-tight font-semibold">
@@ -44,7 +44,7 @@ const Login = () => {
                 <span className="text-headline-md text-primary-fixed">
                   12K+
                 </span>
-                <span className="text-label-sm text-on-surface-variant uppercase tracking-widest mt-xs">
+                <span className="text-label-sm text-brand-muted-text uppercase tracking-widest mt-xs">
                   Vendedores
                 </span>
               </div>
@@ -53,7 +53,7 @@ const Login = () => {
                 <span className="text-headline-md text-primary-fixed">
                   84K+
                 </span>
-                <span className="text-label-sm text-on-surface-variant uppercase tracking-widest mt-xs">
+                <span className="text-label-sm text-brand-muted-text uppercase tracking-widest mt-xs">
                   Productos
                 </span>
               </div>
@@ -62,7 +62,7 @@ const Login = () => {
                 <span className="text-headline-md text-primary-fixed">
                   230K+
                 </span>
-                <span className="text-label-sm text-on-surface-variant uppercase tracking-widest mt-xs">
+                <span className="text-label-sm text-brand-muted-text uppercase tracking-widest mt-xs">
                   Compradores
                 </span>
               </div>
@@ -79,7 +79,7 @@ const Login = () => {
             <h2 className="text-[32px] text-on-surface mb-xs font-bold">
               Iniciar sesión
             </h2>
-            <p className="text-body-md text-on-surface-variant">
+            <p className="text-body-md text-brand-muted-text">
               Bienvenido de vuelta a tu marketplace
             </p>
           </div>
@@ -96,13 +96,13 @@ const Login = () => {
               <div className="relative">
                 <Mail
                   size={20}
-                  className="absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant ml-sm"
+                  className="absolute left-sm top-1/2 -translate-y-1/2 text-icon-gray-500 ml-sm"
                 />
                 <input
                   id="email"
                   type="email"
                   placeholder="tu@correo.com"
-                  className="w-full bg-[#1a1a26] text-on-surface text-body-md rounded-lg pl-3xl pr-md py-sm focus:ring-1 focus:ring-primary focus:border-primary transition-colors h-12 outline-none placeholder:text-on-surface-variant/50 border border-border-subtle"
+                  className="w-full bg-input-bg text-on-surface text-body-md rounded-lg pl-3xl pr-md py-sm focus:ring-1 focus:ring-brand-orange focus:border-brand-orange transition-colors h-12 outline-none placeholder-placeholder-gray-600 border border-border-subtle"
                 />
               </div>
             </div>
@@ -118,18 +118,20 @@ const Login = () => {
               <div className="relative">
                 <Lock
                   size={20}
-                  className="absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant ml-sm"
+                  className="absolute left-sm top-1/2 -translate-y-1/2 text-icon-gray-500 ml-sm"
                 />
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="w-full bg-[#1a1a26] text-on-surface text-body-md rounded-lg pl-3xl pr-md py-sm focus:ring-1 focus:ring-primary focus:border-primary transition-colors h-12 outline-none placeholder:text-on-surface-variant/50 border border-border-subtle"
+                  className="w-full bg-input-bg text-on-surface text-body-md rounded-lg pl-3xl pr-md py-sm focus:ring-1 focus:ring-brand-orange focus:border-brand-orange transition-colors h-12 outline-none placeholder-placeholder-gray-600 border border-border-subtle"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-sm transition-colors"
+                  className={`absolute right-sm top-1/2 -translate-y-1/2 p-sm transition-colors ${
+                    showPassword ? "text-brand-orange" : "text-icon-gray-500 hover:text-on-surface"
+                  }`}
                 >
                   <EyeOff size={20} />
                 </button>
@@ -144,21 +146,21 @@ const Login = () => {
                     type="checkbox"
                     checked={remember}
                     onChange={() => setRemember(!remember)}
-                    className="w-4 h-4 rounded border-surface-variant bg-[#1a1a26] checked:bg-primary-container checked:border-primary-container focus:ring-primary focus:ring-offset-0 focus:ring-offset-transparent transition-colors cursor-pointer appearance-none"
+                    className="w-4 h-4 rounded border-surface-variant bg-input-bg checked:bg-brand-orange checked:border-brand-orange focus:ring-brand-orange focus:ring-offset-0 focus:ring-offset-transparent transition-colors cursor-pointer appearance-none"
                   />
                   <Check
                     size={12}
-                    className={`absolute text-background font-bold pointer-events-none transition-opacity ${
+                    className={`absolute text-brand-dark-text font-bold pointer-events-none transition-opacity ${
                       remember ? "opacity-100" : "opacity-0"
                     }`}
                   />
                 </div>
-                <span className="text-body-sm text-on-surface-variant group-hover:text-on-surface transition-colors font-medium">
+                <span className="text-body-sm text-brand-muted-text group-hover:text-on-surface transition-colors font-medium">
                   Recordarme
                 </span>
               </label>
               <Link
-                className="text-label-sm text-primary-container hover:text-primary transition-colors font-bold"
+                className="text-label-sm text-brand-orange hover:opacity-80 transition-opacity font-bold"
                 to="/recover"
               >
                 ¿Olvidaste tu contraseña?
@@ -168,7 +170,7 @@ const Login = () => {
             {/* Botón principal: Entrar */}
             <button
               type="button"
-              className="w-full bg-gradient-to-br from-[#F5A623] to-[#E8890A] text-[#000] text-label-md py-sm px-lg rounded-[10px] h-12 hover:brightness-120 active:scale-[0.98] transition-all flex items-center justify-center gap-sm mt-xl font-bold shadow-[0_4px_20px_rgba(245,166,35,0.3)]"
+              className="w-full bg-brand-orange text-brand-dark-text text-label-md py-sm px-lg rounded-[10px] h-12 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-sm mt-xl font-bold shadow-button"
             >
               Entrar
               <ArrowRight size={20} />
