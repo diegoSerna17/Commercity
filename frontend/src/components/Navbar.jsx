@@ -124,7 +124,7 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
           </div>
           <div className="flex-grow min-w-0">
             <p className="text-body-sm font-medium truncate text-on-surface">
-              Juan Pérez
+              Juan Cabrera
             </p>
             <p className="text-xs text-brand-muted-text truncate">
               Admin Pro
