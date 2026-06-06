@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Recuperar Contraseña</title>
+<!-- Tailwind CSS v3 CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Custom Configuration for Tailwind -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brand-bg': '#0A0A0F',
+            'brand-card': '#12121A',
+            'brand-input': '#1A1A26',
+            'brand-primary': '#EF9918',
+            'brand-muted': '#797998',
+            'brand-border': '#1C1C22',
+          },
+          borderRadius: {
+            '2xl': '24px',
+          }
+        }
+      }
+    }
+  </script>
+<!-- Typography and specific spacing adjustments -->
+<style data-purpose="typography">
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0A0A0F;
+    }
+    .text-heading {
+      font-size: 32px;
+      line-height: 1.2;
+      font-weight: 700;
+    }
+    .text-body {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #797998;
+    }
+  </style>
+<style data-purpose="layout">
+    /* Center the card precisely like the design */
+    .card-container {
+      width: 100%;
+      max-width: 648px;
+    }
+    .input-height {
+      height: 56px;
+    }
+    .btn-height {
+      height: 60px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+<!-- BEGIN: RecoveryCard -->
+<main class="card-container bg-brand-card rounded-2xl p-10 md:p-16 shadow-2xl" data-purpose="password-recovery-card">
+<!-- Heading Section -->
+<div class="mb-10">
+<h1 class="text-white text-heading mb-4">Recuperar contraseña</h1>
+<p class="text-body max-w-lg">
+        Ingresa el correo electrónico asociado a tu cuenta para recibir un código de recuperación.
+      </p>
+</div>
+<!-- Form Section -->
+<form action="#" class="space-y-8" data-purpose="recovery-form" method="POST">
+<!-- Email Field -->
+<div class="space-y-2">
+<label class="block text-sm font-medium text-brand-muted" for="email">
+          Correo electrónico
+        </label>
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<!-- Email Icon -->
+<svg class="h-5 w-5 text-brand-muted" fill="currentColor" viewbox="0 0 20 20">
+<path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
+<path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
+</svg>
+</div>
+<input class="block w-full input-height pl-12 bg-brand-input border-brand-input rounded-xl text-white placeholder-brand-muted focus:ring-brand-primary focus:border-brand-primary" id="email" name="email" placeholder="ejemplo@correo.com" type="email"/>
+</div>
+</div>
+<!-- Action Button -->
+<button class="w-full btn-height bg-brand-primary hover:bg-opacity-90 transition-all text-brand-card font-bold rounded-xl text-lg flex items-center justify-center" type="submit">
+        Enviar enlace
+      </button>
+<!-- Divider Decoration -->
+<div class="border-t border-brand-border pt-8"></div>
+<!-- Navigation Link -->
+<div class="flex justify-center">
+<a class="flex items-center gap-3 text-brand-primary font-medium hover:underline group" href="#">
+<!-- Back Arrow Icon -->
+<svg class="group-hover:-translate-x-1 transition-transform" fill="none" height="24" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12.13 18.562L7.858 14.289L8.66 13.499L14.285 19.124L8.66 24.749L7.858 23.959L12.13 19.687H3.035V18.562H12.13Z" fill="currentColor" transform="scale(-1,1) translate(-24, -10)"></path>
+</svg>
+          Volver al inicio de sesión
+        </a>
+</div>
+</form>
+</main>
+<!-- END: RecoveryCard -->
+<!-- Footer Info -->
+<footer class="fixed bottom-8 w-full text-center">
+<p class="text-brand-muted text-xs opacity-50">
+      © 2024 Todos los derechos reservados.
+    </p>
+</footer>
+</body></html>
