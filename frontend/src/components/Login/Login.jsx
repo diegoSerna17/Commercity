@@ -11,6 +11,7 @@
  */
 
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Mail, Lock, EyeOff, Check, ArrowRight } from "lucide-react";
 
 const Login = () => {
@@ -181,12 +182,12 @@ const Login = () => {
             </div>
 
             {/* Botón secundario: Crear cuenta nueva */}
-            <button
-              type="button"
+            <Link
+              to="/register"
               className="w-full bg-transparent border border-border-subtle text-on-surface text-label-md py-sm px-lg rounded-[10px] h-12 hover:bg-surface-variant/30 active:scale-[0.98] transition-all flex items-center justify-center font-bold"
             >
               Crear cuenta nueva
-            </button>
+            </Link>
           </form>
         </div>
       </div>
