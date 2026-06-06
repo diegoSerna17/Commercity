@@ -1,0 +1,25 @@
+/**
+ * scrollbar.css - Scrollbar minimalista oscuro global
+ *
+ * Usa variables del theme de Tailwind v4 para mantener
+ * consistencia con el sistema de diseño del proyecto.
+ *
+ * @author CommerCity Team
+ */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-container-lowest);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-container);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-surface-container-high);
+}

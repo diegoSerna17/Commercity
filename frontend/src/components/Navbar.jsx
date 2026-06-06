@@ -1,130 +1,147 @@
-import React, { useState } from "react";
+/**
+ * Navbar — Barra lateral de navegación de CommerCity
+ *
+ * Secciones:
+ *   1. Logo / Marca
+ *   2. Navegación Principal (Inicio, Carrito)
+ *   3. Navegación Cuenta (Perfil, Tienda, Pedidos, Historial, Ajustes)
+ *   4. Footer — perfil de usuario + cerrar sesión
+ *
+ * @component
+ * @returns {JSX.Element} Sidebar de navegación
+ */
+
+import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Search,
-  Bell,
+  Home,
   ShoppingCart,
   User,
-  ChevronDown,
+  Store,
+  ClipboardList,
+  History,
+  Settings,
+  LogOut,
 } from "lucide-react";
-import { Link } from "react-router-dom";
 
-const Navbar = () => {
-    const [search, setSearch] = useState("");
+const NAV_SECTIONS = [
+  {
+    label: "Principal",
+    items: [
+      { name: "Inicio", icon: Home, path: "/" },
+      { name: "Carrito", icon: ShoppingCart, path: "/cart" },
+    ],
+  },
+  {
+    label: "Cuenta",
+    items: [
+      { name: "Perfil", icon: User, path: "/profile" },
+      { name: "Tienda", icon: Store, path: "/store" },
+      { name: "Pedidos", icon: ClipboardList, path: "/orders" },
+      { name: "Historial de compras", icon: History, path: "/history" },
+      { name: "Ajustes", icon: Settings, path: "/settings" },
+    ],
+  },
+];
 
-    return (
-        <header className="fixed top-0 left-0 right-0 z-50 h-16 
-        bg-bg-glass backdrop-blur-xl border-b border-border-subtle 
-        shadow-navbar">
+const Navbar = ({ isOpen = false, onClose = () => {} }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-        <div className="max-w-[94%] mx-auto h-full px-6 flex items-center gap-8">
+  const isActive = (path) => location.pathname === path;
 
-            <a href="#" className="text-xl font-extrabold text-secondary tracking-tight shrink-0">
-              Commer<span className="text-primary relative">City<span className="absolute -bottom-1 left-0 w-full h-[2px] bg-primary/40 blur-sm"></span></span>
-            </a>
+  const handleNav = (path) => {
+    navigate(path);
+    onClose();
+  };
 
-            <nav className="hidden md:flex items-center gap-8 text-sm font-medium flex-1">
-
-            <a
-                href="#"
-                className="relative text-on-surface font-semibold"
-            >
-                Inicio
-                <span className="absolute -bottom-1 left-0 w-full h-[2px] bg-primary rounded-full"></span>
-            </a>
-
-            <a
-                href="#"
-                className="text-on-surface-variant hover:text-on-surface transition-all duration-300 flex items-center gap-1 group"
-            >
-                Categorías
-                <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-300" />
-            </a>
-
-            <a
-                href="#"
-                className="text-on-surface-variant hover:text-on-surface transition-all duration-300 flex items-center gap-1 group"
-            >
-                Opciones
-                <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-300" />
-            </a>
-
-            </nav>
-
-            <div className="hidden lg:flex items-center gap-2 
-            bg-bg-glass-light backdrop-blur-md border border-border-subtle 
-            rounded-full px-4 py-2 flex-1 max-w-xs 
-            focus-within:ring-2 focus-within:ring-accent-blue
-            transition-all duration-300 shadow-card">
-
-            <Search size={16} className="text-on-surface-variant" />
-
-            <input
-                type="text"
-                placeholder="Buscar productos..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="bg-transparent outline-none px-2 text-sm w-full placeholder-text-light"
-            />
-
-            {search && (
-                <button
-                onClick={() => setSearch("")}
-                className="text-on-surface-variant hover:text-on-secondary text-xs transition"
-                >
-                ✕
-                </button>
-            )}
-            </div>
-
-            <div className="flex items-center gap-2 ml-auto">
-
-            {[ 
-                { icon: <Search size={18} />, mobile: true },
-                { icon: <Bell size={18} /> },
-                { icon: <ShoppingCart size={18} />, cart: true },
-                { icon: <User size={18} />, isLogin: true },
-            ].map((item, i) => (
-                item.isLogin ? (
-                    <Link
-                        to="/login"
-                        key={i}
-                        className="relative w-10 h-10 rounded-full flex items-center justify-center 
-                        text-on-secondary 
-                        bg-bg-glass-light backdrop-blur-md border border-border-subtle 
-                        hover:bg-surface hover:shadow-card hover:-translate-y-[1px] 
-                        transition-all duration-300"
-                    >
-                        {item.icon}
-                    </Link>
-                ) : (
-                <button
-                    key={i}
-                    className={`relative w-10 h-10 rounded-full flex items-center justify-center 
-                    text-on-secondary 
-                    bg-bg-glass-light backdrop-blur-md border border-border-subtle 
-                    hover:bg-surface hover:shadow-card hover:-translate-y-[1px] 
-                    transition-all duration-300 
-                    ${item.mobile ? "lg:hidden" : ""}`}
-                >
-                {item.icon}
-
-                {item.cart && (
-                    <span className="absolute top-1.5 right-1.5 w-4 h-4 
-                    bg-accent-red text-white text-[9px] font-bold 
-                    rounded-full flex items-center justify-center 
-                    shadow-card">
-                    3
-                    </span>
-                )}
-                </button>
-                )
-            ))}
-
-            </div>
-
+  return (
+    <aside
+      className={`w-[250px] bg-auth-card-bg flex flex-col border-r border-surface-container h-dvh overflow-y-auto overscroll-contain font-sans fixed inset-y-0 left-0 z-40 transition-transform duration-300 lg:relative lg:translate-x-0 lg:flex-shrink-0 ${
+        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      }`}
+    >
+      {/* ===== LOGO ===== */}
+      <div className="p-padding-xl shrink-0">
+        <div className="flex items-center gap-sm">
+          <span className="text-headline-sm font-bold tracking-tight text-brand-orange">
+            CommerCity
+          </span>
         </div>
-        </header>
-    );
+      </div>
+
+      {/* ===== NAVEGACIÓN ===== */}
+      <nav className="flex-grow px-padding-md mt-md space-y-lg">
+        {NAV_SECTIONS.map((section) => (
+          <div key={section.label}>
+            {/* Título de sección */}
+            <h3 className="px-padding-md text-xs font-semibold text-brand-muted-text uppercase tracking-wider mb-sm">
+              {section.label}
+            </h3>
+
+            <div className="space-y-xs">
+              {section.items.map((item) => {
+                const active = isActive(item.path);
+                const Icon = item.icon;
+
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => handleNav(item.path)}
+                    className={`w-full flex items-center gap-md px-padding-md py-3 rounded-card transition-all group text-left ${
+                      active
+                        ? "text-on-surface bg-surface-container-low border border-border-subtle"
+                        : "text-brand-muted-text hover:text-on-surface border border-transparent"
+                    }`}
+                  >
+                    <Icon
+                      size={20}
+                      className={`shrink-0 ${
+                        active
+                          ? "text-brand-orange"
+                          : "group-hover:text-brand-orange transition-colors"
+                      }`}
+                    />
+                    <span className={active ? "font-medium" : ""}>
+                      {item.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      {/* ===== FOOTER / PERFIL ===== */}
+      <div className="p-padding-lg border-t border-surface-container space-y-3 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-surface-variant shrink-0 overflow-hidden">
+            <img
+              alt="Usuario"
+              className="w-full h-full object-cover"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqMhoV6Qxd6R46I1ZtAFlf5n_DO_I13Qm9yS5Vf_rKjen_gSD4D1eGs_IGsY9mYZicvUnBWImsdYyPEJJxxwSAuS694ltHi4ESaDFRk1CRgTTI3vp68l_W_dEJa-EVHsN3rm41cm3nqymh-KPqn_UMthgkmjFf1_p430Ewa8M_OCwbYgz_0Z7Dayu6Afj_13iTxnn1B7NKHy-nPa3ssguZioMGoR67bc1IE8JHHoPgwBwaaDagvUGxDojSh8e0QMhlC_nzp3n8og"
+            />
+          </div>
+          <div className="flex-grow min-w-0">
+            <p className="text-body-sm font-medium truncate text-on-surface">
+              Juan Pérez
+            </p>
+            <p className="text-xs text-brand-muted-text truncate">
+              Admin Pro
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => handleNav("/login")}
+          className="w-full flex items-center gap-md px-padding-md py-padding-xs text-accent-red hover:opacity-80 transition-opacity group"
+        >
+          <LogOut size={20} className="shrink-0" />
+          <span className="text-body-sm font-medium">Cerrar sesión</span>
+        </button>
+      </div>
+    </aside>
+  );
 };
 
 export default Navbar;
