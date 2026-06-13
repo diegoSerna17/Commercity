@@ -16,6 +16,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/recover" element={<Recover />} />
         <Route path="/restore" element={<Restore />} />
+        <Route path="/profile" element={<PerfilVendedor />} />
         <Route path="/PerfilVendedor" element={<PerfilVendedor />} />
         <Route path="/orders" element={<Orders />} />
       </Routes>

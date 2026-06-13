@@ -102,4 +102,8 @@
   --color-icon-gray-500: #6b7280;
   --color-placeholder-gray-600: #4b5563;
   --color-input-bg: #1A1A26;
+
+  /* Perfil Vendedor */
+  --color-app-badge: #0077FF;
+  --color-app-text-muted: #A0A0A0;
 }
