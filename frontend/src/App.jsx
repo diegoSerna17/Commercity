@@ -5,6 +5,7 @@ import Register from './components/Login/Register';
 import Recover from './components/Login/Recover';
 import Restore from './components/Login/Restore';
 import PerfilVendedor from './components/Profile/PerfilVendedor';
+import Orders from './components/Profile/Orders';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/recover" element={<Recover />} />
         <Route path="/restore" element={<Restore />} />
         <Route path="/PerfilVendedor" element={<PerfilVendedor />} />
+        <Route path="/orders" element={<Orders />} />
       </Routes>
     </Router>
   );
