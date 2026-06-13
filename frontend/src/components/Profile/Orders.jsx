@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Bell, User } from "lucide-react";
 import Navbar from "../Navbar";
+import DetallePedidos from "./DetallePedidos";
 
 const ORDERS = [
   {
@@ -12,6 +14,9 @@ const ORDERS = [
     fecha: "24 Oct, 2026",
     estado: "Entregado",
     monto: "$1,299.000",
+    direccion: "Calle 45 # 23-10, Apto 502",
+    ciudad: "Bogota, Cundinamarca",
+    cantidad: 1,
   },
   {
     id: 2,
@@ -22,6 +27,9 @@ const ORDERS = [
     fecha: "23 Oct, 2026",
     estado: "En Camino",
     monto: "$1,900.000",
+    direccion: "Carrera 7 # 12-34, Apartamento 201",
+    ciudad: "Medellin, Antioquia",
+    cantidad: 2,
   },
   {
     id: 3,
@@ -32,6 +40,9 @@ const ORDERS = [
     fecha: "22 Oct, 2026",
     estado: "Entregado",
     monto: "$3,000.000",
+    direccion: "Av. siempre viva # 742",
+    ciudad: "Cali, Valle del Cauca",
+    cantidad: 1,
   },
   {
     id: 4,
@@ -42,6 +53,9 @@ const ORDERS = [
     fecha: "21 Oct, 2026",
     estado: "Pendiente",
     monto: "$2,799.000",
+    direccion: "Calle 10 # 5-67, Casa 3",
+    ciudad: "Barranquilla, Atlantico",
+    cantidad: 1,
   },
 ];
 
@@ -55,126 +69,140 @@ const FILTERS = ["Todo", "Pendiente", "En camino", "Entregado"];
 
 const Orders = () => {
   const [activeFilter, setActiveFilter] = useState("Todo");
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   return (
-    <div className="flex h-screen bg-surface-container-lowest">
-      <Navbar />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* ===== TOP BAR ===== */}
-        <header className="h-16 flex items-center justify-between px-padding-xl border-b border-surface-container">
-          <div className="flex items-center gap-2">
-            <span className="text-brand-muted-text border-b-2 border-primary-container pb-4 mt-4">
-              Pedidos
-            </span>
-          </div>
-          <div className="flex items-center gap-6">
-            <button className="text-brand-muted-text hover:text-on-surface">
-              <Bell className="w-6 h-6" />
-            </button>
-            <button className="text-brand-muted-text hover:text-on-surface">
-              <User className="w-6 h-6" />
-            </button>
-          </div>
-        </header>
+    <>
+      <div className="flex h-screen bg-surface-container-lowest">
+        <Navbar />
+        <main className="flex-1 flex flex-col overflow-hidden">
+          {/* ===== TOP BAR ===== */}
+          <header className="h-16 flex items-center justify-between px-padding-xl border-b border-surface-container">
+            <div className="flex items-center gap-2">
+              <span className="text-brand-muted-text border-b-2 border-primary-container pb-4 mt-4">
+                Pedidos
+              </span>
+            </div>
+            <div className="flex items-center gap-6">
+              <button className="text-brand-muted-text hover:text-on-surface">
+                <Bell className="w-6 h-6" />
+              </button>
+              <button className="text-brand-muted-text hover:text-on-surface">
+                <User className="w-6 h-6" />
+              </button>
+            </div>
+          </header>
 
-        {/* ===== PAGE CONTENT ===== */}
-        <section className="flex-1 p-padding-xl overflow-y-auto">
-          {/* Page Heading */}
-          <div className="mb-padding-xl">
-            <h2 className="text-headline-md font-bold text-on-surface">
-              Pedidos
-            </h2>
-            <p className="text-brand-muted-text mt-1">
-              Gestiona y actualiza el estado de tus pedidos.
-            </p>
-          </div>
+          {/* ===== PAGE CONTENT ===== */}
+          <section className="flex-1 p-padding-xl overflow-y-auto">
+            {/* Page Heading */}
+            <div className="mb-padding-xl">
+              <h2 className="text-headline-md font-bold text-on-surface">
+                Pedidos
+              </h2>
+              <p className="text-brand-muted-text mt-1">
+                Gestiona y actualiza el estado de tus pedidos.
+              </p>
+            </div>
 
-          {/* Status Filters */}
-          <div className="flex gap-3 mb-padding-xl">
-            {FILTERS.map((f) => {
-              const active = f === activeFilter;
-              return (
-                <button
-                  key={f}
-                  onClick={() => setActiveFilter(f)}
-                  className={`px-5 py-1.5 rounded-button font-semibold text-sm transition-colors ${
-                    active
-                      ? "bg-primary-container text-black"
-                      : "bg-surface-container-high text-brand-muted-text hover:bg-surface-container-highest"
-                  }`}
-                >
-                  {f}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Orders Table */}
-          <div className="rounded-card overflow-hidden border border-surface-container bg-surface-container-low">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="text-[11px] font-bold text-brand-muted-text uppercase border-b border-surface-container">
-                  <th className="px-6 py-4">Cliente</th>
-                  <th className="px-6 py-4">Producto</th>
-                  <th className="px-6 py-4">Fecha</th>
-                  <th className="px-6 py-4">Estado</th>
-                  <th className="px-6 py-4">Accion</th>
-                  <th className="px-6 py-4 text-right">Monto</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-container/50">
-                {ORDERS.map((order) => (
-                  <tr
-                    key={order.id}
-                    className="hover:bg-white/5 transition-colors group"
+            {/* Status Filters */}
+            <div className="flex gap-3 mb-padding-xl">
+              {FILTERS.map((f) => {
+                const active = f === activeFilter;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setActiveFilter(f)}
+                    className={`px-5 py-1.5 rounded-button font-semibold text-sm transition-colors ${
+                      active
+                        ? "bg-primary-container text-black"
+                        : "bg-surface-container-high text-brand-muted-text hover:bg-surface-container-highest"
+                    }`}
                   >
-                    <td className="px-6 py-6">
-                      <div className="flex items-center gap-3">
-                        {order.avatar ? (
-                          <img
-                            alt={order.cliente}
-                            className="w-9 h-9 rounded-full object-cover"
-                            src={order.avatar}
-                          />
-                        ) : (
-                          <div className="w-9 h-9 rounded-full bg-accent-blue/50 flex items-center justify-center text-xs font-bold text-accent-blue">
-                            {order.iniciales}
-                          </div>
-                        )}
-                        <span className="font-medium text-on-surface">
-                          {order.cliente}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-6 text-on-surface font-medium">
-                      {order.producto}
-                    </td>
-                    <td className="px-6 py-6 text-brand-muted-text text-sm">
-                      {order.fecha}
-                    </td>
-                    <td className="px-6 py-6">
-                      <span
-                        className={`px-3 py-1 rounded-md text-[11px] font-bold ${STATUS_STYLES[order.estado]}`}
-                      >
-                        {order.estado}
-                      </span>
-                    </td>
-                    <td className="px-6 py-6">
-                      <button className="px-4 py-1 rounded border border-surface-container text-xs text-brand-muted-text hover:bg-surface-container">
-                        Ver detalle
-                      </button>
-                    </td>
-                    <td className="px-6 py-6 text-right font-semibold text-on-surface">
-                      {order.monto}
-                    </td>
+                    {f}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Orders Table */}
+            <div className="rounded-card overflow-hidden border border-surface-container bg-surface-container-low">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="text-[11px] font-bold text-brand-muted-text uppercase border-b border-surface-container">
+                    <th className="px-6 py-4">Cliente</th>
+                    <th className="px-6 py-4">Producto</th>
+                    <th className="px-6 py-4">Fecha</th>
+                    <th className="px-6 py-4">Estado</th>
+                    <th className="px-6 py-4">Accion</th>
+                    <th className="px-6 py-4 text-right">Monto</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </main>
-    </div>
+                </thead>
+                <tbody className="divide-y divide-surface-container/50">
+                  {ORDERS.map((order) => (
+                    <tr
+                      key={order.id}
+                      className="hover:bg-white/5 transition-colors group"
+                    >
+                      <td className="px-6 py-6">
+                        <div className="flex items-center gap-3">
+                          {order.avatar ? (
+                            <img
+                              alt={order.cliente}
+                              className="w-9 h-9 rounded-full object-cover"
+                              src={order.avatar}
+                            />
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-accent-blue/50 flex items-center justify-center text-xs font-bold text-accent-blue">
+                              {order.iniciales}
+                            </div>
+                          )}
+                          <span className="font-medium text-on-surface">
+                            {order.cliente}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-6 text-on-surface font-medium">
+                        {order.producto}
+                      </td>
+                      <td className="px-6 py-6 text-brand-muted-text text-sm">
+                        {order.fecha}
+                      </td>
+                      <td className="px-6 py-6">
+                        <span
+                          className={`px-3 py-1 rounded-md text-[11px] font-bold ${STATUS_STYLES[order.estado]}`}
+                        >
+                          {order.estado}
+                        </span>
+                      </td>
+                      <td className="px-6 py-6">
+                        <button
+                          onClick={() => setSelectedOrder(order)}
+                          className="px-4 py-1 rounded border border-surface-container text-xs text-brand-muted-text hover:bg-surface-container"
+                        >
+                          Ver detalle
+                        </button>
+                      </td>
+                      <td className="px-6 py-6 text-right font-semibold text-on-surface">
+                        {order.monto}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+      {selectedOrder &&
+        createPortal(
+          <DetallePedidos
+            selectedOrder={selectedOrder}
+            onClose={() => setSelectedOrder(null)}
+          />,
+          document.body
+        )}
+    </>
   );
 };
 
