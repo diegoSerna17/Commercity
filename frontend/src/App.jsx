@@ -6,6 +6,7 @@ import Recover from './components/Login/Recover';
 import Restore from './components/Login/Restore';
 import PerfilVendedor from './components/Profile/PerfilVendedor';
 import Orders from './components/Profile/Orders';
+import Mensajes from './components/Profile/Mensajes';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/profile" element={<PerfilVendedor />} />
         <Route path="/PerfilVendedor" element={<PerfilVendedor />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/messages" element={<Mensajes />} />
       </Routes>
     </Router>
   );

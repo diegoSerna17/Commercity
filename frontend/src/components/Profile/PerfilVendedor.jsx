@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Navbar from "../Navbar";
 
 const PRODUCTS = [
@@ -146,7 +147,10 @@ const PerfilVendedor = () => {
                       juan_giraldo
                     </h2>
                     <div className="flex gap-2 ml-auto">
-                      <button className="bg-brand-orange text-auth-card-bg px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition">
+                      <Link
+                        to="/messages"
+                        className="bg-brand-orange text-auth-card-bg px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition"
+                      >
                         <svg
                           fill="currentColor"
                           height="16"
@@ -156,7 +160,7 @@ const PerfilVendedor = () => {
                           <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
                         </svg>
                         Mensajes
-                      </button>
+                      </Link>
                       <button className="bg-brand-orange text-auth-card-bg px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition">
                         <svg
                           fill="none"
