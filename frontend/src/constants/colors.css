@@ -111,4 +111,13 @@
   /* Perfil Vendedor */
   --color-app-badge: #0077FF;
   --color-app-text-muted: #A0A0A0;
+
+  /* Figma alignment tokens for Inicio_prueba */
+  --color-figma-accent-blue: #0077FF;
+  --color-figma-text-primary: #EDF3FF;
+  --color-figma-divider: #1C1C22;
+  --color-figma-input-bg: #1C1C22;
+  --color-figma-input-bg-focus: #232329;
+  --color-figma-search-icon: #535B71;
+  --color-figma-text-search: #6B7280;
 }

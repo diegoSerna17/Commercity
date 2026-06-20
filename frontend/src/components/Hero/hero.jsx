@@ -21,46 +21,55 @@ import {
   Search,
   Bell,
   User,
-  ChevronRight,
-  ChevronLeft,
-  Zap,
-  Sparkles,
-  Building2,
+  ChevronDown,
 } from "lucide-react";
 
-// JS Datos estaticos de planes con nombre, precio, badge e icono
-const PLANS = [
+// JS Datos estaticos de productos e-commerce
+const productsData = [
   {
-    name: "Zapato Básico",
-    desc: "Optimiza tus procesos fundamentales con nuestra suite esencial de herramientas.",
-    price: "19.00",
-    badge: "Plan",
-    badgeBg: "bg-accent-blue",
-    Icon: Zap,
-    iconClass: "text-accent-blue",
+    name: "Zapatillas Urban Red",
+    originalPrice: 138890,
+    price: 125000,
+    badge: "-10%",
+    badgeBg: "bg-figma-accent-blue",
   },
   {
-    name: "Auriculares Pro",
-    desc: "Escalabilidad avanzada y soporte prioritario para empresas en rápido crecimiento.",
-    price: "49.00",
-    badge: "Populares",
-    badgeBg: "bg-purple-600",
-    Icon: Sparkles,
-    iconClass: "text-purple-600",
+    name: "Auriculares Studio Pro",
+    originalPrice: null,
+    price: 299000,
+    badge: null,
+    badgeBg: null,
   },
   {
-    name: "Reloj Enterprise",
-    desc: "Soluciones a medida, seguridad de grado bancario y consultoría dedicada.",
-    price: "99.00",
-    badge: "Premium",
-    badgeBg: "bg-indigo-700",
-    Icon: Building2,
-    iconClass: "text-indigo-700",
+    name: "Calzado Heritage High",
+    originalPrice: 126670,
+    price: 95000,
+    badge: "-25%",
+    badgeBg: "bg-figma-accent-blue",
+  },
+  {
+    name: "Mochila City Stealth",
+    originalPrice: 83160,
+    price: 79000,
+    badge: "-5%",
+    badgeBg: "bg-figma-accent-blue",
+  },
+  {
+    name: "Reloj Elitist Gold",
+    originalPrice: null,
+    price: 345000,
+    badge: null,
+    badgeBg: null,
+  },
+  {
+    name: "Set Botánico Urban",
+    originalPrice: 56250,
+    price: 45000,
+    badge: "-20%",
+    badgeBg: "bg-figma-accent-blue",
   },
 ];
 
-// JS Datos de paginacion con numeros y salto de omision
-const PAGES = [1, 2, 3, "...", 10];
 
 const Hero = () => {
   // RE Hook para navegacion desde botones del dashboard
@@ -87,37 +96,49 @@ const Hero = () => {
       {/* TW Contenido principal de la pagina */}
       <main className="flex-grow h-dvh overflow-y-auto relative">
         {/* TW Encabezado sticky con breadcrumb, busqueda y notificaciones */}
-        <header className="sticky top-0 z-10 bg-surface-container-lowest/60 backdrop-blur-lg border-b border-surface-container h-[68px] flex items-center justify-between px-padding-xl">
-          {/* TW Breadcrumb + menu hamburguesa mobile */}
-          <div className="flex items-center gap-2 text-brand-muted-text text-body-sm">
+        <header className="sticky top-0 z-10 bg-surface-container-lowest/60 backdrop-blur-lg border-b border-figma-divider h-[68px] flex items-center justify-between px-padding-xl">
+          {/* TW Categorías dropdown + menu hamburguesa mobile */}
+          <div className="flex items-center gap-md">
             <button
-              className="lg:hidden p-2 -ml-2 mr-1 text-brand-muted-text hover:text-on-surface transition-colors"
+              className="lg:hidden p-2 -ml-2 text-brand-muted-text hover:text-on-surface transition-colors"
               onClick={() => setSidebarOpen(true)}
+              aria-label="Abrir menú"
             >
               <Menu size={24} />
             </button>
-            <span>Plataforma</span>
-            <ChevronRight size={16} />
-            <span className="text-on-surface font-medium">Inicio MVP</span>
+            <nav aria-label="Menú de categorías">
+              <button
+                type="button"
+                aria-haspopup="true"
+                aria-expanded="false"
+                className="flex items-center gap-1.5 bg-transparent border-none text-brand-muted-text text-body-sm font-medium hover:text-on-surface transition-colors"
+              >
+                Categorías
+                <ChevronDown size={16} className="transition-transform" />
+              </button>
+            </nav>
           </div>
 
           {/* TW Acciones derecha: busqueda + notificaciones + perfil */}
-          <div className="flex items-center gap-lg">
+          <div className="flex items-center gap-lg flex-1 justify-end">
             {/* TW Campo de busqueda */}
-            <div className="relative hidden sm:block">
+            <div className="relative hidden  sm:block flex-1 max-w-[300px]" role="search">
+              <label htmlFor="search-input" className="sr-only">Buscar productos</label>
               <input
-                className="bg-auth-card-bg border border-surface-container rounded-full py-1.5 pl-10 pr-4 text-body-sm focus:ring-1 focus:ring-brand-orange focus:border-brand-orange w-[256px] text-on-surface placeholder-brand-muted-text outline-none transition-colors"
-                placeholder="Buscar..."
-                type="text"
+                id="search-input"
+                className="bg-figma-input-bg border border-figma-divider/60 rounded-button py-[9px] pl-10 pr-4 text-body-sm w-full text-figma-text-primary placeholder-figma-text-search outline-none transition-colors focus:bg-figma-input-bg-focus"
+                placeholder="Buscar productos..."
+                type="search"
+                autoComplete="off"
               />
               <Search
-                size={16}
-                className="text-brand-muted-text absolute left-4 top-1/2 -translate-y-1/2"
+                size={15}
+                className="text-figma-search-icon absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
               />
             </div>
 
             {/* TW Iconos */}
-            <div className="flex items-center gap-md text-brand-muted-text">
+            <div className="flex items-center gap-md text-brand-muted-text shrink-0">
               <button className="hover:text-on-surface transition-colors relative">
                 <Bell size={24} />
                 <span className="absolute top-0 right-0 w-2 h-2 bg-accent-red rounded-full" />
@@ -132,112 +153,88 @@ const Hero = () => {
           </div>
         </header>
 
-        {/* TW Banner hero con imagen de fondo, gradiente y llamados a la accion */}
+        {/* TW Banner hero con imagen de fondo, gradiente y copy centrado estilo Figma */}
         <section className="p-padding-xl">
-          <div className="relative w-full h-[552px] rounded-hero overflow-hidden shadow-2xl">
+          <div className="relative w-full h-[552px] lg:h-[400px] md:h-[280px] sm:h-[220px] rounded-figma-card overflow-hidden shadow-2xl">
             <img
               alt="Background"
               className="absolute inset-0 w-full h-full object-cover"
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuAE0Uf2aJHJR6JmZTmDeaBo4MB_roFJRkzXT2fSstX1qItU8s3TCa1hWAtEB8AHoTTqo-9HN39bZlI3sfpBuqFG88d_p1ypbvLz6GSMezwEjlfmyBKn9yDyqblPuxKaM9_zY_CLnEhDn6uqW1cc7MMvOKsV6D0owc4yi5tS_l40BHL1wofZq5InnDgCJ72HwXFuJZDtFZqUPWhp3OwpYUTQSIcU1_SCPI071NpmpbW4Q5kI808pH4mqBSaUt_yVBtMnnm0PuENQjw"
             />
-            {/* TW Overlay gradiente */}
-            <div className="absolute inset-0 bg-gradient-to-r from-surface-container-lowest/90 via-surface-container-lowest/40 to-transparent flex flex-col justify-center px-8 lg:px-16">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                <h1 className="text-[40px] lg:text-[56px] leading-tight font-bold text-on-surface drop-shadow-lg">
-                  Transformando el Futuro con Tecnología
+            {/* TW Overlay gradiente + copy */}
+            <div className="absolute inset-0 bg-gradient-to-r from-surface-container-lowest/90 via-surface-container-lowest/40 to-transparent">
+              <div className="absolute left-12 top-1/2 -translate-y-1/2 max-w-[700px]">
+                <h1 className="text-[72px] lg:text-[52px] md:text-[32px] sm:text-[26px] leading-none font-extrabold -tracking-[3.6px] text-figma-text-primary drop-shadow-lg mb-5">
+                  Transforma tu estilo.<br />Eleva tu vida.
                 </h1>
-                <p className="text-headline-sm text-on-surface/90 leading-relaxed">
-                  Explora soluciones de software de vanguardia adaptadas para
-                  elevar tu negocio en la era digital.
+                <p className="text-body-lg leading-relaxed text-figma-text-primary max-w-[576px]">
+                  CommerCity — Donde tus deseos se hacen realidad. Explora y encuentra lo que te define.
                 </p>
-              </div>
-              <div className="flex gap-md flex-wrap mt-8">
-                <button className="bg-brand-orange hover:brightness-90 text-on-primary font-bold px-8 py-4 rounded-card transition-all shadow-lg">
-                  Comenzar ahora
-                </button>
-                <button className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-on-surface font-semibold px-8 py-4 rounded-card transition-all border border-white/20">
-                  Saber más
-                </button>
               </div>
             </div>
           </div>
         </section>
 
-        {/* TW Mapeo de datos de planes a tarjetas de producto */}
-        <section className="p-padding-xl grid grid-cols-1 md:grid-cols-3 gap-padding-xl">
-          {PLANS.map((plan) => {
-            const Icon = plan.Icon;
-            return (
+        {/* TW Mapeo de productos e-commerce estilo Figma */}
+        <section className="px-padding-xl pb-16">
+          <div className="flex items-center justify-end mb-8">
+            <h2 className="text-headline-md font-extrabold text-on-surface" id="products-heading">
+              Explora Novedades
+            </h2>
+          </div>
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            role="list"
+            aria-labelledby="products-heading"
+          >
+            {productsData.map((product) => (
               <article
-                key={plan.name}
-                className="bg-auth-card-bg rounded-hero p-padding-xl shadow-xl border border-surface-container flex flex-col h-full min-h-[442px]"
+                key={product.name}
+                className="bg-auth-card-bg rounded-2xl lg:rounded-figma-card overflow-hidden flex flex-col gap-2.5 lg:gap-4 p-2.5 lg:p-4 shadow-xl border border-figma-divider transition-transform duration-200 hover:-translate-y-1 hover:shadow-2xl"
               >
-                {/* TW Cabecera grafica del plan */}
-                <div className="w-full h-[220px] bg-surface-container-high rounded-card-lg mb-padding-xl relative overflow-hidden flex items-center justify-center">
-                  <div
-                    className={`absolute top-4 left-4 ${plan.badgeBg} text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider`}
-                  >
-                    {plan.badge}
+                <div className="relative rounded-[8px] lg:rounded-[6px] overflow-hidden bg-surface-container-high h-[130px] sm:h-[160px] lg:h-[260px] flex-shrink-0">
+                  <div className="w-full h-full bg-surface-variant" />
+                  {product.badge && (
+                    <span
+                      className={`absolute top-4 left-4 ${product.badgeBg} text-figma-text-primary text-[10px] font-medium px-2 py-1 rounded-full uppercase tracking-wider`}
+                    >
+                      {product.badge}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1 pt-4 pb-1">
+                  <h3 className="text-body-sm lg:text-body-lg font-bold text-on-surface">
+                    {product.name}
+                  </h3>
+                  <div className="flex items-baseline gap-2">
+                    {product.originalPrice && (
+                      <span className="text-xs lg:text-body-sm font-medium text-figma-accent-blue/60 line-through">
+                        ${product.originalPrice.toLocaleString("es-CO")}
+                      </span>
+                    )}
+                    <span className="text-body-md lg:text-body-lg font-medium text-brand-orange">
+                      ${product.price.toLocaleString("es-CO")}
+                    </span>
                   </div>
-                  <Icon size={96} className={plan.iconClass} />
                 </div>
-
-                <h2 className="text-headline-md font-bold mb-2 text-on-surface">
-                  {plan.name}
-                </h2>
-                <p className="text-brand-muted-text mb-6 flex-grow">
-                  {plan.desc}
-                </p>
-
-                <div className="flex items-baseline gap-xs mb-8">
-                  <span className="text-3xl font-bold text-brand-orange">
-                    ${plan.price}
-                  </span>
-                  <span className="text-brand-muted-text">/mes</span>
-                </div>
-
-                <button className="w-full py-4 bg-brand-orange hover:brightness-90 text-on-primary font-bold rounded-card transition-all uppercase tracking-wide text-body-sm">
-                  Seleccionar Plan
-                </button>
               </article>
-            );
-          })}
+            ))}
+          </div>
         </section>
 
-        {/* TW Controles de paginacion y barra de progreso */}
-        <div className="p-padding-xl flex flex-wrap justify-center items-center gap-md">
-          <nav className="flex items-center gap-2 bg-auth-card-bg px-padding-md py-2 rounded-card-lg border border-surface-container">
-            <button className="p-2 text-brand-muted-text hover:text-on-surface transition-colors">
-              <ChevronLeft size={20} />
-            </button>
-
-            {PAGES.map((page, idx) =>
-              page === "..." ? (
-                <span key={idx} className="px-2 text-brand-muted-text">
-                  ...
-                </span>
-              ) : (
-                <button
-                  key={idx}
-                  className={`w-10 h-10 rounded-card transition-colors font-bold ${
-                    page === 1
-                      ? "bg-brand-orange text-on-primary"
-                      : "hover:bg-white/5 text-brand-muted-text hover:text-on-surface"
-                  }`}
-                >
-                  {page}
-                </button>
-              )
-            )}
-
-            <button className="p-2 text-brand-muted-text hover:text-on-surface transition-colors">
-              <ChevronRight size={20} />
-            </button>
-          </nav>
-
-          {/* TW Barra de progreso */}
-          <div className="w-48 h-1.5 bg-auth-card-bg rounded-full overflow-hidden">
-            <div className="w-1/3 h-full bg-brand-orange rounded-full" />
+        {/* TW Indicador de carga con barra de progreso estilo Figma */}
+        <div className="flex items-center justify-center gap-md px-padding-xl pt-2 pb-14">
+          <span className="text-body-sm font-medium text-text-dim">
+            Cargando más piezas...
+          </span>
+          <div
+            className="w-12 h-1 bg-surface-container rounded-full overflow-hidden"
+            role="progressbar"
+            aria-valuenow={33}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div className="w-1/3 h-full bg-figma-accent-blue rounded-full" />
           </div>
         </div>
       </main>
