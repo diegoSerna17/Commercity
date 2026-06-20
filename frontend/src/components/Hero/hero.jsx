@@ -206,7 +206,7 @@ const Hero = () => {
                   <h3 className="text-body-sm lg:text-body-lg font-bold text-on-surface">
                     {product.name}
                   </h3>
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex flex-col">
                     {product.originalPrice && (
                       <span className="text-xs lg:text-body-sm font-medium text-figma-accent-blue/60 line-through">
                         ${product.originalPrice.toLocaleString("es-CO")}

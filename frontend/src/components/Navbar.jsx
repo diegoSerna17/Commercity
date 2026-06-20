@@ -24,7 +24,6 @@ import {
   ClipboardList,
   History,
   Settings,
-  LogOut,
 } from "lucide-react";
 
 // JS Configuracion de secciones de navegacion con nombre, icono y ruta
@@ -144,10 +143,9 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
 
         <button
           onClick={() => handleNav("/login")}
-          className="w-full flex items-center gap-md px-padding-md py-padding-xs text-accent-red hover:opacity-80 transition-opacity group"
+          className="w-full bg-auth-card-bg/20 border border-figma-divider/80 rounded-[14px] py-3 text-body-sm font-extrabold text-brand-muted-text text-center transition-colors hover:bg-white/[0.06] hover:text-figma-text-primary"
         >
-          <LogOut size={20} className="shrink-0" />
-          <span className="text-body-sm font-medium">Cerrar sesión</span>
+          Cerrar Sesión
         </button>
       </div>
     </aside>
