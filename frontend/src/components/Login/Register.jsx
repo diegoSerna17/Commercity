@@ -1,14 +1,32 @@
+// RE Titulo: Register - Pagina de registro de nueva cuenta en CommerCity
+//
+// RE Implementacion React: useState para controlar visibilidad de contrasena
+// RE y estado de aceptacion de terminos
+//
+// JS Codigo y componentes: formulario centrado en tarjeta con campos de nombre,
+// JS correo y contrasena, checkbox personalizado para terminos y condiciones,
+// JS boton de registro y enlace de navegacion a inicio de sesion
+//
+// TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
+// TW bg-input-bg, text-brand-orange, border-border-subtle. Layout centrado
+// TW con max-w-[580px], sombra con shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)],
+// TW checkbox personalizado con appearance-none y check overlay
+
+// JS Importaciones de hooks, Link e iconos para el formulario de registro
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { User, Mail, Lock, EyeOff, Eye, Check } from "lucide-react";
 
 const Register = () => {
+  // RE Estado para alternar visibilidad del campo de contrasena
   const [showPassword, setShowPassword] = useState(false);
+  // RE Estado para controlar la aceptacion de terminos y condiciones
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
+  // JS Manejador de envio del formulario con prevencion de recarga
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle registration
+    // JS Logica de registro pendiente de implementar
     console.log("Registering...");
   };
 
@@ -22,7 +40,7 @@ const Register = () => {
         </header>
 
         <form onSubmit={handleSubmit} className="space-y-md">
-          {/* Nombre completo */}
+          {/* TW Nombre completo */}
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none">
               <User size={20} className="text-icon-gray-500" />
@@ -36,7 +54,7 @@ const Register = () => {
             />
           </div>
 
-          {/* Correo electrónico */}
+          {/* TW Correo electronico */}
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none">
               <Mail size={20} className="text-icon-gray-500" />
@@ -50,7 +68,7 @@ const Register = () => {
             />
           </div>
 
-          {/* Contraseña */}
+          {/* TW Contrasena */}
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none">
               <Lock size={20} className="text-icon-gray-500" />
@@ -62,6 +80,7 @@ const Register = () => {
               placeholder="Contraseña"
               className="block w-full bg-input-bg border border-border-subtle rounded-2xl py-md pl-3xl pr-3xl text-on-surface placeholder-placeholder-gray-600 transition-all focus:ring-1 focus:ring-brand-orange focus:border-brand-orange outline-none h-12 text-body-md"
             />
+            {/* JS Alterna visibilidad de la contrasena entre texto y password */}
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
@@ -73,12 +92,13 @@ const Register = () => {
             </button>
           </div>
 
-          {/* Términos y condiciones */}
+          {/* TW Terminos y condiciones */}
           <div className="flex items-center gap-sm pt-xs">
             <label className="flex items-center gap-sm cursor-pointer group relative">
               <div className="relative flex items-center justify-center">
                 <input
                   type="checkbox"
+                  // JS Alterna el estado de aceptacion de terminos
                   checked={acceptedTerms}
                   onChange={() => setAcceptedTerms(!acceptedTerms)}
                   required
@@ -97,7 +117,7 @@ const Register = () => {
             </label>
           </div>
 
-          {/* Botón Registrarse */}
+          {/* TW Boton Registrarse */}
           <div className="pt-lg pb-md">
             <button
               type="submit"
@@ -108,7 +128,7 @@ const Register = () => {
           </div>
         </form>
 
-        {/* Links de pie de página del form */}
+        {/* TW Enlace a inicio de sesion para usuarios existentes */}
         <footer className="mt-lg pt-lg border-t border-border-subtle text-center">
           <p className="text-brand-muted-text text-body-sm">
             ¿Ya tienes cuenta?
@@ -119,7 +139,7 @@ const Register = () => {
         </footer>
       </main>
 
-      {/* Footer Nav simulado */}
+      {/* TW Pie de pagina con copyright */}
       <div className="fixed bottom-0 left-0 w-full h-[50px] bg-surface border-t border-border-subtle z-fixed">
         <div className="h-full flex items-center justify-center px-margin-mobile">
           <p className="text-brand-muted-text opacity-60 text-label-sm text-center">

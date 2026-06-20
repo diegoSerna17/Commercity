@@ -1,9 +1,25 @@
+// RE Titulo: Orders - Pagina de gestion de pedidos
+//
+// RE Implementacion React: useState para filtro activo y pedido seleccionado,
+// RE createPortal para renderizar modal de detalle en document.body
+//
+// JS Codigo y componentes: tabla de pedidos con datos estaticos en ORDERS,
+// JS filtros por estado, cada fila muestra cliente, producto, fecha, estado
+// JS con badge de color, y boton de detalle que abre DetallePedidos modal
+//
+// TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
+// TW bg-surface-container-low, bg-surface-container-high, text-on-surface,
+// TW text-brand-muted-text, border-surface-container. Tabla con hover en filas,
+// TW badges de estado con estilos segun estado (Entregado, En Camino, Pendiente)
+
+// JS Importaciones de hooks, portal, iconos y componentes
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Bell, User } from "lucide-react";
 import Navbar from "../Navbar";
 import DetallePedidos from "./DetallePedidos";
 
+// JS Datos estaticos de pedidos con cliente, producto y estado
 const ORDERS = [
   {
     id: 1,
@@ -59,16 +75,20 @@ const ORDERS = [
   },
 ];
 
+// TW Colores de fondo y texto para cada estado del pedido
 const STATUS_STYLES = {
   Entregado: "bg-primary/20 text-primary",
   "En Camino": "bg-accent-blue/20 text-accent-blue",
   Pendiente: "bg-accent-red/20 text-accent-red",
 };
 
+// JS Opciones de filtro para la tabla de pedidos
 const FILTERS = ["Todo", "Pendiente", "En camino", "Entregado"];
 
 const Orders = () => {
+  // RE Estado para el filtro activo de la tabla
   const [activeFilter, setActiveFilter] = useState("Todo");
+  // RE Estado para el pedido seleccionado y mostrar detalle
   const [selectedOrder, setSelectedOrder] = useState(null);
 
   return (
@@ -76,7 +96,7 @@ const Orders = () => {
       <div className="flex h-screen bg-surface-container-lowest">
         <Navbar />
         <main className="flex-1 flex flex-col overflow-hidden">
-          {/* ===== TOP BAR ===== */}
+          {/* TW Barra superior con titulo e iconos de notificacion y perfil */}
           <header className="h-16 flex items-center justify-between px-padding-xl border-b border-surface-container">
             <div className="flex items-center gap-2">
               <span className="text-brand-muted-text border-b-2 border-primary-container pb-4 mt-4">
@@ -93,9 +113,9 @@ const Orders = () => {
             </div>
           </header>
 
-          {/* ===== PAGE CONTENT ===== */}
+          {/* TW Contenido principal con tabla de pedidos */}
           <section className="flex-1 p-padding-xl overflow-y-auto">
-            {/* Page Heading */}
+            {/* TW Page Heading */}
             <div className="mb-padding-xl">
               <h2 className="text-headline-md font-bold text-on-surface">
                 Pedidos
@@ -105,7 +125,7 @@ const Orders = () => {
               </p>
             </div>
 
-            {/* Status Filters */}
+            {/* TW Mapeo de filtros a botones de seleccion */}
             <div className="flex gap-3 mb-padding-xl">
               {FILTERS.map((f) => {
                 const active = f === activeFilter;
@@ -125,7 +145,7 @@ const Orders = () => {
               })}
             </div>
 
-            {/* Orders Table */}
+            {/* TW Tabla de pedidos con datos de cliente, producto y estado */}
             <div className="rounded-card overflow-hidden border border-surface-container bg-surface-container-low">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -194,6 +214,7 @@ const Orders = () => {
           </section>
         </main>
       </div>
+      {/* RE Renderiza el modal de detalle fuera del arbol principal via portal */}
       {selectedOrder &&
         createPortal(
           <DetallePedidos

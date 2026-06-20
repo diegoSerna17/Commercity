@@ -1,7 +1,25 @@
+// RE Titulo: PerfilVendedor - Pagina de perfil del vendedor con productos
+//
+// RE Implementacion React: useState para pestana activa (Mi Feed/Mis Productos),
+// RE compone Navbar como sidebar y usa Link para navegacion
+//
+// JS Codigo y componentes: datos estaticos de PRODUCTOS con nombre, imagen,
+// JS descuento y precios. TABS para alternar entre vistas. Layout con header
+// JS de perfil que incluye avatar, nombre, calificacion, estadisticas y
+// JS biografia. Grilla responsive de productos con badges de descuento
+//
+// TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
+// TW bg-auth-card-bg, bg-brand-orange, text-brand-orange, text-app-text-muted,
+// TW border-border-subtle. Avatar circular con w-40 h-40, estrellas de
+// TW calificacion, grilla grid-cols-[1,2,3] responsive, placeholders
+// TW con gradiente bg-gradient-to-b cuando no hay imagen
+
+// JS Importaciones de hooks, Link y componente Navbar
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../Navbar";
 
+// JS Datos estaticos de productos con nombre, precio e imagen
 const PRODUCTS = [
   {
     id: 1,
@@ -59,19 +77,21 @@ const PRODUCTS = [
   },
 ];
 
+// JS Configuracion de pestanas para alternar entre vistas
 const TABS = [
   { label: "Mi Feed", icon: "grid" },
   { label: "Mis Productos", icon: "package" },
 ];
 
 const PerfilVendedor = () => {
+  // RE Estado para la pestana activa actual
   const [activeTab, setActiveTab] = useState("Mis Productos");
 
   return (
     <div className="flex h-screen bg-surface-container-lowest">
       <Navbar />
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* ===== TOP BAR ===== */}
+        {/* TW Barra superior con titulo de perfil e iconos */}
         <header className="h-16 flex items-center justify-center border-b border-border-subtle bg-surface-container-lowest shrink-0">
           <div className="w-10" />
           <h1 className="text-sm font-medium tracking-wide text-on-surface flex-1 text-center">
@@ -112,13 +132,13 @@ const PerfilVendedor = () => {
           </div>
         </header>
 
-        {/* ===== MAIN CONTENT ===== */}
+        {/* TW Contenido principal del perfil */}
         <section className="flex-1 overflow-y-auto px-6 py-8">
           <div className="max-w-4xl mx-auto space-y-8">
-            {/* ===== PROFILE HEADER ===== */}
+            {/* TW Encabezado del perfil con avatar, informacion y acciones */}
             <section className="bg-gradient-to-b from-brand-orange/[0.05] to-transparent rounded-hero p-4">
               <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
-                {/* Avatar */}
+                {/* TW Avatar */}
                 <div className="relative shrink-0">
                   <div className="w-40 h-40 bg-brand-orange rounded-full flex items-center justify-center text-6xl font-bold text-auth-card-bg">
                     J
@@ -140,7 +160,7 @@ const PerfilVendedor = () => {
                   </button>
                 </div>
 
-                {/* Info */}
+                {/* TW Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-4 mb-4">
                     <h2 className="text-3xl font-bold text-on-surface">
@@ -180,7 +200,7 @@ const PerfilVendedor = () => {
                     </div>
                   </div>
 
-                  {/* Rating */}
+                  {/* TW Rating */}
                   <div className="flex items-center gap-1 mb-4">
                     {[...Array(5)].map((_, i) => (
                       <span key={i} className="text-brand-orange">
@@ -189,7 +209,7 @@ const PerfilVendedor = () => {
                     ))}
                   </div>
 
-                  {/* Stats */}
+                  {/* TW Stats */}
                   <div className="flex gap-8 mb-6">
                     <div>
                       <p className="text-xl font-bold text-on-surface">
@@ -207,7 +227,7 @@ const PerfilVendedor = () => {
                     </div>
                   </div>
 
-                  {/* Bio */}
+                  {/* TW Bio */}
                   <div className="space-y-1">
                     <h3 className="font-bold text-on-surface">Juan Giraldo</h3>
                     <p className="text-app-text-muted text-sm leading-relaxed">
@@ -220,7 +240,7 @@ const PerfilVendedor = () => {
               </div>
             </section>
 
-            {/* ===== TABS ===== */}
+            {/* TW Mapeo de pestanas a botones de navegacion */}
             <nav className="bg-auth-card-bg rounded-xl p-1 flex">
               {TABS.map((tab) => {
                 const active = tab.label === activeTab;
@@ -272,7 +292,7 @@ const PerfilVendedor = () => {
               })}
             </nav>
 
-            {/* ===== PRODUCT GRID ===== */}
+            {/* TW Grilla de productos con imagenes, descuentos y precios */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {PRODUCTS.map((p) => (
                 <article
@@ -280,6 +300,7 @@ const PerfilVendedor = () => {
                   className="bg-auth-card-bg rounded-hero overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
                 >
                   <div className="relative aspect-square">
+                    {/* TW Renderizado condicional: imagen del producto o placeholder con gradiente */}
                     {p.imagen ? (
                       <img
                         alt={p.nombre}
@@ -299,6 +320,7 @@ const PerfilVendedor = () => {
                       </div>
                     )}
 
+                    {/* TW Renderizado condicional del badge de descuento */}
                     {p.descuento && (
                       <div className="absolute top-4 left-4 bg-app-badge text-[10px] font-bold px-2 py-1 rounded-full text-white">
                         {p.descuento}

@@ -1,17 +1,32 @@
+// RE Titulo: Recover - Pagina de recuperacion de contrasena
+//
+// RE Implementacion React: componente funcional sin hooks, usa Link de
+// RE react-router-dom para navegacion
+//
+// JS Codigo y componentes: formulario para solicitar codigo de recuperacion
+// JS con campo de correo electronico, boton de envio y enlace de retorno
+// JS al inicio de sesion
+//
+// TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
+// TW bg-input-bg, text-brand-orange, border-border-subtle. Layout centrado
+// TW con max-w-[648px], sombra con shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]
+
+// JS Importaciones de Link e iconos para recuperacion de contrasena
 import { Link } from "react-router-dom";
 import { Mail, ArrowLeft } from "lucide-react";
 
 const Recover = () => {
+  // JS Manejador de envio del formulario de recuperacion
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Manejar lógica de recuperación de contraseña
+    // JS Logica de envio de correo de recuperacion pendiente de implementar
     console.log("Sending recovery email...");
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-surface-container-lowest font-sans">
       <main className="w-full max-w-[648px] bg-surface rounded-[24px] p-10 md:p-16 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-border-subtle">
-        {/* Sección de Encabezado */}
+        {/* TW Encabezado con titulo y descripcion */}
         <div className="mb-10">
           <h1 className="text-on-surface text-[32px] leading-tight font-bold mb-4">
             Recuperar contraseña
@@ -21,9 +36,9 @@ const Recover = () => {
           </p>
         </div>
 
-        {/* Sección de Formulario */}
+        {/* TW Formulario de recuperacion de contrasena */}
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Campo de Correo Electrónico */}
+          {/* TW Campo de Correo Electronico */}
           <div className="space-y-2">
             <label
               className="block text-sm font-medium text-brand-muted-text"
@@ -46,7 +61,7 @@ const Recover = () => {
             </div>
           </div>
 
-          {/* Botón de Acción */}
+          {/* TW Boton de Accion */}
           <button
             type="submit"
             className="w-full h-[60px] bg-brand-orange hover:brightness-110 active:scale-[0.99] transition-all text-brand-dark-text font-bold rounded-xl text-lg flex items-center justify-center shadow-button"
@@ -54,10 +69,10 @@ const Recover = () => {
             Enviar enlace
           </button>
 
-          {/* Separador Decorativo */}
+          {/* TW Separador Decorativo */}
           <div className="border-t border-border-subtle pt-8"></div>
 
-          {/* Enlace de Navegación */}
+          {/* TW Enlace de navegacion de retorno al inicio de sesion */}
           <div className="flex justify-center">
             <Link
               to="/login"
@@ -73,7 +88,7 @@ const Recover = () => {
         </form>
       </main>
 
-      {/* Información del Pie de Página */}
+      {/* TW Pie de pagina con copyright */}
       <footer className="fixed bottom-8 w-full text-center">
         <p className="text-brand-muted-text text-xs opacity-50">
           © 2026 Todos los derechos reservados.

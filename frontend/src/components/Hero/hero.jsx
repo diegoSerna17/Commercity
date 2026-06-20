@@ -1,16 +1,18 @@
-/**
- * Hero — Página principal / Dashboard MVP de CommerCity
- *
- * Secciones:
- *   1. Header sticky (breadcrumb, búsqueda, notificaciones, perfil)
- *   2. Hero banner (imagen + gradiente + título + CTAs)
- *   3. Planes / Tarjetas de producto (3 columnas responsive)
- *   4. Paginación + barra de progreso
- *
- * @component
- * @returns {JSX.Element} Página de inicio del dashboard
- */
+// RE Titulo: Hero - Pagina principal y dashboard MVP de CommerCity
+//
+// RE Implementacion React: useState para controlar apertura del sidebar
+// RE en mobile, useNavigate para navegacion programatica
+//
+// JS Codigo y componentes: renderiza Navbar como sidebar, header sticky con
+// JS busqueda y notificaciones, banner hero con gradiente y CTAs, grilla de
+// JS planes con datos estaticos en PLANS, y paginacion con barra de progreso
+//
+// TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
+// TW bg-auth-card-bg, text-brand-orange, rounded-hero. Layout flex con
+// TW sidebar fijo y main scrollable. Efectos backdrop-blur en header sticky,
+// TW grid responsive para planes, overlay con bg-gradient-to-r
 
+// JS Importaciones de hooks, Navbar e iconos para el dashboard
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../Navbar";
@@ -26,6 +28,7 @@ import {
   Building2,
 } from "lucide-react";
 
+// JS Datos estaticos de planes con nombre, precio, badge e icono
 const PLANS = [
   {
     name: "Zapato Básico",
@@ -56,21 +59,24 @@ const PLANS = [
   },
 ];
 
+// JS Datos de paginacion con numeros y salto de omision
 const PAGES = [1, 2, 3, "...", 10];
 
 const Hero = () => {
+  // RE Hook para navegacion desde botones del dashboard
   const navigate = useNavigate();
+  // RE Estado para controlar apertura y cierre del sidebar en mobile
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen overflow-hidden bg-surface-container-lowest font-sans">
-      {/* ===== SIDEBAR ===== */}
+      {/* TW Renderizado del sidebar de navegacion con estado controlado */}
       <Navbar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Overlay para mobile cuando el sidebar está abierto */}
+      {/* TW Overlay semitransparente que cierra el sidebar al hacer clic */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"
@@ -78,11 +84,11 @@ const Hero = () => {
         />
       )}
 
-      {/* ===== CONTENIDO PRINCIPAL ===== */}
+      {/* TW Contenido principal de la pagina */}
       <main className="flex-grow h-dvh overflow-y-auto relative">
-        {/* ===== HEADER ===== */}
+        {/* TW Encabezado sticky con breadcrumb, busqueda y notificaciones */}
         <header className="sticky top-0 z-10 bg-surface-container-lowest/60 backdrop-blur-lg border-b border-surface-container h-[68px] flex items-center justify-between px-padding-xl">
-          {/* Breadcrumb + menú hamburguesa mobile */}
+          {/* TW Breadcrumb + menu hamburguesa mobile */}
           <div className="flex items-center gap-2 text-brand-muted-text text-body-sm">
             <button
               className="lg:hidden p-2 -ml-2 mr-1 text-brand-muted-text hover:text-on-surface transition-colors"
@@ -95,9 +101,9 @@ const Hero = () => {
             <span className="text-on-surface font-medium">Inicio MVP</span>
           </div>
 
-          {/* Acciones derecha: búsqueda + notificaciones + perfil */}
+          {/* TW Acciones derecha: busqueda + notificaciones + perfil */}
           <div className="flex items-center gap-lg">
-            {/* Campo de búsqueda */}
+            {/* TW Campo de busqueda */}
             <div className="relative hidden sm:block">
               <input
                 className="bg-auth-card-bg border border-surface-container rounded-full py-1.5 pl-10 pr-4 text-body-sm focus:ring-1 focus:ring-brand-orange focus:border-brand-orange w-[256px] text-on-surface placeholder-brand-muted-text outline-none transition-colors"
@@ -110,7 +116,7 @@ const Hero = () => {
               />
             </div>
 
-            {/* Iconos */}
+            {/* TW Iconos */}
             <div className="flex items-center gap-md text-brand-muted-text">
               <button className="hover:text-on-surface transition-colors relative">
                 <Bell size={24} />
@@ -126,7 +132,7 @@ const Hero = () => {
           </div>
         </header>
 
-        {/* ===== HERO BANNER ===== */}
+        {/* TW Banner hero con imagen de fondo, gradiente y llamados a la accion */}
         <section className="p-padding-xl">
           <div className="relative w-full h-[552px] rounded-hero overflow-hidden shadow-2xl">
             <img
@@ -134,7 +140,7 @@ const Hero = () => {
               className="absolute inset-0 w-full h-full object-cover"
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuAE0Uf2aJHJR6JmZTmDeaBo4MB_roFJRkzXT2fSstX1qItU8s3TCa1hWAtEB8AHoTTqo-9HN39bZlI3sfpBuqFG88d_p1ypbvLz6GSMezwEjlfmyBKn9yDyqblPuxKaM9_zY_CLnEhDn6uqW1cc7MMvOKsV6D0owc4yi5tS_l40BHL1wofZq5InnDgCJ72HwXFuJZDtFZqUPWhp3OwpYUTQSIcU1_SCPI071NpmpbW4Q5kI808pH4mqBSaUt_yVBtMnnm0PuENQjw"
             />
-            {/* Overlay gradiente */}
+            {/* TW Overlay gradiente */}
             <div className="absolute inset-0 bg-gradient-to-r from-surface-container-lowest/90 via-surface-container-lowest/40 to-transparent flex flex-col justify-center px-8 lg:px-16">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
                 <h1 className="text-[40px] lg:text-[56px] leading-tight font-bold text-on-surface drop-shadow-lg">
@@ -157,7 +163,7 @@ const Hero = () => {
           </div>
         </section>
 
-        {/* ===== PLANES / TARJETAS ===== */}
+        {/* TW Mapeo de datos de planes a tarjetas de producto */}
         <section className="p-padding-xl grid grid-cols-1 md:grid-cols-3 gap-padding-xl">
           {PLANS.map((plan) => {
             const Icon = plan.Icon;
@@ -166,7 +172,7 @@ const Hero = () => {
                 key={plan.name}
                 className="bg-auth-card-bg rounded-hero p-padding-xl shadow-xl border border-surface-container flex flex-col h-full min-h-[442px]"
               >
-                {/* Cabecera gráfica del plan */}
+                {/* TW Cabecera grafica del plan */}
                 <div className="w-full h-[220px] bg-surface-container-high rounded-card-lg mb-padding-xl relative overflow-hidden flex items-center justify-center">
                   <div
                     className={`absolute top-4 left-4 ${plan.badgeBg} text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider`}
@@ -198,7 +204,7 @@ const Hero = () => {
           })}
         </section>
 
-        {/* ===== PAGINACIÓN ===== */}
+        {/* TW Controles de paginacion y barra de progreso */}
         <div className="p-padding-xl flex flex-wrap justify-center items-center gap-md">
           <nav className="flex items-center gap-2 bg-auth-card-bg px-padding-md py-2 rounded-card-lg border border-surface-container">
             <button className="p-2 text-brand-muted-text hover:text-on-surface transition-colors">
@@ -229,7 +235,7 @@ const Hero = () => {
             </button>
           </nav>
 
-          {/* Barra de progreso */}
+          {/* TW Barra de progreso */}
           <div className="w-48 h-1.5 bg-auth-card-bg rounded-full overflow-hidden">
             <div className="w-1/3 h-full bg-brand-orange rounded-full" />
           </div>

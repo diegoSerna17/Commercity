@@ -1,16 +1,20 @@
-/**
- * Navbar — Barra lateral de navegación de CommerCity
- *
- * Secciones:
- *   1. Logo / Marca
- *   2. Navegación Principal (Inicio, Carrito)
- *   3. Navegación Cuenta (Perfil, Tienda, Pedidos, Historial, Ajustes)
- *   4. Footer — perfil de usuario + cerrar sesión
- *
- * @component
- * @returns {JSX.Element} Sidebar de navegación
- */
+// RE Titulo: Navbar - Barra lateral de navegacion principal de CommerCity
+//
+// RE Implementacion React: useNavigate y useLocation de react-router-dom para
+// RE navegacion programatica y deteccion de ruta activa
+//
+// JS Codigo y componentes: estructura de navegacion definida en NAV_SECTIONS
+// JS con secciones Principal y Cuenta, cada una con items que incluyen nombre,
+// JS icono de lucide-react y ruta. El componente recibe props isOpen y onClose
+// JS para controlar visibilidad en mobile
+//
+// TW Clases Tailwind: usa tokens personalizados como bg-auth-card-bg,
+// TW text-brand-orange, text-brand-muted-text, border-surface-container,
+// TW p-padding-xl, rounded-card. Layout con w-[250px] fijo, transicion CSS
+// TW para sidebar mobile. Estado activo con bg-surface-container-low
+// TW y border-border-subtle
 
+// JS Importaciones de React Router para navegacion y deteccion de ruta activa
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Home,
@@ -23,6 +27,7 @@ import {
   LogOut,
 } from "lucide-react";
 
+// JS Configuracion de secciones de navegacion con nombre, icono y ruta
 const NAV_SECTIONS = [
   {
     label: "Principal",
@@ -44,11 +49,15 @@ const NAV_SECTIONS = [
 ];
 
 const Navbar = ({ isOpen = false, onClose = () => {} }) => {
+  // RE Hook para navegacion programatica entre rutas
   const navigate = useNavigate();
+  // RE Hook para obtener la ruta actual y determinar item activo
   const location = useLocation();
 
+  // JS Verifica si la ruta del item coincide con la ubicacion actual
   const isActive = (path) => location.pathname === path;
 
+  // JS Navega a la ruta seleccionada y cierra el sidebar en mobile
   const handleNav = (path) => {
     navigate(path);
     onClose();
@@ -60,7 +69,7 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       }`}
     >
-      {/* ===== LOGO ===== */}
+      {/* TW Logo de la plataforma */}
       <div className="p-padding-xl shrink-0">
         <div className="flex items-center gap-sm">
           <span className="text-headline-sm font-bold tracking-tight text-brand-orange">
@@ -69,17 +78,18 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
         </div>
       </div>
 
-      {/* ===== NAVEGACIÓN ===== */}
+      {/* TW Navegacion principal y de cuenta */}
       <nav className="flex-grow px-padding-md mt-md space-y-lg">
         {NAV_SECTIONS.map((section) => (
           <div key={section.label}>
-            {/* Título de sección */}
+            {/* TW Titulo de seccion */}
             <h3 className="px-padding-md text-xs font-semibold text-brand-muted-text uppercase tracking-wider mb-sm">
               {section.label}
             </h3>
 
             <div className="space-y-xs">
               {section.items.map((item) => {
+                // RE Determina si el item esta activo y asigna el icono correspondiente
                 const active = isActive(item.path);
                 const Icon = item.icon;
 
@@ -112,7 +122,7 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
         ))}
       </nav>
 
-      {/* ===== FOOTER / PERFIL ===== */}
+      {/* TW Footer con perfil de usuario y boton de cerrar sesion */}
       <div className="p-padding-lg border-t border-surface-container space-y-3 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-surface-variant shrink-0 overflow-hidden">
@@ -144,4 +154,5 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
   );
 };
 
+// RE Exportacion del componente Navbar
 export default Navbar;

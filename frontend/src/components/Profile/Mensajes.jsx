@@ -1,6 +1,22 @@
+// RE Titulo: Mensajes - Pagina de bandeja de mensajes
+//
+// RE Implementacion React: useNavigate para navegacion programatica,
+// RE compone el componente Navbar como sidebar
+//
+// JS Codigo y componentes: lista de conversaciones definida en MESSAGES con
+// JS datos estaticos incluyendo avatar, nombre, hora, preview y contador de
+// JS no leidos. Layout con sidebar y area principal de mensajes
+//
+// TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
+// TW bg-surface-container-low, bg-brand-orange, text-brand-muted-text,
+// TW border-border-subtle. Items de mensaje con hover y estado activo,
+// TW badge de no leidos con rounded-full
+
+// JS Importaciones para navegacion y componente Navbar
 import { useNavigate } from "react-router-dom";
 import Navbar from "../Navbar";
 
+// JS Datos estaticos de conversaciones con avatar, preview y no leidos
 const MESSAGES = [
   {
     id: 1,
@@ -35,14 +51,15 @@ const MESSAGES = [
 ];
 
 const Mensajes = () => {
+  // RE Hook para navegacion programatica
   const navigate = useNavigate();
 
   return (
     <div className="flex h-screen bg-surface-container-lowest">
       <Navbar />
-      {/* ===== CONTENIDO PRINCIPAL ===== */}
+      {/* TW Contenido principal de la pagina */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* ===== ENCABEZADO ===== */}
+        {/* TW Encabezado con titulo y boton de retorno */}
         <header className="flex items-center justify-between px-padding-xl py-padding-lg border-b border-border-subtle shrink-0">
           <div className="flex-1 text-center">
             <h2 className="text-brand-orange text-headline-sm font-bold">
@@ -57,8 +74,9 @@ const Mensajes = () => {
           </button>
         </header>
 
-        {/* ===== LISTA DE MENSAJES ===== */}
+        {/* TW Lista de conversaciones con avatares y previsualizacion */}
         <div className="flex-1 overflow-y-auto p-padding-lg md:p-padding-2xl max-w-5xl mx-auto w-full">
+          {/* TW Mapeo de datos de mensajes a articulos de la lista */}
           <div className="space-y-md">
             {MESSAGES.map((msg) => (
               <article
@@ -69,18 +87,19 @@ const Mensajes = () => {
                     : "border border-transparent hover:border-surface-container hover:bg-surface-container-low"
                 }`}
               >
-                {/* ===== AVATAR ===== */}
+                {/* TW Avatar del remitente */}
                 <div className="relative shrink-0">
                   <img
                     alt={msg.name}
                     src={msg.avatar}
+                    // TW Aplica filtro de escala de grises a avatares inactivos
                     className={`w-14 h-14 rounded-full object-cover border border-surface-container-high ${
                       msg.grayscale ? "grayscale" : ""
                     }`}
                   />
                 </div>
 
-                {/* ===== INFORMACIÓN DEL MENSAJE ===== */}
+                {/* TW Nombre, hora, previsualizacion y badge de no leidos */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-xs">
                     <h4
@@ -106,6 +125,7 @@ const Mensajes = () => {
                     >
                       {msg.preview}
                     </p>
+                    {/* TW Renderiza badge con numero de mensajes no leidos */}
                     {msg.unread > 0 && (
                       <span className="bg-brand-orange text-auth-card-bg font-bold text-[11px] h-5 w-5 flex items-center justify-center rounded-full shrink-0">
                         {msg.unread}
