@@ -7,6 +7,7 @@ import Restore from './pages/Login/Restore';
 import PerfilVendedor from './pages/Profile/PerfilVendedor';
 import Orders from './pages/Profile/Orders';
 import Mensajes from './pages/Profile/Mensajes';
+import Chats from './pages/Profile/Chats';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/PerfilVendedor" element={<PerfilVendedor />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/messages" element={<Mensajes />} />
+        <Route path="/messages/chat" element={<Chats />} />
       </Routes>
     </Router>
   );

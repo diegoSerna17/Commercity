@@ -3,56 +3,28 @@
 // RE Implementacion React: useNavigate para navegacion programatica,
 // RE compone el componente Navbar como sidebar
 //
-// JS Codigo y componentes: lista de conversaciones definida en MESSAGES con
-// JS datos estaticos incluyendo avatar, nombre, hora, preview y contador de
-// JS no leidos. Layout con sidebar y area principal de mensajes
+// JS Codigo y componentes: lista de conversaciones importada desde
+// JS constants/chats.js incluyendo avatar, nombre, hora, preview,
+// JS contador de no leidos y conversacion con mensajes
 //
 // TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
 // TW bg-surface-container-low, bg-brand-orange, text-brand-muted-text,
 // TW border-border-subtle. Items de mensaje con hover y estado activo,
 // TW badge de no leidos con rounded-full
 
-// JS Importaciones para navegacion y componente Navbar
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
-
-// JS Datos estaticos de conversaciones con avatar, preview y no leidos
-const MESSAGES = [
-  {
-    id: 1,
-    name: "Marco Valerio",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAVMdlDdJhIQqEsFgcb2S2BkYejQuj6aJxekd3ounjl0ddKnxQRYh3Q_LxHxgx7wtVFpDKmIYoNgKdPTR75wAj7NV1ltPAp0NPOAeAbUhWfzA003VZqh-y9kMhs2EHYRn0s1CV_n8f9iYBogUIysnqhrzZzm4NYayG30W-K47lM5BpXlaYKKFtrDpfZymOIan2xJfEWH2WinwCjDU-l2kZ5G2bVQ2XvJTl3kwGZIrcCo5sVwG6_LlfSav-glp_FZKOcXszLL-q27uuh",
-    time: "10:24 AM",
-    preview: "¿Cuándo llega mi pedido de 2026?",
-    unread: 2,
-    active: true,
-    grayscale: false,
-  },
-  {
-    id: 2,
-    name: "Sofía Alarcón",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDV4RUURivuKMl_qU0lYRYTcP41QmhXCJFMtrCB1_j05k8pE-Cag0eIc94EMG8k3-mqObX0hLDh_T4-drBWAo5LU5hOa_lb5D4oAXjIlMwpr4RQaEWdz1GZzSK1Vxxyt_e2fxs-Bn67ZhYftag9kZoDLVf4kDuZxBzoKxOKDM_mz0NHzpuRVLjd2m0yTBiPmdY8FSU5l2za-g-OxTBSfHEpdNvyzT4m7VuktJYart8URTyobkms6PhrbLkPiHaOOMXQsodWpMJzDtDx",
-    time: "Ayer",
-    preview: "Gracias por la atención, excelente...",
-    unread: 0,
-    active: false,
-    grayscale: true,
-  },
-  {
-    id: 3,
-    name: "Soporte Commercity",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuB91zK1IPcra_6OyN2uqpnYPWHKifTFT8fojD4u2ojtpfC9SJPP_5cOSEYd68fp-vML8y_MyFsmeumo3JsV5BichZgazy0Mw2lJu1eVpLhJPZuTvcJczjKf1kaAJigLEV5cdD13CefllwsniXs-E3xCr4y82QmxdewgvgcI9f5zo5eLgWLsmFW2xH8BatBb0FM5UligWn39QwHMbY6RsgIWjsJmQVXYPAnvbJHJ9NNDbTTUHPxFMfwL-YlOMy-d8DFWJYfofpz0Ceef",
-    time: "Lun",
-    preview: "Su ticket #8849 ha sido resuelto.",
-    unread: 0,
-    active: false,
-    grayscale: false,
-  },
-];
+import MESSAGES from "../../constants/chats";
 
 const Mensajes = () => {
   // RE Hook para navegacion programatica
   const navigate = useNavigate();
+
+  // JS Manejador de clic en conversacion: persiste en sessionStorage y navega
+  const handleOpenChat = (msg) => {
+    sessionStorage.setItem("activeChat", JSON.stringify(msg));
+    navigate("/messages/chat", { state: { message: msg } });
+  };
 
   return (
     <div className="flex h-screen bg-surface-container-lowest">
@@ -81,6 +53,7 @@ const Mensajes = () => {
             {MESSAGES.map((msg) => (
               <article
                 key={msg.id}
+                onClick={() => handleOpenChat(msg)}
                 className={`group flex items-center gap-md p-padding-md rounded-card-lg transition-all cursor-pointer ${
                   msg.active
                     ? "border border-brand-orange/40 bg-surface-container-low hover:bg-surface-container"

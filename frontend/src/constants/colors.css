@@ -88,6 +88,11 @@
   --color-accent-red: #EF4444;
   --color-success: #22c55e;
 
+  /* Reportar */
+  --color-report-red-bg: #3F1A1A;
+  --color-report-red-text: #f87171;
+  --color-report-red-hover: #7f1d1d;
+
   /* Bordes sutiles */
   --color-border-subtle: rgba(255, 255, 255, 0.08);
 
