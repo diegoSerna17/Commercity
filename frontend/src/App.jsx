@@ -1,12 +1,12 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
-import Login from './components/Login/Login';
-import Register from './components/Login/Register';
-import Recover from './components/Login/Recover';
-import Restore from './components/Login/Restore';
-import PerfilVendedor from './components/Profile/PerfilVendedor';
-import Orders from './components/Profile/Orders';
-import Mensajes from './components/Profile/Mensajes';
+import Login from './pages/Login/Login';
+import Register from './pages/Login/Register';
+import Recover from './pages/Login/Recover';
+import Restore from './pages/Login/Restore';
+import PerfilVendedor from './pages/Profile/PerfilVendedor';
+import Orders from './pages/Profile/Orders';
+import Mensajes from './pages/Profile/Mensajes';
 
 function App() {
   return (

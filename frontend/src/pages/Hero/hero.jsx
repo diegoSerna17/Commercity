@@ -15,7 +15,7 @@
 // JS Importaciones de hooks, Navbar e iconos para el dashboard
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../Navbar";
+import Navbar from "../../components/Navbar";
 import {
   Menu,
   Search,

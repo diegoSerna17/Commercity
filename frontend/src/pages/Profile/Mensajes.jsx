@@ -14,7 +14,7 @@
 
 // JS Importaciones para navegacion y componente Navbar
 import { useNavigate } from "react-router-dom";
-import Navbar from "../Navbar";
+import Navbar from "../../components/Navbar";
 
 // JS Datos estaticos de conversaciones con avatar, preview y no leidos
 const MESSAGES = [

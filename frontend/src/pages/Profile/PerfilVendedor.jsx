@@ -17,7 +17,7 @@
 // JS Importaciones de hooks, Link y componente Navbar
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import Navbar from "../Navbar";
+import Navbar from "../../components/Navbar";
 
 // JS Datos estaticos de productos con nombre, precio e imagen
 const PRODUCTS = [

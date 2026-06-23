@@ -16,7 +16,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Bell, User } from "lucide-react";
-import Navbar from "../Navbar";
+import Navbar from "../../components/Navbar";
 import DetallePedidos from "./DetallePedidos";
 
 // JS Datos estaticos de pedidos con cliente, producto y estado
