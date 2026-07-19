@@ -1,4 +1,4 @@
-import Hero from './Hero/hero'
+import Hero from './Inicio/Inicio'
 
 function Home() {
   return <Hero />

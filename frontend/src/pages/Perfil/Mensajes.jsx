@@ -1,16 +1,4 @@
-// RE Titulo: Mensajes - Pagina de bandeja de mensajes
-//
-// RE Implementacion React: useNavigate para navegacion programatica,
-// RE compone el componente Navbar como sidebar
-//
-// JS Codigo y componentes: lista de conversaciones importada desde
-// JS constants/chats.js incluyendo avatar, nombre, hora, preview,
-// JS contador de no leidos y conversacion con mensajes
-//
-// TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
-// TW bg-surface-container-low, bg-brand-orange, text-brand-muted-text,
-// TW border-border-subtle. Items de mensaje con hover y estado activo,
-// TW badge de no leidos con rounded-full
+
 
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
@@ -28,11 +16,10 @@ const Mensajes = () => {
 
   return (
     <div className="flex h-screen bg-surface-container-lowest">
-      <Navbar />
       {/* TW Contenido principal de la pagina */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* TW Encabezado con titulo y boton de retorno */}
-        <header className="flex items-center justify-between px-padding-xl py-padding-lg border-b border-border-subtle shrink-0">
+        <header className="flex items-center justify-between px-4 md:px-padding-xl py-3 md:py-padding-lg border-b border-border-subtle shrink-0">
           <div className="flex-1 text-center">
             <h2 className="text-brand-orange text-headline-sm font-bold">
               Mensajes
@@ -47,7 +34,7 @@ const Mensajes = () => {
         </header>
 
         {/* TW Lista de conversaciones con avatares y previsualizacion */}
-        <div className="flex-1 overflow-y-auto p-padding-lg md:p-padding-2xl max-w-5xl mx-auto w-full">
+        <div className="flex-1 overflow-y-auto p-4 md:p-padding-lg lg:p-padding-2xl max-w-5xl mx-auto w-full">
           {/* TW Mapeo de datos de mensajes a articulos de la lista */}
           <div className="space-y-md">
             {MESSAGES.map((msg) => (

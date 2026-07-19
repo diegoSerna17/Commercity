@@ -1,15 +1,4 @@
-// RE Titulo: Recover - Pagina de recuperacion de contrasena
-//
-// RE Implementacion React: componente funcional sin hooks, usa Link de
-// RE react-router-dom para navegacion
-//
-// JS Codigo y componentes: formulario para solicitar codigo de recuperacion
-// JS con campo de correo electronico, boton de envio y enlace de retorno
-// JS al inicio de sesion
-//
-// TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
-// TW bg-input-bg, text-brand-orange, border-border-subtle. Layout centrado
-// TW con max-w-[648px], sombra con shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]
+
 
 // JS Importaciones de Link e iconos para recuperacion de contrasena
 import { Link } from "react-router-dom";

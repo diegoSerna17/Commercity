@@ -1,20 +1,7 @@
-// RE Titulo: Chats - Pagina de conversacion individual con un contacto
-//
-// RE Implementacion React: useState, useEffect, useNavigate y useLocation
-// RE para manejo de estado, persistencia via sessionStorage y navegacion
-//
-// JS Codigo y componentes: renderiza la conversacion completa con burbujas
-// JS de mensajes entrantes y salientes, tarjeta de producto preview, input
-// JS bar para escribir. Los datos se obtienen de location.state o sessionStorage
-//
-// TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
-// TW bg-surface-container, bg-brand-orange, text-brand-muted-text,
-// TW text-report-red-text, bg-report-red-bg, border-border-subtle.
-// TW Layout flex con sidebar y main, burbujas con rounded-2xl
 
-import { useState, useEffect } from "react";
+
+import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import Navbar from "../../components/Navbar";
 
 // JS Icono de adjuntar archivo como SVG inline
 const PaperclipIcon = () => (
@@ -87,30 +74,26 @@ const MessageBubble = ({ msg }) => {
 };
 
 const Chats = () => {
-  // RE Hook para navegacion programatica
   const navigate = useNavigate();
-  // RE Hook para obtener los datos del contacto desde el state de navegacion
   const location = useLocation();
-  // RE Estado local para el mensaje activo con persistencia
-  const [message, setMessage] = useState(null);
 
-  // RE Carga el mensaje desde route state o sessionStorage en caso de refresh
+  const message = (() => {
+    if (location.state?.message) return location.state.message;
+    const stored = sessionStorage.getItem("activeChat");
+    return stored ? JSON.parse(stored) : null;
+  })();
+
   useEffect(() => {
-    const stateMsg = location.state?.message;
-
-    if (stateMsg) {
-      setMessage(stateMsg);
-      sessionStorage.setItem("activeChat", JSON.stringify(stateMsg));
-    } else {
-      // JS Fallback a sessionStorage si hay refresh
-      const stored = sessionStorage.getItem("activeChat");
-      if (stored) {
-        setMessage(JSON.parse(stored));
-      } else {
-        navigate("/messages", { replace: true });
-      }
+    if (location.state?.message) {
+      sessionStorage.setItem("activeChat", JSON.stringify(location.state.message));
     }
-  }, [location.state, navigate]);
+  }, [location.state]);
+
+  useEffect(() => {
+    if (!message) {
+      navigate("/messages", { replace: true });
+    }
+  }, [message, navigate]);
 
   // JS Renderiza pantalla de carga mientras se resuelve el estado
   if (!message) {
@@ -119,42 +102,41 @@ const Chats = () => {
 
   return (
     <div className="flex h-screen bg-surface-container-lowest">
-      <Navbar />
       {/* TW Contenido principal del chat */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         {/* TW Encabezado del chat con informacion del contacto y acciones */}
-        <header className="flex items-center justify-between p-6 border-b border-border-subtle bg-surface-container-lowest/60 backdrop-blur-md sticky top-0 z-10">
+        <header className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-6 border-b border-border-subtle bg-surface-container-lowest/60 backdrop-blur-md sticky top-0 z-10">
           {/* TW Avatar y nombre del contacto */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <div className="relative">
               <img
                 alt={message.name}
-                className="w-10 h-10 rounded-full object-cover border border-white/20"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-white/20"
                 src={message.avatar}
               />
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-success border-2 border-surface-container-lowest rounded-full" />
+              <div className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-success border-2 border-surface-container-lowest rounded-full" />
             </div>
-            <h2 className="font-bold text-lg text-on-surface">{message.name}</h2>
+            <h2 className="font-bold text-base sm:text-lg text-on-surface">{message.name}</h2>
           </div>
           {/* TW Botones de accion: Volver, Ver Perfil, Reportar */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end max-w-[50%]">
             <button
               onClick={() => navigate(-1)}
-              className="bg-brand-orange hover:bg-orange-500 text-brand-dark-text px-6 py-2 rounded-lg text-sm font-bold transition-colors"
+              className="bg-brand-orange hover:bg-orange-500 text-brand-dark-text px-3 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors"
             >
               Volver
             </button>
-            <button className="bg-surface-container hover:bg-white/10 px-6 py-2 rounded-lg text-sm font-bold transition-colors border border-border-subtle text-on-surface">
+            <button className="bg-surface-container hover:bg-white/10 px-3 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors border border-border-subtle text-on-surface">
               Ver Perfil
             </button>
-            <button className="bg-report-red-bg text-report-red-text hover:bg-report-red-hover px-6 py-2 rounded-lg text-sm font-bold transition-colors border border-report-red-hover/30">
+            <button className="bg-report-red-bg text-report-red-text hover:bg-report-red-hover px-3 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors border border-report-red-hover/30">
               Reportar
             </button>
           </div>
         </header>
 
         {/* TW Cuerpo de la conversacion con scroll */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
           {/* TW Mapeo de mensajes de la conversacion a burbujas */}
           {message.conversation?.map((msg, index) => (
             <MessageBubble key={index} msg={msg} />
@@ -168,7 +150,7 @@ const Chats = () => {
         </div>
 
         {/* TW Barra de entrada de mensajes */}
-        <div className="p-6 bg-surface-container-lowest border-t border-border-subtle">
+        <div className="p-4 sm:p-6 bg-surface-container-lowest border-t border-border-subtle">
           <div className="bg-surface-container/50 rounded-2xl p-2 flex items-center gap-3 border border-border-subtle shadow-inner">
             {/* TW Boton de adjuntar archivo */}
             <button className="p-2 hover:bg-white/5 rounded-lg text-brand-muted-text" title="Adjuntar archivo">

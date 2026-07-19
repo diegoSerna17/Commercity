@@ -1,23 +1,15 @@
-// RE Titulo: PerfilVendedor - Pagina de perfil del vendedor con productos
-//
-// RE Implementacion React: useState para pestana activa (Mi Feed/Mis Productos),
-// RE compone Navbar como sidebar y usa Link para navegacion
-//
-// JS Codigo y componentes: datos estaticos de PRODUCTOS con nombre, imagen,
-// JS descuento y precios. TABS para alternar entre vistas. Layout con header
-// JS de perfil que incluye avatar, nombre, calificacion, estadisticas y
-// JS biografia. Grilla responsive de productos con badges de descuento
-//
-// TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
-// TW bg-auth-card-bg, bg-brand-orange, text-brand-orange, text-app-text-muted,
-// TW border-border-subtle. Avatar circular con w-40 h-40, estrellas de
-// TW calificacion, grilla grid-cols-[1,2,3] responsive, placeholders
-// TW con gradiente bg-gradient-to-b cuando no hay imagen
+
 
 // JS Importaciones de hooks, Link y componente Navbar
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import Navbar from "../../components/Navbar";
+import Header from "../../components/Header";
+import SeguidoresModal from "../../components/SeguidoresModal";
+import AgregarProducto from "../../components/AgregarProducto";
+import {
+  formatSocialCount,
+  perfilVendedorSocial,
+} from "../../data/perfilVendedorSocial";
 
 // JS Datos estaticos de productos con nombre, precio e imagen
 const PRODUCTS = [
@@ -86,61 +78,23 @@ const TABS = [
 const PerfilVendedor = () => {
   // RE Estado para la pestana activa actual
   const [activeTab, setActiveTab] = useState("Mis Productos");
+  const [socialTab, setSocialTab] = useState(null);
+  const [mostrarAgregarProducto, setMostrarAgregarProducto] = useState(false);
 
   return (
     <div className="flex h-screen bg-surface-container-lowest">
-      <Navbar />
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* TW Barra superior con titulo de perfil e iconos */}
-        <header className="h-16 flex items-center justify-center border-b border-border-subtle bg-surface-container-lowest shrink-0">
-          <div className="w-10" />
-          <h1 className="text-sm font-medium tracking-wide text-on-surface flex-1 text-center">
-            Perfil
-          </h1>
-          <div className="flex items-center gap-4 px-6">
-            <button className="text-on-surface/80 hover:text-on-surface">
-              <svg
-                fill="none"
-                height="20"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                width="20"
-              >
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-              </svg>
-            </button>
-            <button className="text-on-surface/80 hover:text-on-surface">
-              <svg
-                fill="none"
-                height="22"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                width="22"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 8v4" />
-                <path d="M12 16h.01" />
-              </svg>
-            </button>
-          </div>
-        </header>
+        <Header title="Perfil" />
 
         {/* TW Contenido principal del perfil */}
         <section className="flex-1 overflow-y-auto px-6 py-8">
           <div className="max-w-4xl mx-auto space-y-8">
             {/* TW Encabezado del perfil con avatar, informacion y acciones */}
             <section className="bg-gradient-to-b from-brand-orange/[0.05] to-transparent rounded-hero p-4">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
-                {/* TW Avatar */}
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8">
+                {/* Avatar */}
                 <div className="relative shrink-0">
-                  <div className="w-40 h-40 bg-brand-orange rounded-full flex items-center justify-center text-6xl font-bold text-auth-card-bg">
+                  <div className="w-24 h-24 md:w-40 md:h-40 bg-brand-orange rounded-full flex items-center justify-center text-4xl md:text-6xl font-bold text-auth-card-bg">
                     J
                   </div>
                   <button className="absolute bottom-2 right-2 bg-surface-container p-2 rounded-full border border-border-subtle shadow-lg text-on-surface/70 hover:text-on-surface">
@@ -166,38 +120,27 @@ const PerfilVendedor = () => {
                     <h2 className="text-3xl font-bold text-on-surface">
                       juan_giraldo
                     </h2>
-                    <div className="flex gap-2 ml-auto">
-                      <Link
-                        to="/messages"
-                        className="bg-brand-orange text-auth-card-bg px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition"
-                      >
-                        <svg
-                          fill="currentColor"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          width="16"
-                        >
-                          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-                        </svg>
-                        Mensajes
-                      </Link>
-                      <button className="bg-brand-orange text-auth-card-bg px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition">
-                        <svg
-                          fill="none"
-                          height="16"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="3"
-                          viewBox="0 0 24 24"
-                          width="16"
-                        >
-                          <line x1="12" x2="12" y1="5" y2="19" />
-                          <line x1="5" x2="19" y1="12" y2="12" />
-                        </svg>
-                        Agregar Producto
-                      </button>
-                    </div>
+                    <div className="flex flex-wrap items-center gap-3 md:gap-4">
+                    <Link
+                      to="/messages"
+                      className="bg-brand-orange text-auth-card-bg px-4 py-2 md:px-5 md:py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition"
+                    >
+                      <svg fill="currentColor" height="16" viewBox="0 0 24 24" width="16">
+                        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+                      </svg>
+                      Mensajes
+                    </Link>
+                    <button
+                      onClick={() => setMostrarAgregarProducto(true)}
+                      className="bg-brand-orange text-auth-card-bg px-4 py-2 md:px-5 md:py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition"
+                    >
+                      <svg fill="none" height="16" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24" width="16">
+                        <line x1="12" x2="12" y1="5" y2="19" />
+                        <line x1="5" x2="19" y1="12" y2="12" />
+                      </svg>
+                      Agregar
+                    </button>
+                  </div>
                   </div>
 
                   {/* TW Rating */}
@@ -210,21 +153,31 @@ const PerfilVendedor = () => {
                   </div>
 
                   {/* TW Stats */}
-                  <div className="flex gap-8 mb-6">
-                    <div>
-                      <p className="text-xl font-bold text-on-surface">
-                        15.8k
+<div className="flex gap-4 md:gap-8 mb-6">
+                    <button
+                      type="button"
+                      onClick={() => setSocialTab("seguidores")}
+                      className="text-left rounded-card px-2 py-1 -ml-2 transition hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    >
+                      <p className="text-lg md:text-xl font-bold text-on-surface">
+                        {formatSocialCount(perfilVendedorSocial.seguidores.length)}
                       </p>
                       <p className="text-[10px] uppercase tracking-widest text-app-text-muted font-semibold">
                         Seguidores
                       </p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold text-on-surface">842</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSocialTab("siguiendo")}
+                      className="text-left rounded-card px-2 py-1 -ml-2 transition hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    >
+                      <p className="text-lg md:text-xl font-bold text-on-surface">
+                        {formatSocialCount(perfilVendedorSocial.siguiendo.length)}
+                      </p>
                       <p className="text-[10px] uppercase tracking-widest text-app-text-muted font-semibold">
                         Seguidos
                       </p>
-                    </div>
+                    </button>
                   </div>
 
                   {/* TW Bio */}
@@ -362,8 +315,26 @@ const PerfilVendedor = () => {
             </div>
           </div>
         </section>
-      </main>
-    </div>
+        </main>
+
+{socialTab && (
+          <SeguidoresModal
+            datos={perfilVendedorSocial}
+            initialTab={socialTab}
+            onClose={() => setSocialTab(null)}
+          />
+        )}
+
+        {mostrarAgregarProducto && (
+          <AgregarProducto
+            onCancel={() => setMostrarAgregarProducto(false)}
+            onSubmit={async (formData) => {
+              console.log("Producto a enviar:", formData);
+              setMostrarAgregarProducto(false);
+            }}
+          />
+        )}
+      </div>
   );
 };
 

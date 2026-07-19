@@ -1,16 +1,3 @@
-// RE Titulo: Restore - Pagina de restablecimiento de contrasena
-//
-// RE Implementacion React: useState para controlar visibilidad de los dos
-// RE campos de contrasena (nueva y confirmacion)
-//
-// JS Codigo y componentes: formulario con dos campos de contrasena con toggle
-// JS de visibilidad, boton de restablecimiento y enlace de retorno al inicio
-// JS de sesion
-//
-// TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
-// TW bg-auth-card-bg, bg-input-bg, text-brand-orange, border-border-subtle.
-// TW Layout centrado con max-w-[580px], bordes redondeados con rounded-[32px],
-// TW efecto focus-within en los campos de contrasena
 
 // JS Importaciones de hooks, Link e iconos para restablecer contrasena
 import { useState } from "react";

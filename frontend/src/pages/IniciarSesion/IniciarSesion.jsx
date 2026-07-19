@@ -1,17 +1,4 @@
-// RE Titulo: Login - Pagina de inicio de sesion de CommerCity
-//
-// RE Implementacion React: useState para estado del checkbox Recordarme
-// RE y toggle de visibilidad de contrasena
-//
-// JS Codigo y componentes: layout de dos paneles, panel izquierdo con branding
-// JS y estadisticas, panel derecho con formulario de acceso que incluye campos
-// JS de email y contrasena, checkbox personalizado, enlace de recuperacion,
-// JS boton principal Entrar y enlace a registro
-//
-// TW Clases Tailwind: tokens personalizados como bg-surface, bg-input-bg,
-// TW text-brand-orange, text-brand-muted-text, border-border-subtle,
-// TW placeholder-placeholder-gray-600. Layout con lg:w-[60%] y lg:w-[40%]
-// TW para los dos paneles. Gradient overlay con bg-gradient-to-br
+
 
 // JS Importaciones de hooks, Link e iconos para el formulario de login
 import { useState } from "react";

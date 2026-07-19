@@ -1,6 +1,4 @@
 instalar vite y dependencias
 npm install
 
-instalar tailwindcss
-npm install -D tailwindcss @tailwindcss/vite
 

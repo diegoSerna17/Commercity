@@ -1,21 +1,9 @@
-// RE Titulo: Orders - Pagina de gestion de pedidos
-//
-// RE Implementacion React: useState para filtro activo y pedido seleccionado,
-// RE createPortal para renderizar modal de detalle en document.body
-//
-// JS Codigo y componentes: tabla de pedidos con datos estaticos en ORDERS,
-// JS filtros por estado, cada fila muestra cliente, producto, fecha, estado
-// JS con badge de color, y boton de detalle que abre DetallePedidos modal
-//
-// TW Clases Tailwind: tokens personalizados como bg-surface-container-lowest,
-// TW bg-surface-container-low, bg-surface-container-high, text-on-surface,
-// TW text-brand-muted-text, border-surface-container. Tabla con hover en filas,
-// TW badges de estado con estilos segun estado (Entregado, En Camino, Pendiente)
+
 
 // JS Importaciones de hooks, portal, iconos y componentes
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Bell, User } from "lucide-react";
+import Header from "../../components/Header";
 import Navbar from "../../components/Navbar";
 import DetallePedidos from "./DetallePedidos";
 
@@ -94,27 +82,11 @@ const Orders = () => {
   return (
     <>
       <div className="flex h-screen bg-surface-container-lowest">
-        <Navbar />
         <main className="flex-1 flex flex-col overflow-hidden">
-          {/* TW Barra superior con titulo e iconos de notificacion y perfil */}
-          <header className="h-16 flex items-center justify-between px-padding-xl border-b border-surface-container">
-            <div className="flex items-center gap-2">
-              <span className="text-brand-muted-text border-b-2 border-primary-container pb-4 mt-4">
-                Pedidos
-              </span>
-            </div>
-            <div className="flex items-center gap-6">
-              <button className="text-brand-muted-text hover:text-on-surface">
-                <Bell className="w-6 h-6" />
-              </button>
-              <button className="text-brand-muted-text hover:text-on-surface">
-                <User className="w-6 h-6" />
-              </button>
-            </div>
-          </header>
+          <Header title="Pedidos" />
 
           {/* TW Contenido principal con tabla de pedidos */}
-          <section className="flex-1 p-padding-xl overflow-y-auto">
+          <section className="flex-1 p-padding-md sm:p-padding-lg lg:p-padding-xl overflow-y-auto overflow-x-hidden">
             {/* TW Page Heading */}
             <div className="mb-padding-xl">
               <h2 className="text-headline-md font-bold text-on-surface">
@@ -126,7 +98,7 @@ const Orders = () => {
             </div>
 
             {/* TW Mapeo de filtros a botones de seleccion */}
-            <div className="flex gap-3 mb-padding-xl">
+            <div className="flex flex-wrap gap-3 mb-padding-xl">
               {FILTERS.map((f) => {
                 const active = f === activeFilter;
                 return (
@@ -146,7 +118,7 @@ const Orders = () => {
             </div>
 
             {/* TW Tabla de pedidos con datos de cliente, producto y estado */}
-            <div className="rounded-card overflow-hidden border border-surface-container bg-surface-container-low">
+            <div className="rounded-card overflow-x-auto border border-surface-container bg-surface-container-low">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="text-[11px] font-bold text-brand-muted-text uppercase border-b border-surface-container">

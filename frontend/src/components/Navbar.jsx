@@ -64,25 +64,25 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
 
   return (
     <aside
-      className={`w-[250px] bg-auth-card-bg flex flex-col border-r border-surface-container h-dvh overflow-y-auto overscroll-contain font-sans fixed inset-y-0 left-0 z-40 transition-transform duration-300 lg:relative lg:translate-x-0 lg:flex-shrink-0 ${
+      className={`w-[260px] md:w-[210px] lg:w-[250px] bg-auth-card-bg flex flex-col border-r border-surface-container h-dvh overflow-y-auto overscroll-contain font-sans fixed inset-y-0 left-0 z-40 transition-transform duration-300 lg:relative lg:translate-x-0 lg:flex-shrink-0 ${
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       }`}
     >
       {/* TW Logo de la plataforma */}
-      <div className="p-padding-xl shrink-0">
+      <div className="p-padding-md md:p-padding-lg lg:p-padding-xl shrink-0">
         <div className="flex items-center gap-sm">
-          <span className="text-headline-sm font-bold tracking-tight text-brand-orange">
+          <span className="text-headline-sm font-bold tracking-tight text-brand-orange truncate">
             CommerCity
           </span>
         </div>
       </div>
 
       {/* TW Navegacion principal y de cuenta */}
-      <nav className="flex-grow px-padding-md mt-md space-y-lg">
+      <nav className="flex-grow px-padding-sm md:px-padding-md mt-md space-y-md md:space-y-lg">
         {NAV_SECTIONS.map((section) => (
           <div key={section.label}>
             {/* TW Titulo de seccion */}
-            <h3 className="px-padding-md text-xs font-semibold text-brand-muted-text uppercase tracking-wider mb-sm">
+            <h3 className="px-padding-sm md:px-padding-md text-xs font-semibold text-brand-muted-text uppercase tracking-wider mb-xs md:mb-sm">
               {section.label}
             </h3>
 
@@ -96,11 +96,12 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
                   <button
                     key={item.name}
                     onClick={() => handleNav(item.path)}
-                    className={`w-full flex items-center gap-md px-padding-md py-3 rounded-card transition-all group text-left ${
+                    className={`w-full flex items-center gap-md px-padding-sm md:px-padding-md py-2.5 md:py-3 rounded-card transition-all group text-left ${
                       active
                         ? "text-on-surface bg-surface-container-low border border-border-subtle"
                         : "text-brand-muted-text hover:text-on-surface border border-transparent"
                     }`}
+                    aria-current={active ? "page" : undefined}
                   >
                     <Icon
                       size={20}
@@ -110,7 +111,7 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
                           : "group-hover:text-brand-orange transition-colors"
                       }`}
                     />
-                    <span className={active ? "font-medium" : ""}>
+                    <span className={`truncate ${active ? "font-medium" : ""}`}>
                       {item.name}
                     </span>
                   </button>
@@ -122,7 +123,7 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
       </nav>
 
       {/* TW Footer con perfil de usuario y boton de cerrar sesion */}
-      <div className="p-padding-lg border-t border-surface-container space-y-3 shrink-0">
+      <div className="p-padding-md md:p-padding-lg border-t border-surface-container space-y-3 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-surface-variant shrink-0 overflow-hidden">
             <img
@@ -143,7 +144,7 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
 
         <button
           onClick={() => handleNav("/login")}
-          className="w-full bg-auth-card-bg/20 border border-figma-divider/80 rounded-[14px] py-3 text-body-sm font-extrabold text-brand-muted-text text-center transition-colors hover:bg-white/[0.06] hover:text-figma-text-primary"
+          className="w-full bg-auth-card-bg/20 border border-figma-divider/80 rounded-[14px] py-2.5 md:py-3 text-body-sm font-extrabold text-brand-muted-text text-center transition-colors hover:bg-white/[0.06] hover:text-figma-text-primary"
         >
           Cerrar Sesión
         </button>

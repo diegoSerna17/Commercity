@@ -1,17 +1,4 @@
-// RE Titulo: DetallePedidos - Modal de detalle de pedido individual
-//
-// RE Implementacion React: useEffect para escuchar tecla Escape y cerrar
-// RE el modal, recibe props selectedOrder y onClose
-//
-// JS Codigo y componentes: modal overlay con informacion del pedido incluyendo
-// JS encabezado con estado, datos del comprador, direccion de envio, producto
-// JS solicitado y precio total. MODAL_STATUS_STYLES define colores segun
-// JS estado del pedido
-//
-// TW Clases Tailwind: tokens personalizados como bg-surface-container-low,
-// TW bg-surface-container, text-on-surface, text-brand-muted-text. Modal
-// TW centrado con max-w-[550px], overlay con bg-black/70, badges de estado
-// TW con border y rounded-full
+
 
 // RE Importacion de useEffect para manejar tecla Escape
 import { useEffect } from "react";
