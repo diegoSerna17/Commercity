@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import Header from "../../components/Header";
+import Header from "../../components/globales/Header";
 import ItemCarrito from "../../components/Carrito/ItemCarrito";
 import ResumenCarrito from "../../components/Carrito/ResumenCarrito";
 import ModalPago from "../../components/Carrito/ModalPago";

@@ -1,12 +1,12 @@
 
 
 import { useNavigate } from "react-router-dom";
-import Navbar from "../../components/Navbar";
+import Navbar from "../../components/globales/Navbar";
 import MESSAGES from "../../constants/chats";
 
 const Mensajes = () => {
-  // RE Hook para navegacion programatica
-  const navigate = useNavigate();
+  // RE Hook para navegacion programatica 
+  const navigate = useNavigate();   
 
   // JS Manejador de clic en conversacion: persiste en sessionStorage y navega
   const handleOpenChat = (msg) => {

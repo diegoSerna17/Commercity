@@ -50,7 +50,7 @@ export default function AdminModalReporte({
             <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[rgba(239,68,68,0.15)]">
               <IconUser color="#ef4444" size={18} />
             </div>
-            <h3 className="font-sans font-bold text-lg text-white">
+            <h3 className="font-jakarta font-bold text-lg text-white">
               Detalle del Reporte
             </h3>
           </div>
@@ -65,29 +65,29 @@ export default function AdminModalReporte({
         <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
           <div className="rounded-xl p-4 flex flex-wrap gap-4 bg-[#1C1C22]">
             <div className="flex-1 min-w-[80px]">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-1.5 font-sans text-[#797998]">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-1.5 font-jakarta text-[#797998]">
                 Tipo
               </p>
               <BadgeTipo tipo={reporte.tipo} />
             </div>
             <div className="flex-1 min-w-[80px]">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-1.5 font-sans text-[#797998]">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-1.5 font-jakarta text-[#797998]">
                 Estado
               </p>
               <BadgeEstadoReporte estado={reporte.estado} />
             </div>
             <div className="flex-1 min-w-[120px]">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-1.5 font-sans text-[#797998]">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-1.5 font-jakarta text-[#797998]">
                 Fecha
               </p>
-              <p className="text-sm font-semibold font-sans text-white">
+              <p className="text-sm font-semibold font-jakarta text-white">
                 {reporte.fecha}
               </p>
             </div>
           </div>
 
           <div className="rounded-xl p-4 bg-[#1C1C22]">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest mb-3 font-sans text-[#797998]">
+            <p className="text-[10px] font-extrabold uppercase tracking-widest mb-3 font-jakarta text-[#797998]">
               Reportado
             </p>
             <div className="flex items-center gap-3">
@@ -97,10 +97,10 @@ export default function AdminModalReporte({
                     <IconUser size={18} />
                   </div>
                   <div>
-                    <p className="font-bold font-sans text-sm text-white">
+                    <p className="font-bold font-jakarta text-sm text-white">
                       {reporte.reportado}
                     </p>
-                    <p className="text-xs mt-0.5 font-sans text-[#797998]">
+                    <p className="text-xs mt-0.5 font-jakarta text-[#797998]">
                       {infoReportado}
                     </p>
                   </div>
@@ -111,14 +111,14 @@ export default function AdminModalReporte({
                     <IconProduct />
                   </div>
                   <div>
-                    <p className="font-bold font-sans text-sm text-white">
+                    <p className="font-bold font-jakarta text-sm text-white">
                       {reporte.reportado}
                     </p>
-                    <p className="text-xs font-bold mt-0.5 font-sans text-[#EF9918]">
+                    <p className="text-xs font-bold mt-0.5 font-jakarta text-[#EF9918]">
                       {reporte.reportadoPrecio || ""}
                     </p>
                     {reporte.reportadoVendedor && (
-                      <p className="text-xs font-sans text-[#797998]">
+                      <p className="text-xs font-jakarta text-[#797998]">
                         Vendedor: {reporte.reportadoVendedor}
                       </p>
                     )}
@@ -129,7 +129,7 @@ export default function AdminModalReporte({
           </div>
 
           <div className="rounded-xl p-4 bg-[#1C1C22]">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest mb-3 font-sans text-[#797998]">
+            <p className="text-[10px] font-extrabold uppercase tracking-widest mb-3 font-jakarta text-[#797998]">
               Reportado por
             </p>
             <div className="flex items-center gap-3">
@@ -137,10 +137,10 @@ export default function AdminModalReporte({
                 <IconUser size={18} />
               </div>
               <div>
-                <p className="font-bold font-sans text-sm text-white">
+                <p className="font-bold font-jakarta text-sm text-white">
                   {reporte.reportadoPor}
                 </p>
-                <p className="text-xs mt-0.5 font-sans text-[#797998]">
+                <p className="text-xs mt-0.5 font-jakarta text-[#797998]">
                   {infoReportadoPor}
                 </p>
               </div>
@@ -148,17 +148,17 @@ export default function AdminModalReporte({
           </div>
 
           <div className="rounded-xl p-4 bg-[#1C1C22]">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest mb-2 font-sans text-[#797998]">
+            <p className="text-[10px] font-extrabold uppercase tracking-widest mb-2 font-jakarta text-[#797998]">
               Motivo
             </p>
-            <p className="text-xs leading-relaxed font-sans text-[#797998]">
+            <p className="text-xs leading-relaxed font-jakarta text-[#797998]">
               {reporte.descripcion}
             </p>
           </div>
 
           {reporte.evidencias > 0 && (
             <div className="rounded-xl p-4 bg-[#1C1C22]">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-3 font-sans text-[#797998]">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-3 font-jakarta text-[#797998]">
                 Evidencias
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -168,7 +168,7 @@ export default function AdminModalReporte({
                     className="rounded-lg overflow-hidden aspect-square flex flex-col items-center justify-center gap-1 bg-[#1e293b] border border-[rgba(30,41,59,0.6)]"
                   >
                     <IconImage />
-                    <span className="text-[10px] font-medium font-sans text-[#535B71]">
+                    <span className="text-[10px] font-medium font-jakarta text-[#535B71]">
                       Foto {i + 1}
                     </span>
                   </div>
@@ -179,35 +179,35 @@ export default function AdminModalReporte({
 
           {reporte.estado === "resuelto" ? (
             <div className="rounded-xl p-4 bg-[#1C1C22]">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-2 font-sans text-[#797998]">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-2 font-jakarta text-[#797998]">
                 Respuesta del Administrador
               </p>
-              <p className="text-sm leading-relaxed font-sans text-white">
+              <p className="text-sm leading-relaxed font-jakarta text-white">
                 {reporte.respuesta}
               </p>
             </div>
           ) : (
             modo === "responder" && (
               <div className="space-y-2">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest font-sans text-[#797998]">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest font-jakarta text-[#797998]">
                   Tu Respuesta
                 </p>
                 <textarea
                   value={textareaRespuesta}
                   onChange={(e) => setTextareaRespuesta(e.target.value)}
                   placeholder="Escribe tu respuesta al reporte..."
-                  className="w-full text-sm rounded-xl p-3 outline-none resize-none font-sans h-24 text-white bg-[#1C1C22] border border-[#1C1C22] focus:border-[#EF9918] focus:ring-1 focus:ring-[rgba(239,153,24,0.5)] transition-all"
+                  className="w-full text-sm rounded-xl p-3 outline-none resize-none font-jakarta h-24 text-white bg-[#1C1C22] border border-[#1C1C22] focus:border-[#EF9918] focus:ring-1 focus:ring-[rgba(239,153,24,0.5)] transition-all"
                 />
                 <div className="flex gap-3">
                   <button
                     onClick={onCerrar}
-                    className="flex-1 py-2 rounded-lg text-sm font-semibold transition-colors font-sans border border-[#797998] text-[#797998]"
+                    className="flex-1 py-2 rounded-lg text-sm font-semibold transition-colors font-jakarta border border-[#797998] text-[#797998]"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={handleEnviar}
-                    className="flex-1 py-2 rounded-lg text-sm font-bold transition-colors font-sans bg-[#EF9918] text-[#12121A]"
+                    className="flex-1 py-2 rounded-lg text-sm font-bold transition-colors font-jakarta bg-[#EF9918] text-[#12121A]"
                   >
                     Enviar Respuesta
                   </button>
@@ -218,14 +218,14 @@ export default function AdminModalReporte({
 
           {reporte.tipo === "usuario" ? (
             <div className="rounded-xl p-4 bg-[#1C1C22]">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-3 font-sans text-[#797998]">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-3 font-jakarta text-[#797998]">
                 Acciones sobre el Usuario
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={onToggleBanear}
                   disabled={usuarioEliminadoDesdeReporte}
-                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors border font-sans ${usuarioEliminadoDesdeReporte ? "opacity-50 cursor-not-allowed" : estaBaneado ? "border-[#EF9918] text-[#EF9918]" : "border-[#797998] text-[#797998]"}`}
+                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors border font-jakarta ${usuarioEliminadoDesdeReporte ? "opacity-50 cursor-not-allowed" : estaBaneado ? "border-[#EF9918] text-[#EF9918]" : "border-[#797998] text-[#797998]"}`}
                 >
                   {estaBaneado ? "Activar" : "Banear"}
                 </button>
@@ -233,7 +233,7 @@ export default function AdminModalReporte({
                 <button
                   onClick={onPedirEliminarUsuario}
                   disabled={usuarioEliminadoDesdeReporte}
-                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors border font-sans flex items-center justify-center gap-2 ${usuarioEliminadoDesdeReporte ? "opacity-50 cursor-not-allowed border-[#797998] text-[#797998]" : "border-[rgba(127,29,29,0.6)] text-[#EF4444]"}`}
+                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors border font-jakarta flex items-center justify-center gap-2 ${usuarioEliminadoDesdeReporte ? "opacity-50 cursor-not-allowed border-[#797998] text-[#797998]" : "border-[rgba(127,29,29,0.6)] text-[#EF4444]"}`}
                 >
                   {usuarioEliminadoDesdeReporte ? "Eliminado" : "Eliminar"}
                 </button>
@@ -241,14 +241,14 @@ export default function AdminModalReporte({
             </div>
           ) : (
             <div className="rounded-xl p-4 bg-[#1C1C22]">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-3 font-sans text-[#797998]">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-3 font-jakarta text-[#797998]">
                 Acciones sobre el Producto
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={onPedirEliminarProducto}
                   disabled={productoEliminadoDesdeReporte}
-                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors border font-sans flex items-center justify-center gap-2 ${productoEliminadoDesdeReporte ? "opacity-50 cursor-not-allowed" : "border-[rgba(127,29,29,0.6)] text-[#EF4444]"}`}
+                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors border font-jakarta flex items-center justify-center gap-2 ${productoEliminadoDesdeReporte ? "opacity-50 cursor-not-allowed" : "border-[rgba(127,29,29,0.6)] text-[#EF4444]"}`}
                 >
                   {!productoEliminadoDesdeReporte && <IconTrash size={15} />}
                   {productoEliminadoDesdeReporte ? "Eliminado" : "Eliminar"}

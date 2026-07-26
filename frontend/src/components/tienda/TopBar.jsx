@@ -1,4 +1,4 @@
-import Header from "../Header";
+import Header from "../globales/Header";
 
 export default function TopBar() {
   return (

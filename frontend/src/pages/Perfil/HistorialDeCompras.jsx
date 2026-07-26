@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Header from "../../components/Header";
+import Header from "../../components/globales/Header";
 import {
   estadosHistorial,
   historialCompras,
@@ -13,7 +13,7 @@ export default function HistorialDeCompras() {
   const orders = historialCompras.filter((order) => {
     const statusMap = {
       entregado: "Entregado",
-      encamino: "En Camino",
+      encamino: "En camino",
       pendiente: "Pendiente",
     };
     const orderEstado = statusMap[order.status] || order.status;
@@ -56,15 +56,15 @@ export default function HistorialDeCompras() {
           </div>
 
           <div className="rounded-card overflow-x-auto border border-surface-container bg-surface-container-low">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full border-collapse">
               <thead>
                 <tr className="text-[11px] font-bold text-brand-muted-text uppercase border-b border-surface-container">
-                  <th className="px-6 py-4">Vendedor</th>
-                  <th className="px-6 py-4">Producto</th>
-                  <th className="px-6 py-4">Fecha</th>
-                  <th className="px-6 py-4">Estado</th>
-                  <th className="px-6 py-4">Cantidad</th>
-                  <th className="px-6 py-4 text-right">Monto</th>
+                  <th className="px-6 py-4 text-left">Vendedor</th>
+                  <th className="px-6 py-4 text-center">Producto</th>
+                  <th className="px-6 py-4 text-center">Fecha</th>
+                  <th className="px-6 py-4 text-center">Estado</th>
+                  <th className="px-6 py-4 text-center">Cantidad</th>
+                  <th className="px-6 py-4 text-center">Monto</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-container/50">
@@ -94,23 +94,23 @@ export default function HistorialDeCompras() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-6 text-on-surface font-medium">
+                      <td className="px-6 py-6 text-on-surface font-medium text-center">
                         {order.producto}
                       </td>
-                      <td className="px-6 py-6 text-brand-muted-text text-sm">
+                      <td className="px-6 py-6 text-brand-muted-text text-sm text-center">
                         {order.fecha}
                       </td>
-                      <td className="px-6 py-6">
+                      <td className="px-6 py-6 text-center">
                         <span
                           className={`inline-flex items-center px-3 py-1 rounded-md text-[11px] font-bold ${status.className}`}
                         >
                           {status.label}
                         </span>
                       </td>
-                      <td className="px-6 py-6 text-on-surface">
+                      <td className="px-6 py-6 text-on-surface text-center">
                         {order.cantidad}
                       </td>
-                      <td className="px-6 py-6 text-right font-semibold text-on-surface">
+                      <td className="px-6 py-6 font-semibold text-on-surface text-center">
                         {order.monto}
                       </td>
                     </tr>

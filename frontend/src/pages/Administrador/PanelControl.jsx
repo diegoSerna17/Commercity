@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+﻿import { useState, useMemo } from "react";
 import AdminModalConfirmarEliminar from "../../components/admin/AdminModalConfirmarEliminar";
 import AdminModalReporte from "../../components/admin/AdminModalReporte";
+import AjustesAdministrador from "./AjustesAdministrador";
 
 // JS Datos iniciales de usuarios mock
 const USUARIOS_INICIALES = [
@@ -26,8 +27,8 @@ const PRODUCTOS_INICIALES = [
 const REPORTES_INICIALES = [
   {
     id: 1, tipo: "usuario", reportado: "Julian Guerrero",
-    reportadoInfo: "Comprador · julian@mail.com",
-    reportadoPor: "Maria Lopez", reportadoPorInfo: "Vendedora · maria@mail.com",
+    reportadoInfo: "Comprador Â· julian@mail.com",
+    reportadoPor: "Maria Lopez", reportadoPorInfo: "Vendedora Â· maria@mail.com",
     fecha: "24 Oct, 2026", estado: "pendiente",
     motivo: "Comportamiento inapropiado",
     descripcion: "El usuario ha estado enviando mensajes ofensivos y amenazantes a varios vendedores de la plataforma durante los ultimos dias.",
@@ -36,7 +37,7 @@ const REPORTES_INICIALES = [
   {
     id: 2, tipo: "producto", reportado: "Teclado Gamer Pro",
     reportadoPrecio: "$55.000", reportadoVendedor: "Carlos Martinez",
-    reportadoPor: "Luis Perez", reportadoPorInfo: "Comprador · luis@mail.com",
+    reportadoPor: "Luis Perez", reportadoPorInfo: "Comprador Â· luis@mail.com",
     fecha: "22 Oct, 2026", estado: "resuelto",
     motivo: "Producto no corresponde a la descripcion",
     descripcion: "El teclado recibido no tiene retroiluminacion como se anuncia en las fotos. Las especificaciones son incorrectas.",
@@ -46,7 +47,7 @@ const REPORTES_INICIALES = [
   {
     id: 3, tipo: "producto", reportado: "Camiseta Seleccion Colombia",
     reportadoPrecio: "$85.000", reportadoVendedor: "Multigangas",
-    reportadoPor: "Pedro Gomez", reportadoPorInfo: "Comprador · pedro@mail.com",
+    reportadoPor: "Pedro Gomez", reportadoPorInfo: "Comprador Â· pedro@mail.com",
     fecha: "22 Oct, 2026", estado: "pendiente",
     motivo: "Producto falsificado",
     descripcion: "La camiseta recibida tiene costuras de mala calidad y la numeracion es incorrecta. Se sospecha que es una replica no autorizada.",
@@ -54,8 +55,8 @@ const REPORTES_INICIALES = [
   },
   {
     id: 4, tipo: "usuario", reportado: "Mario Alberto",
-    reportadoInfo: "Vendedor · mario@mail.com",
-    reportadoPor: "Clara Soto", reportadoPorInfo: "Compradora · clara@mail.com",
+    reportadoInfo: "Vendedor Â· mario@mail.com",
+    reportadoPor: "Clara Soto", reportadoPorInfo: "Compradora Â· clara@mail.com",
     fecha: "20 Oct, 2026", estado: "pendiente",
     motivo: "Fraude / Estafa",
     descripcion: "El vendedor recibio el pago pero nunca despacho el producto. No responde mensajes y ha bloqueado al comprador.",
@@ -64,7 +65,7 @@ const REPORTES_INICIALES = [
   {
     id: 5, tipo: "producto", reportado: "Zapatillas NIKE F1",
     reportadoPrecio: "$320.000", reportadoVendedor: "SportZone",
-    reportadoPor: "Dominick Toreto", reportadoPorInfo: "Comprador · dom@mail.com",
+    reportadoPor: "Dominick Toreto", reportadoPorInfo: "Comprador Â· dom@mail.com",
     fecha: "19 Oct, 2026", estado: "resuelto",
     motivo: "Precio abusivo",
     descripcion: "El precio del producto fue modificado despues de que el comprador realizo el pago, cobrando $120.000 adicionales.",
@@ -73,8 +74,8 @@ const REPORTES_INICIALES = [
   },
   {
     id: 6, tipo: "usuario", reportado: "Dominick Toreto",
-    reportadoInfo: "Comprador · dom@mail.com",
-    reportadoPor: "Santiago Vega", reportadoPorInfo: "Vendedor · santi@mail.com",
+    reportadoInfo: "Comprador Â· dom@mail.com",
+    reportadoPor: "Santiago Vega", reportadoPorInfo: "Vendedor Â· santi@mail.com",
     fecha: "16 Oct, 2026", estado: "resuelto",
     motivo: "Acoso al vendedor",
     descripcion: "El comprador ha estado dejando resenas falsas y negativas repetidamente en todos los productos del vendedor.",
@@ -122,6 +123,7 @@ export default function PanelAdministrador() {
   // RE Registro de usuarios y productos ya eliminados desde el modal de reporte
   const [usuariosEliminadosDesdeReporte, setUsuariosEliminadosDesdeReporte] = useState(new Set());
   const [productosEliminadosDesdeReporte, setProductosEliminadosDesdeReporte] = useState(new Set());
+  const [mostrarAjustes, setMostrarAjustes] = useState(false);
 
   // RE Derivado: reporte actualmente abierto en el modal
   const reporteActual = useMemo(
@@ -156,7 +158,7 @@ export default function PanelAdministrador() {
     });
   }, [reportes, buscarReportes, filtroReporte]);
 
-  // ─── ACCIONES USUARIOS ────────────────────────────────────────────────────
+  // â”€â”€â”€ ACCIONES USUARIOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   // JS Cambia el estado de un usuario a baneado
   function banearUsuario(id) {
@@ -203,7 +205,7 @@ export default function PanelAdministrador() {
     setModalEliminarUsuario({ abierto: false, id: null, nombreDesdeReporte: null });
   }
 
-  // ─── ACCIONES PRODUCTOS ───────────────────────────────────────────────────
+  // â”€â”€â”€ ACCIONES PRODUCTOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   // JS Abre el modal de confirmacion para eliminar desde la tabla de productos
   function pedirEliminarProducto(id) {
@@ -240,7 +242,7 @@ export default function PanelAdministrador() {
     setModalEliminarProducto({ abierto: false, id: null, nombreDesdeReporte: null });
   }
 
-  // ─── ACCIONES REPORTES ────────────────────────────────────────────────────
+  // â”€â”€â”€ ACCIONES REPORTES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   // JS Abre el modal de detalle de reporte en modo ver o responder
   function abrirModalReporte(id, modo) {
@@ -264,7 +266,7 @@ export default function PanelAdministrador() {
     setModalReporte((prev) => ({ ...prev, modo: "ver" }));
   }
 
-  // ─── ACCIONES BANEO DESDE REPORTE ─────────────────────────────────────────
+  // â”€â”€â”€ ACCIONES BANEO DESDE REPORTE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   // JS Verifica si un usuario por nombre esta baneado
   function estaBaneado(nombre) {
@@ -293,7 +295,7 @@ export default function PanelAdministrador() {
     }
   }
 
-  // ─── RENDER ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   // JS Nombre de la entidad a mostrar en el modal de confirmacion
   const nombreParaConfirmarUsuario =
@@ -322,7 +324,10 @@ export default function PanelAdministrador() {
         <header className="bg-[#12121a] border-b border-[rgba(30,41,59,0.5)] h-14 flex items-center px-4 fixed top-0 left-0 right-0 z-30">
           <span className="font-jakarta font-bold text-[#ef9918] text-2xl tracking-tight">CommerCity</span>
           <div className="ml-auto">
-            <button className="text-[#797998] hover:text-white transition-colors p-1">
+            <button
+              onClick={() => setMostrarAjustes(true)}
+              className="text-[#797998] hover:text-white transition-colors p-1"
+            >
               <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="3" />
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -371,7 +376,7 @@ export default function PanelAdministrador() {
               </div>
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <p className="text-[#797998] text-xs font-bold uppercase tracking-widest">COMISIONES TOTALES</p>
-                <span className="bg-[rgba(239,153,24,0.2)] text-[#ef9918] text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">Comisión %10</span>
+                <span className="bg-[rgba(239,153,24,0.2)] text-[#ef9918] text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">ComisiÃ³n %10</span>
               </div>
               <p className="text-[#f0f0f8] text-3xl font-bold">$45,280.50</p>
             </div>
@@ -379,7 +384,7 @@ export default function PanelAdministrador() {
 
           {/* USERS + PRODUCTS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-            {/* GESTIÓN DE USUARIOS */}
+            {/* GESTIÃ“N DE USUARIOS */}
             <div className="bg-[#12121a] rounded-xl shadow-[0_4px_4px_0_rgba(0,0,0,0.25)] overflow-hidden flex flex-col">
               <div className="p-4 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="font-jakarta font-bold text-xl text-white">Gestión de Usuarios</h2>
@@ -466,7 +471,7 @@ export default function PanelAdministrador() {
               </div>
             </div>
 
-            {/* GESTIÓN DE PRODUCTOS */}
+            {/* GESTIÃ“N DE PRODUCTOS */}
             <div className="bg-[#12121a] rounded-xl shadow-[0_4px_4px_0_rgba(0,0,0,0.25)] overflow-hidden flex flex-col">
               <div className="p-4 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="font-jakarta font-bold text-xl text-white">Gestión de Productos</h2>
@@ -535,7 +540,7 @@ export default function PanelAdministrador() {
             </div>
           </div>
 
-          {/* GESTIÓN DE REPORTES */}
+          {/* GESTIÃ“N DE REPORTES */}
           <div className="bg-[#12121a] rounded-xl shadow-[0_4px_4px_0_rgba(0,0,0,0.25)] overflow-hidden">
             <div className="p-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-jakarta font-bold text-xl text-white">Gestión de Reportes</h2>
@@ -662,6 +667,7 @@ export default function PanelAdministrador() {
           onPedirEliminarProducto={pedirEliminarProductoDesdeReporte}
         />
       )}
+      {mostrarAjustes && <AjustesAdministrador onClose={() => setMostrarAjustes(false)} />}
     </div>
   );
 }

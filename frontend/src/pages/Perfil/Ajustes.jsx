@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import Header from "../../components/Header";
+import Header from "../../components/globales/Header";
 
 function useToast() {
   const [toast, setToast] = useState({ visible: false, msg: "", isError: false });

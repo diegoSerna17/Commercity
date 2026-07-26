@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Search, X } from "lucide-react";
 
-import { formatSocialCount } from "../data/perfilVendedorSocial";
+import { formatSocialCount } from "../../data/perfilVendedorSocial";
 
 function Avatar({ usuario }) {
   if (usuario.avatar) {

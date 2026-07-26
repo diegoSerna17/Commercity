@@ -1,202 +1,449 @@
+import { useState, useEffect, useRef } from "react";
+import Header from "../../components/globales/Header";
+import { estadosHistorial } from "../../data/historialCompras";
 
-
-// JS Importaciones de hooks, portal, iconos y componentes
-import { useState } from "react";
-import { createPortal } from "react-dom";
-import Header from "../../components/Header";
-import Navbar from "../../components/Navbar";
-import DetallePedidos from "./DetallePedidos";
-
-// JS Datos estaticos de pedidos con cliente, producto y estado
-const ORDERS = [
+const ordersData = [
   {
     id: 1,
     cliente: "Alex Rivera",
-    avatar:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAm5NgRFBJGGznBjExVR75roha-zduR-B2uoUsL8mzkQubIGBsVu4U-z7n15LfPY-kcL4w4ENy9ebypjUdtgXG5wqiN8SV0pKRvRBchZSx1a9pG6om23bBThah1knmExHqmUZ3yM-jPmSKFXRbyMcr26pDZgvies2mZ_jefRHrJIWGgZAWFPTjtvcYmj80jEgDbnUEXV92qIqmi6PZGLQpmvql8oymjzE1qO12Qy0unEZW3G_yPZkbyoBBb-GQPpzLawmnvIoBNvr7F",
+    initials: "AR",
+    avatarBg: "#1e3a5f",
+    avatarColor: "#86d0ff",
     producto: "MacBook Air",
     fecha: "24 Oct, 2026",
-    estado: "Entregado",
-    monto: "$1,299.000",
-    direccion: "Calle 45 # 23-10, Apto 502",
-    ciudad: "Bogota, Cundinamarca",
+    estado: "entregado",
+    monto: "$1.299.000",
+    direccion: "Carrera 12 # 56-78, Piso 3",
+    ciudad: "Bogotá, Cundinamarca",
     cantidad: 1,
   },
   {
     id: 2,
     cliente: "Elena Sanz",
-    avatar:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuB2gJmtjOTqrkPpFMGInq2859lNXzvsmKpwOtsrOOFO1rxLuA5qSNt0dtUxT0gs8aZAnn9nWDfwYvBQ8aYykoU_8DtQeCZjwTXCypJu_z9e2gcf6D7MpdR3L7wWDOep5RRGx_JuuHv9NBJBnSW8vb26bCUP8v4h-amN8gbbFpAaknuZg05fX8sP_ETrmV47y5LkkAHTSuit-TGoZgcRWeuZNLg53c78vPtt_N1c8A8vUmqV6vMlIIhZOttlQeGUGOM5LLEtf5kDJtDI",
-    producto: 'Tv LG 45 pulgadas',
+    initials: "ES",
+    avatarBg: "#1a3a2c",
+    avatarColor: "#6ee7b7",
+    producto: "Tv LG 45 pulgadas",
     fecha: "23 Oct, 2026",
-    estado: "En Camino",
-    monto: "$1,900.000",
+    estado: "encamino",
+    monto: "$1.900.000",
     direccion: "Carrera 7 # 12-34, Apartamento 201",
-    ciudad: "Medellin, Antioquia",
+    ciudad: "Medellín, Antioquia",
     cantidad: 2,
   },
   {
     id: 3,
     cliente: "Julian Thorne",
-    avatar:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBYFGCemJj4YzMh4J_2-LSoOnZj39UxLKZAcTqgE1hg6srPpgmnvd1X1x2x5WslJUWS_x7dxnmnJX-Z0sTlDVD0YYLL8FvF4QvE6DXDuBF0Dz1gC3UY0ns35Kt807WvBp0Bq4Gbj6tVgZCw_ZyhZWrXYPCCtkEFjRw6bkr1CxgI0LnXlAsdTszG4n7kiv7S36fpueDVoEvcq4tJhscAeaFujRLR7fCo3SSxLHjiA3T9LCjBSV5uH9xvMB-jAgWH4JRMYETU1PoMP3v2",
+    initials: "JT",
+    avatarBg: "#3b2a1a",
+    avatarColor: "#ffba67",
     producto: "iPhone 15 Pro",
     fecha: "22 Oct, 2026",
-    estado: "Entregado",
-    monto: "$3,000.000",
-    direccion: "Av. siempre viva # 742",
+    estado: "entregado",
+    monto: "$3.000.000",
+    direccion: "Calle 100 # 45-23, Apto 502",
     ciudad: "Cali, Valle del Cauca",
     cantidad: 1,
   },
   {
     id: 4,
     cliente: "Marco Rossi",
-    avatar: null,
-    iniciales: "MR",
+    initials: "MR",
+    avatarBg: "#32324d",
+    avatarColor: "#ffba67",
     producto: 'iPad Pro 11"',
     fecha: "21 Oct, 2026",
-    estado: "Pendiente",
-    monto: "$2,799.000",
-    direccion: "Calle 10 # 5-67, Casa 3",
-    ciudad: "Barranquilla, Atlantico",
+    estado: "pendiente",
+    monto: "$2.799.000",
+    direccion: "Avenida El Dorado # 103-12",
+    ciudad: "Bogotá, Cundinamarca",
+    cantidad: 1,
+  },
+  {
+    id: 5,
+    cliente: "Valentina Torres",
+    initials: "VT",
+    avatarBg: "#2a1a3b",
+    avatarColor: "#d4a0ff",
+    producto: "Samsung Galaxy S24",
+    fecha: "20 Oct, 2026",
+    estado: "pendiente",
+    monto: "$2.100.000",
+    direccion: "Calle 72 # 10-34, Apto 301",
+    ciudad: "Bogotá, Cundinamarca",
+    cantidad: 1,
+  },
+  {
+    id: 6,
+    cliente: "Sebastián Mora",
+    initials: "SM",
+    avatarBg: "#1a2e3b",
+    avatarColor: "#67d0e7",
+    producto: "Audífonos Sony",
+    fecha: "19 Oct, 2026",
+    estado: "encamino",
+    monto: "$1.450.000",
+    direccion: "Carrera 43A # 16-95, Oficina 204",
+    ciudad: "Medellín, Antioquia",
+    cantidad: 1,
+  },
+  {
+    id: 7,
+    cliente: "Camila Ríos",
+    initials: "CR",
+    avatarBg: "#1a3b22",
+    avatarColor: "#6ee7a0",
+    producto: "Teclado gamer",
+    fecha: "18 Oct, 2026",
+    estado: "entregado",
+    monto: "$580.000",
+    direccion: "Avenida 6N # 23-45, Casa 12",
+    ciudad: "Cali, Valle del Cauca",
+    cantidad: 2,
+  },
+  {
+    id: 8,
+    cliente: "Andrés Pedraza",
+    initials: "AP",
+    avatarBg: "#3b1a1a",
+    avatarColor: "#ff9a9a",
+    producto: 'Monitor LG"',
+    fecha: "17 Oct, 2026",
+    estado: "encamino",
+    monto: "$3.200.000",
+    direccion: "Calle 15 # 28-60, Barrio El Prado",
+    ciudad: "Barranquilla, Atlántico",
     cantidad: 1,
   },
 ];
 
-// TW Colores de fondo y texto para cada estado del pedido
-const STATUS_STYLES = {
-  Entregado: "bg-primary/20 text-primary",
-  "En Camino": "bg-accent-blue/20 text-accent-blue",
-  Pendiente: "bg-accent-red/20 text-accent-red",
-};
-
-// JS Opciones de filtro para la tabla de pedidos
 const FILTERS = ["Todo", "Pendiente", "En camino", "Entregado"];
 
-const Orders = () => {
-  // RE Estado para el filtro activo de la tabla
-  const [activeFilter, setActiveFilter] = useState("Todo");
-  // RE Estado para el pedido seleccionado y mostrar detalle
-  const [selectedOrder, setSelectedOrder] = useState(null);
+function StatusDropdown({ order, onStatusChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const status = estadosHistorial[order.estado];
 
   return (
-    <>
-      <div className="flex h-screen bg-surface-container-lowest">
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <Header title="Pedidos" />
+    <div className="relative inline-block" ref={ref}>
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${status.className}`}
+      >
+        {status.label}
+        <svg className="w-3 h-3 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fillRule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
 
-          {/* TW Contenido principal con tabla de pedidos */}
-          <section className="flex-1 p-padding-md sm:p-padding-lg lg:p-padding-xl overflow-y-auto overflow-x-hidden">
-            {/* TW Page Heading */}
-            <div className="mb-padding-xl">
-              <h2 className="text-headline-md font-bold text-on-surface">
-                Pedidos
-              </h2>
-              <p className="text-brand-muted-text mt-1">
-                Gestiona y actualiza el estado de tus pedidos.
+      {open && (
+        <div className="absolute left-0 mt-1 z-50 rounded-xl overflow-hidden shadow-xl min-w-[130px] bg-surface-container-high border border-surface-container">
+          {Object.entries(estadosHistorial).map(([val, c]) => (
+            <button
+              key={val}
+              onClick={() => {
+                onStatusChange(order.id, val);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-surface-container-highest transition-colors block ${c.className}`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrderModal({ order, onClose }) {
+  const status = estadosHistorial[order.estado];
+
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === "Escape") onClose();
+    }
+
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className="
+          relative
+          bg-surface-container-low
+          rounded-3xl
+          shadow-2xl
+          flex
+          flex-col
+          overflow-hidden
+          w-[820px]
+          max-w-[95vw]
+          min-w-[700px]
+          h-[90vh]
+          shrink-0
+          flex-none
+        "
+      >
+        {/* Header */}
+        <div className="px-8 pt-8 pb-6 shrink-0">
+          <h2 className="text-headline-md font-bold text-on-surface tracking-tight mb-1">
+            Detalle del pedido
+          </h2>
+
+          <p className="text-brand-muted-text text-sm mb-4">
+            Fecha: {order.fecha}
+          </p>
+
+          <span
+            className={`inline-flex items-center rounded-full px-4 py-1.5 border font-bold text-sm ${status.className}`}
+          >
+            {status.label}
+          </span>
+        </div>
+
+        {/* Contenido */}
+        <div className="flex-1 overflow-y-auto px-8 pb-6 space-y-5">
+          <div>
+            <p className="text-brand-muted-text text-sm font-bold mb-3">
+              Cliente
+            </p>
+
+            <div className="bg-surface-container rounded-xl px-5 py-4 flex items-center gap-4">
+              <div
+                className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
+                style={{
+                  backgroundColor: order.avatarBg,
+                  color: order.avatarColor,
+                }}
+              >
+                {order.initials}
+              </div>
+
+              <span className="font-semibold text-on-surface text-base">
+                {order.cliente}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-brand-muted-text text-sm font-bold mb-3">
+              Dirección de envío
+            </p>
+
+            <div className="bg-surface-container rounded-xl px-5 py-4">
+              <p className="font-semibold text-on-surface text-base">
+                {order.direccion}
+              </p>
+
+              <p className="text-brand-muted-text text-sm mt-1">
+                {order.ciudad}
               </p>
             </div>
+          </div>
 
-            {/* TW Mapeo de filtros a botones de seleccion */}
-            <div className="flex flex-wrap gap-3 mb-padding-xl">
-              {FILTERS.map((f) => {
-                const active = f === activeFilter;
-                return (
-                  <button
-                    key={f}
-                    onClick={() => setActiveFilter(f)}
-                    className={`px-5 py-1.5 rounded-button font-semibold text-sm transition-colors ${
-                      active
-                        ? "bg-primary-container text-black"
-                        : "bg-surface-container-high text-brand-muted-text hover:bg-surface-container-highest"
-                    }`}
-                  >
-                    {f}
-                  </button>
-                );
-              })}
-            </div>
+          <div>
+            <p className="text-brand-muted-text text-sm font-bold mb-3">
+              Producto solicitado
+            </p>
 
-            {/* TW Tabla de pedidos con datos de cliente, producto y estado */}
-            <div className="rounded-card overflow-x-auto border border-surface-container bg-surface-container-low">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="text-[11px] font-bold text-brand-muted-text uppercase border-b border-surface-container">
-                    <th className="px-6 py-4">Cliente</th>
-                    <th className="px-6 py-4">Producto</th>
-                    <th className="px-6 py-4">Fecha</th>
-                    <th className="px-6 py-4">Estado</th>
-                    <th className="px-6 py-4">Accion</th>
-                    <th className="px-6 py-4 text-right">Monto</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-container/50">
-                  {ORDERS.map((order) => (
-                    <tr
-                      key={order.id}
-                      className="hover:bg-white/5 transition-colors group"
-                    >
-                      <td className="px-6 py-6">
-                        <div className="flex items-center gap-3">
-                          {order.avatar ? (
-                            <img
-                              alt={order.cliente}
-                              className="w-9 h-9 rounded-full object-cover"
-                              src={order.avatar}
-                            />
-                          ) : (
-                            <div className="w-9 h-9 rounded-full bg-accent-blue/50 flex items-center justify-center text-xs font-bold text-accent-blue">
-                              {order.iniciales}
-                            </div>
-                          )}
-                          <span className="font-medium text-on-surface">
-                            {order.cliente}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-6 text-on-surface font-medium">
-                        {order.producto}
-                      </td>
-                      <td className="px-6 py-6 text-brand-muted-text text-sm">
-                        {order.fecha}
-                      </td>
-                      <td className="px-6 py-6">
-                        <span
-                          className={`px-3 py-1 rounded-md text-[11px] font-bold ${STATUS_STYLES[order.estado]}`}
-                        >
-                          {order.estado}
-                        </span>
-                      </td>
-                      <td className="px-6 py-6">
-                        <button
-                          onClick={() => setSelectedOrder(order)}
-                          className="px-4 py-1 rounded border border-surface-container text-xs text-brand-muted-text hover:bg-surface-container"
-                        >
-                          Ver detalle
-                        </button>
-                      </td>
-                      <td className="px-6 py-6 text-right font-semibold text-on-surface">
-                        {order.monto}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="bg-surface-container rounded-xl px-5 py-4">
+              <p className="font-semibold text-on-surface text-base">
+                {order.producto}
+              </p>
+
+              <div className="border-t border-surface-container/50 mt-3 pt-3">
+                <p className="font-semibold text-brand-muted-text text-sm">
+                  Cantidad: {order.cantidad} unidad
+                  {order.cantidad > 1 ? "es" : ""}
+                </p>
+              </div>
             </div>
-          </section>
-        </main>
+          </div>
+
+          <div className="border border-primary bg-[rgba(46,36,27,0.7)] rounded-xl px-5 py-4 flex items-center justify-between">
+            <span className="text-brand-muted-text text-sm font-bold">
+              Precio total del pedido
+            </span>
+
+            <span className="text-primary font-bold text-xl">
+              {order.monto}
+            </span>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-8 py-6 border-t border-surface-container shrink-0">
+          <button
+            onClick={onClose}
+            className="w-full border border-outline rounded-2xl py-3.5 font-bold text-brand-muted-text text-base hover:bg-surface-container transition-colors"
+          >
+            Cerrar
+          </button>
+        </div>
       </div>
-      {/* RE Renderiza el modal de detalle fuera del arbol principal via portal */}
-      {selectedOrder &&
-        createPortal(
-          <DetallePedidos
-            selectedOrder={selectedOrder}
-            onClose={() => setSelectedOrder(null)}
-          />,
-          document.body
-        )}
-    </>
+    </div>
   );
-};
+}
 
-export default Orders;
+export default function Pedidos() {
+  const [orders, setOrders] = useState(ordersData);
+  const [activeFilter, setActiveFilter] = useState("Todo");
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  const filteredOrders = orders.filter((order) => {
+    const statusMap = {
+      pendiente: "Pendiente",
+      encamino: "En camino",
+      entregado: "Entregado",
+    };
+    const orderEstado = statusMap[order.estado] || order.estado;
+    return activeFilter === "Todo" || orderEstado === activeFilter;
+  });
+
+  function handleStatusChange(orderId, newEstado) {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, estado: newEstado } : o))
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-surface-container-lowest overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <Header title="Pedidos" />
+
+        <section className="flex-1 p-padding-md sm:p-padding-lg lg:p-padding-xl overflow-y-auto overflow-x-hidden">
+          <div className="mb-padding-xl">
+            <h2 className="text-headline-md font-bold text-on-surface">
+              Pedidos
+            </h2>
+            <p className="text-brand-muted-text mt-1">
+              Gestiona y actualiza el estado de tus pedidos.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3 mb-padding-xl">
+            {FILTERS.map((f) => {
+              const active = f === activeFilter;
+              return (
+                <button
+                  key={f}
+                  onClick={() => setActiveFilter(f)}
+                  className={`px-5 py-1.5 rounded-button font-semibold text-sm transition-colors ${
+                    active
+                      ? "bg-primary-container text-black"
+                      : "bg-surface-container-high text-brand-muted-text hover:bg-surface-container-highest"
+                  }`}
+                >
+                  {f}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="rounded-card overflow-x-auto border border-surface-container bg-surface-container-low">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="text-[11px] font-bold text-brand-muted-text uppercase border-b border-surface-container">
+                  <th className="px-6 py-4 text-left">Cliente</th>
+                  <th className="px-6 py-4 text-center">Producto</th>
+                  <th className="px-6 py-4 text-center">Fecha</th>
+                  <th className="px-6 py-4 text-center">Estado</th>
+                  <th className="px-6 py-4 text-center">Accion</th>
+                  <th className="px-6 py-4 text-center">Monto</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-container/50">
+                {filteredOrders.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-12 text-center text-brand-muted-text text-sm"
+                    >
+                      No hay pedidos para este filtro.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredOrders.map((order) => {
+                    const status = estadosHistorial[order.estado];
+
+                    return (
+                      <tr
+                        key={order.id}
+                        className="hover:bg-white/5 transition-colors group"
+                      >
+                        <td className="px-6 py-6">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
+                              style={{ backgroundColor: order.avatarBg, color: order.avatarColor }}
+                            >
+                              {order.initials}
+                            </div>
+                            <span className="font-medium text-on-surface">
+                              {order.cliente}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-6 text-on-surface font-medium text-center">
+                          {order.producto}
+                        </td>
+                        <td className="px-6 py-6 text-brand-muted-text text-sm text-center">
+                          {order.fecha}
+                        </td>
+                        <td className="px-6 py-6 text-center">
+                          <StatusDropdown
+                            order={order}
+                            onStatusChange={handleStatusChange}
+                          />
+                        </td>
+                        <td className="px-6 py-6 text-center">
+                          <button
+                            onClick={() => setSelectedOrder(order)}
+                            className="px-4 py-1 rounded border border-surface-container text-xs text-brand-muted-text hover:bg-surface-container"
+                          >
+                            Ver detalle
+                          </button>
+                        </td>
+                        <td className="px-6 py-6 font-semibold text-on-surface text-center">
+                          {order.monto}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+
+      {selectedOrder && (
+        <OrderModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+        />
+      )}
+    </div>
+  );
+}

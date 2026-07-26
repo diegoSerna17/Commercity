@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
-import Navbar from './components/Navbar';
+import Navbar from './components/globales/Navbar';
 import Home from './pages/Home';
 import IniciarSesion from './pages/IniciarSesion/IniciarSesion';
 import Registro from './pages/IniciarSesion/Registro';
