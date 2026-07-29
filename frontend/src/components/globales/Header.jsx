@@ -31,7 +31,7 @@ const Header = ({ title, showSearch = true, showCategories = false }) => {
   return (
     <header className="sticky top-0 z-10 bg-surface-container-lowest/60 backdrop-blur-lg border-b border-figma-divider h-[68px] flex items-center justify-between px-4 sm:px-6 md:px-padding-xl gap-3">
       {/* TW Titulo o dropdown de categorias */}
-      <div className="flex items-center gap-md min-w-0 flex-1">
+      <div className="flex items-center gap-md min-w-0 flex-1 max-lg:justify-center">
         {mobileSearchOpen ? (
           <div className="relative w-full flex items-center sm:hidden" role="search">
             <label htmlFor="mobile-search-input" className="sr-only">Buscar productos</label>

@@ -136,9 +136,6 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
             <p className="text-body-sm font-medium truncate text-on-surface">
               Juan Cabrera
             </p>
-            <p className="text-xs text-brand-muted-text truncate">
-              Admin Pro
-            </p>
           </div>
         </div>
 
