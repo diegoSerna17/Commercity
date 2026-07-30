@@ -130,7 +130,7 @@ export default function NotificacionesDropdown() {
   }
 
   return (
-    <div className="w-[390px] max-w-[calc(100vw-1.5rem)] rounded-xl overflow-hidden shadow-2xl border border-surface-container bg-surface-container-low">
+    <div className="w-full max-w-[390px] min-w-[320px] rounded-xl overflow-hidden shadow-2xl border border-surface-container bg-surface-container-low">
       {/* Encabezado */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-surface-container">
         <span className="font-sans text-body-sm font-medium tracking-wide select-none text-on-surface">

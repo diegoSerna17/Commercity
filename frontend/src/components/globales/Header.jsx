@@ -129,7 +129,7 @@ const Header = ({ title, showSearch = true, showCategories = false }) => {
               <span className="absolute top-0 right-0 w-2 h-2 bg-accent-red rounded-full" />
             </button>
             {showNotifs && (
-              <div className="absolute right-0 top-full mt-2 z-50">
+              <div className="fixed top-[68px] left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-2rem)] max-w-[390px] min-w-[340px]">
                 <NotificacionesDropdown />
               </div>
             )}
