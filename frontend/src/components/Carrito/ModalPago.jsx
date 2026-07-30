@@ -44,7 +44,7 @@ export default function PaymentModal({ onClose, onConfirm, carrito }) {
             Pasarela de Pago
           </h2>
 
-          <div className="w-full flex items-center justify-between rounded-xl px-4 sm:px-6 py-3 sm:py-4 mb-6 sm:mb-8 bg-surface-container">
+          <div className="w-full flex items-center justify-between rounded-xl px-4 sm:px-6 py-3 sm:py-4 mb-6 sm:mb-8 bg-input-bg">
             <span className="font-sans font-extrabold text-sm sm:text-base md:text-lg text-brand-muted-text">
               Total a pagar
             </span>
@@ -73,7 +73,7 @@ export default function PaymentModal({ onClose, onConfirm, carrito }) {
                 placeholder="EJ: 0000 0000 0000 0000"
                 value={numTarjeta}
                 onChange={handleNumTarjeta}
-                className={`w-full block rounded-xl px-4 py-3 sm:py-4 text-white font-sans text-sm sm:text-base focus:outline-none transition-colors bg-surface-container ${errNum ? "border border-error" : "border border-figma-divider"}`}
+                className={`w-full block rounded-xl px-4 py-3 sm:py-4 text-white font-sans text-sm sm:text-base focus:outline-none transition-colors bg-input-bg ${errNum ? "border border-error" : "border border-figma-divider"}`}
               />
               {errNum && (
                 <p className="text-red-500 text-xs mt-1">
@@ -95,7 +95,7 @@ export default function PaymentModal({ onClose, onConfirm, carrito }) {
                 placeholder="Ej: JUAN GIRALDO"
                 value={nombreTarjeta}
                 onChange={(e) => setNombreTarjeta(e.target.value.toUpperCase())}
-                className={`w-full block rounded-xl px-4 py-3 sm:py-4 text-white font-sans text-sm sm:text-base focus:outline-none transition-colors uppercase bg-surface-container ${errNombre ? "border border-error" : "border border-figma-divider"}`}
+                className={`w-full block rounded-xl px-4 py-3 sm:py-4 text-white font-sans text-sm sm:text-base focus:outline-none transition-colors uppercase bg-input-bg ${errNombre ? "border border-error" : "border border-figma-divider"}`}
               />
               {errNombre && (
                 <p className="text-red-500 text-xs mt-1">

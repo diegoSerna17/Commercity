@@ -14,6 +14,7 @@
   --color-surface-container-high: #2a292f;
   --color-surface-container-highest: #35343a;
   --color-surface-variant: #35343a;
+  --color-surface-variant2: #272842;
   --color-surface-inverse: #e4e1e9;
 
   /* Texto sobre superficies */
@@ -106,7 +107,7 @@
   --color-brand-dark-text: #12121A;
   --color-icon-gray-500: #6b7280;
   --color-placeholder-gray-600: #4b5563;
-  --color-input-bg: #1c1c22;
+  --color-input-bg: #1A1A26;
 
   /* Sidebar / Navegación */
   --color-sidebar-active-bg: #2e241b;

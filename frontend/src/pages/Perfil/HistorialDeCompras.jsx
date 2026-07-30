@@ -55,10 +55,10 @@ export default function HistorialDeCompras() {
             })}
           </div>
 
-          <div className="rounded-card overflow-x-auto border border-surface-container bg-surface-container-low">
+          <div className="rounded-card overflow-x-auto border border-surface-container bg-brand-dark-text">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="text-[11px] font-bold text-brand-muted-text uppercase border-b border-surface-container">
+                <tr className="text-[11px] font-bold text-brand-muted-text uppercase bg-surface-variant2">
                   <th className="px-6 py-4 text-left">Vendedor</th>
                   <th className="px-6 py-4 text-center">Producto</th>
                   <th className="px-6 py-4 text-center">Fecha</th>
