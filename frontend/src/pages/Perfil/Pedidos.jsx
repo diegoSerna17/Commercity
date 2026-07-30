@@ -192,21 +192,23 @@ function OrderModal({ order, onClose }) {
         className="
           relative
           bg-surface-container-low
-          rounded-3xl
+          rounded-hero
           shadow-2xl
           flex
           flex-col
           overflow-hidden
-          w-[820px]
+          w-full
           max-w-[95vw]
-          min-w-[700px]
+          sm:w-[820px]
+          sm:max-w-[820px]
+          sm:min-w-[700px]
           h-[90vh]
           shrink-0
           flex-none
         "
       >
         {/* Header */}
-        <div className="px-8 pt-8 pb-6 shrink-0">
+        <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6 shrink-0">
           <h2 className="text-headline-md font-bold text-on-surface tracking-tight mb-1">
             Detalle del pedido
           </h2>
@@ -223,15 +225,15 @@ function OrderModal({ order, onClose }) {
         </div>
 
         {/* Contenido */}
-        <div className="flex-1 overflow-y-auto px-8 pb-6 space-y-5">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 pb-4 sm:pb-6 space-y-4 sm:space-y-5">
           <div>
             <p className="text-brand-muted-text text-sm font-bold mb-3">
               Cliente
             </p>
 
-            <div className="bg-surface-container rounded-xl px-5 py-4 flex items-center gap-4">
+            <div className="bg-surface-container rounded-xl px-4 sm:px-5 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
               <div
-                className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
                 style={{
                   backgroundColor: order.avatarBg,
                   color: order.avatarColor,
@@ -240,7 +242,7 @@ function OrderModal({ order, onClose }) {
                 {order.initials}
               </div>
 
-              <span className="font-semibold text-on-surface text-base">
+              <span className="font-semibold text-on-surface text-sm sm:text-base">
                 {order.cliente}
               </span>
             </div>
@@ -251,12 +253,12 @@ function OrderModal({ order, onClose }) {
               Dirección de envío
             </p>
 
-            <div className="bg-surface-container rounded-xl px-5 py-4">
-              <p className="font-semibold text-on-surface text-base">
+            <div className="bg-surface-container rounded-xl px-4 sm:px-5 py-3 sm:py-4">
+              <p className="font-semibold text-on-surface text-sm sm:text-base">
                 {order.direccion}
               </p>
 
-              <p className="text-brand-muted-text text-sm mt-1">
+              <p className="text-brand-muted-text text-xs sm:text-sm mt-1">
                 {order.ciudad}
               </p>
             </div>
@@ -267,8 +269,8 @@ function OrderModal({ order, onClose }) {
               Producto solicitado
             </p>
 
-            <div className="bg-surface-container rounded-xl px-5 py-4">
-              <p className="font-semibold text-on-surface text-base">
+            <div className="bg-surface-container rounded-xl px-4 sm:px-5 py-3 sm:py-4">
+              <p className="font-semibold text-on-surface text-sm sm:text-base">
                 {order.producto}
               </p>
 
@@ -281,22 +283,22 @@ function OrderModal({ order, onClose }) {
             </div>
           </div>
 
-          <div className="border border-primary bg-[rgba(46,36,27,0.7)] rounded-xl px-5 py-4 flex items-center justify-between">
+          <div className="border border-primary bg-surface-container-high rounded-xl px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between">
             <span className="text-brand-muted-text text-sm font-bold">
               Precio total del pedido
             </span>
 
-            <span className="text-primary font-bold text-xl">
+            <span className="text-primary font-bold text-lg sm:text-xl">
               {order.monto}
             </span>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-6 border-t border-surface-container shrink-0">
+        <div className="px-4 sm:px-8 py-4 sm:py-6 border-t border-surface-container shrink-0">
           <button
             onClick={onClose}
-            className="w-full border border-outline rounded-2xl py-3.5 font-bold text-brand-muted-text text-base hover:bg-surface-container transition-colors"
+            className="w-full border border-outline rounded-xl py-3 sm:py-3.5 font-bold text-brand-muted-text text-sm sm:text-base hover:bg-surface-container transition-colors"
           >
             Cerrar
           </button>
@@ -342,16 +344,16 @@ export default function Pedidos() {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3 mb-padding-xl">
+          <div className="flex flex-wrap gap-2 sm:gap-3 mb-padding-xl">
             {FILTERS.map((f) => {
               const active = f === activeFilter;
               return (
                 <button
                   key={f}
                   onClick={() => setActiveFilter(f)}
-                  className={`px-5 py-1.5 rounded-button font-semibold text-sm transition-colors ${
+                  className={`px-3 sm:px-5 py-1.5 rounded-button font-semibold text-xs sm:text-sm transition-colors ${
                     active
-                      ? "bg-primary-container text-black"
+                      ? "bg-primary-container text-on-primary-container"
                       : "bg-surface-container-high text-brand-muted-text hover:bg-surface-container-highest"
                   }`}
                 >
@@ -361,7 +363,65 @@ export default function Pedidos() {
             })}
           </div>
 
-          <div className="rounded-card overflow-x-auto border border-surface-container bg-brand-dark-text">
+          {/* Vista de tarjetas — solo móvil */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {filteredOrders.length === 0 ? (
+              <div className="rounded-card border border-surface-container bg-brand-dark-text px-6 py-12 text-center text-brand-muted-text text-sm">
+                No hay pedidos para este filtro.
+              </div>
+            ) : (
+              filteredOrders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="bg-surface-container-low border border-surface-container rounded-card p-4 flex flex-col gap-3"
+                  >
+                    {/* Fila 1: Avatar + Cliente + Estado */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
+                          style={{
+                            backgroundColor: order.avatarBg,
+                            color: order.avatarColor,
+                          }}
+                        >
+                          {order.initials}
+                        </div>
+                        <span className="font-medium text-on-surface text-sm truncate">
+                          {order.cliente}
+                        </span>
+                      </div>
+                      <StatusDropdown
+                        order={order}
+                        onStatusChange={handleStatusChange}
+                      />
+                    </div>
+
+                    {/* Fila 2: Producto */}
+                    <p className="text-on-surface font-medium text-sm">
+                      {order.producto}
+                    </p>
+
+                    {/* Fila 3: Fecha + Monto */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-brand-muted-text">{order.fecha}</span>
+                      <span className="font-semibold text-on-surface">{order.monto}</span>
+                    </div>
+
+                    {/* Fila 4: Botón detalle */}
+                    <button
+                      onClick={() => setSelectedOrder(order)}
+                      className="w-full py-2 rounded-xl border border-surface-container text-xs text-brand-muted-text hover:bg-surface-container transition-colors"
+                    >
+                      Ver detalle
+                    </button>
+                  </div>
+                ))
+            )}
+          </div>
+
+          {/* Tabla — solo desktop */}
+          <div className="hidden md:block rounded-card overflow-x-auto border border-surface-container bg-brand-dark-text">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="text-[11px] font-bold text-brand-muted-text uppercase bg-surface-variant2">
@@ -369,7 +429,7 @@ export default function Pedidos() {
                   <th className="px-6 py-4 text-center">Producto</th>
                   <th className="px-6 py-4 text-center">Fecha</th>
                   <th className="px-6 py-4 text-center">Estado</th>
-                  <th className="px-6 py-4 text-center">Accion</th>
+                  <th className="px-6 py-4 text-center">Acción</th>
                   <th className="px-6 py-4 text-center">Monto</th>
                 </tr>
               </thead>
@@ -384,13 +444,10 @@ export default function Pedidos() {
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((order) => {
-                    const status = estadosHistorial[order.estado];
-
-                    return (
+                  filteredOrders.map((order) => (
                       <tr
                         key={order.id}
-                        className="hover:bg-white/5 transition-colors group"
+                        className="hover:bg-surface-container/50 transition-colors group"
                       >
                         <td className="px-6 py-6">
                           <div className="flex items-center gap-3">
@@ -420,7 +477,7 @@ export default function Pedidos() {
                         <td className="px-6 py-6 text-center">
                           <button
                             onClick={() => setSelectedOrder(order)}
-                            className="px-4 py-1 rounded border border-surface-container text-xs text-brand-muted-text hover:bg-surface-container"
+                            className="px-4 py-1 rounded-xl border border-surface-container text-xs text-brand-muted-text hover:bg-surface-container"
                           >
                             Ver detalle
                           </button>
@@ -429,8 +486,7 @@ export default function Pedidos() {
                           {order.monto}
                         </td>
                       </tr>
-                    );
-                  })
+                    ))
                 )}
               </tbody>
             </table>
