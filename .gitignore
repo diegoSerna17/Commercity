@@ -142,7 +142,9 @@ vite.config.ts.timestamp-*
 .trae/
 .agents/
 .claude/
-informes/
+
+# Informes versionables (se suben a ECOMMERCE). Temporales de prueba excluidos.
+informes/_*
 
 # Archivos locales y temporales
 skills-lock.json
