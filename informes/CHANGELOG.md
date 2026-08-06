@@ -4,6 +4,78 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-05 - DOCS: informe de pruebas del modulo carrito
+
+- **Autor**: Daniel Palacios
+- **Archivos**: informes/INFORME_PRUEBAS_CARRITO_2026-08-05.md
+- **Descripcion**: se documento el informe de pruebas del carrito: 19 tests unitarios (Vitest + Supertest, cobertura 93% stmts / 92.92% lines) y prueba funcional en vivo de 8 pasos contra la BD real commercy_v2, con verificacion de agrupacion por vendedor y calculo con descuento.
+- **Motivo**: dejar evidencia estructurada de la validacion de la tarea del carrito.
+- **Requerimientos**: RF103, RF104, RF105, RFX, RF109 (REVISION)
+- **Evidencia**: resultados detallados en el informe.
+- **Estado**: Completado
+
+---
+
+## 2026-08-05 - FEAT: testing backend (Vitest + Supertest) y 19 tests del carrito
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/package.json, backend/src/server/app.js (nuevo), backend/src/server/server.js, backend/src/server/__tests__/carrito.controllers.test.js (nuevo)
+- **Descripcion**: se configuro Vitest + Supertest con umbral de cobertura 60 (thresholds en package.json); se refactorizo la app Express a `app.js` (exporta la app sin listen) y `server.js` (solo arranca) para testabilidad; se escribieron 19 tests del controlador carrito con mock `vi.mock('mysql2/promise')`.
+- **Motivo**: cumplir la politica post-cambio de testing-commercity.md (mantener cobertura >= 60) tras implementar el carrito.
+- **Requerimientos**: RF103, RF104, RF105, RFX, RF109 (REVISION)
+- **Evidencia**: 19/19 tests OK; cobertura Statements 93%, Branches 84.9%, Functions 100%, Lines 92.92% (umbral 60 superado).
+- **Estado**: Completado
+
+---
+
+## 2026-08-05 - DOCS: flujo post-cambio obligatorio para mantener cobertura
+
+- **Autor**: Daniel Palacios
+- **Archivos**: .trae/rules/testing-commercity.md (local, no versionado)
+- **Descripcion**: se agrego la seccion "Post-cambio obligatorio": al terminar cualquier cambio de codigo se deben identificar funciones afectadas, crear/actualizar tests (patron por controlador/componente), ejecutar cobertura (/coverage-be, /coverage-fe), verificar umbral fail_under=60 y registrar evidencia en el changelog. Excepciones: solo archivos de documentacion/configuracion sin logica.
+- **Motivo**: directiva del usuario de mantenerse actualizados en cobertura tras cada cambio.
+- **Requerimientos**: N/A (proceso)
+- **Evidencia**: regla vinculada a testing-commercity.md y documentacion-cambios.md.
+- **Estado**: Completado
+
+---
+
+## 2026-08-05 - FEAT: prueba en vivo del carrito contra la BD real (flujo completo)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: ninguno (prueba funcional)
+- **Descripcion**: se valido el flujo completo del carrito contra `commercy_v2` con datos semilla temporales: agregar (201), acumular por upsert (2+3=5), validacion de stock (400 INSUFFICIENT_STOCK), listado agrupado por vendedor con precio final con descuento (90000 de 100000 con 10%) y resumen (total 450000), modificar cantidad (200), eliminar (200). Datos de prueba eliminados al final (LIMPIEZA OK).
+- **Motivo**: confirmar que la tarea asignada (carrito) cumple RF103, RF104, RF105, RFX y la agrupacion por vendedor (RF109 REVISION).
+- **Requerimientos**: RF103, RF104, RF105, RFX, RF109 (REVISION)
+- **Evidencia**: servidor en puerto 5000; respuestas JSON estructuradas correctas en los 8 pasos del flujo.
+- **Estado**: Completado
+
+---
+
+## 2026-08-05 - CHORE: verificacion de configs del carrito contra la BD real
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/server.js (mensaje de arranque con puerto real)
+- **Descripcion**: se verificaron los 4 endpoints del carrito contra la BD remota commercy_v2 con el puerto 5000 del .env: GET / 200, GET carrito 200 (tablas vacias), validaciones 400 correctas (comprador_id). Correccion cosmetica del console.log del servidor (mostraba el puerto real).
+- **Motivo**: confirmar que la tarea asignada (carrito) quedo aplicada tras la correccion B1.
+- **Requerimientos**: RF103, RF104, RF105, RFX
+- **Evidencia**: prueba con servidor en puerto 5000; respuestas JSON estructuradas correctas contra MySQL real.
+- **Estado**: Completado
+
+---
+
+## 2026-08-05 - DOCS: regla de autorizacion para commit y push
+
+- **Autor**: Daniel Palacios
+- **Archivos**: .trae/rules/git-autorizacion-versionado.md (local, no versionado)
+- **Descripcion**: nueva regla que prohibe ejecutar `git add`, `git commit` o `git push` automaticamente; solo se ejecutan con orden explicita del usuario (commit, push, go, procede, sube, o comandos git concretos). Sin autorizacion, el working tree queda listo sin commitear y se notifica.
+- **Motivo**: directiva del usuario de no versionar nada automaticamente.
+- **Requerimientos**: N/A (proceso)
+- **Evidencia**: aplicada junto a git-push-politica.md (checklist y unico destino de push ECOMMERCE).
+- **Estado**: Completado
+
+---
+
 ## 2026-08-05 - DOCS: ampliar activacion automatica de skills por frases clave
 
 - **Autor**: Daniel Palacios

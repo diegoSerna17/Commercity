@@ -1,12 +1,14 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend API CommerCity (Express + MySQL2)",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/server/server.js",
     "start": "node src/server/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +21,24 @@
     "mysql2": "^3.20.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "@vitest/coverage-v8": "^4.1.10",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.10"
+  },
+  "vitest": {
+    "test": {
+      "environment": "node",
+      "coverage": {
+        "provider": "v8",
+        "include": ["src/server/**/*.js"],
+        "thresholds": {
+          "lines": 60,
+          "functions": 60,
+          "branches": 60,
+          "statements": 60
+        }
+      }
+    }
   }
 }
