@@ -137,3 +137,13 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Configuracion local del entorno de desarrollo (Trae IA)
+.trae/
+.agents/
+.claude/
+informes/
+
+# Archivos locales y temporales
+skills-lock.json
+backend/_*.mjs
