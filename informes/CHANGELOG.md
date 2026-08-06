@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-05 - DOCS: informes versionables subidos a ECOMMERCE
+
+- **Autor**: Daniel Palacios
+- **Archivos**: .gitignore, informes/ (15 archivos: auditoria, requerimientos, brechas, changelog y documentos convertidos del lider)
+- **Descripcion**: se quito `informes/` del .gitignore para versionar los informes en ECOMMERCE; los temporales `informes/_*` (logs de prueba) siguen excluidos. Commit c38a4da pusheado.
+- **Motivo**: directiva del usuario: los informes si se suben al repositorio de trabajo ECOMMERCE.
+- **Requerimientos**: N/A (documentacion)
+- **Evidencia**: `git push 5fb600e..c38a4da`; `git check-ignore` confirma `backend/.env` y `informes/_*.log` excluidos; grep sin credenciales en informes/.
+- **Estado**: Completado
+
+---
+
 ## 2026-08-05 - CHORE: repositorio de trabajo ECOMMERCE + politica de push
 
 - **Autor**: Daniel Palacios
