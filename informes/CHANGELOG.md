@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-05 - DOCS: ampliar activacion automatica de skills por frases clave
+
+- **Autor**: Daniel Palacios
+- **Archivos**: .trae/rules/skill-triggers.md (local, no versionado)
+- **Descripcion**: se amplio el mapeo de frases clave -> skills de 10 a 14 areas: se agregaron mysql/mysql-design (BD), swagger-gen (doc API), error-handling-patterns, zod-validation-expert, ascii-flow/brainstorming (diagramas), git-commit-organizer (versionado), frontend-design y vercel-react-best-practices (rendimiento). Se agrego regla general de catalogo completo + verificacion de cobertura.
+- **Motivo**: directiva del usuario: usar todas las skills disponibles segun las frases de cada consulta o actualizacion.
+- **Requerimientos**: N/A (proceso)
+- **Evidencia**: revision de .trae/skills, .agents/skills y .claude/skills confirma que las skills referenciadas estan disponibles.
+- **Estado**: Completado
+
+---
+
 ## 2026-08-05 - DOCS: informes versionables subidos a ECOMMERCE
 
 - **Autor**: Daniel Palacios
