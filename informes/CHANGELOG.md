@@ -4,6 +4,42 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-06 - DOCS: novedades 9 PM del grupo de lideres en plan Scrum
+
+- **Autor**: Daniel Palacios
+- **Archivos**: informes/PLAN_SCRUM_BACKEND_2026-08-06.md
+- **Descripcion**: se registro en el plan Scrum la subseccion "Novedades 2026-08-06 (9 PM)": Resend confirmado por Diego Serna como proveedor de correo; Yepes actualizo los requerimientos con el flujo de IVA desde la publicacion del producto (pasara el docx `Commercity 2.0 (optimizado) (2).docx` ~10 PM, con nomenclatura e indice); mockup Figma en actualizacion (cantidad x precio unitario, no bloquea backend); la expiracion del token de recuperacion queda como regla de negocio a proponer en requerimientos (texto en informe de BD, seccion 6).
+- **Motivo**: el usuario compartio los mensajes del grupo de lideres (9 PM) y pidio procesarlos.
+- **Requerimientos**: RFX (REVISION) - recuperacion de contrasena / IVA
+- **Evidencia**: mensajes del grupo de lideres 2026-08-06 8:59-9:49 PM.
+- **Estado**: Completado
+
+---
+
+## 2026-08-06 - DOCS: novedades del grupo de lideres en plan Scrum (Resend, requerimientos, token)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: informes/PLAN_SCRUM_BACKEND_2026-08-06.md
+- **Descripcion**: se agrego la subseccion "Novedades 2026-08-06 (9 PM - grupo de lideres)" al plan Scrum: (1) Resend confirmado por Diego Serna como proveedor de correo (CERRADO); (2) Yepes actualizo los requerimientos con el flujo de IVA desde la publicacion del producto y pasara el docx `Commercity 2.0 (optimizado) (2).docx` ~10 PM con nomenclatura e indice (EN CAMINO - pendiente de recibir y revisar errores); (3) mockup Figma en actualizacion (cantidad x precio unitario) sin bloquear backend; (4) expiracion del token de recuperacion como regla de negocio a proponer en requerimientos (texto del RF en el informe de BD seccion 6).
+- **Motivo**: registrar en el plan las decisiones y pendientes comunicados por el grupo de lideres el 2026-08-06 a las 9 PM.
+- **Requerimientos**: RFX (REVISION), RNF (seguridad)
+- **Evidencia**: mensajes del grupo de lideres (WhatsApp, 9:00-9:49 PM 2026-08-06).
+- **Estado**: Completado
+
+---
+
+## 2026-08-06 - DOCS: informe de revision de base de datos commercy_v2 (primera persona)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: informes/INFORME_REVISION_BASE_DATOS_2026-08-06.md; informes/INFORME_REVISION_BASE_DATOS_2026-08-06.pdf
+- **Descripcion**: se creo el informe de revision completa de la base oficial `commercity_v2` contra el esquema real via information_schema y conteos de registros (solo lectura, sin modificar datos). Se confirmo la conexion externa (`commercy_user@%` habilitado por Meneses). La base ahora tiene 19 tablas (Meneses agrego `producto_variantes` el 2026-08-06). Hallazgos: (1) CRITICO - sin datos semilla (0 productos, 0 categorias, 0 pedidos; solo 4 usuarios de prueba vitest); (2) CRITICO - mojibake en `notificaciones.estado` (`enum('le├¡do','no le├¡do')`); (3) MEDIO - `token_recuperacion` sin columna de expiracion para el flujo Resend; (4) decision oficial IVA 19% cierra la brecha 5 del informe 2026-08-04 (no requiere migracion). Se verificaron charset utf8mb4, FKs con indice y roles correctos. Se definieron 5 acciones para Meneses priorizadas y se agrego la seccion 6 "Clasificacion de los pendientes frente a los requerimientos": datos semilla y correccion del ENUM NO son RF/RNF (tarea tecnica y fix de BD), la expiracion del token SI va en requerimientos (se propuso texto para el RF de recuperacion de contrasena).
+- **Motivo**: el usuario pidio un informe completo en primera persona sobre la revision de base de datos para avisar a Meneses (lider BD) y destrabar el backend.
+- **Requerimientos**: RF109, RF110, RF127, RF128, RF129, RF40, RF72, RFX (REVISION)
+- **Evidencia**: consultas directas a commercy_v2 (information_schema, conteos de registros, prueba endpoint perfil publico HTTP 200).
+- **Estado**: Completado
+
+---
+
 ## 2026-08-06 - CHORE: pruebas de la tarea de Cristian con capturas de evidencia
 
 - **Autor**: Daniel Palacios

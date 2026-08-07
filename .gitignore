@@ -174,3 +174,4 @@ scripts/
 
 # Documentos fuente (Word) y conversiones locales, no se versionan
 docs/
+*.docx

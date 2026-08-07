@@ -153,6 +153,15 @@ Regla unica y definitiva del proyecto:
 | Meneses | Base de Datos | **Sin migracion de IVA** (decision oficial: precio final con IVA incluido). Solo confirmar comisiones existentes |
 | Yepes | Perfil Vendedor | El vendedor publica el precio final (ya incluye 19%); sin calculo extra |
 
+### Novedades 2026-08-06 (9 PM - grupo de lideres)
+
+| Novedad | Quien | Estado / Accion |
+|---|---|---|
+| Proveedor de correo confirmado: **Resend** | Diego Serna | CERRADO - se usa Resend para el envio de links de recuperacion de contrasena |
+| Requerimientos actualizados: flujo de IVA desde que el vendedor publica el producto | Yepes | EN CAMINO - Yepes pasa el docx `Commercity 2.0 (optimizado) (2).docx` ~10 PM; falta nomenclatura e indice. **Pendiente**: recibirlo y revisar errores |
+| Mockup Figma en actualizacion (cantidad x precio unitario del vendedor) | Yepes | EN PROCESO - no bloquea backend; el contrato ya esta soportado por `detalle_pedidos` |
+| Expiración de token de recuperacion como regla de negocio | Daniel (yo) | A PROPONER EN REQUERIMIENTOS - el informe de BD (seccion 6) incluye el texto propuesto del RF (link de un solo uso, expira a N minutos, columna `token_recuperacion_expiracion` o JWT con `exp`) |
+
 ## 9. Coordinacion inter-area
 
 | Area                | Contacto      | Accion                                                                      |
