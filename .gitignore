@@ -69,6 +69,23 @@ web_modules/
 .env
 .env.*
 !.env.example
+*.env.local
+
+# Bytecode de Python (scripts de soporte)
+__pycache__/
+*.py[cod]
+
+# Configuracion local de IDEs
+.vscode/
+.idea/
+
+# Archivos de sistema (Windows/macOS)
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Archivos temporales de Office
+~$*
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -149,3 +166,11 @@ informes/_*
 # Archivos locales y temporales
 skills-lock.json
 backend/_*.mjs
+
+# Entregas de los integrantes, audios y scripts locales (no se versionan)
+AVANCES/
+Audios/
+scripts/
+
+# Documentos fuente (Word) y conversiones locales, no se versionan
+docs/
