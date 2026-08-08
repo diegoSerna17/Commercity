@@ -19,6 +19,11 @@ import {
   resolverReporte,
 } from "../controllers/admin/reportes.controllers.js";
 import { buscarAdmin } from "../controllers/admin/busqueda.controllers.js";
+import {
+  getMiCuentaBancaria,
+  getMiCuentaBancariaMasked,
+  upsertMiCuentaBancaria,
+} from "../controllers/admin/cuentaBancaria.controllers.js";
 
 const router = Router();
 
@@ -47,5 +52,11 @@ router.patch("/reportes/:id/resolver", resolverReporte);
 
 // Buscador (RF69-RF71)
 router.get("/busqueda", buscarAdmin);
+
+// Cuenta bancaria de Commercity (RF75/RF76, RNF11 cifrado)
+router.get("/mi-cuenta-bancaria", getMiCuentaBancaria);
+router.get("/mi-cuenta-bancaria/masked", getMiCuentaBancariaMasked);
+router.post("/mi-cuenta-bancaria", upsertMiCuentaBancaria);
+router.put("/mi-cuenta-bancaria", upsertMiCuentaBancaria);
 
 export default router;

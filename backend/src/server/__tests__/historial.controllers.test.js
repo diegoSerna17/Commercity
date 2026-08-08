@@ -23,12 +23,30 @@ const filasMock = [
     {
         pedido_id: 1,
         fecha: "2026-08-08T02:08:27.000Z",
+        direccion: "Calle 5 # 20-10, Cali",
+        detalle_id: 11,
         estado: "Pendiente",
         cantidad: 1,
-        monto: "1299000.00",
+        precio_unitario: "1299000.00",
+        descuento_aplicado: "0.00",
+        subtotal: "1091596.64",
         producto: "MacBook Air M2",
         imagen: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop",
         vendedor: "Vendedor Alex Rivera"
+    },
+    {
+        pedido_id: 1,
+        fecha: "2026-08-08T02:08:27.000Z",
+        direccion: "Calle 5 # 20-10, Cali",
+        detalle_id: 12,
+        estado: "Entregado",
+        cantidad: 2,
+        precio_unitario: "95000.00",
+        descuento_aplicado: "0.00",
+        subtotal: "159663.87",
+        producto: "Mouse Inalambrico",
+        imagen: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=300&h=300&fit=crop",
+        vendedor: "Vendedor Marco Rossi"
     }
 ];
 
@@ -51,7 +69,7 @@ describe("GET /api/historial/compras", () => {
         expect(res.body.success).toBe(false);
     });
 
-    it("deberia devolver el historial del comprador autenticado con contrato { success, data }", async () => {
+    it("deberia devolver el historial del comprador agrupado por pedido (RF32) con campos RF31", async () => {
         pool.query.mockImplementation((sql) =>
             sql.includes("tokens_invalidados") ? [[], undefined] : [filasMock]
         );
@@ -62,9 +80,28 @@ describe("GET /api/historial/compras", () => {
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
+        // RF32: las dos lineas del mismo pedido se agrupan en un solo pedido
         expect(res.body.data).toHaveLength(1);
-        expect(res.body.data[0].vendedor).toBe("Vendedor Alex Rivera");
-        expect(res.body.data[0].producto).toBe("MacBook Air M2");
+        const pedido = res.body.data[0];
+        expect(pedido.pedido_id).toBe(1);
+        // RF31: direccion de envio
+        expect(pedido.direccion).toBe("Calle 5 # 20-10, Cali");
+        // vendedores unicos del pedido
+        expect(pedido.vendedores).toContain("Vendedor Alex Rivera");
+        expect(pedido.vendedores).toContain("Vendedor Marco Rossi");
+        // items con precio unitario, IVA y total por linea
+        expect(pedido.items).toHaveLength(2);
+        const mac = pedido.items[0];
+        expect(mac.producto).toBe("MacBook Air M2");
+        expect(mac.precio_unitario).toBe(1299000);
+        // IVA = subtotal x 0.19 en vuelo (RF31)
+        expect(mac.iva).toBeCloseTo(1091596.64 * 0.19, 2);
+        expect(mac.total).toBeCloseTo(1091596.64 * 1.19, 2);
+        // resumen del pedido
+        expect(pedido.resumen.subtotal).toBeCloseTo(1091596.64 + 159663.87, 2);
+        expect(pedido.resumen.total).toBeCloseTo((1091596.64 + 159663.87) * 1.19, 2);
+        // estado predominante: Pendiente tiene prioridad sobre Entregado (RF28/RF29)
+        expect(pedido.estado).toBe("Pendiente");
 
         // El comprador_id sale del token (req.userId), nunca de un query param
         expect(pool.query).toHaveBeenCalledWith(
