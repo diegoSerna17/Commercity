@@ -4,6 +4,7 @@ import cors from "cors";
 import router from "./routes/routes.js";
 import carritoRouter from "./routes/carrito.routes.js";
 import usuariosRouter from "./routes/usuarios.routes.js";
+import historialRouter from "./routes/historial.routes.js";
 
 const app = express();
 
@@ -12,5 +13,6 @@ app.use(cors());
 app.use("/", router);
 app.use("/api/carrito", carritoRouter);
 app.use("/api/usuarios", usuariosRouter);
+app.use("/api/historial", historialRouter);
 
 export default app;

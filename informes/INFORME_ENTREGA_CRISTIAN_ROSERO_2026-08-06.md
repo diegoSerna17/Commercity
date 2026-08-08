@@ -4,14 +4,14 @@
 **De:** Daniel Palacios (Lider backend)
 **Modulo asignado:** Ver perfil publico de un usuario (item 58 de la metodologia)
 **Fecha de revision:** 6 de agosto de 2026
-**Requerimiento:** RF104 (REVISION)
+**Requerimiento:** RF106 (REVISION) - segun documento oficial `Commercity 2.0 (optimizado 6)`: "El sistema permitirá a los usuarios visualizar el perfil público de los vendedores y compradores"
 **Estado:** Entregado e integrado con correcciones
 
 ---
 
 ## 1. Resumen
 
-Cristian, recibí tu trabajo del modulo de **perfil publico de usuario**. Lo revise completo, lo probe y lo integre al backend real del proyecto. Tu modulo funciona y cumple el requerimiento RF104. Aplique algunas correcciones de seguridad y estructura para que cumpla las reglas del proyecto; en esta nota te explico que hiciste bien y que ajuste.
+Cristian, recibí tu trabajo del modulo de **perfil publico de usuario**. Lo revise completo, lo probe y lo integre al backend real del proyecto. Tu modulo funciona y cumple el requerimiento **RF106** (perfil publico de vendedores y compradores). Aplique algunas correcciones de seguridad y estructura para que cumpla las reglas del proyecto; en esta nota te explico que hiciste bien y que ajuste.
 
 ## 2. Lo que hiciste bien
 
@@ -116,3 +116,31 @@ AVANCES/CRISTIAN ROSERO/
 ## 7. Conclusion
 
 Tu modulo quedo integrado, probado y registrado en el changelog del proyecto, con el commit atribuido a tu nombre. Las correcciones fueron de seguridad y estructura; tu trabajo funcional se mantuvo intacto. Cualquier duda me escribes.
+
+## 8. Actualizacion 2026-08-07 - checklist de revision contra el optimizado 6
+
+Se actualizo este informe para alinearlo con el documento oficial de
+requerimientos `Commercity 2.0 (optimizado 6)` y con la regla del proyecto
+`revision-requerimientos.md`. Cambios:
+
+1. **RF corregido**: el modulo de perfil publico corresponde al **RF106** del
+   optimizado 6 (antes se citaba RF104 de una version anterior).
+2. **Checklist de revision aplicado** (verificado contra el codigo integrado):
+
+| Checklist (regla revision-requerimientos.md) | Estado del modulo integrado |
+|---|---|
+| Contrato de respuesta `{ success, data/error }` | CUMPLE |
+| Consultas parametrizadas (`?` de mysql2) | CUMPLE |
+| No exponer datos sensibles (email fuera del perfil publico) | CUMPLE |
+| Usuarios baneados/inactivos no visibles (activo = 0 -> 404) | CUMPLE |
+| Validacion de entrada (id entero positivo, 400 VALIDATION_ERROR) | CUMPLE |
+| No DELETE fisico de historiales | CUMPLE (endpoint de solo lectura) |
+| Cobertura de tests no menor a la existente | CUMPLE (94.16% global) |
+
+**Conclusion de la actualizacion**: el modulo de Cristian sigue cumpliendo los
+requerimientos oficiales vigentes y no requiere nuevas correcciones.
+
+---
+
+*Informe original 2026-08-06, actualizado el 2026-08-07 (v1.1) con la numeracion
+oficial del `Commercity 2.0 (optimizado 6)` y el checklist de revision.*

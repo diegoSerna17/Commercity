@@ -4,6 +4,318 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-07 - DOCS: informe de revision del modulo panel admin de Cabrera con soluciones copiables (v1.0)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/SPRING 1/JUAN CABRERA/INFORME_REVISION_MODULO_PANEL_ADMIN_CABRERA_2026-08-07.md" (nuevo, v1.0)
+- **Descripcion**: revision de la entrega de Cabrera (panel admin, RF55-RF77) en `AVANCES/SPRING 1/JUAN CABRERA/`. Es la entrega mas completa del equipo: B-R3 (suspension con eliminado_por_admin), B-R4 (desactivacion con activo=0 + transaccion), B-R5 (destino de pedidos con FOR UPDATE: Pendiente se cancela con stock, En camino se completa con desembolso), buscador FULLTEXT con fallback LIKE, validarId/escapeLike y 6 tests con mocks. Se documentaron 7 hallazgos con solucion copiable: 4.1 CRITICO rutas admin sin authRequired+requireRoles, 4.2 ALTA DELETE fisico de reportes (borrado logico), 4.3 ALTA sin helmet/cors cerrado, 4.4 MEDIA contrato {success,data}, 4.5 MEDIA RF41 desactiva cualquier id (usar req.userId), 4.6/4.7 BAJA server/app y ruta raiz.
+- **Motivo**: el usuario pidio revisar la tarea de Juan Cabrera.
+- **Requerimientos**: RF41, RF55-RF77, RF60-RF66, RF67-RF74 (REVISION)
+- **Evidencia**: lectura completa de controllers, routes, app, utils y tests de la entrega.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: reporte de base de datos segun auditoria (v1.0)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "informes/REPORTE_BASE_DE_DATOS_AUDITORIA_2026-08-07.md" (nuevo, v1.0)
+- **Descripcion**: reporte del estado real de la BD `commercy_v2` contra la auditoria. Documenta las 7 migraciones M1-M7 aplicadas y verificadas, las 5 decisiones B-R1 a B-R5 confirmadas en el esquema, los 3 cambios desviados que fueron reversados (iva_total, usuarios.estado, productos.estado GENERADA restaurada), el detalle de columnas clave por tabla, y la confirmacion de que no se borro data (172 usuarios, 332 productos, 38 pedidos). Resultado integral: 11/11 OK.
+- **Motivo**: el usuario pidio generar el reporte de base de datos segun la auditoria.
+- **Requerimientos**: RF4, RF31, RF88, RF97, RF114, RF119, RF120, RF131, RF135, RF136 (REVISION)
+- **Evidencia**: verificacion directa con information_schema de la BD real (columnas, tipos, DEFAULT, indices, STORED GENERATED).
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - FEAT: BD commercity_v2 alineada con la auditoria (M1-M7 aplicadas, B-R2/B-R3/B-R4 verificadas)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: BD remota `commercity_v2` (149.130.178.228) - cambios DDL aplicados y verificados
+- **Descripcion**: se verifico la BD real contra la auditoria y se completo lo que faltaba. Meneses ya habia aplicado: M1 (notificaciones.tipo varchar(50)), M2 (estado sin mojibake), M3 (token_recuperacion_expiracion), M4 (imagen_url en detalle_pedidos), M7 (FULLTEXT productos), la eliminacion de pedidos.iva_total (B-R2) y usuarios.estado (B-R4), y la restauracion de productos.estado como STORED GENERATED (B-R3). Yo aplique las 2 que faltaban: M5 (pagos_simulados.estado DEFAULT 'Pendiente') y M6 (carrito_items.updated_at). Verificacion integral: 11/11 OK.
+- **Motivo**: el usuario pidio corregir lo que faltaba de la BD y confirmar si quedaba alineada con la auditoria.
+- **Requerimientos**: RF4, RF31, RF88, RF114, RF116, RF132, RF135, RF136 (INTEGRADO)
+- **Evidencia**: script de verificacion contra information_schema de la BD real: M1-M7 OK, iva_total eliminado, usuarios.estado eliminado, productos.estado GENERADA, estado_envio con 'Cancelado'.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: informe de Brandon reescrito en primera persona (v1.1)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/SPRING 1/BRANDON/INFORME_REVISION_MODULO_PANEL_PRINCIPAL_BRANDON_2026-08-07.md" (actualizado de v1.0 a v1.1)
+- **Descripcion**: se reescribio el informe de revision del panel principal de Brandon en primera persona natural (voz de Daniel), manteniendo intactas las 7 soluciones copiables (4.1-4.7), la tabla de archivos a integrar (seccion 5), la tabla de RF (seccion 6) y el orden de correccion (seccion 7). Cambiaron los titulos a "De donde salio esta revision" y "Mi conclusion".
+- **Motivo**: el usuario pidio que el informe estuviera en primera persona como los anteriores (Diego y Jary).
+- **Requerimientos**: N/A (redaccion)
+- **Evidencia**: revision del texto completo del informe en su version 1.1.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: informe de revision del modulo panel principal de Brandon con soluciones copiables (v1.0)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/SPRING 1/BRANDON/INFORME_REVISION_MODULO_PANEL_PRINCIPAL_BRANDON_2026-08-07.md" (nuevo, v1.0)
+- **Descripcion**: revision de la entrega de Brandon (panel principal, RF87-RF94) en `AVANCES/SPRING 1/BRANDON/Commercity-Panel/`. Brandon aviso que la hizo con BD simulada propia y diseno diferente; se confirmo que el CODIGO es aprovechable (busqueda por nombre/categoria/vendedor parametrizada + paginacion + frontend con estados carga/error/vacio) pero la BD simulada no coincide con el schema v3. Se documentaron 7 hallazgos con solucion copiable: 4.1 alinear consultas al schema v3 (vendedores en usuarios.nombre_completo, imagen_url, fecha_publicacion, filtrar estado=Disponible y eliminado_por_admin=0), 4.2 endpoint vendedores desde usuarios+usuario_roles+roles, 4.3 CommonJS a ESM, 4.4 contrato {success,data}, 4.5 frontend con diseno propio y URL fija (portar logica a Inicio.jsx), 4.6 buscador LIKE con M7 pendiente, 4.7 commercity.sql.sql no se integra.
+- **Motivo**: el usuario pidio revisar la tarea de Brandon que le envio por WhatsApp.
+- **Requerimientos**: RF87, RF88, RF89, RF90, RF91, RF92, RF93, RF94 (REVISION)
+- **Evidencia**: verificacion de las consultas de server.js contra `schema_commercity_3.sql` (la tabla vendedores no existe; el vendedor esta en usuarios con rol vendedor).
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - FEAT: integracion del modulo historial de compras (Jary) al backend central con auth
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "backend/src/server/controllers/compras.controllers.js" (nuevo), "backend/src/server/routes/historial.routes.js" (nuevo), "backend/src/server/middleware/auth.middleware.js" (nuevo), "backend/src/server/__tests__/historial.controllers.test.js" (nuevo, 6 tests), "backend/src/server/app.js" (monta /api/historial), "backend/package.json" (jsonwebtoken ^9.0.3)
+- **Descripcion**: se integro al backend central el modulo de historial de compras de Jary con TODAS las correcciones del informe v1.0 aplicadas: (1) comprador_id sale de req.userId del JWT (nunca query param), (2) ruta protegida con authRequired recien creado, (3) sin db.js hardcodeado (usa pool de config/db.js), (4) contrato { success, data }, (5) campo imagen (RF31) con prod.imagen_url, (6) filtro por estado validado contra el ENUM real ('Pendiente','En camino','Entregado'). Se agrego JWT_SECRET al .env local (no se sube).
+- **Motivo**: el usuario pidio aplicar los fixes de una vez e integrar el modulo de Jary al backend central para probarlo.
+- **Requerimientos**: RF26, RF27, RF28, RF29, RF30, RF31, RF32 (INTEGRADO)
+- **Evidencia**: GET /api/historial/compras con token -> HTTP 200 con 2 pedidos reales de la BD (comprador 7); sin token -> 401; filtro ?estado=Pendiente -> 200 con solo Pendiente. Tests: 32/32 en verde (26 previos + 6 nuevos). Cobertura 94.7% statements (umbral 60%).
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: informe de revision del modulo de historial de Jary con soluciones copiables (v1.0)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/SPRING 1/JARY/INFORME_REVISION_MODULO_HISTORIAL_COMPRAS_JARY_2026-08-07.md" (nuevo, v1.0)
+- **Descripcion**: revision de la entrega de Jary (historial de compras del comprador) en `AVANCES/SPRING 1/JARY/Commercity-main.zip`. Se descarto el repositorio completo y se identificaron SOLO los archivos de su autoria: `compras.controllers.js` (nuevo), `routes.js` (ruta /compras) y `HistorialDeCompras.jsx` (frontend conectado). La consulta SQL fue verificada contra el schema v3 (columnas correctas, parametrizada). Se documentaron 7 hallazgos con solucion copiable: 3.1 credenciales hardcodeadas en db.js (usar pool del proyecto), 3.2 comprador_id hardcodeado (usar req.userId del JWT, controlador completo listo), 3.3 ruta sin proteger (authRequired + /api/historial/compras), 3.4 mapeo de estados BD (En camino/Pendiente/Entregado) a slugs del frontend, 3.5 URL hardcodeada (API_BASE_URL central), 3.6 contrato {success,data}, 3.7 archivos copiados que no se integran. Incluye RF31 (imagen) preparado con prod.imagen_url pendiente de M4. Ademas se limpio la carpeta de Jary: se elimino la copia completa del repositorio (Commercity-main/ y el zip) y se dejo SOLO la estructura con los 3 archivos de su tarea + este informe.
+- **Motivo**: el usuario pidio revisar la carpeta de Jary en AVANCES/SPRING 1 porque ella dice que ya hizo su modulo; pidio dejar solo los archivos que ella modifico.
+- **Requerimientos**: RF26, RF27, RF28, RF29, RF30, RF31, RF32 (REVISION)
+- **Evidencia**: verificacion de la consulta contra `schema_commercity_3.sql` (pedidos.comprador_id, fecha_pedido, detalle_pedidos.estado_envio, cantidad, subtotal, productos.nombre, usuarios.nombre_completo).
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - CHORE: nueva politica de push (solo con confirmacion; commercycity solo backend)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: ".trae/rules/git-push-politica.md", ".trae/rules/git-autorizacion-versionado.md"
+- **Descripcion**: se actualizo la politica de versionado: (1) el push NUNCA es automatico, siempre requiere confirmacion explicita del usuario (lista de palabras de autorizacion y presentacion previa de archivos/destino/mensaje); (2) el repositorio `commercycity` (diegoSerna17/Commercity) ya NO esta prohibido por completo: se permite push SOLO de actividades de BACKEND (codigo, modulos, controladores, rutas, migraciones, tests), quedando prohibidos informes, configuracion del entorno y material de otras areas; (3) checklist actualizado con la confirmacion como primer requisito y la regla de solo-backend para commercycity.
+- **Motivo**: el usuario pidio cambiar la regla: solo hacer push cuando el confirme, y subir a commercycity unicamente actividades de backend.
+- **Requerimientos**: N/A (configuracion de entorno)
+- **Evidencia**: verificado con `git remote -v` que ambos remotes estan configurados; reglas editadas y memoria del proyecto actualizada.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: informe de Diego reescrito en primera persona (v2.1)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/DIEGO SERNA/INFORME_REVISION_MODULO_AUTENTICACION_DIEGO_SERNA_2026-08-07.md" (actualizado de v2.0 a v2.1)
+- **Descripcion**: se reescribio el informe completo en primera persona natural (voz de Daniel), manteniendo intactas las 9 soluciones copiables (4.1-4.9), el contrato de rutas (seccion 5), la tabla de RF (seccion 6) y el orden de correccion (seccion 7). Cambiaron los titulos de contexto a "De donde salio esta revision" y de conclusion a "Mi conclusion".
+- **Motivo**: el usuario pidio que el informe estuviera en primera persona como si lo hubiera escrito el.
+- **Requerimientos**: N/A (redaccion)
+- **Evidencia**: revision del texto completo del informe en su version 2.1.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: informe de revision del backend de autenticacion de Diego con soluciones copiables (v2.0)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/DIEGO SERNA/INFORME_REVISION_MODULO_AUTENTICACION_DIEGO_SERNA_2026-08-07.md" (actualizado de v1.1 a v2.0)
+- **Descripcion**: revision de la entrega real de Diego (backend de autenticacion en `AVANCES/DIEGO SERNA/backend/`) con soluciones definitivas lista para copiar y pegar en cada hallazgo: 4.1 expiracion de 5 min del token RF4 (requiere M3 + DATE_ADD en UPDATE + WHERE con expiracion + texto del correo), 4.2 checklist api-seguridad (helmet, cors cerrado, rate-limit, JWT_SECRET sin fallback, server.js reemplazable completo), 4.3 Zod (middleware validate + schemas + rutas), 4.4 rol fijo comprador en register, 4.5 transaccion en cambiarRol + proteger admin, 4.6 contrato `{ success, data/error }`, 4.7 tests (integracion vs unit), 4.8 app.js/server.js, 4.9 middleware de error centralizado. Se anadio seccion 5 con el contrato real de rutas (POST /api/register, /api/login, /api/recover, /api/reset-password, GET /api/me, PUT /api/me/rol, GET /api/admin) y seccion 7 con orden de correccion.
+- **Motivo**: el usuario aclaro que el informe de Diego es por su tarea de BACKEND (la entrega en `AVANCES/DIEGO SERNA`), no por frontend; y pidio recomendaciones de solucion para cada punto que lo hagan mas rapido.
+- **Requerimientos**: RF3, RF4, RF7-RF10, RF39, RF42, RF40/RF41 (pendiente), RNF8, RNF9, RNF10 (REVISION)
+- **Evidencia**: revision del codigo real de Diego (controllers, middlewares, routes, utils, config, tests); se elimino el informe frontend creado por error (LAST VERSION/INFORME_REVISION_DIEGO_FRONTEND_2026-08-07.md).
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: re-auditoria de consistencia interna (v3.7)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "LAST VERSION/INFORME_AUDITORIA_COMPLETA_2026-08-07.md" (v3.7)
+- **Descripcion**: revision completa del informe seccion por seccion a peticion del usuario. Se corrigieron 3 inconsistencias internas: (1) RF47 y RF116 pasaron de BLOQUEADO a PARCIAL en la seccion 4.6 (las decisiones B-R1/B-R2 ya estan cerradas, coherente con 2.2/2.8); (2) se agrego la definicion de BLOQUEADO a la leyenda de la seccion 1 y la aclaracion de lectura "Backend pendiente + Estado OK = solo falta el endpoint, sin brecha de datos"; (3) se agrego la fila de RF132 a la seccion 4.6 (solucion definitiva: backend solo inserta el subtotal; monto_vendedor/monto_comision son columnas GENERADAS) y se actualizo su parentesis en 2.11.
+- **Motivo**: el usuario pidio revisar de nuevo si el informe estaba bien y completo.
+- **Requerimientos**: RF47, RF116, RF132 (REVISION)
+- **Evidencia**: verificacion de los bloques del seed (S1-S5) contra el DDL real de `schema_commercity_3.sql`: `reportes.estado_reporte`/`evidencia_url` existen, `producto_variantes` tiene las columnas usadas, `notificaciones.tipo` ENUM incluye 'pedido'; `detalle_pedidos.monto_vendedor`/`monto_comision` son STORED GENERATED.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: bloque SQL unico copiable en la auditoria final (v3.6)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "LAST VERSION/INFORME_AUDITORIA_COMPLETA_2026-08-07.md" (v3.6)
+- **Descripcion**: se fusiono la seccion 4.2 en UN solo bloque SQL copiable (M1-M7 + M8 comentado) para guardarlo directo como `003_auditoria_v2.sql`, con el comando de ejecucion y la limpieza previa de notificaciones en el encabezado del propio archivo. Asi los pasos de BD (PASO 2) y semilla (PASO 3) son literalmente copiar y pegar.
+- **Motivo**: el usuario pidio que el paso a paso quede claro para que los lideres solo copien y peguen exactamente.
+- **Requerimientos**: N/A (instrucciones de ejecucion)
+- **Evidencia**: bloque SQL validado contra el DDL del schema v3.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: consistencia final de la auditoria (v3.5) - limpieza previa en M2 y estados alineados
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "LAST VERSION/INFORME_AUDITORIA_COMPLETA_2026-08-07.md" (v3.5)
+- **Descripcion**: revision de integridad del informe con 2 ajustes para evitar inconvenientes al ejecutar: (1) en la guia PASO 2 se agrego la limpieza previa de `notificaciones` antes de M2 (`DELETE FROM notificaciones;` cuando exista estado corrupto `le├¡do`), para que el MODIFY del ENUM no falle en modo estricto, y la nota de ejecutar primero el schema si la BD es nueva; (2) se alinearon los estados de RF47 y RF116 en las tablas 2.2/2.8 de BLOQUEADO a "PARCIAL (decision B-R1/B-R2)" ya que las decisiones estan cerradas (RF97 sigue BLOQUEADO por depender de BD M1/M2).
+- **Motivo**: el usuario pregunto si ya estaba todo completo para solucionar todo sin errores e inconvenientes.
+- **Requerimientos**: RF47, RF97, RF116 (REVISION)
+- **Evidencia**: revision de cada paso de la guia contra el DDL del schema v3 y la BD real.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: guia paso a paso para solucionarlo todo en la auditoria final (v3.4)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "LAST VERSION/INFORME_AUDITORIA_COMPLETA_2026-08-07.md" (v3.4)
+- **Descripcion**: se reemplazo la seccion 7 por la "Guia paso a paso para solucionarlo todo" con el procedimiento en orden y la verificacion de cada paso: PASO 1 (Director: copiar RF de la seccion 4.7 y guardar versionado), PASO 2 (BD: crear y ejecutar migraciones M1-M7 en orden con verificaciones por columna), PASO 3 (BD: reemplazar bloques NOTIFICACIONES/REPORTES del seed, agregar variantes, ejecutar y verificar conteos), PASO 4 (Backend: pasos detallados de BE-1 expiracion RF4, BE-2 JWT_SECRET, BE-3 seguridad, BE-4 Zod, BE-5 cambiarRol transaccion, BE-6 contrato, BE-7 ACID en compra, BE-8 tests), PASO 5 (verificacion integral: npm test, cobertura, pruebas contra BD real, changelog).
+- **Motivo**: el usuario pidio confirmar que cada correccion tenga el paso a paso exacto para solucionarlo todo.
+- **Requerimientos**: RF4, RF47, RF72-RF74, RF116, RF134-RF136, RNF2, RNF10 (REVISION)
+- **Evidencia**: procedimiento alineado con las migraciones, seed y checklist de backend del informe.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: texto final de los RF para copiar y pegar en el documento oficial (v3.3)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "LAST VERSION/INFORME_AUDITORIA_COMPLETA_2026-08-07.md" (v3.3)
+- **Descripcion**: se agrego la seccion 4.7 "Texto final de los RF para copiar y pegar en el documento oficial" con la redaccion definitiva en el formato del docx (`**RF###:**`): RF41 (desactivar cuenta vendedor + suspender productos), RF47 (precio con IVA incluido), RF72 (suspension logica de productos), RF73 (baneo/activar/desactivar usuarios, eliminacion logica), RF74 (destino de pedidos del vendedor baneado), RF116 (IVA calculado en vuelo, sin almacenar), y 3 RF nuevos RF134 (inventario/descuento de stock), RF135 (cancelaciones con restitucion de stock) y RF136 (carritos abandonados 7 dias). Aclaracion: la seccion 4.6 es la guia de implementacion; la 4.7 es el texto que Yepes puede copiar y pegar.
+- **Motivo**: el usuario pidio que la solucion por requerimiento este escrita tal cual debe quedar en el documento oficial para que Yepes solo copie y pegue.
+- **Requerimientos**: RF41, RF47, RF72, RF73, RF74, RF116, RF134-RF136 (REVISION)
+- **Evidencia**: redaccion alineada al formato y estilo del docx oficial.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: soluciones definitivas en semilla y sugerencias de la auditoria final (v3.2)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "LAST VERSION/INFORME_AUDITORIA_COMPLETA_2026-08-07.md" (v3.2)
+- **Descripcion**: se convirtieron en instrucciones exactas los ajustes de semilla y los campos de sugerencias para que los lideres no hagan algo distinto. Cambios: (1) seccion 4.3 reescrita con SQL listo para pegar - S1+S2: bloque NOTIFICACIONES completo corregido ('pedido enviado' -> 'pedido', estado sin acentos), S3+S5: bloque REPORTES completo con estado_reporte ('Resuelto' solo donde hay respuesta_admin, 5 reportes) y evidencia_url en 2 reportes, S4: bloque de variantes de ejemplo; (2) M8 eliminado (NO se aplica - B-R3 usa eliminado_por_admin existente) y se actualizaron 6.1, 6.2, plan de accion y conclusion de "8 migraciones M1-M8" a "7 migraciones M1-M7"; (3) BE-6 definido: contrato unico { success, data/error } y el modulo de autenticacion se migra a ese formato; (4) nota fija: estado de notificaciones SIEMPRE sin acentos.
+- **Motivo**: el usuario pidio soluciones definitivas (texto/SQL exacto) en los ajustes de semilla y todos los campos de sugerencias, para que quede claro a los lideres y no hagan algo diferente.
+- **Requerimientos**: RF4, RF47, RF97, RF111, RF114, RF115, RF116, RF120, RF72-RF74, RNF2 (REVISION)
+- **Evidencia**: bloques SQL validados contra el schema v3 (columnas y ENUM).
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: solucion definitiva por requerimiento pendiente en la auditoria final (v3.1)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "LAST VERSION/INFORME_AUDITORIA_COMPLETA_2026-08-07.md" (v3.1)
+- **Descripcion**: se agrego la seccion 4.6 "Solucion definitiva por requerimiento pendiente" que lista, para cada RF/RNF que no esta OK (PARCIAL/PEND/BLOQUEADO), la accion concreta a implementar: migracion (M1-M8), decision (B-R1 a B-R5), endpoint exacto o regla de backend. Cubre gestion de usuarios (RF4, RF9, RF12-RF41), perfil vendedor (RF44-RF54), panel admin (RF67-RF74), productos/panel principal (RF80, RF88), notificaciones (RF97), compra/pedidos/finanzas (RF111, RF114, RF115, RF116, RF120, RF123) y no funcionales (RNF2, RNF6, RNF10, RNF11).
+- **Motivo**: el usuario pidio que, ya que se tiene todo el analisis, cada requerimiento no-OK tenga su solucion definitiva en el informe y no solo un estado.
+- **Requerimientos**: RF1-RF133, RNF1-RNF19 (REVISION)
+- **Evidencia**: analisis cruzado de cada RF contra schema v3, seed y codigo backend.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: auditoria final v3.0 reescrita en primera persona natural (voz humana)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "LAST VERSION/INFORME_AUDITORIA_COMPLETA_2026-08-07.md" (v3.0)
+- **Descripcion**: se reescribio la auditoria completa con voz humana en primera persona (como si la hubiera escrito el autor), eliminando el tono robotico. Se conservaron todas las tablas tecnicas (RF1-RF133 por modulo, RNF1-RNF19, decisiones definitivas B-R1 a B-R5, migraciones M1-M8, ajustes de semilla S1-S5, brechas backend BE-1 a BE-8 y frontend FE-1 a FE-4, cobertura por modulo, necesidades 6.1/6.2). Las secciones narrativas pasaron a primera persona natural: "De donde salio esta auditoria", "Recorri los 133 requerimientos uno por uno", "Lo que falta se reduce a tres frentes", "Que propongo hacer (en orden)".
+- **Motivo**: el usuario indico que el informe sonaba a robot y pidio que se sintiera como escrito por el en primera persona.
+- **Requerimientos**: RF1-RF133, RNF1-RNF19 (REVISION)
+- **Evidencia**: mismo contenido tecnico verificado; solo cambio la redaccion.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: decisiones definitivas en la auditoria final (seccion 4.1, sin propuestas ni charlas)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "LAST VERSION/INFORME_AUDITORIA_COMPLETA_2026-08-07.md" (v2.1)
+- **Descripcion**: se reemplazo la seccion 4.1 "Cierre propuesto (criterio tecnico)" por "Decisiones definitivas (implementables)". Decisiones cerradas: B-R1 (RF47: el vendedor publica precio con IVA incluido, el sistema desglosa; el vendedor NO calcula), B-R2 (RF116 se alinea a RF132: NO se almacena IVA por producto, se calcula en vuelo subtotal=precio/1.19, comisiones 90/10 sobre subtotal; sin columnas nuevas), B-R3 (los productos nunca se eliminan fisicamente; se suspenden con eliminado_por_admin=1; un reporte pendiente no suspende; solo el admin decide), B-R4 (eliminar cuenta = desactivacion logica activo=0 + suspension de productos; prohibido DELETE fisico), B-R5 (al banear: productos suspendidos, pedidos pagados se completan, pendientes se cancelan con restitucion de stock; el admin no interviene pedido a pedido). Se actualizaron ademas 6.1, 6.2 (sin columna de IVA, decision tomada), plan de accion (solo registrar las decisiones en el documento) y la tabla de cobertura por modulo (bloqueos liberados).
+- **Motivo**: el usuario pidio que la seccion de cierre contenga solo decisiones definitivas que vayan a funcionar, no propuestas ni discusiones.
+- **Requerimientos**: RF47, RF72, RF73, RF74, RF116, RF132, RF41 (REVISION)
+- **Evidencia**: decisiones alineadas con el esquema v3 (eliminado_por_admin existe) y con RF132 cerrado.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: auditoria final v2.0 en LAST VERSION (primera persona, criterio de experto sin opiniones de lideres)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "LAST VERSION/INFORME_AUDITORIA_COMPLETA_2026-08-07.md" (v2.0)
+- **Descripcion**: se actualizo la auditoria completa a version 2.0 con criterio tecnico independiente (primera persona), basada SOLO en evidencia verificable (archivos de LAST VERSION + codigo real del backend), sin incorporar comentarios de otros lideres ni transcripciones de audios. Cambios: cabecera con criterio y version; fuentes (se quita la referencia a audios/grupo); brechas 4.1 con "cierre propuesto (criterio tecnico)"; nueva seccion 6 "Lo que el proyecto NECESITA y lo que NO necesita" (9 necesidades tecnicas y 7 items de no-sobre-ingenieria: sin columna de IVA hasta decidir RF116, sin imagen duplicada en productos, sin tablas adicionales, sin DELETE fisico, sin pasarela real ni CVV, FULLTEXT diferida, sin reescribir requerimientos); plan de accion reescrito sin nombres de lideres; conclusion y pie actualizados.
+- **Motivo**: el usuario pidio dejar claros los requerimientos del equipo, que la auditoria final este en primera persona, cubra todo y sea de experto sin tener en cuenta comentarios de los otros lideres.
+- **Requerimientos**: RF1-RF133, RNF1-RNF19 (REVISION)
+- **Evidencia**: analisis tecnico verificado contra schema v3, seed y codigo backend real.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: auditoria completa del proyecto en LAST VERSION (analisis profundo RF por RF)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "LAST VERSION/INFORME_AUDITORIA_COMPLETA_2026-08-07.md" (nuevo, version ampliada de la auditoria dentro de la carpeta oficial)
+- **Descripcion**: se creo la version ampliada de la auditoria DENTRO de `LAST VERSION` (unica carpeta oficial), con analisis profundo de los 133 RF y 19 RNF: matriz por modulo (11 secciones) con estado de BD/backend/frontend por RF, tabla RNF, 5 conflictos de requerimientos con cierre propuesto, 8 migraciones SQL listas (M1-M8: notificaciones.tipo VARCHAR, mojibake estado, token_recuperacion_expiracion RF4, imagen en detalle_pedidos RF120, DEFAULT Pendiente en pagos, updated_at en carrito, FULLTEXT, suspendido en productos), 5 ajustes de semilla (S1-S5: 'pedido enviado' vs ENUM, estado_reporte Resuelto, variantes, evidencias), 8 brechas backend (BE-1..BE-8) y 4 dependencias frontend. Incluye cobertura por modulo con bloqueos por integrante y plan de accion.
+- **Motivo**: el usuario pidio dejar todos los requerimientos claros y que la auditoria completa quede dentro de LAST VERSION, cubriendo todas las areas sin brechas.
+- **Requerimientos**: RF1-RF133, RNF1-RNF19 (REVISION)
+- **Evidencia**: cruce RF por RF contra schema v3 y seed; migraciones SQL verificadas contra el DDL.
+- **Estado**: Completado (auditoria); pendientes de decision (Yepes/Meneses)
+
+---
+
+## 2026-08-07 - DOCS: auditoria completa del proyecto contra LAST VERSION (requerimientos + schema v3 + seed)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "informes/INFORME_AUDITORIA_COMPLETA_COMMERCITY_LAST_VERSION_2026-08-07.md" (nuevo), "LAST VERSION/Commercity (optimizado).docx" (convertido a .md), "LAST VERSION/schema_commercity_3.sql" y "LAST VERSION/seed_commercity.sql" (revisados), "Audios/18.txt", "Audios/19.txt", "Audios/20.txt" (transcritos)
+- **Descripcion**: auditoria general de todas las areas usando SOLO la carpeta LAST VERSION (unica fuente oficial). Hallazgos principales: (1) CONFLICTOS de requerimientos - RF47 (vendedor calcula IVA) vs RF132 (precio con IVA incluido), RF116 (almacenar IVA por producto) vs RF132 (desglose en vuelo); (2) CRITICO BD+seed - `notificaciones.tipo` ENUM del schema v3 no contiene 'pedido enviado' que usa la semilla (INSERT falla) y no refleja el VARCHAR(50) real; mojibake en `notificaciones.estado` de la BD real; (3) VACIOS de negocio - eliminacion/suspension de productos con reportes o compras en curso, pedidos pagados de vendedor baneado, descuento de stock, cancelaciones y carritos abandonados; (4) faltan columnas: `token_recuperacion_expiracion` (RF4), imagen en `detalle_pedidos` (RF120), `carrito_items.updated_at`, DEFAULT 'Pendiente' en `pagos_simulados`; (5) seed sin `producto_variantes` y reportes respondidos sin `estado_reporte='Resuelto'`. Se incluyo matriz de cobertura por modulo, 10 brechas priorizadas y plan de accion (Yepes decide IVA y suspension; Meneses aplica migraciones y ajusta seed; entregas 11/08).
+- **Motivo**: el grupo reporto desorden por multiples versiones de requerimientos; Meneses espera la auditoria completa de Daniel para autorizar el esquema y la semilla (audio 18).
+- **Requerimientos**: RF4, RF47, RF72, RF73, RF74, RF97, RF116, RF120, RF132, RNF8-RNF11 (REVISION)
+- **Evidencia**: lectura completa de los 3 archivos oficiales de LAST VERSION + transcripcion de audios 18, 19 y 20.
+- **Estado**: Completado (auditoria); pendientes de decision (Yepes/Meneses)
+
+---
+
+## 2026-08-07 - DOCS: actualizacion de informes de Diego Serna y Cristian Rosero a la numeracion oficial (optimizado 6)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/DIEGO SERNA/INFORME_REVISION_MODULO_AUTENTICACION_DIEGO_SERNA_2026-08-07.md" (v1.1), "informes/INFORME_ENTREGA_CRISTIAN_ROSERO_2026-08-06.md" (v1.1)
+- **Descripcion**: se actualizaron los dos informes con la numeracion vigente de los requerimientos oficiales (`Commercity 2.0 (optimizado 6)`) y el checklist de la regla nueva `revision-requerimientos.md`. Diego: se agrego version 1.1, RF del modulo de autenticacion (RF7-RF10 roles, RF3/RF4 recuperacion, RF39-RF42 gestion de cuenta) y checklist de revision (contrato, token 5 min, JWT_SECRET, cambio de rol). Cristian: RF corregido de RF104 a **RF106** (perfil publico segun optimizado 6) y seccion nueva con checklist verificado (todo CUMPLE: contrato, parametrizacion, datos sensibles, baneados 404, validacion, cobertura 94.16%).
+- **Motivo**: las reglas del proyecto se alinearon al optimizado 6; los informes de entrega/revision deben citar los RF vigentes para que el checklist de revision sea objetivo y trazable.
+- **Requerimientos**: RF106, RF7-RF10, RF4, RF39-RF42 (REVISION)
+- **Evidencia**: verificacion de la numeracion de RF106 y RF39-RF42 contra el documento oficial optimizado 6.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - CHORE: alineacion de reglas del proyecto con los requerimientos oficiales (optimizado 6)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: ".trae/rules/revision-requerimientos.md" (nueva), ".trae/rules/mysql-convenciones.md", ".trae/rules/api-seguridad.md"
+- **Descripcion**: se alinearon las reglas de revision con el documento oficial `Commercity 2.0 (optimizado 6)`. Correcciones: (1) mysql-convenciones.md - RF129->RF133 (moneda COP), RF109->RF45/RF54 (producto-vendedor), estados de envio por linea (detalle_pedidos.estado_envio, RF119/RF120), nota de `productos.estado` STORED GENERATED y reglas de negocio de IVA RF132, token RF4, stock e integridad historica; (2) api-seguridad.md - checklist de recuperacion de contrasena (RF4: expiracion 5 min, token de un solo uso, anti-enumeracion) y checklist de compra/pagos (RF132: desglose IVA, comisiones 90/10, transaccion ACID, descuento de stock, cancelaciones, RF74); (3) se creo .trae/rules/revision-requerimientos.md: documento oficial unico (optimizado 6), mapeo RF/RNF por modulo backend, checklist obligatorio de revision de entregas y conflictos abiertos (RF116 vs RF132, RF47).
+- **Motivo**: las reglas referenciaban RF de versiones anteriores (numeracion cambiada en el optimizado 6), lo que hacia las revisiones dependientes de la memoria del revisor en lugar de un checklist objetivo.
+- **Requerimientos**: RF132, RF4, RF133, RF109, RF45, RF54, RF119, RF120, RF74, RNF8-RNF11 (REVISION)
+- **Evidencia**: verificacion de numeracion contra el optimizado 6 (RF129/RF109 desactualizados, RF133/RF45/RF54 vigentes).
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: revision del modulo de autenticacion de Diego Serna y estructura de AVANCES
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/DIEGO SERNA/INFORME_REVISION_MODULO_AUTENTICACION_DIEGO_SERNA_2026-08-07.md", AVANCES/ (carpetas por integrante creadas)
+- **Descripcion**: (1) se creo en AVANCES una carpeta por integrante del backend con su nombre (CARLOS PEREA, CARLOS VIDAL, JARY, ERICK, MOSQUERA FLOR, JUAN CABRERA, BRANDON, JOSE YEPES, DANIEL PALACIOS; ya existian CRISTIAN ROSERO y DIEGO SERNA); (2) se descomprimio y reviso el backend.zip de Diego Serna (modulo Autenticacion JWT + RBAC + recuperacion con Resend). Resultado: estructura correcta, consultas parametrizadas, RBAC bien implementado, bcrypt, token de un solo uso y tests solidos. Pendientes ALTA: expiracion de 5 min del RF4 no implementada (falta token_recuperacion_expiracion), checklist de seguridad incompleta (cors abierto, sin helmet/rate-limit, JWT_SECRET con fallback hardcodeado). Pendientes MEDIA: validacion Zod, auto-asignacion de rol vendedor en register, cambiarRol sin transaccion y con autodegradacion de admin, contrato de respuesta desalineado ({success,message,data} vs {success,data/error}), tests contra BD real.
+- **Motivo**: el usuario pidio crear la estructura de AVANCES por integrante del backend y revisar el trabajo de Diego Serna para dar informe.
+- **Requerimientos**: RF4, RF7-RF10 (REVISION)
+- **Evidencia**: revision estatica del codigo completo de AVANCES/DIEGO SERNA/backend/ (9 archivos fuente + tests + config).
+- **Estado**: Completado (revision); correcciones pendientes del integrado
+
+---
+
+## 2026-08-07 - DOCS: revision de la ultima version de requerimientos (optimizado 6), seed y sugerencias
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "informes/INFORME DE REVISION - BASE DE DATOS Y REQUERIMIENTOS COMMERCITY (commercity_v2).md" (v1.5), "informes/Commercity 2.0 (optimizado 6)/Commercity 2.0 (optimizado 6).md", "informes/SUGERENCIAS DE AGREGADOS Y MEJORAS/SUGERENCIAS DE AGREGADOS Y MEJORAS.md", "seed_commercity.sql" (revision, sin cambios)
+- **Descripcion**: se convirtieron a .md y se revisaron los dos docx mas recientes del Director (`Commercity 2.0 (optimizado 6)` y `SUGERENCIAS DE AGREGADOS Y MEJORAS`) junto con el `seed_commercity.sql`, y se actualizo el informe de revision a **v1.5**. Hallazgos principales: (1) **RF116** del optimizado 6 exige almacenar el IVA de cada producto -> **CONFLICTO con RF132** (desglose en vuelo); (2) **RF47** cambia la redaccion a "el vendedor hace el calculo adicional del 19%" -> contradice el modelo aprobado (precio con IVA incluido); (3) RF4 (5 min) y RF132 se mantienen iguales; (4) no existe RF que ordene descontar stock tras la compra; (5) `productos.estado` verificado como `enum('Disponible','Agotado')` STORED GENERATED (el seed no lo inserta, correcto); (6) las sugerencias del docx (3 RF: inventario, cancelaciones, carritos abandonados; 3 RNF: JWT, ACID, sanitizacion) se evaluaron y se recomienda incorporarlas, con impacto en BD en los puntos de inventario/cancelaciones/carritos. Pendientes nuevos: confirmar con Yepes RF116/RF47 (bloquean checkout) y decidir los RF/RNF sugeridos.
+- **Motivo**: el usuario indico que el `Commercity 2.0 (optimizado 6)` es la ultima version oficial de requerimientos y pidio revisarla junto con el seed y el docx de sugerencias.
+- **Requerimientos**: RF116, RF47, RF132, RF115, RF4, RF80, RF85 (REVISION)
+- **Evidencia**: consulta a information_schema (productos.estado STORED GENERATED, precio decimal(12,2)); lectura del seed_commercity.sql; conversion de los dos docx a .md y cruce con el esquema real.
+- **Estado**: Completado
+
+---
+
 ## 2026-08-06 - DOCS: novedades 9 PM del grupo de lideres en plan Scrum
 
 - **Autor**: Daniel Palacios
@@ -12,6 +324,102 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 - **Motivo**: el usuario compartio los mensajes del grupo de lideres (9 PM) y pidio procesarlos.
 - **Requerimientos**: RFX (REVISION) - recuperacion de contrasena / IVA
 - **Evidencia**: mensajes del grupo de lideres 2026-08-06 8:59-9:49 PM.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: decision final de IVA (RF132) y verificado esquema post-seed
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "informes/INFORME DE REVISION - BASE DE DATOS Y REQUERIMIENTOS COMMERCITY (commercity_v2).md" (v1.4)
+- **Descripcion**: se cerro el modelo de IVA (RF132 final, comunicado por Yepes el 7/08 9:10 AM): el vendedor publica el precio con IVA incluido, la pasarela saca el 19% del precio base (subtotal = precio/1.19), y del subtotal sale 90% vendedor / 10% CommerCity. Se descarto la columna `iva_porcentaje`. Yepes actualizo el mockup de Figma y agrego el dato imagen del producto a los requerimientos. Se verifico el esquema real: `pedidos`/`detalle_pedidos` aun sin columna de imagen (pendiente que Meneses la agregue), `notificaciones.tipo` VARCHAR(50) OK, `notificaciones.estado` con mojibake, `usuarios` sin `token_recuperacion_expiracion`. Semilla estructural de roles confirmada (comprador, vendedor, administrador). Informe v1.4: pendientes = mojibake estado, columna token, imagen en pedidos.
+- **Motivo**: el usuario compartio la conversacion del grupo (12:32 AM - 2:29 PM 7/08) donde Yepes definio el flujo del IVA y Meneses confirmo la semilla.
+- **Requerimientos**: RF132, RF115, RF31, RF97, RF4 (REVISION)
+- **Evidencia**: mensajes del grupo (Yepes 8:35 AM-9:10 AM; Meneses 2:25 PM) + consultas a information_schema (7/08).
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: verificado el seed inyectado por Meneses y correos reales de prueba
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "informes/INFORME DE REVISION - BASE DE DATOS Y REQUERIMIENTOS COMMERCITY (commercity_v2).md" (v1.3)
+- **Descripcion**: se verifico el estado real de commercy_v2 tras la inyeccion del seed de Meneses (seed de Cabrera ajustado, seed_commercity.sql). Hallazgos: (1) seed RESUELTO - 20 usuarios (1 admin, 10 vendedores, 9 compradores), 82 productos, 16 categorias, 5 etiquetas, 4 variantes, 8 pedidos, 10 detalle_pedidos, 6 datos_bancarios, 10 notificaciones; contrasena comun 123456 (Bcrypt); (2) los correos anunciados por Meneses (admin@commercity.com, vendedor1@commercity.com, comprador1@commercity.com) NO existen en la BD; los reales son nombre.apellido@commercity.com (admin: carlos.munoz@commercity.com; vendedor: juan.giraldo@commercity.com; comprador: camila.torres@commercity.com); (3) `notificaciones.tipo` fue cambiado a VARCHAR(50) por Meneses (resuelto); (4) `notificaciones.estado` sigue con mojibake; (5) `pedidos` no tiene columna estado (el estado vive en detalle_pedidos.estado_envio). Informe actualizado a v1.3 con 3 pendientes: mojibake, token_recuperacion_expiracion y modelo de IVA.
+- **Motivo**: el usuario compartio la conversacion del grupo (2:30-5:44 PM) donde Meneses confirmo el seed y las correcciones; se verifico contra la BD real.
+- **Requerimientos**: RF97, RF4, RFX (REVISION)
+- **Evidencia**: consultas a information_schema y conteos de commercy_v2 (7/08 tarde); comprobacion de que los correos anunciados no existen.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - CHORE: regla de limpieza de archivos temporales
+
+- **Autor**: Daniel Palacios
+- **Archivos**: .trae/rules/limpieza-archivos-temporales.md
+- **Descripcion**: se creo la regla del proyecto que obliga a eliminar los archivos temporales no necesarios al terminar cada tarea y antes de cualquier commit/push. Define: (1) que es temporal y se puede borrar (`informes/_*`, `backend/_*.mjs`, HTML intermedios de md_to_html en %TEMP%, `__pycache__/`, logs sueltos); (2) que NO se borra (informes versionables, scripts/ utilidades, carpetas de conversion docx/pdf, Audios/, AVANCES/, .env, migraciones SQL); (3) flujo de limpieza obligatorio con verificacion previa via Glob; (4) checklist de cierre; (5) prohibicion de borrado por patron amplio (`git clean -f`).
+- **Motivo**: el usuario pidio una regla que elimine archivos temporales innecesarios del proyecto de forma controlada.
+- **Requerimientos**: N/A (configuracion del entorno)
+- **Evidencia**: se limpiaron 24 archivos temporales de `informes/_*` generados en la sesion del 6-7/08 (logs de tests, consultas, conversiones y git status).
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: informe de actualizacion BD y requerimientos (guardado en Escritorio/INFO)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "C:\Users\dpalaciosr\OneDrive - Ufinet Latam\Escritorio\INFO\INFORME_ACTUALIZACION_BD_Y_REQUERIMIENTOS_2026-08-07.md"
+- **Descripcion**: se creo un informe de actualizacion en primera persona (distinto al informe de revision) y se guardo en la ruta externa `Escritorio\INFO`. Documenta los cambios verificados del 6/08 a la madrugada del 7/08: (1) BD - ENUM `notificaciones.tipo` corregido, `detalle_pedidos` con `estado_envio`/`estado_pago_vendedor`/`fecha_desembolso`, `pedidos.estado_pedido` eliminado (N a 1), base vacia; (2) requerimientos - RF4 expiracion 5 min, RF115 ya no almacena IVA, RF132 corregido a 19% (modelo 119% en disputa), RF92 tarjeta incompleta; (3) decisiones pendientes - modelo de IVA (llamada 7/08), columna expiracion token, mojibake, seed; (4) recomendaciones de solucion con migraciones SQL.
+- **Motivo**: el usuario pidio guardar un informe diferente en la ruta INFO, no una copia del informe de revision.
+- **Requerimientos**: RF4, RF92, RF97, RF114, RF115, RF132, RFX (REVISION)
+- **Evidencia**: consultas a information_schema (7/08) y transcripciones de audios 12-13.
+- **Estado**: Completado
+
+---
+
+## 2026-08-07 - DOCS: revision esquema commercy_v2 post-trabajo de Meneses + audios 12-13
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "informes/INFORME DE REVISION - BASE DE DATOS Y REQUERIMIENTOS COMMERCITY (commercity_v2).md" (v1.2); informes/Commercity 2.0 (optimizado4)/Commercity 2.0 (optimizado4).md; informes/Análisis del proyecto/Análisis del proyecto.md; Audios/12.txt; Audios/13.txt
+- **Descripcion**: se actualizo el informe a v1.2 tras la conversacion de la madrugada del 7/08 y la revision del esquema real. Hallazgos: (1) Meneses corregio el ENUM `notificaciones.tipo` (RF97) y agrego `estado_envio`, `estado_pago_vendedor`, `fecha_desembolso` en `detalle_pedidos` ("N a 1 en pedidos"; `pedidos.estado_pedido` eliminado); (2) la BD quedo VACIA de datos (0 registros; se eliminaron los usuarios vitest); (3) sigue el mojibake en `notificaciones.estado`; (4) el RF4 del docx optimizado4 ya define la expiracion del link (5 minutos, un solo uso) pero la BD no tiene `token_recuperacion_expiracion`; (5) IVA: Meneses planteo modelo adicional ("119%", vendedor define IVA por producto - audio 12) que contradice la regla del 6/08 (incluido); pendiente de definir en llamada del 7/08; posible columna `iva_porcentaje` en `productos`; (6) RF115 ya no exige almacenar IVA (conflicto resuelto); (7) RF92 tarjeta de producto incompleta (Yepes). Se transcribieron los audios 12 y 13 (faltantes) y se convirtieron a md el docx optimizado4 y el PDF "Análisis del proyecto".
+- **Motivo**: el usuario pidio tomar todo el contexto de la conversacion del grupo y extraer los audios pendientes.
+- **Requerimientos**: RF4, RF92, RF97, RF114, RF115, RF132, RFX (REVISION)
+- **Evidencia**: consultas a information_schema de commercy_v2 (7/08), transcripciones de los audios 12 y 13, conversion de optimizado4 y analisis del proyecto.
+- **Estado**: Completado
+
+---
+
+## 2026-08-06 - DOCS: link de mockup Figma actualizado registrado en plan Scrum
+
+- **Autor**: Daniel Palacios
+- **Archivos**: informes/PLAN_SCRUM_BACKEND_2026-08-06.md
+- **Descripcion**: se registro el link oficial del mockup Figma actualizado que compartio Yepes a las 10:08 PM (https://www.figma.com/design/WeJbbg2MZuwRddWf2TCkOa/commercity-2.0?node-id=445-2&t=aRqva6MCQNtK6RSK-1, node 445-2) como referencia del equipo. El mockup incluye la cantidad x precio unitario del vendedor; no bloquea el backend porque el contrato ya esta soportado por `detalle_pedidos`.
+- **Motivo**: mantener la trazabilidad de los recursos compartidos por el Director en el plan de trabajo del backend.
+- **Requerimientos**: N/A
+- **Evidencia**: mensaje de Yepes en el grupo de lideres (10:07-10:08 PM 2026-08-06).
+- **Estado**: Completado
+
+---
+
+## 2026-08-06 - DOCS: revision de requerimientos 2.0 Final (link de restablecimiento confirmado)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: informes/Commercity 2.0 Final (optimizado)/Commercity 2.0 Final (optimizado).md (conversion del docx)
+- **Descripcion**: se convirtio y reviso el docx `Commercity 2.0 Final (optimizado).docx`. El contenido de RF es equivalente al 3.0 (RF114 pasarela subtotal+IVA 19%, RF115 almacenar IVA por producto, RF131 con el error 90/10/15, RFX sin numero). Diferencia clave: **RF4 del Final especifica el link** ("cuando abra el link de restablecer contraseña que le llegara por medio del correo electronico"), confirmando el flujo de recuperacion por link. Sigue faltando la **expiracion del link/token** como regla de negocio (ni el Final ni el 3.0 la mencionan) - pendiente de proponer en requerimientos.
+- **Motivo**: el usuario pidio revisar el documento Final para confirmar que el paso a paso de recuperacion por link esta especificado.
+- **Requerimientos**: RF3, RF4 (REVISION)
+- **Evidencia**: conversion del docx Final a markdown y lectura de RF3/RF4 + secciones de IVA/comisiones.
+- **Estado**: Completado
+
+---
+
+## 2026-08-06 - DOCS: revision de requerimientos 3.0 (docx Yepes) y ajuste de conversion md->pdf
+
+- **Autor**: Daniel Palacios
+- **Archivos**: informes/Commercity 3.0 (optimizado)/Commercity 3.0 (optimizado).md (conversion del docx); scripts/md_to_html.py
+- **Descripcion**: se convirtio y reviso el docx `Commercity 3.0 (optimizado).docx` (contenido equivalente al documento oficial `Commercity 2.0 Final (optimizado).docx`, 132 RF + 20 RNF). Hallazgos: (1) RF115 exige registrar el valor del IVA de cada producto al confirmar el pago -> contradice la decision del 8:12 PM (sin columna IVA); reactiva la necesidad de columnas IVA en detalle_pedidos (confirmar con Yepes/Meneses); (2) RF131 redacta "90% vendedor, 10% comision y 15% al iva" -> ERROR: 15% contradice el 19% (RF114/RF115) y 90+10+15=115% no cierra; (3) RF3/RF4 (recuperacion de contrasena) NO mencionan expiracion del link/token -> falta la regla de negocio (se propuso texto); el link de restablecimiento SI esta especificado en el RF4 del documento oficial; (4) RFX sin numero (nomenclatura pendiente); (5) RF31 historial muestra "Iva del %19 aplicado" refuerza almacenar IVA; (6) RF97 tipos de notificacion desalineados con el ENUM actual de BD; (7) metadatos del documento desactualizados (dice version 2.0 / fecha 12/05/2026). Se ajusto `scripts/md_to_html.py` para que el HTML temporal se genere en el directorio temporal del sistema y NO se dejen archivos intermedios en informes/ (evita exponer rutas locales tipo file://).
+- **Motivo**: el usuario pidio revisar los requerimientos actualizados de Yepes y evitar que las conversiones md->pdf expongan rutas temporales locales.
+- **Requerimientos**: RF3, RF4, RF31, RF97, RF114, RF115, RF131, RFX (REVISION)
+- **Evidencia**: conversion del docx 3.0 a markdown y lectura completa del documento.
 - **Estado**: Completado
 
 ---
@@ -31,8 +439,8 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 ## 2026-08-06 - DOCS: informe de revision de base de datos commercy_v2 (primera persona)
 
 - **Autor**: Daniel Palacios
-- **Archivos**: informes/INFORME_REVISION_BASE_DATOS_2026-08-06.md; informes/INFORME_REVISION_BASE_DATOS_2026-08-06.pdf
-- **Descripcion**: se creo el informe de revision completa de la base oficial `commercity_v2` contra el esquema real via information_schema y conteos de registros (solo lectura, sin modificar datos). Se confirmo la conexion externa (`commercy_user@%` habilitado por Meneses). La base ahora tiene 19 tablas (Meneses agrego `producto_variantes` el 2026-08-06). Hallazgos: (1) CRITICO - sin datos semilla (0 productos, 0 categorias, 0 pedidos; solo 4 usuarios de prueba vitest); (2) CRITICO - mojibake en `notificaciones.estado` (`enum('le├¡do','no le├¡do')`); (3) MEDIO - `token_recuperacion` sin columna de expiracion para el flujo Resend; (4) decision oficial IVA 19% cierra la brecha 5 del informe 2026-08-04 (no requiere migracion). Se verificaron charset utf8mb4, FKs con indice y roles correctos. Se definieron 5 acciones para Meneses priorizadas y se agrego la seccion 6 "Clasificacion de los pendientes frente a los requerimientos": datos semilla y correccion del ENUM NO son RF/RNF (tarea tecnica y fix de BD), la expiracion del token SI va en requerimientos (se propuso texto para el RF de recuperacion de contrasena).
+- **Archivos**: "informes/INFORME DE REVISION - BASE DE DATOS Y REQUERIMIENTOS COMMERCITY (commercity_v2).md"
+- **Descripcion**: se creo el informe de revision completa de la base oficial `commercity_v2` contra el esquema real via information_schema y conteos de registros (solo lectura, sin modificar datos). Se confirmo la conexion externa (`commercy_user@%` habilitado por Meneses). La base ahora tiene 19 tablas (Meneses agrego `producto_variantes` el 2026-08-06). Hallazgos: (1) CRITICO - sin datos semilla (0 productos, 0 categorias, 0 pedidos; solo 4 usuarios de prueba vitest); (2) CRITICO - mojibake en `notificaciones.estado` (`enum('le├¡do','no le├¡do')`) y ENUM de tipo desalineado con RF97; (3) MEDIO - link de restablecimiento definido (RF4) pero sin expiracion del token; (4) decision oficial IVA 19% con CONFLICTO por RF115 (almacenar IVA) a resolver; (5) RF131 con error de redaccion (15% vs 19%). Se verificaron charset utf8mb4, FKs con indice y roles correctos. Se definieron acciones priorizadas para Meneses y recomendaciones de solucion por hallazgo (migraciones SQL sugeridas para ENUM, token y IVA condicional). Informe v1.1 dirigido a Jose Yepes (Director) y Jorge Meneses (Lider BD), que integra la revision de los requerimientos oficiales (seccion 3.6). El informe se mantiene **solo en formato .md** (sin conversion a PDF, por decision del lider backend).
 - **Motivo**: el usuario pidio un informe completo en primera persona sobre la revision de base de datos para avisar a Meneses (lider BD) y destrabar el backend.
 - **Requerimientos**: RF109, RF110, RF127, RF128, RF129, RF40, RF72, RFX (REVISION)
 - **Evidencia**: consultas directas a commercy_v2 (information_schema, conteos de registros, prueba endpoint perfil publico HTTP 200).

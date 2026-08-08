@@ -158,9 +158,42 @@ Regla unica y definitiva del proyecto:
 | Novedad | Quien | Estado / Accion |
 |---|---|---|
 | Proveedor de correo confirmado: **Resend** | Diego Serna | CERRADO - se usa Resend para el envio de links de recuperacion de contrasena |
-| Requerimientos actualizados: flujo de IVA desde que el vendedor publica el producto | Yepes | EN CAMINO - Yepes pasa el docx `Commercity 2.0 (optimizado) (2).docx` ~10 PM; falta nomenclatura e indice. **Pendiente**: recibirlo y revisar errores |
-| Mockup Figma en actualizacion (cantidad x precio unitario del vendedor) | Yepes | EN PROCESO - no bloquea backend; el contrato ya esta soportado por `detalle_pedidos` |
-| Expiración de token de recuperacion como regla de negocio | Daniel (yo) | A PROPONER EN REQUERIMIENTOS - el informe de BD (seccion 6) incluye el texto propuesto del RF (link de un solo uso, expira a N minutos, columna `token_recuperacion_expiracion` o JWT con `exp`) |
+| Requerimientos oficiales: **`Commercity 2.0 Final (optimizado).docx`** (flujo de IVA desde que el vendedor publica el producto) | Yepes | OFICIAL - documento de referencia del proyecto. Pendiente: recibir la actualizacion de optimizacion que Yepes subira a la carpeta del proyecto y revisar errores |
+| Mockup Figma actualizado (cantidad x precio unitario del vendedor) | Yepes | DISPONIBLE - link oficial: https://www.figma.com/design/WeJbbg2MZuwRddWf2TCkOa/commercity-2.0?node-id=445-2&t=aRqva6MCQNtK6RSK-1 (node 445-2). Requiere sesion de Figma. No bloquea backend; el contrato ya esta soportado por `detalle_pedidos` |
+| Expiracion del token (link 5 min) | Meneses/Yepes | REQUERIMIENTO YA DEFINIDO (RF4 del docx optimizado4: link de un solo uso, expira a los 5 min). PENDIENTE en BD: `usuarios.token_recuperacion_expiracion DATETIME NULL` |
+| IVA (RF132) | Yepes | **RESUELTO (7/08 9:10 AM)**: el vendedor publica el precio con IVA 19% incluido; la pasarela saca el 19% del precio base (subtotal = precio/1.19) y del subtotal sale 90% vendedor / 10% CommerCity. Sin columna de IVA. Yepes actualizo Figma y agrego el dato imagen del producto |
+| Pedidos N a 1 | Meneses | IMPLEMENTADO en BD (7/08): `detalle_pedidos` gano `estado_envio`, `estado_pago_vendedor`, `fecha_desembolso`; `pedidos.estado_pedido` eliminado (estado por linea/vendedor). Impacta RF119/RF120 |
+| Seed de datos | Meneses | **RESUELTO (7/08)**: 20 usuarios (1 admin, 10 vendedores, 9 compradores), 82 productos, 16 categorias, 8 pedidos, 6 datos bancarios. Contrasena 123456 (Bcrypt). Correos reales: admin carlos.munoz@commercity.com, vendedor juan.giraldo@commercity.com, comprador camila.torres@commercity.com (los anunciados admin@/vendedor1@/comprador1@ NO existen) |
+| Foto/imagen en pedidos | Meneses | PENDIENTE en BD: Meneses anuncio agregar el dato foto a pedidos; aun no existe columna en `pedidos`/`detalle_pedidos` (`productos.imagen_url` si existe) |
+
+### Revision de requerimientos (documento oficial: Commercity 2.0 Final (optimizado))
+
+Hallazgos al revisar el documento oficial (132 RF + 20 RNF; contenido equivalente al docx "3.0" recibido ~9:50 PM):
+
+| # | Hallazgo | Impacto | Accion |
+|---|---|---|---|
+| 1 | **RF115**: "registrar el valor correspondiente al IVA de cada producto para su almacenamiento" | Contradice la decision 8:12 PM (sin columna IVA). Reactiva columnas `iva` / `monto_iva` en `detalle_pedidos` | Confirmar con Yepes y Meneses; de aprobarse, Meneses genera migracion |
+| 2 | **RF131**: "90% vendedor, 10% comision commercity y 15% al iva" | ERROR de redaccion: 15% contradice el 19% (RF114/RF115); 90+10+15=115% no cierra | Avisar a Yepes para corregir el RF131 |
+| 3 | **RF3/RF4** (recuperacion de contrasena) | NO mencionan expiracion del link/token (falta regla de negocio) | Proponer texto del RF (informe BD seccion 6) |
+| 4 | **RFX** (modificar cantidad en carrito) | RF sin numero (nomenclatura pendiente, Yepes lo confirmo) | Esperar la nomenclatura de Yepes |
+| 5 | **RF31** (historial): "Iva del %19 aplicado" | Refuerza almacenar/calcular IVA por linea | Mismo caso que RF115 |
+| 6 | **RF97** (notificaciones): tipos compra/mensajes/reporte/pedido/en camino/entregado | ENUM actual de BD `notificaciones.tipo` = ('compra','mensajes','reporte','pedido enviado') desalineado | Ajustar ENUM con Meneses |
+| 7 | Metadatos del docx | Dice version 2.0 / fecha 12/05/2026 (es el 3.0) | Yepes corrige portada |
+
+### Novedades 2026-08-07 (noche - ultima version de requerimientos: optimizado 6)
+
+El Director compartio la ultima version oficial `Commercity 2.0 (optimizado 6)`
+y el docx `SUGERENCIAS DE AGREGADOS Y MEJORAS`. Revisados y cruzados con el
+esquema real:
+
+| # | Hallazgo | Impacto | Accion |
+|---|---|---|---|
+| 1 | **RF116** (opt.6): "registrar el valor del IVA de cada producto para su almacenamiento" | **CONFLICTO con RF132** (desglose en vuelo). Requiere `monto_iva`/`subtotal_con_iva` en `detalle_pedidos` o `iva_porcentaje` en `productos` | Confirmar con Yepes si se persiste el IVA o se mantiene el desglose (bloquea checkout). Informe BD v1.5 |
+| 2 | **RF47** (opt.6): "el vendedor debe hacer el calculo adicional del IVA del %19" | **CONTRADICE RF132** (precio publicado CON IVA incluido; el vendedor NO calcula) | Aclarar redaccion con Yepes (interpretacion: el vendedor considera el IVA al fijar su precio). Informe BD v1.5 |
+| 3 | RF4 (5 min) y RF132 | Se mantienen identicos en el optimizado 6 | Sin cambio |
+| 4 | No existe RF que ordene **descontar stock** tras la compra | `productos.stock` existe; RF80/RF85 solo verifican | Propuesto como RF nuevo en las sugerencias del docx |
+| 5 | Sugerencias docx: RF inventario, RF cancelaciones ("Pendiente" + restitucion stock), RF carritos abandonados (7 dias), RNF JWT, RNF ACID, RNF sanitizacion | Impacto en BD: stock, cancelaciones y `actualizado_en` en `carrito_items` | Recomendado aceptar; numeros definitivos los asigna Yepes. Informe BD v1.5 seccion 3.8 |
+| 6 | `productos.estado` = enum('Disponible','Agotado') **STORED GENERATED** | El seed no lo inserta (correcto); backend solo lee | Documentado en informe v1.5 (sin accion) |
 
 ## 9. Coordinacion inter-area
 
