@@ -1,18 +1,26 @@
-
-
-// RE Importacion de useEffect para manejar tecla Escape
 import { useEffect } from "react";
 
-// TW Estilos de borde y texto segun el estado del pedido
-const MODAL_STATUS_STYLES = {
-  Entregado: "border-primary/50 text-primary",
-  "En Camino": "border-accent-blue/50 text-accent-blue",
-  Pendiente: "border-accent-red/50 text-accent-red",
+const estadoChip = {
+  Entregado: {
+    bg: "bg-primary-fixed-dim/10",
+    text: "text-primary-fixed-dim",
+    border: "",
+  },
+  "En Camino": {
+    bg: "bg-secondary-fixed-dim/10",
+    text: "text-secondary-fixed-dim",
+    border: "border border-secondary-fixed-dim",
+  },
+  Pendiente: {
+    bg: "bg-error-container/20",
+    text: "text-error",
+    border: "",
+  },
 };
 
-// RE Props: datos del pedido seleccionado y funcion para cerrar modal
-const DetallePedidos = ({ selectedOrder, onClose }) => {
-  // RE Efecto que cierra el modal al presionar la tecla Escape
+const fmt = (n) => "$" + n.toLocaleString("es-CO");
+
+export default function DetallePedidos({ pedido, onClose }) {
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === "Escape") onClose();
@@ -21,108 +29,125 @@ const DetallePedidos = ({ selectedOrder, onClose }) => {
     return () => document.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
+  if (!pedido) return null;
+
+  const chip = estadoChip[pedido.estado] ?? {
+    bg: "bg-surface-variant2",
+    text: "text-on-surface-variant",
+    border: "",
+  };
+
+  const total = pedido.productos.reduce(
+    (acc, p) => acc + p.precioUnitario * p.cantidad,
+    0
+  );
+
+  const hasManyProductos = pedido.productos.length > 5;
+  const productListClass = hasManyProductos
+    ? "bg-input-bg rounded-card overflow-x-hidden overflow-y-auto max-h-64 divide-y divide-surface-container/30"
+    : "bg-input-bg rounded-card overflow-hidden divide-y divide-surface-container/30";
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <div
-        className="bg-surface-container-low w-[90vw] sm:w-full max-w-[550px] rounded-hero shadow-2xl border border-surface-container p-6 flex flex-col gap-4"
+        className="bg-auth-card-bg rounded-hero shadow-2xl w-[400px] sm:w-[500px] max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* TW Encabezado con titulo, fecha y badge de estado */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-2xl font-bold text-on-surface mb-1">
-              Detalle del pedido
-            </h3>
-            <p className="text-brand-muted-text text-sm">
-              Fecha: {selectedOrder.fecha}
-            </p>
-          </div>
-          <div
-            className={`px-4 py-1.5 border rounded-full ${MODAL_STATUS_STYLES[selectedOrder.estado] || "border-surface-container text-brand-muted-text"}`}
-          >
-            <span className="text-xs font-semibold">
-              {selectedOrder.estado}
+        <div className="px-6 pt-6 pb-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-on-surface text-2xl font-extrabold tracking-tight leading-tight">
+                Detalle del pedido
+              </h2>
+              <p className="text-brand-muted-text font-bold text-sm mt-1">
+                Fecha: {pedido.fechaLarga}
+              </p>
+            </div>
+            <span
+              className={`shrink-0 mt-1 px-3 py-1 rounded-full text-xs font-bold ${chip.bg} ${chip.text} ${chip.border}`}
+            >
+              {pedido.estado}
             </span>
           </div>
         </div>
 
-        {/* TW Informacion del comprador con avatar */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-brand-muted-text">Comprador</h4>
-          <div className="bg-surface-container/40 rounded-xl p-3 flex items-center gap-3 border border-surface-container/50">
-            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
-              {/* TW Renderizado condicional: avatar imagen o iniciales del comprador */}
-              {selectedOrder.avatar ? (
-                <img
-                  alt={selectedOrder.cliente}
-                  className="w-full h-full object-cover"
-                  src={selectedOrder.avatar}
-                />
-              ) : (
-                <div className="w-full h-full bg-accent-blue/50 flex items-center justify-center text-xs font-bold text-accent-blue">
-                  {selectedOrder.iniciales}
+        <div className="px-6 pb-4">
+          <p className="text-brand-muted-text font-bold text-sm mb-2">Comprador</p>
+          <div className="bg-input-bg rounded-card p-3 flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-primary-fixed-dim text-sm font-bold shrink-0"
+              style={{ backgroundColor: pedido.avatarColor ?? "#32324d" }}
+            >
+              {pedido.avatarLetra}
+            </div>
+            <span className="text-on-surface font-semibold text-base">
+              {pedido.cliente}
+            </span>
+          </div>
+        </div>
+
+        <div className="px-6 pb-4">
+          <p className="text-brand-muted-text font-bold text-sm mb-2">
+            Dirección de envío
+          </p>
+          <div className="bg-input-bg rounded-card px-4 py-3">
+            <p className="text-on-surface font-semibold text-sm">
+              {pedido.direccion}
+            </p>
+            <p className="text-brand-muted-text text-xs mt-0.5">{pedido.ciudad}</p>
+          </div>
+        </div>
+
+        <div className="px-6 pb-4">
+          <p className="text-brand-muted-text font-bold text-sm mb-2">
+            Productos solicitados
+          </p>
+          <div className={productListClass}>
+            {pedido.productos.map((prod, i) => (
+              <div
+                key={i}
+                className="px-4 py-3 flex items-center justify-between gap-2"
+              >
+                <div className="min-w-0">
+                  <p className="text-on-surface font-semibold text-sm">
+                    {prod.nombre}
+                  </p>
+                  <p className="text-brand-muted-text text-xs mt-0.5">
+                    Cantidad {prod.cantidad}
+                  </p>
                 </div>
-              )}
-            </div>
-            <span className="font-semibold text-sm text-on-surface">
-              {selectedOrder.cliente}
+                <span className="text-brand-orange font-extrabold text-sm flex-shrink-0">
+                  {fmt(prod.precioUnitario * prod.cantidad)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="px-6 pb-4">
+          <div className="bg-sidebar-active-bg/70 border border-brand-orange rounded-card px-4 py-4 flex justify-between items-center">
+            <span className="text-brand-muted-text font-bold text-base">
+              Precio total del pedido
+            </span>
+            <span className="text-brand-orange font-extrabold text-lg">
+              {fmt(total)}
             </span>
           </div>
         </div>
 
-        {/* TW Direccion de envio del pedido */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-brand-muted-text">Direccion de envio</h4>
-          <div className="bg-surface-container/40 rounded-xl p-3 border border-surface-container/50">
-            <p className="font-semibold text-sm text-on-surface">
-              {selectedOrder.direccion}
-            </p>
-            <p className="text-brand-muted-text text-xs">{selectedOrder.ciudad}</p>
-          </div>
+        <div className="border-t border-figma-divider mx-6 mb-4" />
+        <div className="px-6 pb-6">
+          <button
+            onClick={onClose}
+            className="w-full border border-[#8e8e93] rounded-card-lg py-3 text-brand-muted-text font-bold text-lg hover:bg-on-surface/5 transition-colors cursor-pointer"
+          >
+            Cerrar
+          </button>
         </div>
-
-        {/* TW Producto solicitado con cantidad */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-brand-muted-text">
-            Producto solicitado
-          </h4>
-          <div className="bg-surface-container/40 rounded-xl p-3 border border-surface-container/50 divide-y divide-surface-container/50">
-            <div className="pb-3">
-              <p className="font-semibold text-sm text-on-surface">
-                {selectedOrder.producto}
-              </p>
-            </div>
-            <div className="pt-3">
-              <p className="text-brand-muted-text text-sm">
-                Cantidad: {selectedOrder.cantidad} unidades
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* TW Precio total del pedido destacado */}
-        <div className="bg-surface-container rounded-xl p-4 border border-primary-container/30 flex justify-between items-center mt-1">
-          <span className="text-brand-muted-text font-medium">
-            Precio total del pedido
-          </span>
-          <span className="text-primary-container font-bold text-xl">
-            {selectedOrder.monto}
-          </span>
-        </div>
-
-        {/* TW Boton para cerrar el modal */}
-        <button
-          onClick={onClose}
-          className="w-full py-3 mt-2 rounded-xl border border-surface-container text-on-surface text-lg font-semibold hover:bg-surface-container transition-colors"
-        >
-          Cerrar
-        </button>
       </div>
     </div>
   );
-};
-
-export default DetallePedidos;
+}
