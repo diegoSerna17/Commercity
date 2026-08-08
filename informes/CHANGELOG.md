@@ -4,6 +4,256 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-08 - FEAT: cierre del modulo Historial de Compras de Jary (RF26-RF32 completos)
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - backend/src/server/controllers/compras.controllers.js (historial agrupado por pedido + campos RF31)
+  - frontend/src/pages/Perfil/HistorialDeCompras.jsx (conectado a la API real; se elimino el mock data/historialCompras)
+  - backend/src/server/__tests__/historial.controllers.test.js (mock y aserciones actualizados al nuevo contrato)
+- **Descripcion**: se completo el modulo de historial de compras (Jary) para cumplir RF26-RF32: (1) backend agrupa las lineas por pedido (RF32) y expone todos los campos del RF31 (direccion de envio, vendedores, productos, cantidad, precio unitario, IVA 19% en vuelo, total por linea y por pedido, imagen, estado por linea); (2) estado predominante del pedido con prioridad Pendiente>En camino>Entregado>Cancelado (RF28/RF29); (3) filtro ?estado= ampliado a Cancelado (RF30); (4) frontend consume GET /api/historial/compras con token JWT, con estados loading/error/empty y tabla con precio unitario, IVA y total (antes usaba datos mock de data/historialCompras).
+- **Motivo**: el historial estaba marcado PARCIAL porque el frontend usaba datos mock y faltaban campos del RF31/RF32; el usuario pidio completar el modulo de Jary.
+- **Requerimientos**: RF26, RF27, RF28, RF29, RF30, RF31, RF32 (RESUELTO)
+- **Evidencia**: `npm test` -> 195/195 passed. Verificado E2E contra la API real: GET /api/historial/compras -> 200 con 17 pedidos del comprador, agrupados, con direccion, vendedores, resumen subtotal/IVA/total e items con precio unitario/IVA/total e imagen.
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - FEAT: cierre de RF75/RF76 - cuenta bancaria de Commercity gestionada por el administrador
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - backend/src/server/controllers/admin/cuentaBancaria.controllers.js (nuevo: get + masked + upsert con es_commercity=1 y cifrado RNF11)
+  - backend/src/server/routes/admin.routes.js (rutas /api/admin/mi-cuenta-bancaria, protegidas con authRequired + requireRoles administrador)
+  - frontend/src/pages/Administrador/AjustesAdministrador.jsx (conectado al backend; se elimino el uso de localStorage)
+  - backend/src/server/__tests__/admin.cuentaBancaria.test.js (nuevo, 8 tests)
+- **Descripcion**: se implemento el registro de la cuenta bancaria de la plataforma (la que recibe la comision del 10%) por el administrador: GET (descifrada), GET /masked (vista segura RF122) y POST/PUT upsert que SIEMPRE fuerza `es_commercity = 1` con cifrado AES-256-GCM (RNF11). El frontend de ajustes del admin ahora consulta y guarda contra el backend (antes persistia solo en localStorage del navegador).
+- **Motivo**: RF75 (seccion de ajustes del admin) y RF76 (registrar la cuenta bancaria de Commercity) estaban pendientes: la funcionalidad no estaba cableada al backend y el endpoint de cuenta bancaria solo aceptaba rol vendedor.
+- **Requerimientos**: RF75, RF76, RNF11 (RESUELTO)
+- **Evidencia**: `npm test` -> 195/195 passed (14 archivos); cobertura Statements 93.09% (umbral 60). Verificado E2E contra la API real: POST 201 (registro, es_commercity=true), GET 200 (descifrada), GET /masked 200 (enmascarado, ultimos4 7890), vendedor -> 403, sin token -> 401, numero con letras -> 400.
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - DOCS: set de pruebas de integracion end-to-end + verificacion del reporte de BD de Meneses
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - AVANCES/PRUEBAS/ejecutar_pruebas.mjs (runner de integracion, re-ejecutable)
+  - AVANCES/PRUEBAS/INFORME_PRUEBAS.md (50 pruebas paso a paso)
+  - AVANCES/PRUEBAS/resultados.json (trazabilidad JSON)
+  - AVANCES/PRUEBAS/informe_pruebas_final.md (informe consolidado)
+  - AVANCES/PRUEBAS/capturas/*.png (10 capturas del frontend por modulo)
+- **Descripcion**: se genero y ejecuto un set de pruebas de integracion contra el backend desplegado (`http://localhost:5000`) validando login + un flujo completo por modulo: Autenticacion (12), Catalogo (4), Carrito (8), Pedidos/Pago (8), Historial (3), Tienda (7) y Admin (8). **Resultado: 50/50 OK (0 fallos)** contra la BD real `commercy_v2`. Se tomo captura de pantalla de cada modulo del frontend (10 PNG en `AVANCES/PRUEBAS/capturas/`). Ademas se verifico contra la BD real el reporte de Jorge Meneses: migraciones 009 (EVENT limpiar_carritos_inactivos + carrito_items.updated_at), 010 (tokens_invalidados + token_recuperacion_expiracion) y 011 (reportes.archivado) — todas aplicadas correctamente.
+- **Motivo**: el usuario pidio un set de pruebas (login + flujo por modulo) con capturas de pantalla guardadas en AVANCES/PRUEBAS, y pausar las pruebas para verificar el mensaje de BD de Meneses.
+- **Requerimientos**: RF2, RF3, RF26-RF32, RF39-RF42, RF55-RF77, RF83-RF90, RF107-RF109, RF111-RF118, RF119-RF125, RF134, RF135, RNF11 (VALIDADO E2E)
+- **Evidencia**: `AVANCES/PRUEBAS/INFORME_PRUEBAS.md` (50/50 PASS); verificado en BD: EVENT ENABLED, tabla tokens_invalidados (token_hash/expira_en/creado_en), columnas token_recuperacion_expiracion y reportes.archivado presentes. Hallazgo: el admin del seed (carlos.munoz) no existe en la BD real; admins reales admin01/02/03@commercity.com (ids 471-473, password 123456).
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - DOCS/FIX: sincronizacion del schema oficial v3 con la BD real + verificacion de mojibake
+
+- **Autor**: Daniel Palacios
+- **Archivos**: LAST VERSION/schema_commercity_3.sql
+- **Descripcion**: (1) se anexo al schema oficial la seccion "Migraciones aplicadas a commercy_v2 (2026-08-08)": tabla `tokens_invalidados` (010, RF2), columna `reportes.archivado` (011, RF60-RF66) e indices FULLTEXT `ft_nombre`, `ft_productos_busqueda` y `ft_usuario` (M7, RF69-RF71); (2) se ajusto `notificaciones.estado` al enum real de la BD (`enum('leido','no leido')`). Se verifico la BD remota: NO hay mojibake en `notificaciones.estado` (valores limpios 'leido' x6 / 'no leido' x4).
+- **Motivo**: cerrar los pendientes de BD corregibles por el lider (sincronizar fuente de verdad y confirmar limpieza de datos).
+- **Requerimientos**: RF2, RF4, RF60-RF66, RF69-RF71 (INTEGRADO)
+- **Evidencia**: consulta a commercy_v2: `notificaciones.estado` = enum('leido','no leido'), 10 filas sin caracteres corruptos; indices FULLTEXT presentes en productos y usuarios.
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - FEAT: push del modulo Panel Administrativo a commercycity (rama backend, commit 6056216)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: rama `backend` de https://github.com/diegoSerna17/Commercity.git (commit 6056216, 10 archivos, +1283)
+- **Descripcion**: se actualizo la rama backend del repo del lider con el modulo Panel Administrativo de Cabrera integrado: `controllers/admin/*` (stats, usuarios, productos, reportes, pedidos, busqueda, utils), `routes/admin.routes.js` (protegida con authRequired + requireRoles administrador), `__tests__/admin.controllers.test.js` y el montaje en `app.js`. Se uso worktree temporal sobre la rama backend.
+- **Motivo**: el usuario autorizo el commit y push del modulo admin a la rama backend.
+- **Requerimientos**: RF55-RF77, RF54, RF74 (PUSH)
+- **Evidencia**: push exitoso `90a0c90..6056216 backend -> backend`; 187/187 tests; cobertura Statements 93.17%. EXCLUIDO del push: migraciones `db/` (quedan en origin/BD), `.env`, `informes/`.
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - FEAT: modulo Panel Administrativo de Juan Cabrera corregido e integrado al backend central (fixes 4.1-4.5)
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - backend/src/server/controllers/admin/ (nuevo: admin.utils, stats, usuarios, productos, reportes, pedidos, busqueda)
+  - backend/src/server/routes/admin.routes.js (nuevo, protegido con authRequired + requireRoles(["administrador"]))
+  - backend/src/server/app.js (montaje /api/admin), backend/src/server/db/011_agregar_archivado_reportes.sql (nuevo)
+  - backend/src/server/__tests__/admin.controllers.test.js (nuevo, 45 tests)
+- **Descripcion**: se integro el Panel Admin (RF55-RF77) con los fixes del informe v2.0: 4.1 CRITICO rutas admin protegidas con authRequired + requireRoles(["administrador"]) (router.use), 4.2 eliminacion de reportes por ARCHIVO logico (columna archivado, migracion 011, nunca DELETE), 4.4 getProductos lista todos (activos y suspendidos) + endpoint restaurar, 4.5 totalComisiones excluye lineas canceladas, 4.3 no aplica (la desactivacion de cuenta propia ya usa req.userId en el backend central). Ademas B-R5 con reembolso RF74: si al banear un pedido queda sin lineas activas, el pago pasa a 'Reembolsado'. Contrato { success, data/error }.
+- **Motivo**: el usuario pidio proceder con el fix e integracion del modulo admin de Cabrera.
+- **Requerimientos**: RF55-RF77, RF54, RF74, RF72, RF73, RF68, RF69-RF71, RF60-RF66 (INTEGRADO)
+- **Evidencia**: `npm test` -> 187/187 passed (13 archivos); cobertura Statements 93.17%, Branches 83.4%, Functions 99.09%, Lines 93.91% (admin 86.4% stmts). Migracion 011 aplicada a commercy_v2 (reportes.archivado: OK).
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - FEAT: migracion 011 aplicada a la BD remota commercy_v2
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/db/011_agregar_archivado_reportes.sql (aplicado a la BD remota)
+- **Descripcion**: se agrego la columna `reportes.archivado TINYINT(1) NOT NULL DEFAULT 0` (archivo logico de reportes, fix 4.2 del Panel Admin). Migracion idempotente (guarda en information_schema).
+- **Motivo**: los reportes son historial de moderacion; se archivan, nunca se borran fisicamente.
+- **Requerimientos**: RF65, RF66, RF60 (INTEGRADO)
+- **Evidencia**: `MIGRACION_011_APLICADA en commercity_v2`; verificacion: `reportes.archivado: OK`.
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - FEAT: push de modulos backend integrados a commercycity (rama backend, commit 90a0c90)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: rama `backend` de https://github.com/diegoSerna17/Commercity.git (commit 90a0c90, 30 archivos, +3376/-29)
+- **Descripcion**: se actualizo la rama backend del repo del lider con los modulos integrados del backend central: auth (Diego), carrito (Daniel), perfil publico (Cristian), historial (Jary), pedidos/pago (Carlos), panel principal (Brandon) y tienda del vendedor (Erick). Incluye controllers, rutas, middlewares, schemas, utils (config, response, mailer, finanzas, crypto), app/server, package.json/lock y 12 archivos de tests. Se uso worktree temporal para construir el commit limpio sobre la rama backend (sin arrastrar el historial divergente de main).
+- **Motivo**: el usuario autorizo subir las actualizaciones de backend al repo de Diego.
+- **Requerimientos**: RF1-RF13, RF28-RF31, RF112-RF125, RF134-RF136, RF40, RF74, RNF1, RNF10, RNF11 (PUSH)
+- **Evidencia**: push exitoso `7fe83b2..90a0c90 backend -> backend`; 152/152 tests; cobertura Statements 94.87%. EXCLUIDOS del push: migraciones `db/` (quedan en origin/BD), `backend/.env`, `.env.example`, `informes/`, `frontend/`, `AVANCES/`.
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - FEAT: migracion 010 aplicada a la BD remota commercy_v2
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/db/010_integrar_auth_diego_serna.sql (aplicado a la BD remota)
+- **Descripcion**: se aplico la migracion 010 sobre commercy_v2 (149.130.178.228): creacion de la tabla `tokens_invalidados` (lista negra para revocar tokens JWT en logout, RF2) y adicion de la columna `usuarios.token_recuperacion_expiracion` (expiracion de 5 minutos, RF4, pendiente documentado desde el informe de BD v1.5 seccion 3.3). Migracion idempotente (CREATE TABLE IF NOT EXISTS + guarda en information_schema).
+- **Motivo**: dejar la BD remota al dia para que el logout con revocacion y la recuperacion de contrasena funcionen en produccion.
+- **Requerimientos**: RF2, RF4 (INTEGRADO)
+- **Evidencia**: `MIGRACION_010_APLICADA en commercity_v2`; verificacion post-aplicacion: `tokens_invalidados: OK`, `token_recuperacion_expiracion: OK`.
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - FIX: cancelacion RF135 consultaba comprador_id en la tabla equivocada (B)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/controllers/compras.controllers.js, backend/src/server/__tests__/historial.controllers.test.js
+- **Descripcion**: `cancelarPedidoComprador` hacia `WHERE id = ? AND comprador_id = ?` sobre `detalle_pedidos`, pero esa columna pertenece a `pedidos` (no existe en detalle). Se corrigio la consulta con JOIN a `pedidos` (`dp.id = ? AND p.comprador_id = ? AND dp.estado_envio = 'Pendiente'`). Se actualizo la asercion del test correspondiente.
+- **Motivo**: bug pre-existente del backend central detectado al revisar los modulos de Carlos/Erick; sin la correccion la cancelacion fallaba contra la BD real (Unknown column 'comprador_id').
+- **Requerimientos**: RF135 (FIX)
+- **Evidencia**: `npm test` -> 152/152 passed (12 archivos).
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - FEAT: modulos de Pedidos/Pago (Carlos Vidal) y Tienda del Vendedor (Erick) corregidos e integrados al backend central
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - backend/src/server/controllers/pedidos.controllers.js (nuevo, integrado y corregido de Carlos)
+  - backend/src/server/controllers/tienda.controllers.js (nuevo, integrado y corregido de Erick)
+  - backend/src/server/routes/pedidos.routes.js (nuevo), routes/tienda.routes.js (nuevo)
+  - backend/src/server/utils/finanzas.js (nuevo, de Carlos: IVA/90-10/Luhn), utils/crypto.js (nuevo, de Erick corregido)
+  - backend/src/server/utils/config.js (CRYPTO_SECRET_KEY derivado de JWT_SECRET, sin valor hardcodeado)
+  - backend/src/server/middleware/error.middleware.js (respeta httpStatus -> 400 de validacion Zod)
+  - backend/src/server/app.js (montaje /api/pedidos y /api/tienda), backend/.env.example (CRYPTO_SECRET_KEY)
+  - backend/src/server/__tests__/ (nuevos finanzas, pedidos, tienda, crypto; ampliado error.middleware)
+- **Descripcion**: se corrigieron TODOS los hallazgos v1.0 de los informes de Carlos y Erick y se integraron ambos modulos al backend central. PEDIDOS (Carlos): GET /api/pedidos/resumen, POST /api/pedidos/confirmar-pago (RF134 ACID: pedido + lineas + stock + pago en UNA transaccion FOR UPDATE; Luhn antes de aprobar), PATCH /api/pedidos/:id/estado (vendedor avanza UN nivel sus envios). TIENDA (Erick): cuenta bancaria cifrada (get/masked/upsert), GET /api/tienda/ventas, /ingresos, /dashboard/stats. Fixes aplicados: sin pedidos.estado_pedido (RF119, estado por linea estado_envio), sin INSERT a columnas GENERATED ni imagen_url, authRequired + req.userId (nunca IDs del body), RF74 (productos suspendidos/vendedores inactivos), JWT_SECRET y clave de cifrado sin hardcodear (utils/config.js), token de recuperacion sin filtrar (ya en auth central), pago aprobado solo tras validar tarjeta, round2 en montos, contrato { success, data/error }.
+- **Motivo**: el usuario pidio corregir todos los hallazgos de Carlos y Erik e integrarlos a las carpetas correspondientes.
+- **Requerimientos**: RF112-RF125, RF28-RF31, RF117/RF134, RF118, RF119-RF123, RF126, RF135, RF136, RF74, RNF11 (INTEGRADO)
+- **Evidencia**: `npm test` -> 152/152 passed (12 archivos); `npm run test:coverage` -> Statements 94.87%, Branches 85%, Functions 100%, Lines 94.83% (anterior al cambio: 95.04/91.2/100/94.94; el delta corresponde a ~340 lineas nuevas de los 2 modulos). `node -e "import app"` -> APP_OK.
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - DOCS: informe de revision del modulo Pedidos y Pago de Carlos Vidal v1.0 (entrega 1)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/SPRING 1/CARLOS VIDAL/INFORME_REVISION_MODULO_PEDIDOS_PAGO_CARLOS_VIDAL_2026-08-08.md" (nuevo, v1.0)
+- **Descripcion**: revision de la entrega de Carlos (backend Pedidos y Pago: resumen carrito, crear pedido, pagar con Luhn, estado, cancelar, historial, detalle; utils/finanzas.js con IVA y 90/10; tests Vitest; migracion 001; CHANGELOG propio). Se destaca lo correcto: desglose de IVA (subtotal = precio/1.19), reparto 90/10 sobre subtotal, Luhn, transacciones ACID con FOR UPDATE, contrato { success, data }. Errores reales v1.0: 3.1 CRITICO entrega incompleta (app.js importa routes/auth.routes.js y middleware/errorHandler.js que NO estan en la entrega -> servidor y tests no arrancan), 3.2 CRITICO pedidos.estado_pedido NO existe en schema v3 (RF119, usado en todas las funciones -> SQL error), 3.3 CRITICO migracion 001 modifica columna inexistente y contradice RF119 (cancelacion por linea + Reembolsado), 3.4 CRITICO sin auth en rutas y confia en comprador_id/vendedor_id del body (IDs sin validar), 3.5 ALTA INSERT a detalle_pedidos con columnas STORED GENERATED e imagen_url inexistente (error 3105), 3.6 ALTA compra dividida en 2 transacciones (RF134 ACID), 3.7 ALTA cancelacion del pedido completo sin reembolso del pago, 3.8 MEDIA RF74 (productos suspendidos/vendedores inactivos), 3.9 MEDIA getUsuarios expone 50 usuarios sin auth (fuga PII), 3.10 MEDIA pago 'Aprobado' directo, 3.11 BAJA redondeo de IVA en mapearDetalle.
+- **Motivo**: el usuario pidio revisar las entregas de ERICK y CARLOS VIDAL y generar informes.
+- **Requerimientos**: RF28-RF31, RF112-RF124, RF134-RF136, RF135, RF74 (REVISION)
+- **Evidencia**: lectura completa de controllers (pedidos, usuarios), rutas, utils/finanzas.js, app.js, migracion, tests y CHANGELOG, contrastada con LAST VERSION/schema_commercity_3.sql (pedidos sin estado_pedido, detalle_pedidos con monto_vendedor/monto_comision STORED GENERATED).
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - DOCS: informe de revision del modulo Tienda del Vendedor de Erick v1.0 (entrega 1)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/SPRING 1/ERICK/INFORME_REVISION_MODULO_TIENDA_VENDEDOR_ERICK_2026-08-08.md" (nuevo, v1.0)
+- **Descripcion**: revision de la entrega de Erick (backend Tienda del vendedor: auth, cuenta bancaria cifrada, checkout/pedidos, historial de ventas e ingresos, dashboard; utils/revenue.js con 90/10). Se destaca lo correcto: transacciones ACID con FOR UPDATE, validacion Zod, intento de cifrado RNF11, RBAC en BD, paginacion. Errores reales v1.0: 3.1 CRITICO JWT_SECRET hardcodeado (auth.js), 3.2 CRITICO clave AES de datos bancarios hardcodeada (crypto.js, RNF11), 3.3 CRITICO register acepta rol del cliente y getOrCreateRoleId crea roles arbitrarios (escalada de privilegios), 3.4 ALTA RF4 sin token_recuperacion_expiracion y token devuelto en la respuesta HTTP, 3.5 CRITICO pedidos.estado_pedido NO existe en schema v3 (RF119; usado en 5 lugares -> checkout/historial rompen), 3.6 ALTA INSERT a detalle_pedidos con columnas STORED GENERATED (error 3105), 3.7 ALTA RF134 comisiones 90/10 sobre precio con IVA en lugar de subtotal/1.19, 3.8 ALTA updateOrderStatus sin control de propiedad, 3.9 MEDIA getOrderById sin control de propiedad, 3.10 MEDIA RF74 (productos suspendidos/vendedores inactivos), 3.11 MEDIA pago 'Aprobado' directo, 3.12 BAJA sin tests, 3.13 BAJA carrito_id declarado sin usar.
+- **Motivo**: el usuario pidio revisar las entregas de ERICK y CARLOS VIDAL y generar informes.
+- **Requerimientos**: RF1-RF13, RF4, RF119-RF126, RF129-RF134, RNF11, RF74 (REVISION)
+- **Evidencia**: lectura completa de controllers (auth, bankAccount, orders, usuarios), middlewares/auth.js, utils/crypto.js y revenue.js, validators, server.js y schema incluido, contrastada con LAST VERSION/schema_commercy_3.sql (pedidos sin estado_pedido, detalle_pedidos con generated columns) y la regla api-seguridad.md (JWT_SECRET, rol del cliente).
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - FEAT: modulo de autenticacion de Diego Serna integrado al backend central (fixes 3.1-3.4)
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - backend/src/server/controllers/usuarios.controllers.js (register, login, logout, getPerfil, cambiarRol, solicitarRecuperacion, restablecerPassword, adminGetDatos)
+  - backend/src/server/routes/usuarios.routes.js (endpoints /api/usuarios/{register, login, logout, recover, reset-password, me, me/rol, admin})
+  - backend/src/server/middleware/auth.middleware.js (fix 3.1 y 3.3), middleware/validate.middleware.js (nuevo), middleware/error.middleware.js (nuevo)
+  - backend/src/server/utils/config.js (nuevo, validacion JWT_SECRET), utils/response.js (nuevo), utils/mailer.js (nuevo, fix 3.4)
+  - backend/src/server/schemas/auth.schemas.js (nuevo)
+  - backend/src/server/db/010_integrar_auth_diego_serna.sql (nuevo: tokens_invalidados + token_recuperacion_expiracion)
+  - backend/src/server/app.js (helmet, cors cerrado, rate-limit por ruta, x-powered-by off, error handler), server.js (JWT_SECRET fatal)
+  - backend/.env.example (JWT_SECRET, FRONTEND_URL, RESEND_API_KEY, RESEND_FROM)
+  - backend/package.json (bcrypt, zod, resend, helmet, express-rate-limit)
+  - backend/src/server/__tests__/ (suites de auth en usuarios, nuevos error.middleware, mailer.utils, config.utils; adaptados role.middleware e historial)
+- **Descripcion**: se integro el modulo de autenticacion de la entrega 2 de Diego (`AVANCES/SPRING 1/DIEGO SERNA/2/`) al backend central con la estructura estandar. Endpoints bajo `/api/usuarios/*` (PATCH en me/rol, no PUT). Fixes del informe v3.0: 3.1 JWT_SECRET sin fallback hardcodeado (utils/config.js valida al arrancar, server.js falla si falta, register/login/authRequired usan el secreto validado), 3.2 register con transaccion ACID (usuario + rol), 3.3 logout revoca el token en `tokens_invalidados` (migracion 010) y `authRequired` rechaza tokens revocados (401), 3.4 el correo dice "expira en 5 minutos" (RF4). Endurecimiento central (regla api-seguridad.md): helmet, cors cerrado a FRONTEND_URL, rate-limit 10/min independiente por ruta login/recover, x-powered-by desactivado, error handler centralizado al final de la cadena.
+- **Motivo**: el usuario pidio "solucionar todo e integrar a las carpetas" tras la revision del modulo de Diego (informe v3.0).
+- **Requerimientos**: RF1-RF13, RF34-RF42, RF4, RF41, RNF1, RNF10 (INTEGRADO)
+- **Evidencia**: `npm test` -> 102/102 passed (8 archivos de test); `npm run test:coverage` -> Statements 95.04%, Branches 91.2%, Functions 100%, Lines 94.94% (anterior al cambio: 95.21/91.26/100/95.16; el delta es por 3 archivos nuevos: config.js, mailer.js, error.middleware.js). `npx vitest` sin BD real (mocks de mysql2/promise, bcrypt y resend).
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - DOCS: informe de revision del modulo de autenticacion de Diego v3.0 (entrega 2)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/SPRING 1/DIEGO SERNA/INFORME_REVISION_MODULO_AUTENTICACION_DIEGO_SERNA_2026-08-08.md" (nuevo, v3.0)
+- **Descripcion**: revision de la entrega 2 de Diego (modulo de autenticacion, RF1-RF13, RF34-RF42). Esta vez envio solo su modulo, bien delimitado. Corrigio la mayoria de los hallazgos de v2.1: recuperacion con expiracion 5 min (RF4), anti-enumeracion, token de un solo uso, cambio de rol protegido (admin no se autodegrada), validacion Zod en rutas, login rechaza inactivos, requireRoles en BD. Hallazgos v3.0 (solo errores reales): 3.1 CRITICO JWT_SECRET hardcodeado como respaldo en 3 lugares (register, login, auth.middleware) - NO corregido de v2.1, 3.2 ALTA register sin transaccion (usuario+rol), 3.3 MEDIO logout no invalida el token (RF2), 3.4 MEDIO correo dice "expira en 1 hora" pero el token expira en 5 minutos, 3.5 BAJO schema.sql en la entrega (se retiro). Notas de integracion: estructura de carpetas (middlewares/ vs middleware/, database.js vs db.js), PUT vs PATCH.
+- **Motivo**: Diego envio actualizaciones en `AVANCES/SPRING 1/DIEGO SERNA/2/`.
+- **Requerimientos**: RF1-RF13, RF34-RF42, RF4, RF41, RNF1, RNF10 (REVISION)
+- **Evidencia**: lectura completa de controller, rutas, middlewares, schemas, utils y tests de la entrega 2.
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - FEAT: rama unica de backend creada en commercycity con modulos integrados
+
+- **Autor**: Daniel Palacios
+- **Archivos**: rama `backend` en https://github.com/diegoSerna17/Commercity.git (commit 7fe83b2, 15 archivos)
+- **Descripcion**: se creo la rama unica de backend en el repo del lider partiendo de `backend-carrito-perfil` (carrito + perfil publico) y se agregaron todos los modulos backend integrados: auth JWT + RBAC (auth.middleware.js, role.middleware.js), historial de compras (compras.controllers.js, historial.routes.js), panel principal (productos.controllers.js, productos.routes.js), RF135 cancelar pedido, RF40 eliminar cuenta, montaje en app.js, tests (55/55). Estrategia de ramas definida: `main` (integracion del equipo), `backend` (unica rama de backend, la administra el lider), `feature/*` (integrantes). EXCLUIDOS del push: migraciones M8/RF109 (quedan en origin/BD), informes, changelog, schema, .env.
+- **Motivo**: el usuario aprobo la estrategia de una sola rama de backend y pidio subir las mejoras de backend al repo de Diego.
+- **Requerimientos**: RF2, RNF1, RNF10, RF26-RF32, RF87-RF94, RF135, RF40, RF74 (INTEGRADO)
+- **Evidencia**: push exitoso `[new branch] backend -> backend`; verificacion de que no se incluyo db/ ni .env; worktree temporal eliminado.
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - FEAT: modulo panel principal de Brandon integrado y corregido en backend central
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/controllers/productos.controllers.js (nuevo), backend/src/server/routes/productos.routes.js (nuevo), backend/src/server/app.js, backend/src/server/__tests__/productos.controllers.test.js (nuevo), AVANCES/SPRING 1/BRANDON/2/Commercity-main-panel/Commercity-main-panel/frontend/src/pages/Inicio/Inicio.jsx, frontend/src/components/inicio/FichaProducto.jsx, frontend/src/components/inicio/Reportar.jsx
+- **Descripcion**: se integro el backend del Panel Principal (RF87-RF94) al backend central con la estructura estandar: controlador `productos.controllers.js` (getProductos con busqueda/filtros/paginacion, getCategorias, getVendedores), router `productos.routes.js` montado en `/api` (GET /productos, /categorias, /vendedores). Se corrigieron los hallazgos del informe v2.0: 3.1 boton "Agregar al carrito" conectado a `POST /api/carrito` (FichaProducto solo muestra exito si realmente agrego), 3.2 "Enviar reporte" ahora hace fetch a `/reportes/productos/:id` con FormData y muestra error real, 3.3 navegacion al perfil del vendedor con id, 3.5 precio final con descuento en tarjeta, 3.4 se agregaron 8 tests del controlador.
+- **Motivo**: el usuario pidio "solucionar todo y organizar en las carpetas principales" tras la revision de Brandon.
+- **Requerimientos**: RF87-RF94, RF81, RF82, RF83, RF106, RF52 (INTEGRADO)
+- **Evidencia**: `npm test` -> 55/55 passed (5 archivos, +8 productos); `npm run test:coverage` -> Statements 95.21%, Branches 91.26%, Functions 100%, Lines 95.16%.
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - DOCS: informe de revision del modulo panel principal de Brandon v2.0 (entrega 2)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/SPRING 1/BRANDON/INFORME_REVISION_MODULO_PANEL_PRINCIPAL_BRANDON_2026-08-08.md" (nuevo, v2.0)
+- **Descripcion**: revision de la entrega 2 de Brandon (Panel Principal RF87-RF94) tras limpiar el proyecto completo que envio (solo quedo su modulo). Confirmacion de que el backend quedo alineado al schema v3 real (elimino la tabla simulada `vendedores`, usa `usuarios`, `imagen_url`, `eliminado_por_admin`). Hallazgos v2.0 (solo errores reales): 3.1 CRITICO boton "Agregar al carrito" sin `onAgregarCarrito` (falso exito, no agrega nada), 3.2 ALTA "Enviar reporte" solo hace console.log (falso exito), 3.3 MEDIA navegacion al perfil del vendedor sin id, 3.4 MEDIA entrega sin tests, 3.5 BAJA tarjeta no aplica descuento. Notas de integracion aparte (cors/helmet/puerto las resuelve el lider).
+- **Motivo**: Brandon envio cambios en `AVANCES/SPRING 1/BRANDON/2/` (proyecto completo) y el usuario pidio limpiar y revisar.
+- **Requerimientos**: RF87-RF94, RF88, RF89, RF93, RF106, RF52 (REVISION)
+- **Evidencia**: lectura completa de backend (productos.controllers.js, routes, server, db) y frontend (Inicio.jsx, FichaProducto.jsx, Categorias.jsx, Reportar.jsx, config) contrastada con schema_commercity_3.sql (columnas verificadas: categoria_id, imagen_url, fecha_publicacion, descuento_porcentaje, eliminado_por_admin).
+- **Estado**: Completado
+
+---
+
 ## 2026-08-08 - FEAT: M8 (Reembolsado) + RF109 + RF135 + RF40 implementados
 
 - **Autor**: Daniel Palacios

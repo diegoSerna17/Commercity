@@ -252,7 +252,7 @@ CREATE TABLE notificaciones (
     usuario_id INT NOT NULL, 
     tipo VARCHAR(50) NOT NULL, 
     descripcion TEXT NOT NULL, 
-    estado ENUM('leído', 'no leído') DEFAULT 'no leído', 
+    estado ENUM('leido', 'no leido') DEFAULT 'no leido', 
     url_redireccion VARCHAR(255) NULL, 
     fecha_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
@@ -287,3 +287,28 @@ INSERT INTO roles (nombre, descripcion) VALUES
 ('comprador', 'Rol por defecto de navegación e interacción comercial'),
 ('vendedor', 'Rol comercial con permisos de publicación y tracking'),
 ('administrador', 'Supervisor global del ecosistema CommerCity');
+
+-- ==========================================
+-- MIGRACIONES APLICADAS A commercy_v2 (2026-08-08)
+-- Seccion anexa: refleja los cambios aplicados a la BD real
+-- (fuente: backend/src/server/db/010 y 011 + M7 del panel admin).
+-- ==========================================
+
+-- 010: tabla de lista negra para revocar tokens JWT en logout (RF2)
+CREATE TABLE IF NOT EXISTS tokens_invalidados (
+    token_hash CHAR(64) PRIMARY KEY,
+    expira_en DATETIME NOT NULL,
+    creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_tokens_invalidados_expiracion (expira_en)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 011: archivo logico de reportes (fix 4.2 panel admin, RF60-RF66)
+ALTER TABLE reportes
+  ADD COLUMN archivado TINYINT(1) NOT NULL DEFAULT 0 AFTER respondido_at;
+
+-- M7: indices FULLTEXT para el buscador administrativo (RF69-RF71)
+ALTER TABLE productos
+  ADD FULLTEXT INDEX ft_nombre (nombre),
+  ADD FULLTEXT INDEX ft_productos_busqueda (nombre, descripcion);
+ALTER TABLE usuarios
+  ADD FULLTEXT INDEX ft_usuario (nombre_completo, email);

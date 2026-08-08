@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
+// API base del backend (misma convencion que el resto del proyecto).
+const API_BASE = import.meta.env?.VITE_API_URL || "http://localhost:5000";
+
 function useToast() {
   const [toast, setToast] = useState({ visible: false, msg: "", isError: false });
   const timerRef = useRef(null);
@@ -16,20 +19,55 @@ function useToast() {
   return { toast, showToast };
 }
 
+/**
+ * Obtiene el token JWT del administrador (guardado en login como "commercity_token").
+ * @returns {string|null}
+ */
+function obtenerToken() {
+  return localStorage.getItem("commercity_token") || null;
+}
+
+/**
+ * Ajustes del administrador (RF75/RF76): registro de la cuenta bancaria de
+ * Commercity contra el backend (cifrado RNF11, es_commercity = 1).
+ */
 export default function AjustesAdministrador({ onClose }) {
   const [titular, setTitular] = useState("");
   const [banco, setBanco] = useState("");
   const [tipo, setTipo] = useState("");
   const [numero, setNumero] = useState("");
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
   const { toast, showToast } = useToast();
 
+  // Carga la cuenta bancaria de Commercity desde el backend (RF76).
   useEffect(() => {
-    const datos = JSON.parse(localStorage.getItem("commercity_banco") || "null");
-    if (!datos) return;
-    setTitular(datos.titular || "");
-    setBanco(datos.banco || "");
-    setTipo(datos.tipo || "");
-    setNumero(datos.numero || "");
+    const token = obtenerToken();
+    if (!token) {
+      setCargando(false);
+      showToast("Inicia sesión como administrador para gestionar la cuenta bancaria.", true);
+      return;
+    }
+
+    (async () => {
+      try {
+        const resp = await fetch(`${API_BASE}/api/admin/mi-cuenta-bancaria`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const body = await resp.json().catch(() => null);
+        if (resp.ok && body?.data?.registrado && body.data.datos) {
+          const d = body.data.datos;
+          setTitular(d.titular_nombre || "");
+          setBanco(d.banco || "");
+          setTipo(d.tipo_cuenta || "");
+          setNumero(d.numero_cuenta || "");
+        }
+      } catch (e) {
+        showToast("No se pudo cargar la cuenta bancaria.", true);
+      } finally {
+        setCargando(false);
+      }
+    })();
   }, []);
 
   function validar() {
@@ -56,13 +94,40 @@ export default function AjustesAdministrador({ onClose }) {
     return true;
   }
 
-  function guardar() {
+  async function guardar() {
     if (!validar()) return;
-    localStorage.setItem(
-      "commercity_banco",
-      JSON.stringify({ titular: titular.trim(), banco, tipo, numero: numero.trim() })
-    );
-    showToast("Cuenta bancaria guardada correctamente.", false);
+    const token = obtenerToken();
+    if (!token) {
+      showToast("Inicia sesión como administrador para guardar.", true);
+      return;
+    }
+
+    setGuardando(true);
+    try {
+      const resp = await fetch(`${API_BASE}/api/admin/mi-cuenta-bancaria`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          titular_nombre: titular.trim(),
+          banco,
+          tipo_cuenta: tipo,
+          numero_cuenta: numero.trim(),
+        }),
+      });
+      const body = await resp.json().catch(() => null);
+      if (resp.ok) {
+        showToast(body?.message || "Cuenta bancaria guardada correctamente.", false);
+      } else {
+        showToast(body?.error?.message || "No se pudo guardar la cuenta bancaria.", true);
+      }
+    } catch (e) {
+      showToast("Error de conexión con el servidor.", true);
+    } finally {
+      setGuardando(false);
+    }
   }
 
   function handleKeyDown(e) {
@@ -114,10 +179,11 @@ export default function AjustesAdministrador({ onClose }) {
               <input
                 id="titular"
                 type="text"
-                placeholder="Ej: Daniel Stivens Palacios"
+                placeholder="Ej: CommerCity SAS"
                 value={titular}
                 onChange={(e) => setTitular(e.target.value)}
                 onKeyDown={handleKeyDown}
+                disabled={cargando}
                 className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full"
                 style={{
                   backgroundColor: "var(--color-surface-container-high)",
@@ -135,6 +201,7 @@ export default function AjustesAdministrador({ onClose }) {
                   id="banco"
                   value={banco}
                   onChange={(e) => setBanco(e.target.value)}
+                  disabled={cargando}
                   className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full appearance-none cursor-pointer"
                   style={{
                     backgroundColor: "var(--color-surface-container-high)",
@@ -143,13 +210,13 @@ export default function AjustesAdministrador({ onClose }) {
                   }}
                 >
                   <option value="" disabled>Selecciona un banco</option>
-                  <option value="bancolombia">Bancolombia</option>
-                  <option value="davivienda">Davivienda</option>
-                  <option value="bbva">BBVA</option>
-                  <option value="bogota">Banco de Bogotá</option>
-                  <option value="occidente">Banco de Occidente</option>
-                  <option value="nequi">Nequi</option>
-                  <option value="daviplata">Daviplata</option>
+                  <option value="Bancolombia">Bancolombia</option>
+                  <option value="Davivienda">Davivienda</option>
+                  <option value="BBVA">BBVA</option>
+                  <option value="Banco de Bogotá">Banco de Bogotá</option>
+                  <option value="Banco de Occidente">Banco de Occidente</option>
+                  <option value="Nequi">Nequi</option>
+                  <option value="Daviplata">Daviplata</option>
                 </select>
                 <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -167,6 +234,7 @@ export default function AjustesAdministrador({ onClose }) {
                   id="tipo"
                   value={tipo}
                   onChange={(e) => setTipo(e.target.value)}
+                  disabled={cargando}
                   className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full appearance-none cursor-pointer"
                   style={{
                     backgroundColor: "var(--color-surface-container-high)",
@@ -196,6 +264,7 @@ export default function AjustesAdministrador({ onClose }) {
                 value={numero}
                 onChange={(e) => setNumero(e.target.value)}
                 onKeyDown={handleKeyDown}
+                disabled={cargando}
                 className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full"
                 style={{
                   backgroundColor: "var(--color-surface-container-high)",
@@ -213,14 +282,15 @@ export default function AjustesAdministrador({ onClose }) {
           >
             <button
               onClick={guardar}
-              className="font-semibold text-sm rounded-3xl px-8 h-12 hover:brightness-110 active:scale-95 transition-all"
+              disabled={cargando || guardando}
+              className="font-semibold text-sm rounded-3xl px-8 h-12 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
               style={{
                 background: "linear-gradient(169deg, var(--color-brand-orange) 0%, #e08a0b 100%)",
                 color: "var(--color-brand-dark-text)",
                 fontFamily: "Poppins, sans-serif",
               }}
             >
-              Guardar cuenta bancaria
+              {guardando ? "Guardando..." : "Guardar cuenta bancaria"}
             </button>
           </div>
         </div>

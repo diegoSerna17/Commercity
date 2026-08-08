@@ -1,4 +1,19 @@
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import pool from "../config/db.js";
+import { JWT_SECRET } from "../utils/config.js";
+import { successResponse, errorResponse } from "../utils/response.js";
+import { enviarCorreoRecuperacion } from "../utils/mailer.js";
+
+// ============================================================================
+// MODULO DE AUTENTICACION (integrado desde AVANCES/SPRING 1/DIEGO SERNA/2)
+// Fixes aplicados en la integracion (informe v3.0):
+//   3.1 CRITICO: JWT_SECRET sin fallback hardcodeado (se usa utils/config.js).
+//   3.2 ALTA:    register con transaccion (usuario + rol nunca quedan a medias).
+//   3.3 MEDIO:   logout invalida el token en tokens_invalidados (RF2).
+//   3.4 MEDIO:   el correo dice "expira en 5 minutos" (RF4) en utils/mailer.js.
+// ============================================================================
 
 /**
  * Endpoint de verificación: responde que el servidor esta activo.
@@ -7,6 +22,331 @@ import pool from "../config/db.js";
  */
 export const getUsuarios = (req, res) => {
     res.send('servidor creado')
+};
+
+// ============================ REGISTRO ============================
+export const register = async (req, res) => {
+    const { email, password, nombre_completo } = req.body;
+
+    try {
+        // Email duplicado (la UNIQUE de la BD es la garantia final)
+        const [existente] = await pool.query(
+            "SELECT id FROM usuarios WHERE email = ?",
+            [email]
+        );
+        if (existente.length > 0) {
+            return errorResponse(res, "El email ya está registrado", 400);
+        }
+
+        const rolSolicitado = "comprador";
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // Fix 3.2: transaccion para que usuario + rol queden siempre consistentes.
+        const connection = await pool.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            const [resultado] = await connection.query(
+                "INSERT INTO usuarios (email, password, nombre_completo) VALUES (?, ?, ?)",
+                [email, passwordHash, nombre_completo || null]
+            );
+            const usuarioId = resultado.insertId;
+
+            // Asignar el rol por medio de la tabla puente usuario_roles
+            const [rolRow] = await connection.query(
+                "SELECT id FROM roles WHERE nombre = ?",
+                [rolSolicitado]
+            );
+            if (rolRow.length === 0) {
+                await connection.rollback();
+                return errorResponse(res, "Error interno del servidor", 500);
+            }
+            await connection.query(
+                "INSERT INTO usuario_roles (usuario_id, rol_id) VALUES (?, ?)",
+                [usuarioId, rolRow[0].id]
+            );
+
+            await connection.commit();
+
+            // Fix 3.1: secreto validado, nunca un fallback hardcodeado.
+            const token = jwt.sign(
+                { id: usuarioId, email },
+                JWT_SECRET,
+                { expiresIn: "7d" }
+            );
+
+            return successResponse(res, "Usuario registrado correctamente", {
+                token,
+                user: {
+                    id: usuarioId,
+                    email,
+                    nombre_completo: nombre_completo || null,
+                    roles: [rolSolicitado]
+                }
+            }, 201);
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        // Duplicado de email a pesar del pre-check (race condition)
+        if (error?.code === "ER_DUP_ENTRY") {
+            return errorResponse(res, "El email ya está registrado", 400);
+        }
+        console.error("Error en register:", error);
+        return errorResponse(res, "Error interno del servidor", 500);
+    }
+};
+
+// ============================= LOGIN =============================
+export const login = async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const [usuarios] = await pool.query(
+            `SELECT u.id, u.email, u.password, u.nombre_completo, u.foto_perfil, u.activo
+             FROM usuarios u WHERE u.email = ?`,
+            [email]
+        );
+        if (usuarios.length === 0) {
+            return errorResponse(res, "Credenciales inválidas", 401);
+        }
+
+        const usuario = usuarios[0];
+        if (!usuario.activo) {
+            return errorResponse(res, "Usuario inactivo", 401);
+        }
+
+        const passwordValido = await bcrypt.compare(password, usuario.password);
+        if (!passwordValido) {
+            return errorResponse(res, "Credenciales inválidas", 401);
+        }
+
+        // Roles
+        const [roles] = await pool.query(
+            `SELECT r.nombre FROM roles r
+             INNER JOIN usuario_roles ur ON r.id = ur.rol_id
+             WHERE ur.usuario_id = ?`,
+            [usuario.id]
+        );
+
+        // Fix 3.1: secreto validado, nunca un fallback hardcodeado.
+        const token = jwt.sign(
+            { id: usuario.id, email: usuario.email },
+            JWT_SECRET,
+            { expiresIn: "7d" }
+        );
+
+        return successResponse(res, "Inicio de sesión exitoso", {
+            token,
+            user: {
+                id: usuario.id,
+                email: usuario.email,
+                nombre_completo: usuario.nombre_completo,
+                foto_perfil: usuario.foto_perfil,
+                roles: roles.map(r => r.nombre)
+            }
+        });
+    } catch (error) {
+        console.error("Error en login:", error);
+        return errorResponse(res, "Error interno del servidor", 500);
+    }
+};
+
+// ========================= LOGOUT (RF2) =========================
+// Fix 3.3: revoca el JWT en la lista negra tokens_invalidados (la ruta exige
+// token via authRequired). INSERT IGNORE hace idempotente un doble logout.
+export const logout = async (req, res) => {
+    const token = (req.headers.authorization || "").replace("Bearer ", "");
+    if (token) {
+        const hash = crypto.createHash("sha256").update(token).digest("hex");
+        await pool.query(
+            "INSERT IGNORE INTO tokens_invalidados (token_hash, expira_en) VALUES (?, DATE_ADD(NOW(), INTERVAL 7 DAY))",
+            [hash]
+        );
+    }
+    return successResponse(res, "Sesión cerrada correctamente");
+};
+
+// ===================== PERFIL (autenticado) =====================
+export const getPerfil = async (req, res) => {
+    try {
+        const [usuarios] = await pool.query(
+            `SELECT u.id, u.email, u.nombre_completo, u.foto_perfil, u.descripcion_personal,
+                    u.direccion_envio, u.created_at, u.updated_at
+             FROM usuarios u WHERE u.id = ?`,
+            [req.userId]
+        );
+        if (usuarios.length === 0) {
+            return errorResponse(res, "Usuario no encontrado", 404);
+        }
+
+        const [roles] = await pool.query(
+            `SELECT r.nombre FROM roles r
+             INNER JOIN usuario_roles ur ON r.id = ur.rol_id
+             WHERE ur.usuario_id = ?`,
+            [req.userId]
+        );
+
+        return successResponse(res, "Perfil obtenido", {
+            ...usuarios[0],
+            roles: roles.map(r => r.nombre)
+        });
+    } catch (error) {
+        console.error("Error en getPerfil:", error);
+        return errorResponse(res, "Error interno del servidor", 500);
+    }
+};
+
+// ============ CAMBIAR ROL (comprador <-> vendedor) =============
+export const cambiarRol = async (req, res) => {
+    const { rol } = req.body;
+
+    try {
+        const rolesValidos = ["comprador", "vendedor"];
+        if (!rolesValidos.includes(rol)) {
+            return errorResponse(res, "Rol inválido. Solo comprador o vendedor", 400);
+        }
+
+        const [rolRow] = await pool.query(
+            "SELECT id FROM roles WHERE nombre = ?",
+            [rol]
+        );
+        if (rolRow.length === 0) {
+            return errorResponse(res, "Rol no encontrado", 404);
+        }
+
+        const [rolesActuales] = await pool.query(
+            `SELECT r.nombre FROM roles r
+             INNER JOIN usuario_roles ur ON r.id = ur.rol_id
+             WHERE ur.usuario_id = ?`,
+            [req.userId]
+        );
+
+        if (rolesActuales.some(r => r.nombre === "administrador")) {
+            return errorResponse(res, "El rol administrador no puede autodegradarse", 403);
+        }
+
+        const connection = await pool.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            await connection.query(
+                "DELETE FROM usuario_roles WHERE usuario_id = ?",
+                [req.userId]
+            );
+            await connection.query(
+                "INSERT INTO usuario_roles (usuario_id, rol_id) VALUES (?, ?)",
+                [req.userId, rolRow[0].id]
+            );
+
+            await connection.commit();
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        } finally {
+            connection.release();
+        }
+
+        return successResponse(res, "Rol actualizado correctamente", {
+            roles: [rol]
+        });
+    } catch (error) {
+        console.error("Error en cambiarRol:", error);
+        return errorResponse(res, "Error interno del servidor", 500);
+    }
+};
+
+// ================ SOLICITAR RECUPERACION (RF4) =================
+export const solicitarRecuperacion = async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        const [usuarios] = await pool.query(
+            "SELECT id, email, activo FROM usuarios WHERE email = ?",
+            [email]
+        );
+
+        // Anti-enumeracion: respuesta uniforme para email existente/inexistente
+        if (usuarios.length === 0 || !usuarios[0].activo) {
+            return successResponse(
+                res,
+                "Si el correo existe, recibirás un enlace para restablecer tu contraseña."
+            );
+        }
+
+        const usuario = usuarios[0];
+
+        // Token seguro (32 bytes hex = 64 caracteres)
+        const token = crypto.randomBytes(32).toString("hex");
+
+        // RF4: expira a los 5 minutos
+        await pool.query(
+            "UPDATE usuarios SET token_recuperacion = ?, token_recuperacion_expiracion = DATE_ADD(NOW(), INTERVAL 5 MINUTE) WHERE id = ?",
+            [token, usuario.id]
+        );
+
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const resetUrl = `${frontendUrl}/restore?token=${token}`;
+
+        await enviarCorreoRecuperacion(usuario.email, resetUrl);
+
+        return successResponse(
+            res,
+            "Si el correo existe, recibirás un enlace para restablecer tu contraseña."
+        );
+    } catch (error) {
+        console.error("Error en solicitarRecuperacion:", error);
+        return errorResponse(res, "Error interno del servidor", 500);
+    }
+};
+
+// ================ RESTABLECER CONTRASEÑA (RF4) =================
+export const restablecerPassword = async (req, res) => {
+    const { token, password } = req.body;
+
+    try {
+        // Token de un solo uso y no expirado (RF4: 5 minutos)
+        const [usuarios] = await pool.query(
+            "SELECT id, email FROM usuarios WHERE token_recuperacion = ? AND token_recuperacion_expiracion > NOW()",
+            [token]
+        );
+
+        if (usuarios.length === 0) {
+            return errorResponse(res, "El enlace es inválido o ya fue utilizado", 400);
+        }
+
+        const usuario = usuarios[0];
+
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // Actualizar contraseña y limpiar token (el link muere: un solo uso)
+        await pool.query(
+            "UPDATE usuarios SET password = ?, token_recuperacion = NULL, token_recuperacion_expiracion = NULL WHERE id = ?",
+            [passwordHash, usuario.id]
+        );
+
+        return successResponse(res, "Contraseña restablecida correctamente. Ya puedes iniciar sesión.");
+    } catch (error) {
+        console.error("Error en restablecerPassword:", error);
+        return errorResponse(res, "Error interno del servidor", 500);
+    }
+};
+
+// ========================== ADMIN ==============================
+export const adminGetDatos = async (req, res) => {
+    try {
+        // Devuelve el rol detectado por requireRoles (inyectado en req.userRoles)
+        return successResponse(res, "Acceso de administrador autorizado", {
+            email: req.userEmail,
+            roles: req.userRoles,
+        });
+    } catch (error) {
+        console.error("Error en adminGetDatos:", error);
+        return errorResponse(res, "Error interno del servidor", 500);
+    }
 };
 
 /**
