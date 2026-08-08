@@ -4,6 +4,66 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-08 - FEAT: M8 (Reembolsado) + RF109 + RF135 + RF40 implementados
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/db/008_agregar_reembolso_pagos.sql (nuevo), backend/src/server/db/009_limpiar_carritos_inactivos.sql (nuevo), backend/src/server/controllers/compras.controllers.js (RF135), backend/src/server/routes/historial.routes.js, backend/src/server/controllers/usuarios.controllers.js (RF40), backend/src/server/routes/usuarios.routes.js, backend/src/server/__tests__/historial.controllers.test.js, backend/src/server/__tests__/usuarios.controllers.test.js, LAST VERSION/schema_commercity_3.sql
+- **Descripcion**: se implementaron los 4 pendientes de la actualizacion de Yepes: (1) M8 aplicada a commercy_v2: `pagos_simulados.estado` ahora incluye 'Reembolsado' (RF74/RF135); (2) RF109: EVENT `limpiar_carritos_inactivos` diario que borra carritos sin actividad 7 dias (verificado ENABLED); (3) RF135: endpoint `POST /api/historial/compras/:id/cancelar` con authRequired, transaccion ACID (cancelar linea, restituir stock, marcar pago Reembolsado), solo dueno y estado Pendiente; (4) RF40/B-R6: endpoint `DELETE /api/usuarios/cuenta` con authRequired (desactivacion logica activo=0, suspende productos si es vendedor, vacia carrito, conserva historial). Schema oficial sincronizado con 'Reembolsado'.
+- **Motivo**: autorizacion del usuario para implementar M8 + RF109 + RF135 + RF40 (pendientes que solo dependen del lider).
+- **Requerimientos**: RF135, RF109, RF40, RF74, RF54 (RF del optimizado actualizado)
+- **Evidencia**: migraciones aplicadas y verificadas en BD real (estado Reembolsado + EVENT ENABLED); `npm test` -> 47/47 passed (4 archivos); `npm run test:coverage` -> Statements 96.09%, Branches 89.15%, Functions 100%, Lines 96.03% (subio desde 95.09%).
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - DOCS: schema_commercity_3.sql sincronizado con la BD real
+
+- **Autor**: Daniel Palacios
+- **Archivos**: LAST VERSION/schema_commercity_3.sql
+- **Descripcion**: se sincronizo el archivo del esquema oficial con la BD real `commercy_v2`: se agrego `usuarios.token_recuperacion_expiracion DATETIME NULL` (M3, RF4 expira 5 min), `detalle_pedidos.estado_envio` ahora incluye `'Cancelado'` (RF74/RF135), `notificaciones.tipo` paso de ENUM a `VARCHAR(50)` (M1, evita truncado) y `pagos_simulados.estado` cambio el DEFAULT a `'Pendiente'` (M5). NO se agrego `'Reembolsado'` porque la BD real aun no tiene la migracion M8 (pendiente de autorizacion).
+- **Motivo**: Diego Serna pidio el schema actualizado; el archivo estaba desactualizado respecto a la BD real.
+- **Requerimientos**: RF4, RF74, RF135, RF97, RF119
+- **Evidencia**: verificacion previa contra information_schema de la BD real (estado_envio con Cancelado, tipo varchar(50), DEFAULT Pendiente, token_recuperacion_expiracion).
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - FEAT: middleware RBAC requireRoles para proteger rutas de admin
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/middleware/role.middleware.js (nuevo), backend/src/server/__tests__/role.middleware.test.js (nuevo)
+- **Descripcion**: se creo el middleware de autorizacion por roles `requireRoles(rolesPermitidos)` que se ejecuta DESPUES de `authRequired`: consulta los roles del usuario en BD (`usuario_roles` + `roles`) usando `req.userId`, inyecta `req.userRoles` y devuelve 403 si no tiene el rol requerido. Se creo porque el JWT solo transporta `{ id, email }` (sin roles) y el backend central no tenia este middleware, que es el que se le indica a Cabrera agregar en las 5 rutas admin. 6 tests nuevos (401 sin token, 403 token invalido, 403 rol incorrecto, 403 sin roles, 200 admin, 500 error BD).
+- **Motivo**: la respuesta enviada a Cabrera referencia `requireRoles`, que no existia en el backend central; el lider cubre la brecha de seguridad (criterio revision-requerimientos.md).
+- **Requerimientos**: RNF10 (solo usuarios autenticados segun su rol), RF67-RF74, RF73
+- **Evidencia**: `npm test` -> 38/38 passed (4 archivos); `npm run test:coverage` -> Statements 95.09%, Branches 88%, Functions 100%, Lines 95% (umbral 60%, subio desde 94.7%).
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - DOCS: informe de revision del modulo panel admin de Cabrera v2.0 (solo errores reales)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: "AVANCES/SPRING 1/JUAN CABRERA/INFORME_REVISION_MODULO_PANEL_ADMIN_CABRERA_2026-08-07.md" (actualizado a v2.0), ".trae/rules/revision-requerimientos.md" (criterio de revision actualizado)
+- **Descripcion**: nueva version del informe con el criterio corregido: solo se listan los ERRORES REALES de la entrega, excluyendo las recomendaciones de la checklist interna de api-seguridad.md (helmet, cors, rate-limit, contrato {success,data}) que los integrantes no conocen y que se aplican de forma centralizada. Hallazgos v2.0: 4.1 CRITICO rutas admin sin authRequired+requireRoles, 4.2 ALTA DELETE fisico de reportes, 4.3 MEDIA desactivarCuenta con id de la URL (IDOR, usar req.userId), 4.4 MEDIA admin no puede ver/reactivar productos suspendidos (nuevo), 4.5 MEDIA totalComisiones suma cancelados (nuevo, se alinea con RF74/RF135), 4.6 BAJA ruta raiz de prueba. Se agregaron soluciones copiables y se actualizo la tabla de RF a la numeracion oficial vigente (RF41->RF54).
+- **Motivo**: el usuario indico que las revisiones no deben incluir reglas internas que los integrantes no tienen (api-seguridad.md), solo temas donde cometieron un error.
+- **Requerimientos**: RF55-RF77, RF54, RF72, RF73, RF74, RF56, RF68 (REVISION)
+- **Evidencia**: relectura completa del codigo de Cabrera (controllers, routes, app, utils) y verificacion de columnas contra schema_commercity_3.sql (respondido_at, fecha_desembolso, vendedor_id existen).
+- **Estado**: Completado
+
+---
+
+## 2026-08-08 - DOCS: regla de respuestas a chat de WhatsApp con timestamps (v1.0)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: ".trae/rules/respuestas-chat-whatsapp.md" (nuevo, v1.0)
+- **Descripcion**: nueva regla del proyecto para responder conversaciones de WhatsApp pegadas con timestamps (`[9:26 a.m., 8/8/2026] Nombre: mensaje`). Define el formato de etiqueta por respuesta (`RESPUESTA N — Tema corto (hora a.m./p.m.):`), una respuesta por mensaje respetando el orden cronologico, agrupacion de mensajes duplicados citando todas las horas, tono formal sin emojis, texto listo para copiar y pegar, y verificacion de los RF contra la numeracion oficial vigente (actualizacion 2026-08-08).
+- **Motivo**: el usuario pidio crear una regla para que al copiar textos del chat se le responda cada mensaje teniendo en cuenta la hora/minuto en que se envio.
+- **Requerimientos**: N/A
+- **Evidencia**: aplicacion de la regla en la conversacion de esta manana (8 respuestas generadas con el formato solicitado).
+- **Estado**: Completado
+
+---
+
 ## 2026-08-07 - DOCS: informe de revision del modulo panel admin de Cabrera con soluciones copiables (v1.0)
 
 - **Autor**: Daniel Palacios

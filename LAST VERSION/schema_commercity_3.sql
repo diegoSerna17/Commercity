@@ -43,6 +43,7 @@ CREATE TABLE usuarios (
     direccion_envio TEXT NULL, 
     activo TINYINT(1) DEFAULT 1, 
     token_recuperacion VARCHAR(100) NULL,
+    token_recuperacion_expiracion DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -165,7 +166,7 @@ CREATE TABLE pagos_simulados (
     metodo_pago ENUM('tarjeta', 'transferencia', 'pse') NOT NULL,
     referencia_pago VARCHAR(100) NOT NULL UNIQUE,
     monto DECIMAL(12, 2) NOT NULL,
-    estado ENUM('Aprobado', 'Rechazado', 'Pendiente') DEFAULT 'Aprobado',
+    estado ENUM('Aprobado', 'Rechazado', 'Pendiente', 'Reembolsado') DEFAULT 'Pendiente',
     fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -249,7 +250,7 @@ CREATE TABLE mensajes_chat (
 CREATE TABLE notificaciones (
     id INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT NOT NULL, 
-    tipo ENUM('compra', 'mensajes', 'reporte', 'pedido', 'en camino', 'entregado') NOT NULL, 
+    tipo VARCHAR(50) NOT NULL, 
     descripcion TEXT NOT NULL, 
     estado ENUM('leído', 'no leído') DEFAULT 'no leído', 
     url_redireccion VARCHAR(255) NULL, 

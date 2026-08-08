@@ -4,7 +4,7 @@ import express from "express";
 
 // Mock del pool para no depender de la BD real
 vi.mock("../config/db.js", () => ({
-    default: { query: vi.fn() }
+    default: { query: vi.fn(), getConnection: vi.fn() }
 }));
 
 import pool from "../config/db.js";
@@ -106,5 +106,94 @@ describe("GET /api/historial/compras", () => {
         expect(res.status).toBe(500);
         expect(res.body.success).toBe(false);
         expect(res.body.error.code).toBe("INTERNAL_ERROR");
+    });
+});
+
+describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
+    const conn = {
+        query: vi.fn(),
+        beginTransaction: vi.fn(),
+        commit: vi.fn(),
+        rollback: vi.fn(),
+        release: vi.fn(),
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        pool.getConnection.mockResolvedValue(conn);
+        conn.beginTransaction.mockResolvedValue();
+        conn.commit.mockResolvedValue();
+        conn.rollback.mockResolvedValue();
+        conn.release.mockResolvedValue();
+        conn.query.mockResolvedValue([[], undefined]);
+    });
+
+    it("deberia rechazar la peticion sin token (401)", async () => {
+        const res = await request(app).post("/api/historial/compras/9/cancelar");
+        expect(res.status).toBe(401);
+    });
+
+    it("deberia devolver 400 con id no numerico", async () => {
+        const res = await request(app)
+            .post("/api/historial/compras/abc/cancelar")
+            .set("Authorization", `Bearer ${tokenValido}`);
+        expect(res.status).toBe(400);
+        expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("deberia devolver 404 si la linea no es del comprador o no esta Pendiente", async () => {
+        conn.query.mockResolvedValue([[], undefined]); // FOR UPDATE sin filas
+        const res = await request(app)
+            .post("/api/historial/compras/999/cancelar")
+            .set("Authorization", `Bearer ${tokenValido}`);
+        expect(res.status).toBe(404);
+        expect(res.body.error.code).toBe("NOT_FOUND");
+    });
+
+    it("deberia cancelar la linea, restituir stock y reembolsar el pago (200)", async () => {
+        conn.query.mockImplementation((sql) => {
+            if (sql.includes("FOR UPDATE"))
+                return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4 }], undefined];
+            return [[], undefined];
+        });
+
+        const res = await request(app)
+            .post("/api/historial/compras/9/cancelar")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual({ id: 9, estado: "Cancelado", reembolsado: true });
+
+        expect(conn.query).toHaveBeenCalledWith(
+            expect.stringContaining("WHERE id = ? AND comprador_id = ? AND estado_envio = 'Pendiente'"),
+            [9, 7]
+        );
+        expect(conn.query).toHaveBeenCalledWith(
+            expect.stringContaining("UPDATE detalle_pedidos SET estado_envio = 'Cancelado'"),
+            [9]
+        );
+        expect(conn.query).toHaveBeenCalledWith(
+            expect.stringContaining("UPDATE productos SET stock = stock + ? WHERE id = ?"),
+            [2, 3]
+        );
+        expect(conn.query).toHaveBeenCalledWith(
+            expect.stringContaining("UPDATE pagos_simulados SET estado = 'Reembolsado'"),
+            [4]
+        );
+        expect(conn.commit).toHaveBeenCalled();
+        expect(conn.rollback).not.toHaveBeenCalled();
+    });
+
+    it("deberia devolver 500 con rollback si la BD falla", async () => {
+        conn.query.mockRejectedValue(new Error("DB boom"));
+
+        const res = await request(app)
+            .post("/api/historial/compras/9/cancelar")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(500);
+        expect(res.body.error.code).toBe("INTERNAL_ERROR");
+        expect(conn.rollback).toHaveBeenCalled();
     });
 });

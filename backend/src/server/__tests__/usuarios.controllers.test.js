@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
+import jwt from "jsonwebtoken";
 
 // Mock de mysql2/promise: createPool devuelve un pool simulado (sin BD real).
 vi.mock("mysql2/promise", () => {
@@ -107,5 +108,94 @@ describe("GET /api/usuarios/perfil-publico/:id", () => {
       expect.stringContaining("WHERE id = ?"),
       [42]
     );
+  });
+});
+
+describe("DELETE /api/usuarios/cuenta (RF40 - comprador elimina su cuenta)", () => {
+  const conn = {
+    query: vi.fn(),
+    beginTransaction: vi.fn(),
+    commit: vi.fn(),
+    rollback: vi.fn(),
+    release: vi.fn(),
+  };
+  const token = jwt.sign(
+    { id: 5, email: "comprador@test.com" },
+    process.env.JWT_SECRET || "secreto_test",
+    { expiresIn: "1h" }
+  );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto_test";
+    pool.getConnection.mockResolvedValue(conn);
+    conn.beginTransaction.mockResolvedValue();
+    conn.commit.mockResolvedValue();
+    conn.rollback.mockResolvedValue();
+    conn.release.mockResolvedValue();
+    conn.query.mockResolvedValue([[], undefined]);
+  });
+
+  it("devuelve 401 sin token", async () => {
+    const res = await request(app).delete("/api/usuarios/cuenta");
+    expect(res.status).toBe(401);
+  });
+
+  it("desactiva la cuenta, suspende productos y vacia el carrito (200)", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT id, activo FROM usuarios"))
+        return [[{ id: 5, activo: 1 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .delete("/api/usuarios/cuenta")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toEqual({ id: 5, estado: "desactivado" });
+
+    // B-R6: nunca DELETE fisico del usuario
+    expect(conn.query).not.toHaveBeenCalledWith(
+      expect.stringContaining("DELETE FROM usuarios"),
+      expect.anything()
+    );
+    expect(conn.query).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE usuarios SET activo = 0 WHERE id = ?"),
+      [5]
+    );
+    expect(conn.query).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE productos SET eliminado_por_admin = 1 WHERE vendedor_id = ?"),
+      [5]
+    );
+    expect(conn.query).toHaveBeenCalledWith(
+      expect.stringContaining("DELETE FROM carrito_items WHERE comprador_id = ?"),
+      [5]
+    );
+    expect(conn.commit).toHaveBeenCalled();
+  });
+
+  it("devuelve 404 si la cuenta no existe", async () => {
+    conn.query.mockResolvedValue([[], undefined]); // SELECT sin filas
+
+    const res = await request(app)
+      .delete("/api/usuarios/cuenta")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("devuelve 500 con rollback si la BD falla", async () => {
+    conn.query.mockRejectedValue(new Error("DB boom"));
+
+    const res = await request(app)
+      .delete("/api/usuarios/cuenta")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe("INTERNAL_ERROR");
+    expect(conn.rollback).toHaveBeenCalled();
   });
 });
