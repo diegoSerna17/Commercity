@@ -70,3 +70,63 @@ export const getPerfilPublico = async (req, res) => {
         });
     }
 };
+
+/**
+ * RF40 / B-R6: el comprador elimina su cuenta desde ajustes (desactivacion logica).
+ * - usuarios.activo = 0 (nunca DELETE fisico)
+ * - Se vacia su carrito (dato transitorio)
+ * - Si ademas es vendedor, sus productos se suspenden (RF54/RF74)
+ * - Se conservan pedidos, calificaciones y reportes (historial intacto)
+ */
+export const eliminarCuentaComprador = async (req, res) => {
+    const compradorId = req.userId;
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        // Verificar que la cuenta exista y este activa
+        const [usuarios] = await conn.query(
+            "SELECT id, activo FROM usuarios WHERE id = ?",
+            [compradorId]
+        );
+        if (usuarios.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({
+                success: false,
+                error: { code: "NOT_FOUND", message: "Usuario no encontrado" }
+            });
+        }
+
+        // Desactivacion logica de la cuenta
+        await conn.query(
+            "UPDATE usuarios SET activo = 0 WHERE id = ?",
+            [compradorId]
+        );
+        // Suspender sus productos publicados si es vendedor (RF54/RF74)
+        await conn.query(
+            "UPDATE productos SET eliminado_por_admin = 1 WHERE vendedor_id = ? AND eliminado_por_admin = 0",
+            [compradorId]
+        );
+        // Vaciar el carrito (dato transitorio, se puede borrar)
+        await conn.query(
+            "DELETE FROM carrito_items WHERE comprador_id = ?",
+            [compradorId]
+        );
+
+        await conn.commit();
+        return res.status(200).json({
+            success: true,
+            data: { id: compradorId, estado: "desactivado" }
+        });
+    } catch (error) {
+        await conn.rollback();
+        console.error("Error al eliminar la cuenta:", error.message);
+        return res.status(500).json({
+            success: false,
+            error: { code: "INTERNAL_ERROR", message: "Error al eliminar la cuenta" }
+        });
+    } finally {
+        conn.release();
+    }
+};
