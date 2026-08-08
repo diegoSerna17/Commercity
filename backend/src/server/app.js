@@ -1,20 +1,47 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 import router from "./routes/routes.js";
 import carritoRouter from "./routes/carrito.routes.js";
 import usuariosRouter from "./routes/usuarios.routes.js";
 import historialRouter from "./routes/historial.routes.js";
 import productosRouter from "./routes/productos.routes.js";
+import pedidosRouter from "./routes/pedidos.routes.js";
+import tiendaRouter from "./routes/tienda.routes.js";
+import { errorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
 
-app.use(express.json());
-app.use(cors());
+// Seguridad centralizada (regla api-seguridad.md)
+app.disable("x-powered-by");
+app.use(helmet());
+app.use(express.json({ limit: "10mb" }));
+app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
+
+// Rate limit para rutas de autenticacion (anti fuerza bruta / spam de correos).
+// Un limitador independiente por ruta: cada una tiene su propio cupo de 10/min.
+const opcionesRateLimit = {
+    windowMs: 60 * 1000,
+    max: 10,
+    message: { success: false, error: { code: "RATE_LIMIT", message: "Demasiadas peticiones." } },
+    standardHeaders: true,
+    legacyHeaders: false,
+};
+app.use("/api/usuarios/login", rateLimit(opcionesRateLimit));
+app.use("/api/usuarios/recover", rateLimit(opcionesRateLimit));
+
+// Routers por modulo
 app.use("/", router);
 app.use("/api/carrito", carritoRouter);
 app.use("/api/usuarios", usuariosRouter);
 app.use("/api/historial", historialRouter);
+app.use("/api/pedidos", pedidosRouter);
+app.use("/api/tienda", tiendaRouter);
 app.use("/api", productosRouter);
+
+// Middleware de error centralizado al final de la cadena
+app.use(errorHandler);
 
 export default app;

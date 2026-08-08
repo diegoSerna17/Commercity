@@ -39,7 +39,9 @@ describe("requireRoles (RBAC)", () => {
     });
 
     it("deberia devolver 403 si el usuario no tiene el rol administrador", async () => {
-        pool.query.mockResolvedValue([[{ nombre: "vendedor" }]]);
+        pool.query.mockImplementation((sql) =>
+            sql.includes("tokens_invalidados") ? [[], undefined] : [[{ nombre: "vendedor" }]]
+        );
 
         const res = await request(app)
             .get("/protegido")
@@ -51,7 +53,9 @@ describe("requireRoles (RBAC)", () => {
     });
 
     it("deberia devolver 403 si el usuario no tiene roles asignados", async () => {
-        pool.query.mockResolvedValue([[]]);
+        pool.query.mockImplementation((sql) =>
+            sql.includes("tokens_invalidados") ? [[], undefined] : [[]]
+        );
 
         const res = await request(app)
             .get("/protegido")
@@ -61,7 +65,9 @@ describe("requireRoles (RBAC)", () => {
     });
 
     it("deberia permitir el acceso y consultar los roles del usuario autenticado", async () => {
-        pool.query.mockResolvedValue([[{ nombre: "administrador" }]]);
+        pool.query.mockImplementation((sql) =>
+            sql.includes("tokens_invalidados") ? [[], undefined] : [[{ nombre: "administrador" }]]
+        );
 
         const res = await request(app)
             .get("/protegido")

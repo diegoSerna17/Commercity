@@ -69,11 +69,13 @@ export const cancelarPedidoComprador = async (req, res) => {
     try {
         await conn.beginTransaction();
 
-        // 1. Bloquear la linea y validar propietario + estado Pendiente
+        // 1. Bloquear la linea y validar propietario + estado Pendiente.
+        // comprador_id vive en pedidos, no en detalle_pedidos (fix RF135).
         const [lineas] = await conn.query(
-            `SELECT id, producto_id, cantidad, pedido_id
-               FROM detalle_pedidos
-              WHERE id = ? AND comprador_id = ? AND estado_envio = 'Pendiente'
+            `SELECT dp.id, dp.producto_id, dp.cantidad, dp.pedido_id
+               FROM detalle_pedidos dp
+               JOIN pedidos p ON p.id = dp.pedido_id
+              WHERE dp.id = ? AND p.comprador_id = ? AND dp.estado_envio = 'Pendiente'
               FOR UPDATE`,
             [detalleId, compradorId]
         );

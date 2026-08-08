@@ -52,7 +52,9 @@ describe("GET /api/historial/compras", () => {
     });
 
     it("deberia devolver el historial del comprador autenticado con contrato { success, data }", async () => {
-        pool.query.mockResolvedValue([filasMock]);
+        pool.query.mockImplementation((sql) =>
+            sql.includes("tokens_invalidados") ? [[], undefined] : [filasMock]
+        );
 
         const res = await request(app)
             .get("/api/historial/compras")
@@ -72,26 +74,32 @@ describe("GET /api/historial/compras", () => {
     });
 
     it("deberia aplicar el filtro por estado cuando llega ?estado=", async () => {
-        pool.query.mockResolvedValue([filasMock]);
+        pool.query.mockImplementation((sql) =>
+            sql.includes("tokens_invalidados") ? [[], undefined] : [filasMock]
+        );
 
         const res = await request(app)
             .get("/api/historial/compras?estado=Pendiente")
             .set("Authorization", `Bearer ${tokenValido}`);
 
         expect(res.status).toBe(200);
-        const [query, params] = pool.query.mock.calls[0];
+        const llamadaCompras = pool.query.mock.calls.find(([sql]) => sql.includes("comprador_id = ?"));
+        const [query, params] = llamadaCompras;
         expect(query).toContain("AND dp.estado_envio = ?");
         expect(params).toEqual([7, "Pendiente"]);
     });
 
     it("NO deberia filtrar si el estado no esta en la lista valida", async () => {
-        pool.query.mockResolvedValue([filasMock]);
+        pool.query.mockImplementation((sql) =>
+            sql.includes("tokens_invalidados") ? [[], undefined] : [filasMock]
+        );
 
         await request(app)
             .get("/api/historial/compras?estado=pendiente")
             .set("Authorization", `Bearer ${tokenValido}`);
 
-        const [query, params] = pool.query.mock.calls[0];
+        const llamadaCompras = pool.query.mock.calls.find(([sql]) => sql.includes("comprador_id = ?"));
+        const [query, params] = llamadaCompras;
         expect(query).not.toContain("AND dp.estado_envio = ?");
         expect(params).toEqual([7]);
     });
@@ -121,6 +129,7 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         pool.getConnection.mockResolvedValue(conn);
+        pool.query.mockResolvedValue([[], undefined]); // blacklist de tokens vacia
         conn.beginTransaction.mockResolvedValue();
         conn.commit.mockResolvedValue();
         conn.rollback.mockResolvedValue();
@@ -166,7 +175,7 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
         expect(res.body.data).toEqual({ id: 9, estado: "Cancelado", reembolsado: true });
 
         expect(conn.query).toHaveBeenCalledWith(
-            expect.stringContaining("WHERE id = ? AND comprador_id = ? AND estado_envio = 'Pendiente'"),
+            expect.stringContaining("WHERE dp.id = ? AND p.comprador_id = ? AND dp.estado_envio = 'Pendiente'"),
             [9, 7]
         );
         expect(conn.query).toHaveBeenCalledWith(
