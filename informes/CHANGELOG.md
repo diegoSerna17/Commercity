@@ -4,6 +4,26 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-09 - FEAT: integracion y pruebas del modulo Catalogo/Producto de Carlos Perea (RF78/RF79/RF86)
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - backend/src/server/controllers/productos.controllers.js (nuevas funciones getProductoDetalle y validarStockProducto)
+  - backend/src/server/routes/productos.routes.js (nuevas rutas /api/productos/:id y /api/productos/:id/validar-stock)
+  - backend/src/server/__tests__/productos.controllers.test.js (14 casos nuevos sobre detalle y validacion de stock)
+  - frontend/src/utils/productosApi.js (nuevo: cliente HTTP del modulo Catalogo/Producto)
+  - frontend/src/utils/mapearProducto.js (nuevo: adaptador del backend a la UI)
+  - frontend/src/pages/Inicio/Inicio.jsx (panel principal conectado a GET /api/productos; se elimino el array mock productsData)
+  - frontend/src/components/inicio/FichaProducto.jsx (validacion de stock contra el backend antes de agregar al carrito, RF86)
+  - AVANCES/SPRING 1/CARLOS PEREA/INFORME_REVISION_MODULO_CATALOGO_PEREA_2026-08-09.md (hallazgos 4.1/4.2/4.3 marcados RESUELTOS)
+- **Descripcion**: se integro la entrega de Carlos Perea (Catalogo/Producto) resolviendo los 3 hallazgos de la revision: (1) tests unitarios creados (detalle 200/404/400, filtro u.activo=1, validar stock ok/agotado/cantidad-excedida/404/400); (2) solo se montaron las rutas nuevas /productos/:id y /productos/:id/validar-stock sin duplicar GET /productos del Panel Principal; (3) el detalle ahora excluye vendedores inactivos (AND u.activo = 1, RF74). En frontend se portaron productosApi.js y mapearProducto.js (adaptados a la URL central y al contrato { success, data }), el Inicio consume la API real con estados loading/error/empty y muestra la calificacion del vendedor (RF49), y la ficha valida stock antes de agregar al carrito (RF86).
+- **Motivo**: el usuario pidio corregir e integrar de una vez la entrega de Perea y probarla (la entrega no traia tests, duplicaba la ruta de listado y no filtraba vendedores inactivos en el detalle).
+- **Requerimientos**: RF78, RF79, RF86, RF49, RF74, RF53 (RESUELTO)
+- **Evidencia**: `npm test` -> 209/209 passed (14 archivos); cobertura Statements 93.41% (antes 93.09%, no se redujo). E2E contra BD real: GET /api/productos/584 -> 200 (detalle completo), validar-stock?cantidad=1 -> valido:true, cantidad=2 -> valido:false, 99999 -> 404, abc -> 400, cantidad=0 -> 400. Build de frontend OK (dist/ generado). Verificado en navegador (http://localhost:5173): la grilla carga productos reales del backend y la ficha abre el detalle sin errores de red ni de React. Nota: los productos 584/585 tienen imagenes placeholder (example.com) en la BD, no es defecto de codigo.
+- **Estado**: Completado
+
+---
+
 ## 2026-08-08 - FEAT: cierre del modulo Historial de Compras de Jary (RF26-RF32 completos)
 
 - **Autor**: Daniel Palacios

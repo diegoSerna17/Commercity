@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft, Flag, Minus, Plus, X } from "lucide-react";
+import { validarStockProducto } from "../../utils/productosApi";
 
 const PRODUCT_IMAGE_SRC =
   "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&auto=format&fit=crop";
@@ -13,11 +14,14 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
   const [quantity, setQuantity] = useState(1);
   const [zoomAbierto, setZoomAbierto] = useState(false);
   const [toastMsg, setToastMsg] = useState(null);
+  const [validandoStock, setValidandoStock] = useState(false);
 
   const stock = product?.stock ?? 0;
   const descuento = product?.descuento ?? 0;
   const precioBase = product?.precioBase ?? product?.price ?? 0;
-  const agotado = stock === 0;
+  // RF86: el estado (Disponible/Agotado) viene calculado por la BD segun el stock;
+  // si aun no llego del backend, se cae de respaldo al stock local.
+  const agotado = product?.estado ? product.estado === "Agotado" : stock === 0;
   const tieneDescuento = descuento > 0;
   const precioFinal = tieneDescuento
     ? precioBase - (precioBase * descuento) / 100
@@ -51,13 +55,30 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
 
   if (!product) return null;
 
-  function handleCart() {
-    if (agotado) return;
+  // RF86: antes de agregar al carrito se valida el stock real en el backend,
+  // por si cambio desde que se abrio la ficha (otro comprador se lo pudo llevar).
+  async function handleCart() {
+    if (agotado || validandoStock) return;
 
     const added = quantity;
-    setQuantity(1);
-    onAgregarCarrito?.(product, added);
-    setToastMsg(`${added} ${added === 1 ? "unidad agregada" : "unidades agregadas"} al carrito`);
+
+    try {
+      setValidandoStock(true);
+      const resultado = await validarStockProducto(product.id, added);
+
+      if (!resultado.data?.valido) {
+        setToastMsg(resultado.data?.mensaje || "No hay stock suficiente");
+        return;
+      }
+
+      setQuantity(1);
+      onAgregarCarrito?.(product, added);
+      setToastMsg(`${added} ${added === 1 ? "unidad agregada" : "unidades agregadas"} al carrito`);
+    } catch {
+      setToastMsg("No se pudo validar el stock, intenta de nuevo");
+    } finally {
+      setValidandoStock(false);
+    }
   }
 
   return createPortal(
@@ -217,10 +238,10 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
               <button
                 type="button"
                 onClick={handleCart}
-                disabled={agotado}
+                disabled={agotado || validandoStock}
                 className="h-11 rounded-button bg-brand-orange px-6 text-body-sm font-bold text-brand-dark-text transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Agregar al carrito
+                {validandoStock ? "Validando..." : "Agregar al carrito"}
               </button>
             </div>
           </footer>

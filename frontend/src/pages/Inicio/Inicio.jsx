@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay, EffectFade } from "swiper/modules";
 import FichaProducto from "../../components/inicio/FichaProducto";
 import Header from "../../components/globales/Header";
 import Reportar from "../../components/inicio/Reportar";
+import { listarProductos, obtenerProducto } from "../../utils/productosApi";
+import { mapearProductoUI } from "../../utils/mapearProducto";
 
 import "swiper/css";
 import "swiper/css/pagination";
@@ -40,121 +42,54 @@ const heroSlides = [
   },
 ];
 
-const productsData = [
-  {
-    id: 1,
-    name: "Zapatillas Urban Red",
-    category: "Calzado",
-    originalPrice: 138890,
-    price: 125000,
-    precioBase: 138890,
-    descuento: 10,
-    stock: 45,
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&auto=format&fit=crop",
-    imageAlt: "Zapatillas urbanas rojas",
-    description: "Zapatillas de alto rendimiento con amortiguacion avanzada. Ideales para uso diario, entrenamientos y recorridos urbanos con suela antideslizante.",
-    vendedorId: "juan_giraldo",
-    vendedorNombre: "Juan_Giraldo",
-    vendedorAvatar: "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true",
-    badge: "-10%",
-    badgeBg: "bg-figma-accent-blue",
-  },
-  {
-    id: 2,
-    name: "Auriculares Studio Pro",
-    category: "Tecnologia",
-    originalPrice: null,
-    price: 299000,
-    precioBase: 299000,
-    descuento: 0,
-    stock: 18,
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&auto=format&fit=crop",
-    imageAlt: "Auriculares de estudio",
-    description: "Auriculares premium con sonido envolvente, cancelacion pasiva de ruido y almohadillas comodas para sesiones largas.",
-    vendedorId: "juan_giraldo",
-    vendedorNombre: "Juan_Giraldo",
-    vendedorAvatar: "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true",
-    badge: null,
-    badgeBg: null,
-  },
-  {
-    id: 3,
-    name: "Calzado Heritage High",
-    category: "Calzado",
-    originalPrice: 126670,
-    price: 95000,
-    precioBase: 126670,
-    descuento: 25,
-    stock: 22,
-    image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=900&auto=format&fit=crop",
-    imageAlt: "Calzado heritage high",
-    description: "Tenis altos con diseño clasico, costuras reforzadas y plantilla suave para combinar estilo urbano con comodidad.",
-    vendedorId: "juan_giraldo",
-    vendedorNombre: "Juan_Giraldo",
-    vendedorAvatar: "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true",
-    badge: "-25%",
-    badgeBg: "bg-figma-accent-blue",
-  },
-  {
-    id: 4,
-    name: "Mochila City Stealth",
-    category: "Accesorios",
-    originalPrice: 83160,
-    price: 79000,
-    precioBase: 83160,
-    descuento: 5,
-    stock: 31,
-    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=900&auto=format&fit=crop",
-    imageAlt: "Mochila negra urbana",
-    description: "Mochila urbana resistente al uso diario, con compartimentos internos para portatil, accesorios y objetos personales.",
-    vendedorId: "juan_giraldo",
-    vendedorNombre: "Juan_Giraldo",
-    vendedorAvatar: "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true",
-    badge: "-5%",
-    badgeBg: "bg-figma-accent-blue",
-  },
-  {
-    id: 5,
-    name: "Reloj Elitist Gold",
-    category: "Accesorios",
-    originalPrice: null,
-    price: 345000,
-    precioBase: 345000,
-    descuento: 0,
-    stock: 9,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&auto=format&fit=crop",
-    imageAlt: "Reloj dorado elegante",
-    description: "Reloj elegante con acabado dorado, correa resistente y un diseno minimalista para ocasiones casuales o formales.",
-    vendedorId: "juan_giraldo",
-    vendedorNombre: "Juan_Giraldo",
-    vendedorAvatar: "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true",
-    badge: null,
-    badgeBg: null,
-  },
-  {
-    id: 6,
-    name: "Set Botánico Urban",
-    category: "Hogar",
-    originalPrice: 56250,
-    price: 45000,
-    precioBase: 56250,
-    descuento: 20,
-    stock: 16,
-    image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=900&auto=format&fit=crop",
-    imageAlt: "Set botanico urbano",
-    description: "Set decorativo botanico para interiores con macetas compactas, ideal para escritorios, salas y espacios pequenos.",
-    vendedorId: "juan_giraldo",
-    vendedorNombre: "Juan_Giraldo",
-    vendedorAvatar: "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true",
-    badge: "-20%",
-    badgeBg: "bg-figma-accent-blue",
-  },
-];
-
 const Hero = () => {
   const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [mostrarReportar, setMostrarReportar] = useState(false);
+  const [productos, setProductos] = useState([]);
+  const [cargandoProductos, setCargandoProductos] = useState(true);
+  const [errorProductos, setErrorProductos] = useState(null);
+
+  // RF87-RF94: carga los productos activos desde el backend para el panel principal
+  useEffect(() => {
+    let cancelado = false;
+
+    async function cargarProductos() {
+      try {
+        setCargandoProductos(true);
+        setErrorProductos(null);
+        const datos = await listarProductos({ limit: 24 });
+        if (!cancelado) {
+          setProductos((datos.data.productos || []).map(mapearProductoUI));
+        }
+      } catch (error) {
+        if (!cancelado) setErrorProductos(error.message);
+      } finally {
+        if (!cancelado) setCargandoProductos(false);
+      }
+    }
+
+    cargarProductos();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  // RF78: al abrir la ficha se muestra de inmediato lo que ya se tiene en la
+  // tarjeta y en paralelo se trae el detalle fresco (stock/estado actualizados)
+  function verDetalleProducto(product) {
+    setSelectedProduct(product);
+
+    obtenerProducto(product.id)
+      .then((datos) => {
+        setSelectedProduct((actual) =>
+          actual && actual.id === product.id ? mapearProductoUI(datos.data) : actual
+        );
+      })
+      .catch(() => {
+        // Si falla el refresco de detalle, se conserva lo que ya se ve en pantalla.
+      });
+  }
 
   return (
     <div className="flex min-h-screen md:min-h-0 overflow-hidden bg-surface-container-lowest font-sans">
@@ -336,14 +271,41 @@ const Hero = () => {
             </button>
           </div>
 
+          {errorProductos && (
+            <p
+              className="mb-6 rounded-2xl border border-error-container bg-error-container/15 px-4 py-3 text-sm font-semibold text-error"
+              role="alert"
+            >
+              No se pudieron cargar los productos: {errorProductos}
+            </p>
+          )}
+
+          {!errorProductos && cargandoProductos && (
+            <p
+              className="mb-6 text-sm font-semibold"
+              style={{ color: "var(--color-brand-muted-text)" }}
+            >
+              Cargando productos...
+            </p>
+          )}
+
+          {!errorProductos && !cargandoProductos && productos.length === 0 && (
+            <p
+              className="mb-6 text-sm font-semibold"
+              style={{ color: "var(--color-brand-muted-text)" }}
+            >
+              Aun no hay productos publicados.
+            </p>
+          )}
+
           <div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 md:gap-7"
             role="list"
             aria-labelledby="products-heading"
           >
-            {productsData.map((product) => (
+            {productos.map((product) => (
               <article
-                key={product.name}
+                key={product.id}
                 role="listitem"
                 className="group relative rounded-3xl overflow-hidden flex flex-col transition-all duration-500 hover:-translate-y-2"
                 style={{
@@ -362,7 +324,7 @@ const Hero = () => {
 
                 <button
                   type="button"
-                  onClick={() => setSelectedProduct(product)}
+                  onClick={() => verDetalleProducto(product)}
                   className="text-left relative overflow-hidden"
                   aria-label={`Ver ficha de ${product.name}`}
                 >
@@ -402,7 +364,7 @@ const Hero = () => {
                 <div className="flex flex-col gap-2 p-5 pt-4">
                   <button
                     type="button"
-                    onClick={() => setSelectedProduct(product)}
+                    onClick={() => verDetalleProducto(product)}
                     className="text-left group/btn"
                   >
                     <h3
@@ -425,6 +387,15 @@ const Hero = () => {
                     >
                       {product.vendedorNombre}
                     </span>
+                    {product.calificacionVendedor != null && (
+                      <span
+                        className="text-[11px] font-bold"
+                        style={{ color: "var(--color-brand-orange)" }}
+                        aria-label={`Calificación del vendedor: ${product.calificacionVendedor} de 5`}
+                      >
+                        {"★"} {product.calificacionVendedor}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-baseline gap-2.5 mt-1.5">
@@ -492,45 +463,6 @@ const Hero = () => {
             </button>
           </div>
         </section>
-
-        {/* Loading */}
-        <div className="flex flex-col items-center justify-center gap-4 px-4 pb-16 md:pb-20">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-bounce"
-              style={{ animationDelay: "0ms" }}
-            />
-            <div
-              className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-bounce"
-              style={{ animationDelay: "150ms" }}
-            />
-            <div
-              className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-bounce"
-              style={{ animationDelay: "300ms" }}
-            />
-          </div>
-          <span
-            className="text-xs font-medium tracking-wide uppercase"
-            style={{ color: "var(--color-brand-muted-text)" }}
-          >
-            Cargando más piezas...
-          </span>
-          <div
-            className="w-32 h-1 rounded-full overflow-hidden"
-            style={{
-              backgroundColor: "var(--color-surface-container-high)",
-            }}
-            role="progressbar"
-            aria-valuenow={33}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div
-              className="w-1/3 h-full rounded-full animate-pulse"
-              style={{ backgroundColor: "var(--color-brand-orange)" }}
-            />
-          </div>
-        </div>
       </main>
 
       {selectedProduct && (
