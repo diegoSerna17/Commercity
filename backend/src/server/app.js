@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import router from "./routes/routes.js";
 import carritoRouter from "./routes/carrito.routes.js";
@@ -14,12 +16,16 @@ import adminRouter from "./routes/admin.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Seguridad centralizada (regla api-seguridad.md)
 app.disable("x-powered-by");
 app.use(helmet());
 app.use(express.json({ limit: "10mb" }));
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
+
+// Imagenes subidas por el vendedor (Perfil Vendedor RF45/RF49)
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Rate limit para rutas de autenticacion (anti fuerza bruta / spam de correos).
 // Un limitador independiente por ruta: cada una tiene su propio cupo de 10/min.

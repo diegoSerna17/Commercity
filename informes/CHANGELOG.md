@@ -4,6 +4,41 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-12 - CHORE: push a commercycity del modulo Perfil Vendedor (Yepes) y frontend Catalogo (Perea)
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - Rama `backend`: backend/src/server/controllers/productos.controllers.js, backend/src/server/routes/productos.routes.js, backend/src/server/config/multer.js, backend/src/server/app.js, backend/src/server/__tests__/productos.vendedor.test.js, backend/package.json, backend/package-lock.json
+  - Rama `feature/frontend-modulos-s1`: frontend/src/utils/productosApi.js, frontend/src/utils/mapearProducto.js
+  - .trae/rules/git-push-politica.md y .trae/rules/git-autorizacion-versionado.md (se permite subir frontend cuando hace parte de la actividad asignada al modulo)
+  - .gitignore (excluir backend/src/server/uploads/ runtime)
+- **Descripcion**: se actualizo la politica de push para permitir archivos frontend cuando forman parte del modulo asignado al integrante. Se hizo push a `commercycity` vía worktrees temporales: rama `backend` con el modulo Perfil Vendedor de Yepes (commit 956e0be, autor Jose Yepes) y rama nueva `feature/frontend-modulos-s1` desde main con los utils del Catalogo de Perea (commit aaf6360, autor Carlos Perea) para que Diego Serna revise y haga merge.
+- **Motivo**: el usuario indico que los archivos frontend de las actividades asignadas si se suben al repositorio del lider; se requeria subir el trabajo integrado de Yepes (backend) y el frontend de Perea que no existia en main.
+- **Requerimientos**: RF44-RF49, RF54, RF78-RF85
+- **Evidencia**: `git ls-remote commercycity` confirma refs/heads/backend=956e0be y refs/heads/feature/frontend-modulos-s1=aaf6360; worktrees y ramas locales temporales eliminados.
+- **Estado**: Completado
+
+---
+
+## 2026-08-12 - FEAT: integracion del modulo Perfil Vendedor de Jose Yepes (RF44-RF49, RF54) con auth JWT
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - backend/src/server/controllers/productos.controllers.js (crearProductoVendedor, editarProductoVendedor, getMisProductos con req.userId)
+  - backend/src/server/routes/productos.routes.js (rutas protegidas: POST /productos, PUT /productos/:id, GET /productos/mis-productos)
+  - backend/src/server/config/multer.js (nuevo: subida de imagenes a /uploads, 5MB, formatos validos)
+  - backend/src/server/app.js (servir /uploads estaticamente)
+  - backend/package.json (dependencia multer)
+  - backend/src/server/__tests__/productos.vendedor.test.js (nuevo, 13 tests)
+  - AVANCES/SPRING 1/JOSE YEPES/ (carpeta de entrega limpia + LEEME.txt + informe de revision)
+- **Descripcion**: se integro el modulo Perfil Vendedor de Jose Yepes resolviendo el hallazgo 4.1 (vendedor hardcodeado VENDEDOR_ID_TEMPORAL=3): ahora el controller usa `req.userId` del JWT y las rutas se protegen con `authRequired + requireRoles(["vendedor"])`; la edicion verifica propiedad (`WHERE id = ? AND vendedor_id = ?`). Se creo `config/multer.js` para la subida de imagenes (carpeta uploads creada automaticamente) y se sirve `/uploads` estaticamente. Se escribieron 13 tests (401/403/201/400/404/500, propiedad, categoria nueva, imagen nueva). El estado Disponible/Agotado se mantiene calculado por la BD (GENERADA); la migracion del RF46 queda pendiente con Meneses.
+- **Motivo**: el usuario pidio corregir el hallazgo 4.1 del informe de Yepes e integrar el modulo con pruebas (la entrega usaba un vendedor fijo y no traia tests).
+- **Requerimientos**: RF44, RF45, RF46 (pendiente migracion), RF48, RF49, RF54 (RESUELTO)
+- **Evidencia**: `npm test` -> 222/222 passed (15 archivos); cobertura Statements 93.01%. E2E contra BD real: POST /api/productos con token de vendedor e imagen -> 201 (producto 585); GET /api/productos/mis-productos -> 200 (11 productos); PUT /api/productos/585 -> 200; imagen servida en /uploads -> 200; sin token -> 401; comprador -> 403. Nota: se detecto un proceso zombie en el puerto 5000 (doble bind en Windows) que respondia con codigo viejo; se resolvio matando el proceso y relanzando.
+- **Estado**: Completado
+
+---
+
 ## 2026-08-09 - FEAT: integracion y pruebas del modulo Catalogo/Producto de Carlos Perea (RF78/RF79/RF86)
 
 - **Autor**: Daniel Palacios

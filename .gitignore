@@ -167,6 +167,9 @@ informes/_*
 skills-lock.json
 backend/_*.mjs
 
+# Archivos subidos por multer en runtime (no se versionan)
+backend/src/server/uploads/
+
 # Entregas de los integrantes, audios y scripts locales (no se versionan)
 AVANCES/
 Audios/
