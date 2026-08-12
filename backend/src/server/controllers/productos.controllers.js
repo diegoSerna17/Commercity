@@ -336,3 +336,198 @@ export const validarStockProducto = async (req, res) => {
     });
   }
 };
+
+// ============================================================================
+// GESTION DE PRODUCTOS DEL VENDEDOR (RF44-RF49, RF54)
+// Integrada desde Jose Yepes (2026-08-12).
+// Fix 4.1: el vendedor se obtiene del JWT (req.userId) via authRequired +
+// requireRoles(["vendedor"]); se elimino el VENDEDOR_ID_TEMPORAL hardcodeado.
+// El estado Disponible/Agotado SIEMPRE lo calcula la BD (columna GENERADA).
+// ============================================================================
+
+/**
+ * Busca una categoria por nombre; si no existe, la crea automaticamente.
+ * @param {string} nombreCategoria
+ * @returns {Promise<number>} id de la categoria (existente o recien creada)
+ */
+async function obtenerOCrearCategoria(nombreCategoria) {
+  const [filas] = await pool.query(
+    "SELECT id FROM categorias WHERE nombre = ?",
+    [nombreCategoria]
+  );
+  if (filas.length > 0) return filas[0].id;
+
+  const [resultado] = await pool.query(
+    "INSERT INTO categorias (nombre) VALUES (?)",
+    [nombreCategoria]
+  );
+  return resultado.insertId;
+}
+
+/**
+ * POST /api/productos (RF45/RF46/RF48) - crear producto del vendedor autenticado.
+ * Multipart: campo "imagen" obligatorio. El estado lo calcula la BD (GENERADA).
+ */
+export const crearProductoVendedor = async (req, res) => {
+  try {
+    const { nombre, descripcion, precio, stock, descuento, categoria } = req.body;
+
+    if (!nombre || !descripcion || !categoria) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "Faltan campos requeridos (nombre, descripcion, categoria)" },
+      });
+    }
+
+    const precioNum = Number(precio);
+    const stockNum = Number(stock);
+    if (!Number.isFinite(precioNum) || precioNum <= 0 || !Number.isInteger(stockNum) || stockNum < 0) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "Precio y stock deben ser numeros validos" },
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "La imagen es requerida" },
+      });
+    }
+
+    const categoriaId = await obtenerOCrearCategoria(String(categoria).trim());
+    const imagenUrl = `/uploads/${req.file.filename}`;
+
+    const [resultado] = await pool.query(
+      `INSERT INTO productos
+         (vendedor_id, categoria_id, nombre, descripcion, imagen_url, precio, stock, descuento_porcentaje)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.userId,
+        categoriaId,
+        String(nombre).trim(),
+        String(descripcion).trim(),
+        imagenUrl,
+        precioNum,
+        stockNum,
+        descuento ? Number(descuento) : 0,
+      ]
+    );
+
+    return res.status(201).json({
+      success: true,
+      data: { id: resultado.insertId, mensaje: "Producto creado exitosamente" },
+    });
+  } catch (error) {
+    console.error("Error al crear producto del vendedor:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Error al crear el producto" },
+    });
+  }
+};
+
+/**
+ * PUT /api/productos/:id (RF49) - editar producto del vendedor autenticado.
+ * Solo puede editar productos cuyo vendedor_id sea el del JWT.
+ */
+export const editarProductoVendedor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const productoId = Number(id);
+    if (!Number.isInteger(productoId) || productoId <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "ID inválido" },
+      });
+    }
+
+    const [productoExistente] = await pool.query(
+      `SELECT id, categoria_id, imagen_url, vendedor_id,
+              nombre, descripcion, precio, stock, descuento_porcentaje
+         FROM productos
+        WHERE id = ? AND vendedor_id = ?`,
+      [productoId, req.userId]
+    );
+
+    if (productoExistente.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Producto no encontrado" },
+      });
+    }
+
+    const producto = productoExistente[0];
+    const { nombre, descripcion, precio, stock, descuento, categoria } = req.body;
+
+    let categoriaId = producto.categoria_id;
+    if (categoria && String(categoria).trim() !== "") {
+      categoriaId = await obtenerOCrearCategoria(String(categoria).trim());
+    }
+
+    const imagenUrl = req.file ? `/uploads/${req.file.filename}` : producto.imagen_url;
+
+    await pool.query(
+      `UPDATE productos
+          SET nombre = ?, descripcion = ?, imagen_url = ?, precio = ?,
+              stock = ?, descuento_porcentaje = ?, categoria_id = ?
+        WHERE id = ? AND vendedor_id = ?`,
+      [
+        nombre ? String(nombre).trim() : producto.nombre,
+        descripcion ? String(descripcion).trim() : producto.descripcion,
+        imagenUrl,
+        precio !== undefined ? Number(precio) : producto.precio,
+        stock !== undefined ? Number(stock) : producto.stock,
+        descuento !== undefined ? Number(descuento) : producto.descuento_porcentaje,
+        categoriaId,
+        productoId,
+        req.userId,
+      ]
+    );
+
+    return res.json({
+      success: true,
+      data: { mensaje: "Producto actualizado exitosamente" },
+    });
+  } catch (error) {
+    console.error("Error al editar producto del vendedor:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Error al editar el producto" },
+    });
+  }
+};
+
+/**
+ * GET /api/productos/mis-productos (RF54) - lista los productos del vendedor autenticado.
+ */
+export const getMisProductos = async (req, res) => {
+  try {
+    const [productos] = await pool.query(
+      `SELECT p.id, p.nombre, p.descripcion, p.imagen_url, p.precio, p.stock,
+              p.estado, p.descuento_porcentaje, p.fecha_publicacion,
+              c.id AS categoria_id, c.nombre AS categoria_nombre
+         FROM productos p
+         JOIN categorias c ON p.categoria_id = c.id
+        WHERE p.vendedor_id = ?
+        ORDER BY p.id DESC`,
+      [req.userId]
+    );
+
+    return res.json({
+      success: true,
+      data: productos.map((p) => ({
+        ...p,
+        precio: Number(p.precio),
+        stock: Number(p.stock),
+        descuento_porcentaje: Number(p.descuento_porcentaje || 0),
+      })),
+    });
+  } catch (error) {
+    console.error("Error al obtener mis productos:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Error al obtener los productos" },
+    });
+  }
+};
