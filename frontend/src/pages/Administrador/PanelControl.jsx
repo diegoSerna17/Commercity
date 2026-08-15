@@ -158,7 +158,7 @@ export default function PanelAdministrador() {
     });
   }, [reportes, buscarReportes, filtroReporte]);
 
-  // â”€â”€â”€ ACCIONES USUARIOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  //ACCIONES USUARIOS 
 
   // JS Cambia el estado de un usuario a baneado
   function banearUsuario(id) {
@@ -205,7 +205,7 @@ export default function PanelAdministrador() {
     setModalEliminarUsuario({ abierto: false, id: null, nombreDesdeReporte: null });
   }
 
-  // â”€â”€â”€ ACCIONES PRODUCTOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  //ACCIONES PRODUCTOS 
 
   // JS Abre el modal de confirmacion para eliminar desde la tabla de productos
   function pedirEliminarProducto(id) {
@@ -242,7 +242,7 @@ export default function PanelAdministrador() {
     setModalEliminarProducto({ abierto: false, id: null, nombreDesdeReporte: null });
   }
 
-  // â”€â”€â”€ ACCIONES REPORTES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  //ACCIONES REPORTES 
 
   // JS Abre el modal de detalle de reporte en modo ver o responder
   function abrirModalReporte(id, modo) {
@@ -266,7 +266,7 @@ export default function PanelAdministrador() {
     setModalReporte((prev) => ({ ...prev, modo: "ver" }));
   }
 
-  // â”€â”€â”€ ACCIONES BANEO DESDE REPORTE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  //ACCIONES BANEO DESDE REPORTE 
 
   // JS Verifica si un usuario por nombre esta baneado
   function estaBaneado(nombre) {
@@ -295,7 +295,7 @@ export default function PanelAdministrador() {
     }
   }
 
-  // â”€â”€â”€ RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // RENDER 
 
   // JS Nombre de la entidad a mostrar en el modal de confirmacion
   const nombreParaConfirmarUsuario =
@@ -376,7 +376,7 @@ export default function PanelAdministrador() {
               </div>
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <p className="text-[#797998] text-xs font-bold uppercase tracking-widest">COMISIONES TOTALES</p>
-                <span className="bg-[rgba(239,153,24,0.2)] text-[#ef9918] text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">ComisiÃ³n %10</span>
+                <span className="bg-[rgba(239,153,24,0.2)] text-[#ef9918] text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">Comisiones 10%</span>
               </div>
               <p className="text-[#f0f0f8] text-3xl font-bold">$45,280.50</p>
             </div>

@@ -4,6 +4,7 @@ import Header from "../../components/globales/Header";
 import AgregarProducto from "../../components/perfil/AgregarProducto";
 import SeguidoresModal from "../../components/perfil/SeguidoresModal";
 import { perfilVendedorSocial } from "../../data/perfilVendedorSocial";
+import { useAuth } from "../../contexts/AuthContext.js";
 
 const BIO_MAX_LENGTH = 180;
 
@@ -76,6 +77,9 @@ const TABS = [
 ];
 
 export default function PerfilVendedor() {
+  // RE Usuario autenticado (nombre_completo, email, foto_perfil desde la BD)
+  const { user } = useAuth();
+
   const [activeTab, setActiveTab] = useState("mis-productos");
   const [sellerRatingSum, setSellerRatingSum] = useState(0);
   const [sellerRatingCount, setSellerRatingCount] = useState(0);
@@ -92,6 +96,7 @@ export default function PerfilVendedor() {
   const [avatarError, setAvatarError] = useState(false);
   const [brokenImages, setBrokenImages] = useState({});
   const [mostrarAgregarProducto, setMostrarAgregarProducto] = useState(false);
+  const [productoAEditar, setProductoAEditar] = useState(null);
   const [mostrarSeguidores, setMostrarSeguidores] = useState(false);
 
   const avatarInputRef = useRef(null);
@@ -144,13 +149,18 @@ export default function PerfilVendedor() {
 
   const toggleFollow = () => setIsFollowing((p) => !p);
 
-  const handleAgregarProducto = async (formData) => {
-    console.log("Producto agregado:", Object.fromEntries(formData));
+  const cerrarFormularioProducto = () => {
     setMostrarAgregarProducto(false);
+    setProductoAEditar(null);
   };
 
-  const handleImageError = (id) => {
-    setBrokenImages((prev) => ({ ...prev, [id]: true }));
+  const handleAgregarProducto = async (formData) => {
+    if (productoAEditar) {
+      console.log("Producto actualizado:", productoAEditar.id, Object.fromEntries(formData));
+    } else {
+      console.log("Producto agregado:", Object.fromEntries(formData));
+    }
+    cerrarFormularioProducto();
   };
 
   return (
@@ -187,8 +197,8 @@ export default function PerfilVendedor() {
                 {!avatarError ? (
                   <img
                     id="avatar-img"
-                    src={avatarSrc}
-                    alt="Avatar de juan_giraldo"
+                    src={user?.foto_perfil || avatarSrc}
+                    alt={user?.nombre_completo || "Avatar"}
                     className="w-full h-full object-cover"
                     onError={() => setAvatarError(true)}
                   />
@@ -248,7 +258,7 @@ export default function PerfilVendedor() {
                       color: "var(--color-on-surface)",
                     }}
                   >
-                    juan_giraldo
+                    {user?.nombre_completo || user?.email || "Perfil"}
                   </h1>
 
                   <div className="flex items-center gap-[6px]">
@@ -462,7 +472,7 @@ export default function PerfilVendedor() {
                       color: "var(--color-on-surface)",
                     }}
                   >
-                    Juan Giraldo
+                    {user?.nombre_completo || user?.email || "Perfil"}
                   </p>
                   {!isEditingBio && (
                     <button
@@ -709,6 +719,7 @@ export default function PerfilVendedor() {
                 )}
                 {isMisProductos && (
                   <button
+                    onClick={() => setProductoAEditar(p)}
                     title="Editar producto"
                     className="absolute top-3 right-3 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
                     style={{
@@ -774,9 +785,10 @@ export default function PerfilVendedor() {
         </div>
       </main>
 
-      {mostrarAgregarProducto && (
+      {(mostrarAgregarProducto || productoAEditar) && (
         <AgregarProducto
-          onCancel={() => setMostrarAgregarProducto(false)}
+          producto={productoAEditar}
+          onCancel={cerrarFormularioProducto}
           onSubmit={handleAgregarProducto}
         />
       )}

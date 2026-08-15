@@ -140,3 +140,21 @@
   width: 32px;
   background: var(--color-brand-orange) !important;
 }
+
+@keyframes drawer-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes drawer-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.drawer-panel {
+  animation: drawer-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.drawer-backdrop {
+  animation: drawer-fade-in 0.3s ease;
+}

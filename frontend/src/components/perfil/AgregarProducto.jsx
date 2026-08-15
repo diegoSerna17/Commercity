@@ -9,15 +9,26 @@ function limpiarPrecio(valor) {
   return soloNumeros === "" ? NaN : parseInt(soloNumeros, 10);
 }
 
-export default function AgregarProducto({ onCancel, onSubmit } = {}) {
-  const [nombre, setNombre] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [precioTexto, setPrecioTexto] = useState("");
-  const [stock, setStock] = useState("");
-  const [estado, setEstado] = useState("disponible");
-  const [descuento, setDescuento] = useState("");
-  const [categoria, setCategoria] = useState("");
+export default function AgregarProducto({ onCancel, onSubmit, producto = null } = {}) {
+  const esEdicion = Boolean(producto);
+
+  const [nombre, setNombre] = useState(producto?.name || "");
+  const [descripcion, setDescripcion] = useState(producto?.descripcion || "");
+  const [precioTexto, setPrecioTexto] = useState(() => {
+    if (!producto?.price) return "";
+    const numero = limpiarPrecio(String(producto.price));
+    return isNaN(numero) ? "" : formatearPrecio(numero);
+  });
+  const [stock, setStock] = useState(producto?.stock != null ? String(producto.stock) : "");
+  const [estado, setEstado] = useState(producto?.estado || "disponible");
+  const [descuento, setDescuento] = useState(() => {
+    if (producto?.discount == null) return "";
+    const numero = parseInt(String(producto.discount).replace(/[^0-9]/g, ""), 10);
+    return isNaN(numero) ? "" : String(numero);
+  });
+  const [categoria, setCategoria] = useState(producto?.categoria || "");
   const [imagenArchivo, setImagenArchivo] = useState(null);
+  const [imagenExistente, setImagenExistente] = useState(producto?.image || null);
   const inputImagenRef = useRef(null);
   const [errores, setErrores] = useState({});
   const [enviando, setEnviando] = useState(false);
@@ -70,7 +81,9 @@ export default function AgregarProducto({ onCancel, onSubmit } = {}) {
 
     if (!nombre.trim()) nuevosErrores.nombre = true;
 
-    const imagenInvalida = !imagenArchivo || !imagenArchivo.type.startsWith("image/");
+    const imagenInvalida =
+      !imagenExistente &&
+      (!imagenArchivo || !imagenArchivo.type.startsWith("image/"));
     if (imagenInvalida) nuevosErrores.imagen = true;
 
     if (!descripcion.trim()) nuevosErrores.descripcion = true;
@@ -92,6 +105,7 @@ export default function AgregarProducto({ onCancel, onSubmit } = {}) {
     if (!validarFormulario()) return;
 
     const formData = new FormData();
+    if (producto?.id != null) formData.append("id", String(producto.id));
     formData.append("nombre", nombre.trim());
     formData.append("descripcion", descripcion.trim());
     formData.append("precio", String(limpiarPrecio(precioTexto)));
@@ -99,7 +113,7 @@ export default function AgregarProducto({ onCancel, onSubmit } = {}) {
     formData.append("estado", estado);
     formData.append("descuento", String(descuento !== "" ? parseFloat(descuento) : 0));
     formData.append("categoria", categoria.trim());
-    formData.append("imagen", imagenArchivo);
+    if (imagenArchivo) formData.append("imagen", imagenArchivo);
 
     try {
       setEnviando(true);
@@ -121,6 +135,7 @@ export default function AgregarProducto({ onCancel, onSubmit } = {}) {
     setDescuento("");
     setCategoria("");
     setImagenArchivo(null);
+    setImagenExistente(null);
     if (inputImagenRef.current) inputImagenRef.current.value = "";
     setErrores({});
   }
@@ -130,13 +145,29 @@ export default function AgregarProducto({ onCancel, onSubmit } = {}) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-surface-container-lowest rounded-hero shadow-2xl w-full max-w-[620px] max-h-[90vh] overflow-y-auto">
-        <div className="p-padding-xl">
-          <h1 className="text-headline-sm font-bold text-on-surface mb-padding-md">
-            Agregar Producto
+    <div className="fixed inset-0 z-50">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm drawer-backdrop"
+        onClick={handleCancelar}
+      />
+      <div className="absolute right-0 top-0 h-full w-full max-w-[480px] bg-surface-container-lowest shadow-2xl border-l border-border-subtle overflow-y-auto drawer-panel">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 p-padding-md bg-surface-container-lowest border-b border-border-subtle">
+          <h1 className="text-headline-sm font-bold text-on-surface">
+            {esEdicion ? "Editar Producto" : "Agregar Producto"}
           </h1>
+          <button
+            type="button"
+            onClick={handleCancelar}
+            title="Cerrar"
+            className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L10.59 13.4l-6.3 6.3-1.42-1.41L9.17 12 2.87 5.71 4.29 4.29l6.3 6.3 6.3-6.3 1.41 1.42Z" />
+            </svg>
+          </button>
+        </div>
 
+        <div className="p-padding-md">
           <form onSubmit={handleSubmit} noValidate className="space-y-padding-md">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 min-w-0">
@@ -162,7 +193,13 @@ export default function AgregarProducto({ onCancel, onSubmit } = {}) {
                   htmlFor="imagen"
                   className="flex items-center justify-center w-full h-[44px] bg-surface-container border border-border-subtle rounded-xl cursor-pointer text-body-sm text-brand-muted-text hover:border-brand-orange transition select-none px-2 text-center"
                 >
-                  <span>{imagenArchivo ? "✓ Imagen cargada" : "+ Cargar imagen"}</span>
+                  <span>
+                    {imagenArchivo
+                      ? "✓ Imagen cargada"
+                      : imagenExistente
+                      ? "✓ Imagen actual"
+                      : "+ Cargar imagen"}
+                  </span>
                 </label>
                 <input
                   ref={inputImagenRef}
@@ -299,7 +336,7 @@ export default function AgregarProducto({ onCancel, onSubmit } = {}) {
                 disabled={enviando}
                 className="flex-1 h-[44px] bg-gradient-to-r from-brand-orange to-tertiary-container rounded-button text-body-sm font-bold text-brand-dark-text hover:opacity-90 transition-opacity disabled:opacity-60"
               >
-                {enviando ? "Guardando..." : "Agregar Producto"}
+                {enviando ? "Guardando..." : esEdicion ? "Guardar Cambios" : "Agregar Producto"}
               </button>
             </div>
           </form>
