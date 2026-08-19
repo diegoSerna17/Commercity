@@ -4,7 +4,6 @@ import Header from "../../components/globales/Header";
 import AgregarProducto from "../../components/perfil/AgregarProducto";
 import SeguidoresModal from "../../components/perfil/SeguidoresModal";
 import { perfilVendedorSocial } from "../../data/perfilVendedorSocial";
-import { useAuth } from "../../contexts/AuthContext.js";
 
 const BIO_MAX_LENGTH = 180;
 
@@ -77,9 +76,6 @@ const TABS = [
 ];
 
 export default function PerfilVendedor() {
-  // RE Usuario autenticado (nombre_completo, email, foto_perfil desde la BD)
-  const { user } = useAuth();
-
   const [activeTab, setActiveTab] = useState("mis-productos");
   const [sellerRatingSum, setSellerRatingSum] = useState(0);
   const [sellerRatingCount, setSellerRatingCount] = useState(0);
@@ -197,8 +193,8 @@ export default function PerfilVendedor() {
                 {!avatarError ? (
                   <img
                     id="avatar-img"
-                    src={user?.foto_perfil || avatarSrc}
-                    alt={user?.nombre_completo || "Avatar"}
+                    src={avatarSrc}
+                    alt="Avatar"
                     className="w-full h-full object-cover"
                     onError={() => setAvatarError(true)}
                   />
@@ -258,7 +254,7 @@ export default function PerfilVendedor() {
                       color: "var(--color-on-surface)",
                     }}
                   >
-                    {user?.nombre_completo || user?.email || "Perfil"}
+                    Perfil
                   </h1>
 
                   <div className="flex items-center gap-[6px]">
@@ -472,7 +468,7 @@ export default function PerfilVendedor() {
                       color: "var(--color-on-surface)",
                     }}
                   >
-                    {user?.nombre_completo || user?.email || "Perfil"}
+                    Perfil
                   </p>
                   {!isEditingBio && (
                     <button
