@@ -4,6 +4,22 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-12 - FEAT: modulo Reportes (creacion por comprador) RF62/RF63, RF79, RF101
+
+- **Autor**: Daniel Palacios (en suplencia de Mosquera, modulo Reportes)
+- **Archivos**:
+  - backend/src/server/controllers/reportes.controllers.js (nuevo: crearReporte)
+  - backend/src/server/routes/reportes.routes.js (nuevo: POST /api/reportes)
+  - backend/src/server/app.js (montar /api/reportes)
+  - backend/src/server/__tests__/reportes.controllers.test.js (nuevo, 11 tests)
+- **Descripcion**: se implemento el lado comprador del modulo Reportes, que estaba pendiente (el lado admin ya existia desde el Panel Admin de Cabrera). `POST /api/reportes` permite a un usuario autenticado reportar un producto o usuario con motivo obligatorio y evidencia opcional (archivo multipart "evidencia" via multer). El `informante_id` se toma del JWT (`req.userId`), nunca del body. Se valida: tipo (Producto/Usuario, normalizado), motivo obligatorio (max 2000), producto/usuario valido y existente, y se rechaza el autoreporte. La evidencia usa la columna `evidencia_url` (brecha B2 resuelta en el esquema real v2). El borrado logico (archivado) y la resolucion ya estaban cubiertos en `controllers/admin/reportes.controllers.js`.
+- **Motivo**: Mosquera no entrego su modulo y el usuario pidio hacer el trabajo en su lugar (plazo sabado incumplido); Reportes era el unico modulo pendiente de los 10 del plan.
+- **Requerimientos**: RF62, RF63, RF79, RF101
+- **Evidencia**: `vitest run` -> 233/233 passed (16 archivos); modulo nuevo 11/11. Cobertura Statements 93.07% (sin regresion; era 93.01%).
+- **Estado**: Completado (pendiente E2E contra BD real y push a commercycity con autorizacion)
+
+---
+
 ## 2026-08-12 - CHORE: push a commercycity del modulo Perfil Vendedor (Yepes) y frontend Catalogo (Perea)
 
 - **Autor**: Daniel Palacios
