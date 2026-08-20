@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Header from "../../components/globales/Header";
 import DetalleCompras from "./DetalleCompras";
+import ConfirmacionDevolucion from "./ConfirmacionDevolucion";
 import {
   formatCOP,
   calcSubtotal,
@@ -80,15 +81,25 @@ const ORDERS = [
 const FILTERS = ["Todo", "Pendiente", "En Camino", "Entregado"];
 
 export default function HistorialDeCompras() {
+  const [orders, setOrders] = useState(ORDERS);
   const [activeFilter, setActiveFilter] = useState("Todo");
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [showDevolutionModal, setShowDevolutionModal] = useState(false);
 
   const filteredOrders =
-    activeFilter === "Todo" ? ORDERS : ORDERS.filter((o) => o.estado === activeFilter);
+    activeFilter === "Todo" ? orders : orders.filter((o) => o.estado === activeFilter);
 
   const selectedOrder = selectedOrderId
-    ? ORDERS.find((o) => o.id === selectedOrderId)
+    ? orders.find((o) => o.id === selectedOrderId)
     : null;
+
+  function handleDevolutionConfirm() {
+    if (!selectedOrderId) return;
+    // Backend: aquí va la llamada real, ej. POST /api/pedidos/:id/devolucion
+    setOrders((prev) => prev.filter((o) => o.id !== selectedOrderId));
+    setSelectedOrderId(null);
+    setShowDevolutionModal(false);
+  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -256,8 +267,20 @@ export default function HistorialDeCompras() {
         </>
       )}
 
-        {selectedOrder && (
-          <DetalleCompras order={selectedOrder} onClose={() => setSelectedOrderId(null)} />
+        {selectedOrder && !showDevolutionModal && (
+          <DetalleCompras
+            order={selectedOrder}
+            onClose={() => setSelectedOrderId(null)}
+            onDevolution={() => setShowDevolutionModal(true)}
+          />
+        )}
+
+        {showDevolutionModal && selectedOrder && (
+          <ConfirmacionDevolucion
+            order={selectedOrder}
+            onConfirm={handleDevolutionConfirm}
+            onCancel={() => setShowDevolutionModal(false)}
+          />
         )}
       </section>
     </div>

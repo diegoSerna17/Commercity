@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { formatCOP, calcSubtotal, calcIVA, calcTotal } from "../../utils/historialUtils.js";
 import { EstadoBadge, Avatar } from "../../utils/historialUtils.jsx";
 
-export default function DetalleCompras({ order, onClose }) {
+export default function DetalleCompras({ order, onClose, onDevolution }) {
   const subtotal = calcSubtotal(order.productos);
   const iva = calcIVA(subtotal);
   const total = calcTotal(subtotal);
@@ -88,7 +88,15 @@ export default function DetalleCompras({ order, onClose }) {
         </div>
 
         <div className="border-t border-figma-divider mx-6 mb-4" />
-          <div className="px-6 pb-6">
+          <div className="px-6 pb-6 flex flex-col gap-3">
+            {order.estado === "Pendiente" && (
+              <button
+                onClick={onDevolution}
+                className="w-full bg-brand-orange rounded-card-lg py-3.5 sm:py-4 text-brand-dark-text text-lg sm:text-xl font-bold hover:bg-primary-container transition-colors cursor-pointer shadow-[0px_4px_4px_rgba(0,0,0,0.25)]"
+              >
+                Solicitar Devolución
+              </button>
+            )}
             <button
               onClick={onClose}
               className="w-full border border-[#8e8e93] rounded-card-lg py-3 text-brand-muted-text font-bold text-lg hover:bg-on-surface/5 transition-colors cursor-pointer"

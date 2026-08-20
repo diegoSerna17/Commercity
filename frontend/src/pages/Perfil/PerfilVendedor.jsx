@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Header from "../../components/globales/Header";
 import AgregarProducto from "../../components/perfil/AgregarProducto";
 import SeguidoresModal from "../../components/perfil/SeguidoresModal";
+import FichaProducto from "../../components/inicio/FichaProducto";
 import { perfilVendedorSocial } from "../../data/perfilVendedorSocial";
 
 const BIO_MAX_LENGTH = 180;
@@ -12,59 +13,110 @@ const STAR_PATH =
 const PENCIL_PATH =
   "M1.66667 13.3333H2.85417L11 5.1875L9.8125 4L1.66667 12.1458V13.3333ZM0 15V11.4583L11 0.479167C11.1667 0.326389 11.3507 0.208333 11.5521 0.125C11.7535 0.0416667 11.9653 0 12.1875 0C12.4097 0 12.625 0.0416667 12.8333 0.125C13.0417 0.208333 13.2222 0.333333 13.375 0.5L14.5208 1.66667C14.6875 1.81944 14.809 2 14.8854 2.20833C14.9618 2.41667 15 2.625 15 2.83333C15 3.05556 14.9618 3.26736 14.8854 3.46875C14.809 3.67014 14.6875 3.85417 14.5208 4.02083L3.54167 15H0ZM13.3333 2.83333L12.1667 1.66667L13.3333 2.83333ZM10.3958 4.60417L9.8125 4L11 5.1875L10.3958 4.60417Z";
 
+const VENDEDOR_AVATAR =
+  "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true";
+
 const PRODUCTS = [
   {
     id: 1,
     name: "Bolso Boutique",
-    originalPrice: "$138.880",
-    price: "$125.000",
-    discount: "-10%",
+    category: "Accesorios",
+    precioBase: 138880,
+    descuento: 10,
+    price: 125000,
+    stock: 8,
     image: "https://picsum.photos/seed/bolso1/400/400",
+    imageAlt: "Bolso boutique",
+    description: "Bolso boutique de diseño urbano, elaborado con materiales resistentes y acabados premium para el día a día.",
+    vendedorId: "juan_giraldo",
+    vendedorNombre: "Juan_Giraldo",
+    vendedorAvatar: VENDEDOR_AVATAR,
+    badge: "-10%",
     bgColor: "#f1f1f4",
   },
   {
     id: 2,
     name: "Cuadro Decorativo Minimalista",
-    originalPrice: null,
-    price: "$29.000",
-    discount: null,
+    category: "Hogar",
+    precioBase: 29000,
+    descuento: 0,
+    price: 29000,
+    stock: 15,
     image: "https://picsum.photos/seed/cuadro1/400/400",
+    imageAlt: "Cuadro decorativo minimalista",
+    description: "Cuadro minimalista ideal para dar un toque moderno a salas, habitaciones y espacios de trabajo.",
+    vendedorId: "juan_giraldo",
+    vendedorNombre: "Juan_Giraldo",
+    vendedorAvatar: VENDEDOR_AVATAR,
+    badge: null,
     bgColor: "#f1f1f4",
   },
   {
     id: 3,
     name: "Cuadro Decorativo",
-    originalPrice: "$6.000",
-    price: "$25.000",
-    discount: "-25%",
+    category: "Hogar",
+    precioBase: 33000,
+    descuento: 25,
+    price: 25000,
+    stock: 5,
     image: "https://picsum.photos/seed/cuadro3/400/400",
+    imageAlt: "Cuadro decorativo",
+    description: "Pieza decorativa con acabados cuidados, perfecta para complementar cualquier ambiente interior.",
+    vendedorId: "juan_giraldo",
+    vendedorNombre: "Juan_Giraldo",
+    vendedorAvatar: VENDEDOR_AVATAR,
+    badge: "-25%",
     bgColor: "#f1f1f4",
   },
   {
     id: 4,
     name: "Bascula de Oro",
-    originalPrice: "$4.000",
-    price: "$40.000",
-    discount: "-20%",
+    category: "Hogar",
+    precioBase: 50000,
+    descuento: 20,
+    price: 40000,
+    stock: 10,
     image: "https://picsum.photos/seed/bascula1/400/400",
+    imageAlt: "Bascula de oro",
+    description: "Bascula de precisión con acabado dorado, ideal para control de peso en casa con estilo.",
+    vendedorId: "juan_giraldo",
+    vendedorNombre: "Juan_Giraldo",
+    vendedorAvatar: VENDEDOR_AVATAR,
+    badge: "-20%",
     bgColor: "#f1f1f4",
   },
   {
     id: 5,
     name: "Bascula de Oro",
-    originalPrice: "$4.000",
-    price: "$40.000",
-    discount: "-20%",
+    category: "Hogar",
+    precioBase: 50000,
+    descuento: 20,
+    price: 40000,
+    stock: 10,
     image: "https://picsum.photos/seed/bascula2/400/400",
+    imageAlt: "Bascula de oro",
+    description: "Bascula de precisión con acabado dorado, ideal para control de peso en casa con estilo.",
+    vendedorId: "juan_giraldo",
+    vendedorNombre: "Juan_Giraldo",
+    vendedorAvatar: VENDEDOR_AVATAR,
+    badge: "-20%",
     bgColor: "#f1f1f4",
   },
   {
     id: 6,
     name: "Cuadro Decorativo",
-    originalPrice: "$6.000",
-    price: "$25.000",
-    discount: "-25%",
+    category: "Hogar",
+    precioBase: 33000,
+    descuento: 25,
+    price: 25000,
+    stock: 5,
     image: "https://picsum.photos/seed/cuadro4/400/400",
+    imageAlt: "Cuadro decorativo",
+    description: "Pieza decorativa con acabados cuidados, perfecta para complementar cualquier ambiente interior.",
+    vendedorId: "juan_giraldo",
+    vendedorNombre: "Juan_Giraldo",
+    vendedorAvatar: VENDEDOR_AVATAR,
+    badge: "-25%",
     bgColor: "#f1f1f4",
   },
 ];
@@ -93,6 +145,7 @@ export default function PerfilVendedor() {
   const [brokenImages, setBrokenImages] = useState({});
   const [mostrarAgregarProducto, setMostrarAgregarProducto] = useState(false);
   const [productoAEditar, setProductoAEditar] = useState(null);
+  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [mostrarSeguidores, setMostrarSeguidores] = useState(false);
 
   const avatarInputRef = useRef(null);
@@ -666,69 +719,100 @@ export default function PerfilVendedor() {
           }}
         >
           {PRODUCTS.map((p) => (
-            <div
+            <article
               key={p.id}
-              className="rounded-2xl overflow-hidden cursor-pointer transition-shadow"
+              className="group relative rounded-3xl overflow-hidden flex flex-col transition-all duration-500 hover:-translate-y-2"
               style={{
                 backgroundColor: "var(--color-auth-card-bg)",
-                boxShadow: "0px 1px 2px 0px rgba(0,0,0,0.05)",
+                boxShadow:
+                  "0 1px 3px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.2)",
               }}
             >
               <div
-                className="relative overflow-hidden"
+                className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                 style={{
-                  height: "240px",
-                  backgroundColor: p.bgColor,
+                  border: "1px solid var(--color-border-subtle)",
+                  boxShadow: "inset 0 1px 1px rgba(255,255,255,0.05)",
                 }}
+              />
+
+              <div
+                className="relative h-[200px] sm:h-[220px] md:h-[260px] flex-shrink-0 overflow-hidden cursor-pointer"
+                style={{ backgroundColor: p.bgColor }}
+                onClick={() => setProductoSeleccionado(p)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setProductoSeleccionado(p);
+                  }
+                }}
+                aria-label={`Ver ficha de ${p.name}`}
               >
-                {!brokenImages[p.id] && (
+                {!brokenImages[p.id] ? (
                   <img
                     src={p.image}
-                    alt={p.name}
-                    className="w-full h-full object-cover"
+                    alt={p.imageAlt || p.name}
+                    className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                     onError={() =>
                       setBrokenImages((prev) => ({ ...prev, [p.id]: true }))
                     }
                   />
-                )}
-                {p.discount && (
+                ) : (
                   <div
-                    className="absolute top-2 left-2 rounded-full flex items-center justify-center"
-                    style={{
-                      width: "40px",
-                      height: "40px",
-                      backgroundColor: "var(--color-app-badge)",
-                      boxShadow: "0px 4px 6px -1px rgba(0,0,0,0.1)",
-                    }}
+                    className="flex h-full w-full items-center justify-center text-sm"
+                    style={{ color: "var(--color-brand-muted-text)" }}
                   >
-                    <span
-                      className="text-white text-center leading-tight"
-                      style={{
-                        fontFamily: "var(--font-sans)",
-                        fontWeight: 700,
-                        fontSize: "10px",
-                      }}
-                    >
-                      {p.discount}
-                    </span>
+                    Imagen no disponible
                   </div>
                 )}
+
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                {p.badge && (
+                  <span
+                    className="absolute top-4 left-4 text-[11px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow-lg"
+                    style={{
+                      backgroundColor: "var(--color-brand-orange)",
+                      color: "var(--color-auth-card-bg)",
+                    }}
+                  >
+                    {p.badge}
+                  </span>
+                )}
+
+                <span
+                  className="absolute top-4 right-4 text-[10px] font-semibold px-2.5 py-1 rounded-full backdrop-blur-md uppercase tracking-wider"
+                  style={{
+                    backgroundColor: "var(--color-bg-glass)",
+                    color: "var(--color-on-surface-variant)",
+                    border: "1px solid var(--color-border-subtle)",
+                  }}
+                >
+                  {p.category}
+                </span>
+
                 {isMisProductos && (
                   <button
-                    onClick={() => setProductoAEditar(p)}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setProductoAEditar(p);
+                    }}
                     title="Editar producto"
-                    className="absolute top-3 right-3 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
+                    className="absolute bottom-3 right-3 rounded-full flex items-center justify-center backdrop-blur-sm transition-transform hover:scale-110"
                     style={{
-                      width: "31px",
-                      height: "31px",
-                      backgroundColor: "rgba(255,255,255,0.9)",
-                      boxShadow: "0px 10px 15px -3px rgba(0,0,0,0.1)",
+                      width: "36px",
+                      height: "36px",
+                      backgroundColor: "var(--color-auth-card-bg)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
                     }}
                   >
                     <svg
                       className="w-[15px] h-[15px]"
                       viewBox="0 0 15 15"
-                      fill="var(--color-app-badge)"
+                      fill="var(--color-brand-orange)"
                     >
                       <path d={PENCIL_PATH} />
                     </svg>
@@ -736,47 +820,84 @@ export default function PerfilVendedor() {
                 )}
               </div>
 
-              <div className="p-4">
-                <h3
-                  className="mb-2"
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontWeight: 600,
-                    fontSize: "18px",
-                    lineHeight: "24px",
-                    color: "var(--color-on-surface)",
-                  }}
+              <div className="flex flex-col gap-2 p-5 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setProductoSeleccionado(p)}
+                  className="text-left group/btn"
                 >
-                  {p.name}
-                </h3>
-                {p.originalPrice && (
-                  <p
-                    className="mb-1"
+                  <h3
+                    className="text-base lg:text-lg font-bold line-clamp-2 transition-colors duration-200 group-hover/btn:text-brand-orange"
+                    style={{ color: "var(--color-on-surface)" }}
+                  >
+                    {p.name}
+                  </h3>
+                </button>
+
+                <div className="flex items-center gap-2 mt-0.5">
+                  <img
+                    src={p.vendedorAvatar}
+                    alt={p.vendedorNombre}
+                    className="w-5 h-5 rounded-full"
+                  />
+                  <span
+                    className="text-xs font-medium"
+                    style={{ color: "var(--color-brand-muted-text)" }}
+                  >
+                    {p.vendedorNombre}
+                  </span>
+                </div>
+
+                <div className="flex items-baseline gap-2.5 mt-1.5">
+                  {p.descuento > 0 && (
+                    <span
+                      className="text-sm font-medium line-through"
+                      style={{ color: "var(--color-brand-muted-text)" }}
+                    >
+                      ${p.precioBase.toLocaleString("es-CO")}
+                    </span>
+                  )}
+                  <span
+                    className="text-lg lg:text-xl font-bold"
+                    style={{ color: "var(--color-brand-orange)" }}
+                  >
+                    ${p.price.toLocaleString("es-CO")}
+                  </span>
+                </div>
+
+                <div className="mt-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span
+                      className="text-[10px] font-medium uppercase tracking-wider"
+                      style={{ color: "var(--color-brand-muted-text)" }}
+                    >
+                      Stock disponible
+                    </span>
+                    <span
+                      className="text-[10px] font-bold"
+                      style={{ color: "var(--color-brand-orange)" }}
+                    >
+                      {p.stock} unidades
+                    </span>
+                  </div>
+                  <div
+                    className="w-full h-1 rounded-full overflow-hidden"
                     style={{
-                      fontFamily: "var(--font-sans)",
-                      fontWeight: 700,
-                      fontSize: "15px",
-                      lineHeight: "20px",
-                      color: "var(--color-app-badge)",
-                      textDecoration: "line-through",
+                      backgroundColor: "var(--color-surface-container-high)",
                     }}
                   >
-                    {p.originalPrice}
-                  </p>
-                )}
-                <p
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontWeight: 700,
-                    fontSize: "22px",
-                    lineHeight: "28px",
-                    color: "var(--color-brand-orange)",
-                  }}
-                >
-                  {p.price}
-                </p>
+                    <div
+                      className="h-full rounded-full transition-all duration-1000 ease-out"
+                      style={{
+                        width: `${Math.min((p.stock / 50) * 100, 100)}%`,
+                        backgroundColor: "var(--color-brand-orange)",
+                        opacity: 0.6,
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       </main>
@@ -794,6 +915,13 @@ export default function PerfilVendedor() {
           datos={perfilVendedorSocial}
           initialTab="seguidores"
           onClose={() => setMostrarSeguidores(false)}
+        />
+      )}
+
+      {productoSeleccionado && (
+        <FichaProducto
+          product={productoSeleccionado}
+          onClose={() => setProductoSeleccionado(null)}
         />
       )}
     </div>
