@@ -4,6 +4,62 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-20 - FEAT: modulo Chat interno RF105 (backend)
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - backend/src/server/controllers/chat.controllers.js (nuevo: enviarMensaje, listarConversaciones, listarMensajesCon, marcarComoLeido)
+  - backend/src/server/routes/chat.routes.js (nuevo: POST /mensajes, GET /conversaciones, GET /mensajes/:receptorId, PATCH /mensajes/:id/leido)
+  - backend/src/server/app.js (montar /api/chat)
+  - backend/src/server/__tests__/chat.controllers.test.js (nuevo, 14 tests)
+- **Descripcion**: modulo de chat interno entre usuarios (RF105): enviar mensajes de texto/imagen/archivo, listar conversaciones con el ultimo mensaje y el conteo de no leidos, historial entre dos usuarios (marca como leidos los recibidos) y marcar un mensaje como leido. Usa la tabla real `mensajes_chat` (DDL verificado en commercity_v2: emisor_id, receptor_id, tipo_mensaje ENUM texto/imagen/archivo, mensaje, archivo_url, enviado_at, leido) sin requerir migracion. Todas las rutas protegidas con `authRequired`; consultas parametrizadas; el emisor sale del JWT (`req.userId`), nunca del body.
+- **Motivo**: modulo nuevo del alcance ampliado del Sprint 2 (interaccion comprador-vendedor), sin integrante asignado en el plan.
+- **Requerimientos**: RF105
+- **Evidencia**: `vitest run` -> 251/251 passed (17 archivos), suite chat 16/16. Sin regresion (era 235/235).
+- **Estado**: Completado
+
+---
+
+## 2026-08-20 - DOCS: RF140 validado contra BD real (sin migracion)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: .trae/rules/revision-requerimientos.md (seccion 4: RF140 SIN migracion)
+- **Descripcion**: se verifico en commercity_v2 que `detalle_pedidos.subtotal` ya se guarda SIN IVA (precio/1.19) y que `monto_vendedor`/`monto_comision` se llenan correctamente al aprobar el pago (90/10); las columnas NO son generadas (confirmado con SHOW CREATE TABLE). Se decide NO migrar: las columnas generadas quedan como mejora opcional post-entrega.
+- **Motivo**: cerrar el RF140 sin tocar el esquema productivo y avanzar en el Sprint 2.
+- **Requerimientos**: RF140
+- **Evidencia**: SHOW CREATE TABLE detalle_pedidos en commercity_v2 + 5 lineas reales (subtotal 1091596.64 = 1299000/1.19; montos 982436.98/109159.66 = 90/10 sobre subtotal).
+- **Estado**: Completado
+
+---
+
+## 2026-08-20 - FEAT: RF129 - las lineas canceladas desaparecen de los Pedidos del vendedor
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - backend/src/server/controllers/tienda.controllers.js (getHistorialVentas: excluye `estado_envio <> 'Cancelado'` por defecto)
+  - backend/src/server/__tests__/tienda.controllers.test.js (2 tests nuevos de RF129)
+- **Descripcion**: en el historial de ventas del vendedor (`GET /api/tienda/ventas`), las lineas canceladas por el comprador ya no aparecen por defecto (desaparecen de la seccion Pedidos, como exige RF129). Solo se muestran si el vendedor filtra explicitamente `estado=Cancelado` (la devolucion se sigue reflejando en Mi tienda via RF137, sin cambio).
+- **Motivo**: el Director cerro la devolucion de requerimientos; RF129 quedaba pendiente de implementacion asignada al lider backend.
+- **Requerimientos**: RF129
+- **Evidencia**: `vitest run` -> 235/235 passed (16 archivos), suite tienda 16/16 (incluye 2 tests de RF129). Sin regresion (era 233/233).
+- **Estado**: Completado
+
+---
+
+## 2026-08-20 - DOCS: adoptar numeracion de requerimientos version final 20/08 y cerrar RF140/RF141
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - .trae/rules/revision-requerimientos.md (mapeo RF/RNF actualizado a la numeracion 20/08, checklist y conflictos)
+  - LAST VERSION/Commercity (optimizado)/Commercity (optimizado).docx.md (nuevo: documento oficial final del Director)
+- **Descripcion**: se adopto como fuente unica de requerimientos la version final 2026-08-20 del Director (`Commercity (optimizado).docx.md`), que renumeró los RF: la cancelacion paso de RF135 a RF35, el perfil publico de RF106 a RF110, el IVA/desglose se reparte en RF48/RF120/RF121/RF140 y la moneda COP es RF141. Se actualizo la regla revision-requerimientos.md (tabla de mapeo por modulo, checklist y conflictos). El Director cerro: RF140 (subtotal SIN IVA = precio/1.19 en detalle_pedidos; monto_vendedor 90% y monto_comision 10% como columnas generadas; IVA solo en vuelo en la pasarela; sin columna de IVA) y RF141 (moneda COP vigente; el RF141 antiguo de almacenar IVA en BD fue eliminado; el seguimiento del IVA desde BD queda agendado post-entrega). RF36 cerrado (cubierto por frontend); RF129 queda pendiente de implementar (filtrar lineas canceladas en Pedidos del vendedor).
+- **Motivo**: el Director envio el SRS final actualizado (20/08); se requiere alinear la numeracion oficial para las revisiones y asignaciones (el perfil publico pasa a RF110, afecta la asignacion de Cristian).
+- **Requerimientos**: RF140, RF141, RF36, RF129, RF110
+- **Evidencia**: lectura del documento oficial 20/08 (`LAST VERSION/Commercity (optimizado)/Commercity (optimizado).docx.md`) y confirmacion del Director en el grupo de lideres (20/08).
+- **Estado**: Completado (RF129 pendiente de implementacion)
+
+---
+
 ## 2026-08-12 - FEAT: modulo Reportes (creacion por comprador) RF62/RF63, RF79, RF101
 
 - **Autor**: Daniel Palacios (en suplencia de Mosquera, modulo Reportes)
@@ -15,6 +71,7 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 - **Descripcion**: se implemento el lado comprador del modulo Reportes, que estaba pendiente (el lado admin ya existia desde el Panel Admin de Cabrera). `POST /api/reportes` permite a un usuario autenticado reportar un producto o usuario con motivo obligatorio y evidencia opcional (archivo multipart "evidencia" via multer). El `informante_id` se toma del JWT (`req.userId`), nunca del body. Se valida: tipo (Producto/Usuario, normalizado), motivo obligatorio (max 2000), producto/usuario valido y existente, y se rechaza el autoreporte. La evidencia usa la columna `evidencia_url` (brecha B2 resuelta en el esquema real v2). El borrado logico (archivado) y la resolucion ya estaban cubiertos en `controllers/admin/reportes.controllers.js`.
 - **Motivo**: Mosquera no entrego su modulo y el usuario pidio hacer el trabajo en su lugar (plazo sabado incumplido); Reportes era el unico modulo pendiente de los 10 del plan.
 - **Requerimientos**: RF62, RF63, RF79, RF101
+- **Actualizacion 2026-08-20**: con la numeracion final del documento del Director, este modulo cubre RF63-RF69 (reportes del admin), RF85-RF86 (reportar producto) y RF108-RF109 (reportar usuario por chat).
 - **Evidencia**: `vitest run` -> 233/233 passed (16 archivos); modulo nuevo 11/11. Cobertura Statements 93.07% (sin regresion; era 93.01%).
 - **Estado**: Completado (pendiente E2E contra BD real y push a commercycity con autorizacion)
 

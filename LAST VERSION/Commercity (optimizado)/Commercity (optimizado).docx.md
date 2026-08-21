@@ -1,0 +1,632 @@
+**Documento De Proyecto Lectivo CommerCity**
+
+**Proyecto:** Plataforma marketPlace   
+**Versión:** 2.0  
+**fecha:** 12/05/2026
+
+**INTRODUCCIÓN** 
+
+## **1.1 Propósito**
+
+El propósito de este documento es describir los requisitos del sistema CommerCity, una plataforma web tipo marketplace que permitirá a los usuarios publicar, comprar y vender productos nuevos o usados desde cualquier dispositivo de forma fácil con conexión a internet.
+
+Este documento está dirigido al equipo desarrollador ADSO 35, evaluadores académicos y futuros administradores del sistema, con el fin de establecer de manera clara las funcionalidades y características que deberá cumplir la aplicación.
+
+## **1.2 Ámbito del Sistema**
+
+El sistema será una plataforma web intermediaria entre compradores y vendedores donde los usuarios podrán:
+
+* Entrar como Invitados y Registrarse e iniciar sesión.
+
+* Crear perfiles como comprador, vendedor, administrador.
+
+* Publicar productos en distintas categorías.
+
+* Buscar y filtrar productos.
+
+* Comunicarse mediante chat interno.
+
+* Agregar productos al carrito de compras.
+
+* Generar pedidos.
+
+* Realizar pagos en entorno de simulación académica.
+
+* Calificar y seguir vendedores mediante sistema de reputación.
+
+Los beneficiarios principales serán emprendedores, vendedores independientes, empresas emergentes y clientes que deseen comprar de forma organizada y segura en un mismo entorno digital.
+
+# **2\. Descripción General**
+
+## **2.1 Perspectiva del Producto**
+
+Commercity es una plataforma de E-Commerce diseñada para generar identidad y pertenencia entre sus usuarios. Su nombre refleja la idea de formar una gran comunidad de negocios digitales, en la que compradores y vendedores puedan interactuar de manera fluida y confiable.
+
+El sistema se centra en la comunicación y la interactividad, incorporando herramientas como chat interno, seguimiento de usuarios y sistema de calificaciones. La meta es que Commercity funcione no solo como una tienda en línea, sino también como una red social de ventas, donde la experiencia de compra y venta sea dinámica, social y confiable.
+
+## **2.2 Funciones del Producto**
+
+El sistema permitirá:
+
+* Gestión de cuentas de usuario con distintos roles.
+
+* Publicación y administración de productos.
+
+* Clasificación por categorías con interfaces intuitivas y amigables.
+
+* Búsqueda y filtrado de productos.
+
+* Comunicación entre comprador y vendedor mediante chat interno.
+
+* Carrito de compras y generación de pedidos.
+
+* Simulación de pago para validación académica.
+
+* Sistema de reputación basado en calificaciones y seguimientos .
+
+* Panel administrativo para control del sistema.
+
+## **2.3 Características De Los Usuarios**
+
+**Compradores:**  
+ Usuarios registrados que pueden comprar, chatear y calificar vendedores.
+
+### **Vendedores:**
+
+Usuarios registrados con capacidad de publicar productos y gestionar pedidos dentro de la plataforma.  
+El sistema no establecerá diferencias funcionales entre persona natural y empresa; ambos tendrán los mismos permisos y responsabilidades dentro del marketplace.
+
+**Administrador:**  
+ Encargado de supervisar el sistema, moderar publicaciones y gestionar usuarios.
+
+## **2.4 Restricciones**
+
+* El sistema funcionará únicamente mediante conexión a internet.
+
+* Será accesible desde navegadores actualizados.
+
+* El módulo de pagos funcionará a modo de simulación académica.
+
+* El sistema será desarrollado bajo un entorno local de pruebas.
+
+
+## **2.5 Suposiciones y Dependencias**
+
+* Los usuarios tendrán conocimientos muy Básicos de navegación web.
+
+* El sistema dependerá de un servidor de base de datos relacional.
+
+* El correcto funcionamiento estará ligado al entorno de ejecución del servidor local.
+
+# **3.0 Requisitos Específicos**
+
+# **3.1 Requerimientos Funcionales** 
+
+# **Gestión de usuarios** 
+
+**RF1:** El sistema permitirá el registro de usuarios por medio de correo electrónico.
+
+**RF2:** El sistema permitirá iniciar y cerrar sesión.
+
+**RF3:** El sistema permitirá que el usuario recupere su cuenta por medio de correo electrónico cuando se le olvide la contraseña, en recuperar contraseña.
+
+**RF4:**  Restablecer contraseña el usuario solicita el restablecimiento con su correo electrónico y recibe un link de un solo uso. El link expira a los 5 minutos de emitido al vencer, el usuario debe solicitar uno nuevo.
+
+**RF5:** El sistema le mostrará al usuario los términos y condiciones. 
+
+**RF6**: El registro tendrá un input donde el usuario acepta los términos y condiciones.
+
+**RF7:** El sistema gestionará diferentes roles de usuario: comprador, vendedor y administrador.
+
+**RF8:** El sistema asignará por defecto el rol de comprador a todos los usuarios registrados incluso a los vendedores excepto los administradores.
+
+**RF9:** El administrador no venderá ni comprará productos solo supervisará Commercity.
+
+**RF10:** EL sistema permitirá a los vendedores, vender y comprar productos.
+
+**RF11:** El sistema proporcionará a los usuarios un perfil personal. 
+
+**RF12:** El sistema proporcionará a los vendedores un perfil personal.
+
+**RF13:** El sistema proporcionará al administrador un panel administrativo.
+
+---
+
+**PERFIL COMPRADOR (usuario)**
+
+**RF14:** El sistema permitirá al comprador añadir una foto de perfil.
+
+**RF15:** El sistema permitirá al comprador editar su foto de perfil.
+
+**RF16:** El sistema permitirá al comprador añadir una descripción personal.
+
+**RF17:** El sistema permitirá al comprador editar su descripción personal.
+
+**RF18:** El sistema permitirá al comprador visualizar la cantidad de seguidores que tiene.
+
+**RF19:** El sistema permitirá al comprador visualizar la cantidad de usuarios que sigue.
+
+**RF20:** El sistema permitirá al comprador acceder a la lista de seguidores.
+
+**RF21:** El sistema permitirá al comprador acceder a la lista de usuarios seguidos.
+
+**RF22:** El comprador tendrá una sección dentro de su perfil que se llamara Mi feed ahi podra scrollear productos.
+
+**RF23:** El sistema permitirá al comprador ver y scrollear productos desde su perfi en la seccion mi feed.
+
+**RF24:** El sistema permitirá al comprador acceder a su carrito de compras desde su barra lateral
+
+**RF25:** El sistema permitirá al comprador acceder a la campana de notificaciones desde el topbar
+
+**RF26:** El sistema permitirá al comprador acceder al  historial de compras desde el sidebar.
+
+**RF27:** El sistema permitirá al comprador visualizar los productos que ha comprado en la sección de historial de compras.
+
+**RF28:** El sistema permitirá al comprador visualizar el estado de sus pedidos en la sección de historial de compras.
+
+**RF29:**El estado de los pedidos será (Pendiente/ En camino/ Entregado).
+
+**RF30:** El comprador podrá filtrar pedidos.
+
+**RF31:** El historial de compras tendrá los siguientes datos del pedido.
+
+vendedor (Nombre del que vende el producto)  
+productos ( pueden haber varios productos en una sola compra o pedido )  
+Dirección ( La dirección del comprador a la hora de pagar los productos )  
+fecha  
+estado (Pendiente/ En camino/ Entregado).
+
+* cantidad  
+* precio unitario de cada producto por su cantidad  
+* Iva del %19 aplicado  
+* Precio total  
+* Imagen del Producto
+
+**RF32:** El comprador podra ver un resumen de sus productos comprados.
+
+**RF33:** El sistema permitirá al comprador acceder a la sección de chat por medio de su perfil.
+
+**RF34:** El sistema permitirá al comprador acceder a la sección ajustes desde la barra lateral.
+
+**RF35:** El sistema permitirá al Comprador cancelar un pedido en el historial de compras si se encuentra en estado "Pendiente", restituyendo automáticamente el stock y haciendo devolución del dinero.
+
+**RF36:** El pedido pendiente al ser cancelado por el comprador desaparecerá del historial de compras.
+
+**RF37:** El sistema permitirá al comprador visualizar sus datos personales registrados en la sección de ajustes.
+
+**RF38:** El sistema permitirá al comprador editar sus datos personales en la sección de ajustes.
+
+**RF39:** El sistema permitirá que el comprador ingrese su dirección a la sección de ajustes.
+
+**RF40**: El sistema permitirá que los usuarios hagan compras después de que registren su dirección en la sección ajustes.
+
+**RF41:** El sistema permitirá al comprador cerrar sesión por medio de la sección ajustes.
+
+**RF42:** El sistema permitirá al comprador eliminar su cuenta en la sección de ajustes.
+
+**RF43:** El sistema permitirá al comprador pasarse a vendedor en sección de ajustes.
+
+---
+
+**PERFIL VENDEDOR**
+
+**RF44:** El sistema definirá que los usuarios con rol de vendedor poseen por defecto todas las funcionalidades del comprador.
+
+**RF45:**El sistema permitirá a los usuarios con rol de vendedor contar con funcionalidades adicionales.
+
+**RF46:** El sistema permitirá al vendedor agregar productos por medio de un botón eso desplegará el formulario en el perfil del vendedor para que el vendedor agregue su producto.
+
+**RF47:** El formulario para agregar productos tendrá campos como nombre, descripción, imagen, stock, descuento, estado, precio,  categoría y fecha.
+
+**RF48:** El vendedor publicara su producto con el precio final que ya incluye el IVA del 19% que el mismo vendedor debe calcular; el sistema desglosara el IVA en la pasarela de pago.
+
+**RF49:** El sistema permitirá al vendedor guardar la información del producto al hacer clic en “agregar producto”.
+
+**RF50:** El formulario podrá ser reutilizado para editar un producto existente, mostrando los datos previamente ingresados.
+
+**RF51:** El vendedor podrá visualizar sus calificaciones de su perfil de 1 a 5 estrellas.
+
+**RF52:** El vendedor podrá acceder por medio de la barra lateral a mi tienda.
+
+**RF53:** El vendedor podrá acceder por medio de la barra lateral a la sección pedidos.
+
+**RF54:** El sistema permitirá a los usuarios visualizar los productos que el vendedor ha publicado en su perfil igual que en el panel principal.
+
+**RF55:** El vendedor tendrá en su perfil una sección llamada mis productos en esa seccion podra ver y gestionar sus productos publicados.
+
+**RF56:** El sistema desactivara la cuenta del vendedor cuando este la elimine desde ajustes, conservando los historiales (pedidos, pagos, comisiones, reportes y calificaciones). Sus productos publicados quedarán suspendidos y fuera del catalogo.
+
+---
+
+**PANEL ADMINISTRATIVO**
+
+**RF57:** El administrador podrá ver estadísticas
+
+**RF58:** El sistema permitirá al administrador visualizar el historial de ingresos de CommerCity, correspondientes al 10% de comisión sobre las ventas realizadas por los vendedores.
+
+**RF59:**  Si el usuario cancela un pedido pendiente la devolución se verá reflejada en las estadísticas del administrador, se descontará el dinero %10. 
+
+**RF60:** El administrador podrá visualizar la cantidad de compradores que hay en Commercity.
+
+**RF61:** El administrador podrá visualizar la cantidad de vendedores que hay en Commercity. 
+
+**RF62:** El administrador podrá visualizar la cantidad de productos publicados en Commercity.
+
+**RF63:** El sistema permitirá al administrador acceder a una sección de reportes del panel.
+
+**RF64:** El administrador podrá visualizar reportes.
+
+**RF65:** El administrador recibirá los reportes de usuarios reportados en la sección de reportes.
+
+**RF66**:Los reportes de usuarios tendrán los siguientes datos y acciones.
+
+* tipo (usuario)  
+* estado (Resuelto / Pendiente)  
+* fecha  
+* usuario  reportado  
+* usuario reportante  
+* motivo (Descripción del reporte)  
+* evidencias (imagen)  
+* respuesta del administrador
+
+**RF67:** El administrador recibirá los reportes de los productos reportados en la sección de reportes.
+
+**RF68:** Los reportes de productos tendrán los siguientes datos y acciones.
+
+* tipo (Producto)  
+* estado (Resuelto / Pendiente)  
+* fecha  
+* producto reportado  
+* usuario del que publicó el producto.  
+* usuario reportante  
+* motivo (Descripción del reporte)  
+* evidencias (imagen)  
+* respuesta del administrador
+
+**RF69:** El administrador podrá responder a los reportes mediante mensajes dentro del detalle del reporte.
+
+**RF70:** El administrador podrá gestionar usuarios.
+
+**RF71:** El administrador podrá gestionar productos.
+
+**RF72:** El administrador tendrá un buscador en su panel administrativo.
+
+**RF73:** El administrador podrá buscar usuarios por medio del buscador.
+
+**RF74:** El administrador podrá buscar productos por medio del buscador.
+
+**RF75:** El sistema permitirá al administrador suspender productos publicados (eliminación lógica). El producto dejará de aparecer en el catálogo y no podrá agregarse al carrito, pero su historial (pedidos, reportes, calificaciones) se conservará.
+
+**RF76:** El sistema permitirá al administrador banear, activar o eliminar (desactivar) usuarios. La eliminación será lógica: la cuenta queda inactiva y nunca se borran físicamente sus datos.
+
+**RF77:** Si el administrador banea a un vendedor, sus productos quedarán suspendidos y su cuenta inactiva. Los pedidos ya pagados se completarán (envío y desembolso incluidos); los pedidos en estado "Pendiente" se cancelarán restituyendo el stock al comprador.
+
+**RF78:** El administrador tendrá una sección de ajustes.
+
+**RF79:** El administrador en la sección ajustes podrá registrar la cuenta bancaria de Commercity
+
+**RF80:** El administrador en la sección ajustes podrá cerrar sesión.
+
+---
+
+## **productos**
+
+**RF81:** El sistema permitirá al comprador acceder a la vista de detalle de un producto haciendo clic sobre él desde la lista de productos en la ventana principal.
+
+**RF82:** La vista de detalle mostrará la información completa del producto seleccionado:
+
+* Nombre del producto
+
+* Imagen
+
+* Descripción completa
+
+* Precio y descuento si aplica
+
+* Stock disponible
+
+* Estado (Disponible / Agotado)
+
+* Categoría
+
+**RF83:** El sistema permitirá al comprador seleccionar la cantidad de unidades que desea comprar, verificando que no supere el stock disponible.
+
+**RF84:** El sistema permitirá al comprador agregar el producto al carrito.
+
+**RF85:** El sistema permitirá al usuario reportar el producto por medio de un menú eso desplegará un formulario con campos obligatorios.
+
+**RF86**: El formulario de reportar productos tendrá los siguientes campos.
+
+* Motivo (Agrega descripción del producto).  
+* Evidencia ( Agrega imagenes )
+
+**RF87:** El sistema permitirá al comprador después de haber pagado el producto calificar al vendedor de 1 a 5 estrellas.
+
+**RF88:** El sistema deshabilitará la opción de agregar al carrito si el producto está agotado y mostrará un mensaje indicando que no está disponible.
+
+**RF89:** Si el usuario cancela un pedido el stock será restituido al producto.
+
+**RF90:** El sistema mostrará los productos en el panel principal y en el perfil del respectivo vendedor que publicó el producto.
+
+---
+
+**Panel Principal**
+
+**RF91:** El sistema mostrará un panel principal al iniciar sesión donde los usuarios podrán visualizar y scrollear productos publicados por los vendedores.
+
+**RF92:** El panel principal permitirá al usuario acceder a la barra de búsqueda para buscar productos por nombre, categoría o vendedor.
+
+**RF93:** El panel principal permitirá al usuario filtrar y navegar por categorías de productos.
+
+**RF94:** El Topbar permitira al usuario ingresar a su perfil
+
+**RF95:** El sidebar permitirá al usuario acceder a su carrito de compras por medio de la barra lateral.
+
+**RF96:** El sistema permitirá al panel principal mostrar las tarjetas de los productos
+
+**RF97**: las tarjetas de los productos mostrará información resumida del producto.
+
+**RF98:** El panel principal permitirá al usuario hacer clic en la tarjeta de un producto para acceder a la vista de detalle del mismo.
+
+---
+
+**NOTIFICACIONES**
+
+**RF99:** El sistema permitirá al usuario acceder a la sección de notificaciones desde el ícono de la campana en el topbar.
+
+**RF100:** El sistema mostrará una lista de notificaciones recientes, ordenadas de más recientes a más antiguas.
+
+**RF101:** Cada notificación mostrará información resumida sobre el evento, incluyendo:
+
+* Tipo de notificación (compra, mensajes, reporte, pedido, en camino, entregado.)
+
+* Breve descripción (“tu pedido ha sido enviado”)
+
+* dias y hora
+
+**RF102:** El sistema permitirá al usuario eliminar notificaciones individuales o limpiar todas las notificaciones de manera masiva.
+
+**RF103:** El sistema permitirá al usuario hacer clic en una notificación para ir directamente a la sección correspondiente.
+
+**RF104:** El sistema mostrará un indicador de nueva notificaciones sobre ícono de la campana.
+
+---
+
+## **Interacción comprador-vendedor**
+
+**RF105:** El sistema permitirá a los usuarios comunicarse mediante un chat interno para enviar y recibir mensajes, fotos y archivos.
+
+**RF106:** El sistema permitirá a los usuarios seguir y dejar de seguir a otros usuarios dentro de la plataforma.
+
+**RF107:** El sistema permitirá a los compradores calificar a los vendedores de 1 a 5 estrellas después de realizar una compra.
+
+**RF108:** El sistema permitirá a los usuarios reportar por medio del chat a vendedores o compradores por comportamiento inapropiado.
+
+**RF109:** El reporte de (usuarios) compradores y vendedores tendrá los siguientes campos
+
+* Motivo (Agrega descripción del usuario).  
+* Evidencia ( Agregar imagenes )
+
+**RF110:** El sistema permitirá a los usuarios visualizar el perfil público de los vendedores y compradores.
+
+---
+
+## **carrito y pasarela de pago**
+
+**RF111:**El sistema permitirá al usuario agregar productos al carrito de compras.
+
+**RF112:**El sistema permitirá al usuario visualizar los productos agregados al carrito de compras.
+
+**RF113:** El sistema vaciara automáticamente los carritos de compra inactivos después de 7 días.
+
+**RF114:** El usuario podrá eliminar productos del carrito de compras.
+
+**RF115:**El usuario podrá modificar la cantidad de cada producto en el carrito de compras.
+
+**RF116:** El sistema permitirá generar pedidos a partir del carrito de compras.
+
+**RF117:** El sistema permitirá que el carrito almacene varios productos de varios vendedores a la hora de hacer el pago, los productos se enviaran a cada vendedor.
+
+**RF118:** Antes de generar el pedido, el sistema mostrará un resumen con  cantidad, precio y descuentos si aplican, envío gratis siempre y total.
+
+**RF119:** El sistema simulará el pago del pedido (forma académica)
+
+**RF120:** El sistema le mostrará al usuario en la pasarela de pago el subtotal y el iva desglosado del  %19.
+
+**RF121:** Al confirmar el pago de un pedido, el sistema calculará en vuelo el IVA del 19% y el subtotal de cada producto y los mostrará en la pasarela, sin almacenarlos en la base de datos.
+
+**RF122:** El sistema pedirá los siguientes datos en la pasarela de pago (forma académica)
+
+* Número de la tarjeta  
+* Nombre de la tarjeta
+
+
+**RF123:** El sistema en la pasarela de pago mostrará el total del pedido.
+
+**RF124:** El sistema descontará automáticamente la cantidad comprada del stock del producto una vez que el pago sea aprobado.
+
+---
+
+**pedidos**
+
+**RF125:** El sistema permitirá al vendedor acceder a la sección Pedidos por medio de la barra lateral.
+
+**RF126:** La lista de pedidos mostrará la información mínima necesaria para enviar los productos:
+
+* Nombre del comprador
+
+* Dirección de envío cuando se pagó los productos.  
+    
+* Fecha del pedido
+
+* producto o Productos solicitados
+
+* Cantidad
+
+* Estado del pedido (Pendiente, En camino, Entregado)  
+    
+* Precio unitario de cada producto multiplicado por su cantidad.
+
+* Precio total 
+
+* Imagen del producto
+
+**RF127:** El sistema permitirá al vendedor actualizar el estado de cada pedido (Pendiente → En camino→Entregado).
+
+**RF128:** El sistema permitirá al vendedor revisar el historial de pedidos y sus filtros  (Pendiente, En camino, Entregado)
+
+**RF129:** El pedido pendiente al ser cancelado por el Comprador desaparecerá de la sección pedidos, la devolución del dinero se reflejara en la sección Mi tienda. 
+
+---
+
+**mi tienda**
+
+**RF130:** El vendedor tendrá una sección en su perfil llamada mi tienda
+
+**RF131:** El vendedor en tienda registrará su cuenta bancaria (Forma Académica)
+
+**RF132:** El vendedor en tienda registrará los siguientes datos de su cuenta bancaria.
+
+* Nombre del titular  
+* Banco  
+* Tipo de cuenta  
+* Numero de cuenta
+
+**RF133:** El sistema permitirá al vendedor actualizar su cuenta bancaria.
+
+**RF134:** El vendedor Podrá ver estadísticas
+
+**RF135:** El vendedor podrá ver el historial de las ventas que ha hecho.
+
+**RF136:** El vendedor podrá ver el historial del dinero que ha recaudado de sus ventas.
+
+**RF137:** Si el Comprador cancela un pedido la devolución se verá reflejada en las estadísticas del vendedor, se descontará el dinero %90 y la venta.
+
+**RF138:** El sistema gestionará las ventas sin exponer la cuenta bancaria del vendedor.
+
+**RF139:** El sistema permitirá al vendedor visualizar el historial de ingresos generados por sus ventas, correspondientes al 90% del valor de cada transacción.
+
+ 
+
+---
+
+**Ganancias**
+
+**RF140:** En la pasarela de pago, el sistema desglosara el IVA del 19% de cada producto de la siguiente manera: el subtotal se calculara como el precio publicado dividido entre 1.19 (subtotal \= precio / 1.19) y el IVA como el subtotal multiplicado por 0.19 (IVA \= subtotal x 0.19). El usuario pagará el precio publicado por el vendedor. Sobre el subtotal, el sistema asignará el 90% al vendedor (monto\_vendedor \= subtotal x 0.90) y el 10% a CommerCity como comision (monto\_comision \= subtotal x 0.10). El backend solo almacenará el subtotal en el detalle del pedido, y los montos del vendedor y de la comisión se calcularan automáticamente como columnas generadas de la base de datos.
+
+**RF141:** El sistema usará la moneda colombiana COP. (simulado)
+
+---
+
+# **3.2 Requerimientos No Funcionales** 
+
+**Autenticacion**
+
+**RNF1:** El sistema implementará autenticación mediante JWT (JSON Web Token) para la gestión de la autenticación y autorización de los usuarios. 
+
+---
+
+**Interfaz y Usabilidad**
+
+ **RNF2:** La interfaz del sistema será intuitiva, con diseños amigables y modernos.
+
+ **RNF3:** El sistema proporcionará mensajes claros ante errores o acciones realizadas por el usuario.
+
+ **RNF4:** El sistema mantendrá consistencia visual en todas las interfaces  
+.  
+ **RNF5:** El sistema permitirá una navegación sencilla e intuitiva entre las diferentes secciones.
+
+---
+
+**Rendimiento**
+
+**RNF6:** El tiempo de carga del sistema no superará los 2 segundos en condiciones normales.
+
+**RNF7:** El sistema soportará múltiples usuarios simultáneos sin afectar el rendimiento básico  
+.  
+ **RNF8:** El sistema optimizará la carga de imágenes para mejorar el tiempo de respuesta.
+
+---
+
+**Seguridad**
+
+**RNF9:** El sistema protegerá los datos de los usuarios mediante cifrado de contraseñas.
+
+**RNF10:** El sistema garantizará que solo los usuarios autenticados puedan acceder a funcionalidades privadas según su rol.
+
+**RNF11:** El sistema validará los datos ingresados por los usuarios para evitar entradas inválidas o maliciosas.
+
+**RNF12:** El sistema protegerá la información sensible de los usuarios, como datos personales y bancarios.
+
+---
+
+**Disponibilidad**
+
+**RNF13:** El sistema estará disponible mientras el servidor se encuentre activo.
+
+**Integridad de datos**
+
+**RNF14:** El sistema garantizará la consistencia y validez de los datos almacenados, evitando registros incompletos o relaciones inválidas entre entidades.
+
+**RNF15:** El sistema evitará la duplicación de información en registros críticos como usuarios o pedidos.
+
+---
+
+**Compatibilidad**
+
+**RNF16:** El sistema será responsive, permitiendo su uso en dispositivos móviles y de escritorio.
+
+**RNF17:** El sistema será compatible con los principales navegadores web como Chrome, Edge y Firefox.
+
+---
+
+**Mantenibilidad y escalabilidad**
+
+**RNF18:** El sistema estará estructurado de forma modular para facilitar futuras mejoras.
+
+**RNF19:** El código del sistema será legible y organizado para facilitar su mantenimiento.
+
+**RNF20:** El sistema permitirá la incorporación de nuevas funcionalidades sin afectar las existentes.
+
+---
+
+**Manejo de errores**
+
+**RNF21:** El sistema gestionará los errores de forma controlada sin interrumpir la experiencia del usuario.
+
+---
+
+**4.0 Tecnologías a Utilizar**
+
+**4.1 Página Web**
+
+**Fronted:** HTML / Tailwind CSS / React / Responsive  
+**Backend:** [Node.JS](http://node.js) / Express.JS  
+**Base De Datos:** MySQL
+
+---
+
+**4.2 Móvil** 
+
+**Fronted:** React Native  
+**Backend:** Node.JS  
+**Base De Datos:** MySQL
+
+**5.0 INNOVACIÓN**  
+
+En esta sección se incluyen ideas y propuestas  para el Ecommerce, con el objetivo de hacer la plataforma más competitiva y atractiva y potenciar más su capacidad.
+
+**integración de IA:** esta es una propuesta para incorporar IA al Ecommerce con el objetivo de facilitar más el uso de la plataforma y potenciar su productividad con:
+
+* **ChatBots:** en el chat responden sobre dudas del producto eso mejora las respuestas y los clientes no deben esperar tanto por respuestas.  
+    
+* **Buscador Inteligente:** entiende texto natural y filtra la información para dar respuestas precisas al producto que busca el cliente.
+
+* **Recomendador:** sirve para recomendarle productos a los clientes en base a lo que ellos buscan y compran en el Ecommerce.
+
+b 
+
+* **Descripciones Automáticas:** aquí el vendedor sube su producto alimenta a la IA con información sobre el producto y la IA sube el producto con una descripción organizada y profesional.
+
+ 
+
