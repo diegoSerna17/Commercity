@@ -4,6 +4,23 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-20 - FEAT: modulo Notificaciones RF99-RF104 (Carlos Vidal) integrado
+
+- **Autor**: Carlos Vidal (integrado y revisado por Daniel Palacios)
+- **Archivos**:
+  - backend/src/server/controllers/notificaciones.controllers.js (nuevo: registrarNotificacion best-effort, listarNotificaciones, contarNoLeidas, marcarComoLeida, marcarTodasLeidas, eliminarNotificacion, eliminarTodas)
+  - backend/src/server/routes/notificaciones.routes.js (nuevo: GET /, GET /no-leidas, PATCH /leidas, PATCH /:id/leida, DELETE /, DELETE /:id)
+  - backend/src/server/__tests__/notificaciones.controllers.test.js (nuevo, ~28 tests)
+  - backend/src/server/controllers/pedidos.controllers.js (registro por eventos: notificacion de compra en confirmarPago y de envio/entregado en actualizarEstado, best-effort)
+  - backend/src/server/app.js (montar /api/notificaciones)
+- **Descripcion**: modulo de notificaciones (RF99-RF104): listado reciente con filtro por tipo (RF100/RF101), indicador de no leidas (RF104), marcar leida/individual o todas, eliminar individual o masivo (RF102), url de redireccion (RF103). Se integro el registro por eventos en el flujo de pedidos (compra y avance de envio) con patron best-effort: un fallo al registrar la notificacion nunca rompe el pedido ACID. Usa el ENUM real `estado` ('leido'/'no leido') verificado en commercity_v2.
+- **Motivo**: modulo asignado a Carlos Vidal en el Sprint 2 (alcance ampliado: interaccion comprador-vendedor).
+- **Requerimientos**: RF99, RF100, RF101, RF102, RF103, RF104
+- **Evidencia**: `vitest run` -> 278/278 passed (18 archivos), suite notificaciones 27/27. Sin regresion (era 251/251).
+- **Estado**: Completado
+
+---
+
 ## 2026-08-20 - FEAT: modulo Chat interno RF105 (backend)
 
 - **Autor**: Daniel Palacios
