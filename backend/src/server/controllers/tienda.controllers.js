@@ -176,9 +176,13 @@ export const getHistorialVentas = async (req, res, next) => {
     const where = ["dp.vendedor_id = ?"];
     const params = [vendedorId];
 
+    // RF129 (doc 20/08): la linea cancelada por el comprador desaparece de la
+    // seccion Pedidos por defecto; solo se muestra si se filtra estado=Cancelado.
     if (estado && ESTADOS_VENTA.includes(String(estado))) {
       where.push("dp.estado_envio = ?");
       params.push(String(estado));
+    } else {
+      where.push("dp.estado_envio <> 'Cancelado'");
     }
     if (fecha_desde) {
       where.push("DATE(p.fecha_pedido) >= DATE(?)");
