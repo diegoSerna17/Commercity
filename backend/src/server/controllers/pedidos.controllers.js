@@ -3,6 +3,7 @@ import { z } from "zod";
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { calcularLinea, calcularTotales, validarLuhn, round2 } from "../utils/finanzas.js";
+import { registrarNotificacion } from "./notificaciones.controllers.js";
 
 // ============================================================================
 // MODULO DE PEDIDOS Y PAGO (integrado desde AVANCES/SPRING 1/CARLOS VIDAL/Entrega)
@@ -230,6 +231,16 @@ export const confirmarPago = async (req, res, next) => {
     // El carrito se consume al confirmar la compra
     await conn.query("DELETE FROM carrito_items WHERE comprador_id = ?", [compradorId]);
 
+    // RF101/RF103: notificar al comprador la confirmacion de su compra
+    // (best-effort; el helper jamas propaga errores al pedido ACID).
+    await registrarNotificacion({
+      db: conn,
+      usuario_id: compradorId,
+      tipo: "compra",
+      descripcion: `Tu pedido #${pedidoId} ha sido confirmado y está en preparación.`,
+      url_redireccion: "/history",
+    });
+
     await conn.commit();
 
     return successResponse(res, "Pago confirmado y pedido creado con éxito", {
@@ -300,6 +311,32 @@ export const actualizarEstado = async (req, res, next) => {
     );
 
     await conn.commit();
+
+    // RF101/RF103: notificar al comprador el avance del envio (best-effort).
+    // Un fallo al notificar NUNCA debe romper la actualizacion ya confirmada.
+    try {
+      const [pedido] = await conn.query(
+        "SELECT comprador_id FROM pedidos WHERE id = ?",
+        [id]
+      );
+      if (pedido.length > 0) {
+        const tipoNotif = estado === "En camino" ? "en camino" : "entregado";
+        const descripcion =
+          estado === "En camino"
+            ? `Tu pedido #${id} está en camino. ¡Muy pronto llegará a tu puerta!`
+            : `Tu pedido #${id} ha sido entregado. ¡Disfruta tu compra!`;
+        await registrarNotificacion({
+          db: conn,
+          usuario_id: pedido[0].comprador_id,
+          tipo: tipoNotif,
+          descripcion,
+          url_redireccion: "/history",
+        });
+      }
+    } catch (err) {
+      console.warn("No se pudo notificar el cambio de estado:", err.message);
+    }
+
     return successResponse(res, "Estado de envío actualizado", {
       pedido_id: id,
       estado_envio: estado,
