@@ -263,6 +263,43 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
     expect(conBusqueda).toBeTruthy();
   });
 
+  it("GET /api/tienda/ventas excluye las lineas canceladas por defecto (RF129)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT COUNT(*)")) return [[{ total: 0 }], undefined];
+      if (sql.includes("SUM(dp.subtotal)")) return [[{ total_ventas: 0, total_bruto: 0, total_neto_vendedor: 0, total_comision_plataforma: 0 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/tienda/ventas")
+      .set("Authorization", `Bearer ${tokenVendedor}`);
+
+    expect(res.status).toBe(200);
+    const sinFiltro = pool.query.mock.calls.find(([sql]) => sql.includes("FROM detalle_pedidos dp"));
+    expect(sinFiltro[0]).toContain("dp.estado_envio <> 'Cancelado'");
+  });
+
+  it("GET /api/tienda/ventas con estado=Cancelado si las muestra (RF129)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT COUNT(*)")) return [[{ total: 1 }], undefined];
+      if (sql.includes("SUM(dp.subtotal)")) return [[{ total_ventas: 1, total_bruto: 0, total_neto_vendedor: 0, total_comision_plataforma: 0 }], undefined];
+      return [[{ ...filaVenta, estado_envio: "Cancelado" }], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/tienda/ventas?estado=Cancelado")
+      .set("Authorization", `Bearer ${tokenVendedor}`);
+
+    expect(res.status).toBe(200);
+    const conFiltro = pool.query.mock.calls.find(([sql]) => sql.includes("FROM detalle_pedidos dp"));
+    expect(conFiltro[0]).toContain("dp.estado_envio = ?");
+    expect(conFiltro[0]).not.toContain("<> 'Cancelado'");
+  });
+
   it("GET /api/tienda/ingresos devuelve el resumen 90/10 sin datos bancarios", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
