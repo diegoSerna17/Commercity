@@ -4,6 +4,22 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-21 - FEAT: modulo Calificaciones RF107 (comprador califica vendedor 1-5)
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - backend/src/server/controllers/calificaciones.controllers.js (nuevo: calificarVendedor con validaciones)
+  - backend/src/server/routes/calificaciones.routes.js (nuevo: POST /vendedor con authRequired, montado en /api/calificaciones)
+  - backend/src/server/app.js (montar /api/calificaciones)
+  - backend/src/server/__tests__/calificaciones.controllers.test.js (nuevo, 8 tests)
+- **Descripcion**: se implementa RF107 del documento 20/08: el comprador califica de 1 a 5 estrellas a un vendedor despues de una compra. Valida que el pedido exista y pertenezca al comprador autenticado (403 si es ajeno), que exista al menos una linea de compra no cancelada hacia ese vendedor (400), que el pedido no este ya calificado (400, restriccion UNIQUE uq_pedido_calificacion_vend del esquema) y estrellas 1-5 (zod, CHECK en BD). INSERT parametrizado en `calificaciones_vendedores` (sin migracion, la tabla ya existe).
+- **Motivo**: RF107 es un RF vigente del modulo Interaccion comprador-vendedor (RF105-RF110) sin integrante asignado; el backend solo tenia lectura del promedio (RF49).
+- **Requerimientos**: RF107
+- **Evidencia**: probado contra el server activo y la BD real commercity_v2 (2026-08-21): POST pedido 57 / vendedor 474 (Erick Prueba) -> 201 id=5 estrellas=5; duplicado -> 400; estrellas=6 -> 400; pedido 99999 -> 404; pedido ajeno (2) -> 403; vendedor sin compra en el pedido -> 400. Persistencia verificada: GET /api/productos/584 muestra calificacion_promedio=5 y total_calificaciones=1 para Erick Prueba. Tests unitarios 8/8 VERIFICADOS (suite completa 283/283, era 275/275, +8 sin regresion, 19 archivos).
+- **Estado**: Completado y verificado
+
+---
+
 ## 2026-08-21 - DOCS: regla memoria-proyecto.md y actualizacion de reglas de respuesta
 
 - **Autor**: Daniel Palacios
