@@ -1,103 +1,109 @@
-/**
- * Modulo Chat interno (RF105 del documento 20/08).
- * Comunicacion entre usuarios: mensajes de texto, imagen y archivo.
- * Tabla real: mensajes_chat (emisor_id, receptor_id, tipo_mensaje,
- * mensaje, archivo_url, enviado_at, leido).
- */
-import { z } from "zod";
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 
-const mensajeSchema = z.object({
-  receptor_id: z.number().int().positive(),
-  tipo_mensaje: z.enum(["texto", "imagen", "archivo"]).default("texto"),
-  mensaje: z.string().max(4000).optional(),
-  archivo_url: z.string().max(255).optional(),
-});
+// ============================================================================
+// MODULO DE CHAT INTERNO (RF105 del documento 20/08)
+// Integrado desde Diego Serna (2026-08-21). Tabla base: mensajes_chat
+// (emisor_id, receptor_id, tipo_mensaje, mensaje, archivo_url, enviado_at, leido).
+// Ajustes de integracion:
+//   - validarId inline (sin acoplamiento a controllers/admin/admin.utils.js)
+//   - limite de longitud del mensaje (5000 chars, columna TEXT)
+// ============================================================================
+
+const LIMITE_MENSAJE = 5000;
+
+const validarId = (id) => Number.isInteger(Number(id)) && Number(id) > 0;
 
 /**
- * Envia un mensaje de un usuario autenticado a otro (RF105).
- * - texto: requiere mensaje no vacio.
- * - imagen/archivo: requiere archivo_url.
- * - Prohibido enviarse mensaje a uno mismo.
+ * POST /api/chat
+ * Envia un mensaje del usuario autenticado (emisor) a otro usuario (receptor).
+ * Soporta texto plano y archivos (imagen o documento) via multipart "archivo".
+ *
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
  */
 export const enviarMensaje = async (req, res, next) => {
   try {
-    const emisorId = req.userId;
-    const data = mensajeSchema.parse(req.body);
-    const { receptor_id, tipo_mensaje, mensaje, archivo_url } = data;
+    const receptorId = Number(req.body.receptor_id);
+    const texto = typeof req.body.mensaje === "string" ? req.body.mensaje.trim() : "";
+    const archivoUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-    if (receptor_id === emisorId) {
-      return errorResponse(res, "No puedes enviarte un mensaje a ti mismo.", 400);
+    if (!validarId(receptorId)) {
+      return errorResponse(res, "Debe indicar un destinatario válido", 400);
     }
-    if (tipo_mensaje === "texto" && (!mensaje || !mensaje.trim())) {
-      return errorResponse(res, "El mensaje es obligatorio.", 400);
-    }
-    if (tipo_mensaje !== "texto" && !archivo_url) {
-      return errorResponse(res, "La URL del archivo es obligatoria para imagen o archivo.", 400);
+    if (receptorId === req.userId) {
+      return errorResponse(res, "No puedes enviarte un mensaje a ti mismo", 400);
     }
 
-    // El receptor debe existir y estar activo.
+    // Si hay archivo, el tipo se deriva del mimetype; si no, es texto.
+    const tipoMensaje = archivoUrl
+      ? (req.file.mimetype || "").startsWith("image/") ? "imagen" : "archivo"
+      : "texto";
+
+    // Sin archivo y sin texto, no hay mensaje que enviar (RF105).
+    if (!archivoUrl && !texto) {
+      return errorResponse(res, "El mensaje está vacío", 400);
+    }
+    if (texto.length > LIMITE_MENSAJE) {
+      return errorResponse(res, `El mensaje no puede superar ${LIMITE_MENSAJE} caracteres`, 400);
+    }
+
+    // Verificar que el receptor exista y este activo.
     const [receptor] = await pool.query(
-      "SELECT id FROM usuarios WHERE id = ? AND activo = 1",
-      [receptor_id]
+      "SELECT id, activo FROM usuarios WHERE id = ?",
+      [receptorId]
     );
-    if (receptor.length === 0) {
-      return errorResponse(res, "Receptor no encontrado o inactivo.", 404);
+    if (receptor.length === 0 || !receptor[0].activo) {
+      return errorResponse(res, "Usuario no encontrado", 404);
     }
 
     const [result] = await pool.query(
       `INSERT INTO mensajes_chat (emisor_id, receptor_id, tipo_mensaje, mensaje, archivo_url)
        VALUES (?, ?, ?, ?, ?)`,
-      [emisorId, receptor_id, tipo_mensaje, mensaje?.trim() ?? null, archivo_url ?? null]
+      [req.userId, receptorId, tipoMensaje, texto || null, archivoUrl]
     );
 
-    return successResponse(
-      res,
-      "Mensaje enviado correctamente.",
-      {
-        id: result.insertId,
-        emisor_id: emisorId,
-        receptor_id,
-        tipo_mensaje,
-        mensaje: mensaje?.trim() ?? null,
-        archivo_url: archivo_url ?? null,
-      },
-      201
-    );
+    return successResponse(res, "Mensaje enviado correctamente", {
+      id: result.insertId,
+    }, 201);
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      return errorResponse(
-        res,
-        "Datos del mensaje inválidos.",
-        400,
-        err.issues.map((i) => ({ campo: i.path.join("."), mensaje: i.message }))
-      );
-    }
     next(err);
   }
 };
 
 /**
- * Lista las conversaciones del usuario autenticado con el ultimo mensaje
- * de cada par y el conteo de no leidos (RF105).
+ * GET /api/chat/conversaciones
+ * Lista las conversaciones del usuario autenticado: una por cada interlocutor,
+ * con el ultimo mensaje y el numero de mensajes no leidos.
  */
 export const listarConversaciones = async (req, res, next) => {
   try {
     const usuarioId = req.userId;
 
-    const [ultimos] = await pool.query(
-      `SELECT mc.id, mc.emisor_id, mc.receptor_id, mc.tipo_mensaje, mc.mensaje,
-              mc.archivo_url, mc.enviado_at, mc.leido,
-              u.nombre_completo AS otro_nombre, u.foto_perfil AS otro_foto
-       FROM mensajes_chat mc
-       INNER JOIN usuarios u ON u.id = IF(mc.emisor_id = ?, mc.receptor_id, mc.emisor_id)
-       WHERE mc.id IN (
-         SELECT MAX(m2.id) FROM mensajes_chat m2
-         WHERE m2.emisor_id = ? OR m2.receptor_id = ?
-         GROUP BY LEAST(m2.emisor_id, m2.receptor_id), GREATEST(m2.emisor_id, m2.receptor_id)
+    const [conversaciones] = await pool.query(
+      `SELECT
+         otro.id AS usuario_id,
+         otro.nombre_completo,
+         otro.foto_perfil,
+         m.id AS mensaje_id,
+         m.emisor_id,
+         m.receptor_id,
+         m.tipo_mensaje,
+         m.mensaje,
+         m.archivo_url,
+         m.enviado_at,
+         m.leido
+       FROM mensajes_chat m
+       JOIN usuarios otro
+         ON otro.id = CASE WHEN m.emisor_id = ? THEN m.receptor_id ELSE m.emisor_id END
+       WHERE m.id IN (
+         SELECT MAX(id)
+         FROM mensajes_chat
+         WHERE emisor_id = ? OR receptor_id = ?
+         GROUP BY LEAST(emisor_id, receptor_id), GREATEST(emisor_id, receptor_id)
        )
-       ORDER BY mc.enviado_at DESC`,
+       ORDER BY m.enviado_at DESC`,
       [usuarioId, usuarioId, usuarioId]
     );
 
@@ -108,79 +114,69 @@ export const listarConversaciones = async (req, res, next) => {
        GROUP BY emisor_id`,
       [usuarioId]
     );
-    const noLeidosPorEmisor = new Map(noLeidos.map((n) => [n.emisor_id, Number(n.total)]));
 
-    const conversaciones = ultimos.map((m) => {
-      const otroId = m.emisor_id === usuarioId ? m.receptor_id : m.emisor_id;
-      return {
-        id: m.id,
-        otro_usuario: { id: otroId, nombre: m.otro_nombre, foto: m.otro_foto },
-        ultimo_mensaje: {
-          id: m.id,
-          emisor_id: m.emisor_id,
-          tipo_mensaje: m.tipo_mensaje,
-          mensaje: m.mensaje,
-          archivo_url: m.archivo_url,
-          enviado_at: m.enviado_at,
-          leido: !!m.leido,
-        },
-        no_leidos: noLeidosPorEmisor.get(otroId) || 0,
-      };
-    });
+    const mapaNoLeidos = Object.fromEntries(
+      noLeidos.map((n) => [n.emisor_id, Number(n.total)])
+    );
 
-    return successResponse(res, "Conversaciones del usuario", { conversaciones });
+    const data = conversaciones.map((c) => ({
+      usuario: {
+        id: c.usuario_id,
+        nombre_completo: c.nombre_completo,
+        foto_perfil: c.foto_perfil,
+      },
+      ultimo_mensaje: {
+        id: c.mensaje_id,
+        tipo_mensaje: c.tipo_mensaje,
+        mensaje: c.mensaje,
+        archivo_url: c.archivo_url,
+        enviado_at: c.enviado_at,
+        enviado_por_mi: c.emisor_id === usuarioId,
+      },
+      no_leidos: mapaNoLeidos[c.usuario_id] || 0,
+    }));
+
+    return successResponse(res, "Conversaciones obtenidas", data);
   } catch (err) {
     next(err);
   }
 };
 
 /**
- * Lista el historial entre el usuario autenticado y otro usuario,
- * y marca como leidos los mensajes recibidos (RF105).
+ * GET /api/chat/mensajes/:usuarioId
+ * Devuelve el historial de mensajes entre el usuario autenticado y otro usuario.
  */
-export const listarMensajesCon = async (req, res, next) => {
+export const obtenerConversacion = async (req, res, next) => {
   try {
-    const usuarioId = req.userId;
-    const otroId = Number(req.params.receptorId);
-    if (!Number.isInteger(otroId) || otroId <= 0) {
-      return errorResponse(res, "El id del otro usuario debe ser un entero positivo.", 400);
+    const otroId = Number(req.params.usuarioId);
+
+    if (!validarId(otroId)) {
+      return errorResponse(res, "El id del usuario debe ser un entero positivo", 400);
+    }
+
+    const [otro] = await pool.query(
+      "SELECT id, nombre_completo, foto_perfil FROM usuarios WHERE id = ?",
+      [otroId]
+    );
+    if (otro.length === 0) {
+      return errorResponse(res, "Usuario no encontrado", 404);
     }
 
     const [mensajes] = await pool.query(
-      `SELECT mc.id, mc.emisor_id, mc.receptor_id, mc.tipo_mensaje, mc.mensaje,
-              mc.archivo_url, mc.enviado_at, mc.leido,
-              u.nombre_completo AS otro_nombre, u.foto_perfil AS otro_foto
-       FROM mensajes_chat mc
-       INNER JOIN usuarios u ON u.id = IF(mc.emisor_id = ?, mc.receptor_id, mc.emisor_id)
-       WHERE (mc.emisor_id = ? AND mc.receptor_id = ?)
-          OR (mc.emisor_id = ? AND mc.receptor_id = ?)
-       ORDER BY mc.enviado_at ASC, mc.id ASC`,
-      [usuarioId, usuarioId, otroId, otroId, usuarioId]
+      `SELECT id, emisor_id, receptor_id, tipo_mensaje, mensaje, archivo_url, enviado_at, leido
+       FROM mensajes_chat
+       WHERE (emisor_id = ? AND receptor_id = ?) OR (emisor_id = ? AND receptor_id = ?)
+       ORDER BY enviado_at ASC, id ASC`,
+      [req.userId, otroId, otroId, req.userId]
     );
 
-    await pool.query(
-      `UPDATE mensajes_chat SET leido = 1
-       WHERE emisor_id = ? AND receptor_id = ? AND leido = 0`,
-      [otroId, usuarioId]
-    );
-
-    const otro =
-      mensajes.length > 0
-        ? { id: otroId, nombre: mensajes[0].otro_nombre, foto: mensajes[0].otro_foto }
-        : { id: otroId, nombre: null, foto: null };
-
-    return successResponse(res, "Mensajes de la conversación", {
-      otro_usuario: otro,
-      mensajes: mensajes.map((m) => ({
-        id: m.id,
-        emisor_id: m.emisor_id,
-        receptor_id: m.receptor_id,
-        tipo_mensaje: m.tipo_mensaje,
-        mensaje: m.mensaje,
-        archivo_url: m.archivo_url,
-        enviado_at: m.enviado_at,
-        leido: !!m.leido,
-      })),
+    return successResponse(res, "Mensajes obtenidos", {
+      usuario: {
+        id: otro[0].id,
+        nombre_completo: otro[0].nombre_completo,
+        foto_perfil: otro[0].foto_perfil,
+      },
+      mensajes,
     });
   } catch (err) {
     next(err);
@@ -188,26 +184,27 @@ export const listarMensajesCon = async (req, res, next) => {
 };
 
 /**
- * Marca como leido un mensaje dirigido al usuario autenticado (RF105).
+ * PATCH /api/chat/mensajes/:id/leido
+ * Marca como leido un mensaje recibido por el usuario autenticado.
  */
-export const marcarComoLeido = async (req, res, next) => {
+export const marcarMensajeLeido = async (req, res, next) => {
   try {
-    const usuarioId = req.userId;
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      return errorResponse(res, "El id del mensaje debe ser un entero positivo.", 400);
+    const mensajeId = Number(req.params.id);
+
+    if (!validarId(mensajeId)) {
+      return errorResponse(res, "El id del mensaje debe ser un entero positivo", 400);
     }
 
     const [result] = await pool.query(
       "UPDATE mensajes_chat SET leido = 1 WHERE id = ? AND receptor_id = ?",
-      [id, usuarioId]
+      [mensajeId, req.userId]
     );
 
     if (result.affectedRows === 0) {
-      return errorResponse(res, "Mensaje no encontrado o no es tuyo.", 404);
+      return errorResponse(res, "Mensaje no encontrado", 404);
     }
 
-    return successResponse(res, "Mensaje marcado como leído", { id });
+    return successResponse(res, "Mensaje marcado como leído", { id: mensajeId });
   } catch (err) {
     next(err);
   }
