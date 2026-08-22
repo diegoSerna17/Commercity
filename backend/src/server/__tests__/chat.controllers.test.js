@@ -109,6 +109,31 @@ describe("Chat interno (RF105)", () => {
     expect(insert[1][2]).toBe("texto");// tipo_mensaje
     expect(insert[1][3]).toBe("Hola Carlos");
     expect(insert[1][4]).toBeNull();   // archivo_url
+
+    // Notificacion best-effort al receptor (RF99-RF104, tipo RF101 "mensajes").
+    const notif = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO notificaciones"));
+    expect(notif).toBeTruthy();
+    expect(notif[1][0]).toBe(2);        // usuario_id = receptor
+    expect(notif[1][1]).toBe("mensajes");
+    expect(notif[1][4]).toBe("no leido");
+  });
+
+  it("registra notificacion al receptor sin romper el envio (best-effort)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT id, activo FROM usuarios")) return [[{ id: 2, activo: 1 }], undefined];
+      if (sql.includes("INSERT INTO mensajes_chat")) return [{ insertId: 910 }, undefined];
+      if (sql.includes("INSERT INTO notificaciones")) throw new Error("tabla no existe");
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .post("/api/chat")
+      .set("Authorization", `Bearer ${tokenComprador}`)
+      .send({ receptor_id: 2, mensaje: "Hola" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
   });
 
   it("POST /api/chat con archivo (multipart) guarda archivo_url (201)", async () => {
