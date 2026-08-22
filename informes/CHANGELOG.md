@@ -4,6 +4,34 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-21 - FEAT: eventos de notificacion de mensaje (chat RF105) y reporte (RF62-RF69)
+
+- **Autor**: Daniel Palacios (apoyo a la asignacion de Carlos Vidal)
+- **Archivos**:
+  - backend/src/server/controllers/chat.controllers.js (registrarNotificacion best-effort al receptor al enviar mensaje, tipo "mensajes", url /perfil/chats)
+  - backend/src/server/controllers/reportes.controllers.js (notifica a los administradores activos al crear un reporte, tipo "reporte", url /admin/reportes)
+  - backend/src/server/__tests__/chat.controllers.test.js (+1 test best-effort, +assertions de la notificacion)
+  - backend/src/server/__tests__/reportes.controllers.test.js (+2 tests: notifica admins y best-effort)
+- **Descripcion**: se completan los eventos de la asignacion de Vidal que faltaban (RF99-RF104): al enviar un mensaje de chat se notifica al receptor y al crear un reporte se notifica a los administradores. Ambos con patron best-effort (un fallo de la notificacion jamas rompe el evento principal).
+- **Motivo**: la asignacion de Vidal exige registro por eventos (compra, mensaje, reporte, envio); solo existian compra y envio/entregado.
+- **Requerimientos**: RF99, RF100, RF101, RF103, RF104, RF105, RF62, RF63, RF65, RF67
+- **Evidencia**: verificado en server activo contra BD real commercity_v2 (2026-08-21): mensaje a usuario 2 creo notificacion id 17 (tipo mensajes, no leido, url /perfil/chats); reporte de producto creo notificaciones 18/19/20 a los 3 admins reales (471/472/473, admin01/02/03@commercity.com), tipo reporte, no leido. Tests unitarios VERIFICADOS: chat 14/14 y reportes 13/13. Suite completa: 269/286 en el run con 1 crash de worker Vitest (17 tests de 1 archivo no ejecutados, problema de infraestructura en Windows, no de codigo); los 269 que corrieron pasaron 100%. Rerun recomendado para confirmar 286/286.
+- **Estado**: Completado y verificado en server activo
+
+---
+
+## 2026-08-21 - DOCS: ajuste frontend RF46/RF47 delegado al lider de frontend (Diego Serna)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: N/A (sin cambios de codigo en el repositorio)
+- **Descripcion**: el formulario del vendedor (frontend/src/components/perfil/AgregarProducto.jsx) debe mostrar el campo estado en SOLO LECTURA y no enviarlo en el FormData, porque la columna `productos.estado` es GENERATED STORED en la BD (RF46/RF47 cerrado sin migracion el 21/08). Por regla de gobierno del proyecto (el equipo de backend solo trabaja backend y los cambios de frontend los aplica su lider), el ajuste se delega a Diego Serna, lider de frontend.
+- **Motivo**: el frontend aun envia `estado` como select editable, generando incoherencia RF vs codigo ante el instructor; la BD ya es la unica fuente del estado.
+- **Requerimientos**: RF46, RF47, RF88
+- **Evidencia**: definicion del esquema verificada (`estado` GENERATED ALWAYS AS if(stock>0,'Disponible','Agotado') STORED); el backend ya cumple (INSERT de productos sin columna estado).
+- **Estado**: En revision — pendiente de aplicacion por Diego Serna (frontend)
+
+---
+
 ## 2026-08-21 - FEAT: modulo Calificaciones RF107 (comprador califica vendedor 1-5)
 
 - **Autor**: Daniel Palacios

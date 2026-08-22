@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { validarId } from "./admin/admin.utils.js";
+import { registrarNotificacion } from "./notificaciones.controllers.js";
 
 const TIPOS_VALIDOS = ["Producto", "Usuario"];
 
@@ -77,6 +78,28 @@ export const crearReporte = async (req, res, next) => {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [req.userId, tipo, productoId, usuarioReportadoId, motivo, evidenciaUrl]
     );
+
+    // Notificacion best-effort (RF99-RF104): avisa a los administradores del nuevo
+    // reporte (RF65/RF67: el admin recibe los reportes en su panel, RF101 tipo
+    // "reporte"). Su fallo jamas rompe la creacion del reporte.
+    try {
+      const [admins] = await pool.query(
+        `SELECT u.id FROM usuarios u
+         INNER JOIN usuario_roles ur ON u.id = ur.usuario_id
+         INNER JOIN roles r ON r.id = ur.rol_id
+         WHERE r.nombre = 'administrador' AND u.activo = 1`
+      );
+      for (const admin of admins) {
+        await registrarNotificacion({
+          usuario_id: admin.id,
+          tipo: "reporte",
+          descripcion: `Nuevo reporte de ${tipo.toLowerCase()}`,
+          url_redireccion: "/admin/reportes",
+        });
+      }
+    } catch {
+      console.warn("No se pudo notificar el reporte a los administradores");
+    }
 
     return successResponse(
       res,

@@ -109,6 +109,49 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
     expect(insert[1][4]).toBe("Producto roto");
   });
 
+  it("notifica a los administradores al crear un reporte (RF99-RF104)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT id FROM productos")) return [[{ id: 1 }], undefined];
+      if (sql.includes("INSERT INTO reportes")) return [{ insertId: 503 }, undefined];
+      if (sql.includes("INNER JOIN usuario_roles")) return [[{ id: 1 }], undefined];
+      if (sql.includes("INSERT INTO notificaciones")) return [{ insertId: 1 }, undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .post("/api/reportes")
+      .set("Authorization", `Bearer ${tokenComprador}`)
+      .send({ tipo: "Producto", motivo: "Producto roto", producto_id: 1 });
+
+    expect(res.status).toBe(201);
+
+    const notif = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO notificaciones"));
+    expect(notif).toBeTruthy();
+    expect(notif[1][0]).toBe(1);        // usuario_id = admin
+    expect(notif[1][1]).toBe("reporte");
+    expect(notif[1][2]).toContain("Nuevo reporte de producto");
+    expect(notif[1][4]).toBe("no leido");
+  });
+
+  it("un fallo al notificar el reporte NO rompe la creacion (best-effort)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT id FROM productos")) return [[{ id: 1 }], undefined];
+      if (sql.includes("INSERT INTO reportes")) return [{ insertId: 504 }, undefined];
+      if (sql.includes("INNER JOIN usuario_roles")) throw new Error("BD caida");
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .post("/api/reportes")
+      .set("Authorization", `Bearer ${tokenComprador}`)
+      .send({ tipo: "Producto", motivo: "Motivo", producto_id: 1 });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+  });
+
   it("POST /api/reportes de usuario autoreporte -> 400", async () => {
     const res = await request(app)
       .post("/api/reportes")

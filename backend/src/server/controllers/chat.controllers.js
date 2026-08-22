@@ -1,5 +1,6 @@
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
+import { registrarNotificacion } from "./notificaciones.controllers.js";
 
 // ============================================================================
 // MODULO DE CHAT INTERNO (RF105 del documento 20/08)
@@ -63,6 +64,15 @@ export const enviarMensaje = async (req, res, next) => {
        VALUES (?, ?, ?, ?, ?)`,
       [req.userId, receptorId, tipoMensaje, texto || null, archivoUrl]
     );
+
+    // Notificacion best-effort (RF99-RF104): avisa al receptor del nuevo mensaje
+    // (RF101 tipo "mensajes"). Su fallo jamas rompe el envio del chat.
+    await registrarNotificacion({
+      usuario_id: receptorId,
+      tipo: "mensajes",
+      descripcion: archivoUrl ? "Te enviaron un archivo en el chat" : "Nuevo mensaje en el chat",
+      url_redireccion: "/perfil/chats",
+    });
 
     return successResponse(res, "Mensaje enviado correctamente", {
       id: result.insertId,
