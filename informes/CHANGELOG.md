@@ -4,6 +4,50 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-08-21 - DOCS: regla memoria-proyecto.md y actualizacion de reglas de respuesta
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - .trae/rules/memoria-proyecto.md (nuevo: memoria del proyecto SIEMPRE actualizada al cerrar tarea y al finalizar turno; rutas exactas de project_memory.md y topics.md; checklist de cierre)
+  - .trae/rules/respuesta-asistente.md (parrafos fluidos SOLO para WhatsApp; este chat mantiene tablas/listas/bloques de codigo)
+  - memoria del proyecto: project_memory.md (seccion Estado 2026-08-21 agregada)
+- **Descripcion**: se crea la regla que obliga a mantener la memoria del proyecto (project_memory.md y topics.md) actualizada en cada cierre de tarea y fin de turno, con rutas exactas, momentos de actualizacion obligatorios, estructura minima por secciones y checklist de cierre. Se ajusta respuesta-asistente.md para que el formato de parrafos fluidos aplique solo a WhatsApp, y se actualiza la memoria del proyecto con el estado del 21/08 (RF46/RF47 cerrado, chat de Diego integrado, ramas, temporales).
+- **Motivo**: la memoria del proyecto estaba desactualizada (20/08) y no existia regla que garantizara su mantenimiento continuo entre sesiones.
+- **Requerimientos**: N/A
+- **Evidencia**: project_memory.md actualizado con Estado 2026-08-21; regla memoria-proyecto.md en .trae/rules/.
+- **Estado**: Completado
+
+---
+
+## 2026-08-21 - FEAT: modulo Chat RF105 de Diego Serna integrado (fotos y archivos)
+
+- **Autor**: Diego Serna (integrado y revisado por Daniel Palacios)
+- **Archivos**:
+  - backend/src/server/controllers/chat.controllers.js (reemplazado por el de Diego: enviarMensaje multipart, listarConversaciones, obtenerConversacion, marcarMensajeLeido; validarId inline y limite de mensaje 5000 chars)
+  - backend/src/server/routes/chat.routes.js (reemplazado: POST /, GET /conversaciones, GET /mensajes/:usuarioId, PATCH /mensajes/:id/leido)
+  - backend/src/server/config/multer.chat.js (nuevo: imagenes + documentos, 10 MB, guarda en /uploads)
+  - backend/src/server/__tests__/chat.controllers.test.js (reemplazado, 13 tests de Diego)
+  - backend/src/server/app.js (Fix helmet imagenes: crossOriginResourcePolicy cross-origin para servir /uploads al frontend)
+- **Descripcion**: se integra el modulo Chat interno (RF105) entregado por Diego Serna, que reemplaza al respaldo del lider: envia mensajes de texto y archivos reales via multipart (tipo_mensaje derivado del mimetype: imagen/archivo), lista conversaciones con ultimo mensaje y no leidos, historial entre dos usuarios y marca de leido. El fix de helmet (crossOriginResourcePolicy: cross-origin) habilita que el frontend muestre las imagenes servidas desde /uploads. La tabla `mensajes_chat` ya existe en el esquema (sin migracion).
+- **Motivo**: entrega del modulo Chat del Sprint 2 (interaccion comprador-vendedor); el app.js del lider ya tenia el montaje de chatRouter.
+- **Requerimientos**: RF105
+- **Evidencia**: suite chat 13/13 (verificado 2026-08-21 con node node_modules\vitest\vitest.mjs); suite completa 275/275 (era 278/278 con respaldo de 16 tests de chat; -3 por los 13 tests de Diego); cobertura global Lines 93.53%, Statements 93%, Branch 83.05%, Funcs 99.35%. Primer run de la suite completa fallo 1 worker de Vitest en admin.controllers.test.js (flaky, "Worker exited unexpectedly"); el run con coverage paso 18/18 archivos.
+- **Estado**: Completado y verificado
+
+---
+
+## 2026-08-21 - DOCS: RF46/RF47 cerrados sin migracion (campo estado en solo lectura)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: .trae/rules/revision-requerimientos.md (seccion 3 checklist y seccion 4)
+- **Descripcion**: se cierra el debate del campo `productos.estado`: sigue siendo `ENUM('Disponible','Agotado') GENERATED ALWAYS AS (if(stock>0,...)) STORED`; el formulario del vendedor lo muestra en SOLO LECTURA (RF47 = campo presente e informativo) y el backend nunca lo inserta ni actualiza. La coherencia stock/estado la garantiza la BD (RF88). NO hay migracion.
+- **Motivo**: no existe caso de negocio que justifique convertir la columna en escribible; migrar solo agregaria riesgo sin beneficio (335 productos sin inconsistencias).
+- **Requerimientos**: RF46, RF47, RF88
+- **Evidencia**: SHOW CREATE TABLE productos (2026-08-21) confirmo que la columna sigue STORED GENERATED; sin errores conocidos de estado/stock en la BD real.
+- **Estado**: Completado
+
+---
+
 ## 2026-08-20 - FEAT: modulo Notificaciones RF99-RF104 (Carlos Vidal) integrado
 
 - **Autor**: Carlos Vidal (integrado y revisado por Daniel Palacios)

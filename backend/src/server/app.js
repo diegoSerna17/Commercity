@@ -22,12 +22,14 @@ const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Seguridad centralizada (regla api-seguridad.md)
+// Fix helmet (imagenes): crossOriginResourcePolicy permite que el frontend
+// muestre las imagenes/archivos servidos desde /uploads (RF45/RF49, chat RF105).
 app.disable("x-powered-by");
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(express.json({ limit: "10mb" }));
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
 
-// Imagenes subidas por el vendedor (Perfil Vendedor RF45/RF49)
+// Imagenes subidas por el vendedor (Perfil Vendedor RF45/RF49) y chat (RF105)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Rate limit para rutas de autenticacion (anti fuerza bruta / spam de correos).
