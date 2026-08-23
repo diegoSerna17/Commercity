@@ -4,6 +4,23 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+
+## 2026-08-21 - CHORE: reglas y scripts de changelog, version y cobertura (adaptados del proyecto NOC)
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - .trae/rules/ahorro-tokens-changelog-manual.md (nuevo: la IA NO lee/reescribe informes/CHANGELOG.md; usa scripts/actualizar_changelog.ps1)
+  - .trae/rules/ahorro-tokens-version-manual.md (nuevo: bump de VERSION con scripts/actualizar_version.ps1, SemVer X.Y.Z)
+  - .trae/rules/cobertura-tests-por-cambio.md (nuevo: tests y cobertura por cambio con vitest, no bajar de 93.53% Lines)
+  - scripts/actualizar_changelog.ps1 (nuevo: inserta entrada antes de la primera fecha, valida ## YYYY-MM-DD, rechaza duplicados fecha+TAG)
+  - scripts/actualizar_version.ps1 (nuevo: bump de VERSION con -DryRun y -Ruta)
+  - VERSION (nuevo: 1.0.0)
+- **Descripcion**: se adaptan al proyecto CommerCity las reglas de ahorro de tokens del proyecto NOC para actualizar el CHANGELOG (por fecha, no por version), el archivo VERSION (SemVer) y la cobertura por cambio (vitest en vez de pytest).
+- **Motivo**: el CHANGELOG de CommerCity usa formato por fecha; se conserva la plantilla de documentacion-cambios.md y se automatiza la insercion para ahorrar tokens.
+- **Requerimientos**: N/A
+- **Evidencia**: scripts validados contra copias temporales (insercion, bump, rechazo de duplicados y DryRun OK).
+- **Estado**: Completado
+
 ## 2026-08-21 - FEAT: eventos de notificacion de mensaje (chat RF105) y reporte (RF62-RF69)
 
 - **Autor**: Daniel Palacios (apoyo a la asignacion de Carlos Vidal)
