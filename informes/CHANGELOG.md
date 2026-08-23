@@ -5,6 +5,31 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 ---
 
 
+
+
+## 2026-08-23 - FEAT: modulo Seguidores RF106 integrado al backend
+
+- **Autor**: Daniel Palacios (integracion de entrega de Carlos Perea)
+- **Archivos**: backend/src/server/controllers/seguidores.controllers.js, backend/src/server/routes/seguidores.routes.js, backend/src/server/app.js, backend/src/server/__tests__/seguidores.controllers.test.js
+- **Descripcion**: modulo de seguidores (seguir, dejar de seguir, listar siguiendo, listar seguidores) montado en /api/seguidores con authRequired; 15 tests unitarios con mock de mysql2/promise.
+- **Motivo**: entrega de Carlos Perea del Sprint 2 (RF106) aprobada con capturas validadas por OCR contra BD real.
+- **Requerimientos**: RF106
+- **Evidencia**: 15/15 tests seguidores; 301/301 suite completa; Lines 93.68%; endpoints GET /api/seguidores/siguiendo 401 sin token, POST /api/seguidores 401 sin token (validado con PowerShell Invoke-RestMethod).
+- **Estado**: En revision (pendiente vitest)
+
+## 2026-08-21 - CHORE: clarificar config local de JWT_SECRET y versionar reglas/scripts
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - .trae/rules/api-seguridad.md (nota: JWT_SECRET es config local de cada integrante, no la envia el lider de BD; comando para generarlo; NO desactivar la validacion RNF1/RNF10)
+  - backend/.env.example (misma aclaracion en el comentario de JWT_SECRET)
+  - .gitignore (versionar .trae/rules/ y scripts/actualizar_*.ps1; mantener ignorados skills, ffmpeg y demas scripts locales)
+- **Descripcion**: se aclara que el JWT_SECRET es una llave de la aplicacion (no de la BD) que cada integrante genera en su .env local, evitando el bloqueo al arrancar el servidor sin debilitar la validacion de seguridad. Se ajusta .gitignore para versionar reglas y scripts de automatizacion.
+- **Motivo**: integrantes bloqueados por "FATAL: falta JWT_SECRET" al no saber que era config local (el lider de BD solo entrega credenciales MySQL).
+- **Requerimientos**: RNF1, RNF10
+- **Evidencia**: servidor arranca con JWT_SECRET definido; regla actualizada con el comando de generacion.
+- **Estado**: Completado
+
 ## 2026-08-21 - CHORE: reglas y scripts de changelog, version y cobertura (adaptados del proyecto NOC)
 
 - **Autor**: Daniel Palacios
