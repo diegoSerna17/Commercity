@@ -155,8 +155,10 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# Configuracion local del entorno de desarrollo (Trae IA)
-.trae/
+# Configuracion local del entorno de desarrollo (Trae IA).
+# Las REGLAS del proyecto (.trae/rules/) SI se versionan en origin/ECOMMERCE.
+.trae/*
+!.trae/rules/
 .agents/
 .claude/
 
@@ -173,7 +175,10 @@ backend/src/server/uploads/
 # Entregas de los integrantes, audios y scripts locales (no se versionan)
 AVANCES/
 Audios/
-scripts/
+# Los scripts de automatizacion (changelog/version) SI se versionan.
+scripts/*
+!scripts/actualizar_changelog.ps1
+!scripts/actualizar_version.ps1
 
 # Documentos fuente (Word) y conversiones locales, no se versionan
 docs/

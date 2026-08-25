@@ -7,6 +7,23 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+
+## 2026-08-24 - DOCS: revision de entrega de Juan Cabrera (RF63-RF69) y reglas de memoria
+
+- **Autor**: Daniel Palacios
+- **Archivos**:
+  - AVANCES/SPRING 2/JUAN CABRERA/Test Admin/tests-admin-reportes/ (revisado; carpeta en .gitignore, NO se versiona)
+  - .trae/rules/memoria-proyecto.md (nuevo)
+  - .trae/rules/respuesta-asistente.md (actualizado)
+  - .trae/rules/revision-requerimientos.md (actualizado)
+  - scripts/actualizar_changelog.ps1 y scripts/actualizar_version.ps1 (nuevos, versionados)
+  - .gitignore y backend/.env.example (ajustados para versionar reglas y scripts)
+- **Descripcion**: revision de la entrega de Juan Cabrera (tests de QA del Panel Admin de Reportes RF63-RF69): 51/51 tests Vitest + 7/7 scripts curl = 58 verificaciones PASS contra BD real, 13 capturas validas. Coincide con el backend real (GET /reportes, GET /reportes/:id, DELETE archivado=1, PATCH /resolver). Correcciones aplicadas a la entrega: eliminado JWT_SECRET real hardcodeado en setup/auth.js y vitest.config.js; eliminadas credenciales BD hardcodeadas en setup/db.js (ahora solo process.env sin fallback); 01-auth-login.sh ahora hace login real por la API (antes firmaba token con el secret); corregido test 403 condicional en list-reportes.test.js (usaba comprador@test.com inexistente); limpiadas credenciales expuestas en README.md y Resultados finales.md. AVANCES/ sigue en .gitignore (evidencia local).
+- **Motivo**: revision de entrega del Sprint 2 y cumplir la regla memoria-proyecto (memoria siempre actualizada).
+- **Requerimientos**: RF63, RF64, RF65, RF66, RF67, RF68, RF69
+- **Evidencia**: Resultados finales.md de Cabrera (51/51 + 7/7 PASS); git check-ignore confirma AVANCES/ ignorado.
+- **Estado**: Completado
+
 ## 2026-08-23 - FEAT: modulo Seguidores RF106 integrado al backend
 
 - **Autor**: Daniel Palacios (integracion de entrega de Carlos Perea)
