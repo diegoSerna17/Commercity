@@ -8,6 +8,17 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+
+## 2026-08-24 - FEAT: endpoint de validacion de Mi Tienda RF130-RF139 (integrado desde Erick)
+
+- **Autor**: Erick (integrado y verificado por Daniel Palacios)
+- **Archivos**: backend/src/server/controllers/tienda.controllers.js, backend/src/server/routes/tienda.routes.js, backend/src/server/__tests__/tienda.controllers.test.js
+- **Descripcion**: se integra GET /api/tienda/validacion (solo lectura): valida cuenta bancaria registrada/completa sin exponer datos (RF131-133, RF138), flujo 90/10 por linea con tolerancia de 1 centavo (RF136/RF139) y devoluciones con reembolso (RF35/RF129/RF137). 6 tests nuevos. Se descartaron las copias antiguas de pedidos/compras de la entrega (revertian fixes ya aplicados).
+- **Motivo**: entrega del modulo Mi Tienda de Erick en el Sprint 2; su aporte de validacion es util como herramienta de QA.
+- **Requerimientos**: RF130, RF131, RF132, RF133, RF134, RF135, RF136, RF137, RF138, RF139
+- **Evidencia**: suite tienda 22/22; E2E contra BD real: /validacion 200, /ventas 200, /ingresos 200, /dashboard/stats 200, /mi-cuenta-bancaria 200, sin token 401.
+- **Estado**: Completado
+
 ## 2026-08-24 - DOCS: revision de entrega de Juan Cabrera (RF63-RF69) y reglas de memoria
 
 - **Autor**: Daniel Palacios

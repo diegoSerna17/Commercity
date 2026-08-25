@@ -449,3 +449,208 @@ export const getDashboardStats = async (req, res, next) => {
     next(err);
   }
 };
+
+// ─────────────────────────────────────────────────────────────
+// VALIDACION DE MI TIENDA (RF130-RF139) - integrado desde Erick (24/08)
+// Endpoint de solo lectura: verifica la consistencia de Mi Tienda contra la
+// BD real (cuenta bancaria, flujo 90/10 y devoluciones) sin mutar datos.
+// ─────────────────────────────────────────────────────────────
+const TOLERANCIA_CENTAVOS = 0.01;
+
+/** Comprueba que la cuenta bancaria este registrada y sea utilizable (RF131-RF133). */
+function validarCuentaBancaria(fila) {
+  if (!fila) {
+    return {
+      registrada: false,
+      completa: false,
+      banco: null,
+      tipo_cuenta: null,
+      titular_enmascarado: null,
+      numero_enmascarado: null,
+      ultimos4: null,
+      updated_at: null,
+    };
+  }
+  const titular = decryptSensitive(fila.titular_nombre);
+  const numero = decryptSensitive(fila.numero_cuenta);
+  const completa = Boolean(
+    titular && numero &&
+    fila.banco && fila.tipo_cuenta &&
+    ["ahorros", "corriente"].includes(fila.tipo_cuenta) &&
+    /^\d{6,20}$/.test(String(numero))
+  );
+  return {
+    registrada: true,
+    completa,
+    banco: fila.banco,
+    tipo_cuenta: fila.tipo_cuenta,
+    titular_enmascarado: maskFullName(titular),
+    numero_enmascarado: maskBankAccount(numero),
+    ultimos4: numero ? String(numero).slice(-4) : null,
+    updated_at: fila.updated_at || null,
+  };
+}
+
+/**
+ * GET /api/tienda/validacion
+ * Validacion integral de Mi Tienda contra la BD real (RF130-RF139):
+ *  1. Cuenta bancaria del vendedor (RF131-RF133): registrada, completa y
+ *     NUNCA expuesta en claro (RF138).
+ *  2. Flujo 90/10 (RF136/RF139): cada linea de venta activa debe cumplir
+ *     monto_vendedor + monto_comision == subtotal (tolerancia 1 centavo).
+ *  3. Devoluciones (RF35/RF129/RF137): lineas canceladas, unidades de stock
+ *     restituidas y pago reembolsado (descuento del 90% del vendedor).
+ * El endpoint es de solo lectura y solo opera sobre el vendedor del token.
+ */
+export const getValidacionMiTienda = async (req, res, next) => {
+  try {
+    const vendedorId = req.userId;
+
+    // --- 1. Cuenta bancaria (RF131-RF133, RF138) ---
+    const [bancarias] = await pool.query(
+      `SELECT id, usuario_id, titular_nombre, banco, tipo_cuenta, numero_cuenta,
+              es_commercity, updated_at
+         FROM datos_bancarios
+        WHERE usuario_id = ?
+        LIMIT 1`,
+      [vendedorId]
+    );
+    const cuentaBancaria = validarCuentaBancaria(bancarias[0] || null);
+
+    // --- 2. Flujo 90/10 (RF136/RF139) ---
+    const [lineas] = await pool.query(
+      `SELECT dp.id, dp.pedido_id, dp.producto_id, dp.cantidad, dp.subtotal,
+              dp.monto_vendedor, dp.monto_comision, dp.estado_envio
+         FROM detalle_pedidos dp
+        WHERE dp.vendedor_id = ?
+        ORDER BY dp.id`,
+      [vendedorId]
+    );
+
+    const incoherencias = [];
+    let lineasActivas = 0;
+    let subtotalActivo = 0;
+    let vendedorActivo = 0;
+    let comisionActivo = 0;
+
+    for (const l of lineas) {
+      const subtotal = Number(l.subtotal || 0);
+      const montoV = Number(l.monto_vendedor || 0);
+      const montoC = Number(l.monto_comision || 0);
+      const diferencia = round2(Math.abs(subtotal - (montoV + montoC)));
+
+      if (l.estado_envio !== "Cancelado") {
+        lineasActivas += 1;
+        subtotalActivo = round2(subtotalActivo + subtotal);
+        vendedorActivo = round2(vendedorActivo + montoV);
+        comisionActivo = round2(comisionActivo + montoC);
+      }
+
+      if (diferencia > TOLERANCIA_CENTAVOS) {
+        incoherencias.push({
+          detalle_id: l.id,
+          pedido_id: l.pedido_id,
+          estado_envio: l.estado_envio,
+          subtotal,
+          monto_vendedor: montoV,
+          monto_comision: montoC,
+          diferencia,
+        });
+      }
+    }
+
+    // Consistencia global: el acumulado 90/10 sobre el subtotal activo cuadra
+    // dentro de una tolerancia de redondeo de 1 centavo por linea.
+    const flujoPorLineasValido = incoherencias.length === 0;
+    const globalCoherente =
+      Math.abs(subtotalActivo - (vendedorActivo + comisionActivo)) <=
+      TOLERANCIA_CENTAVOS * Math.max(1, lineasActivas);
+
+    // --- 3. Devoluciones (RF35/RF129/RF137) ---
+    const [devoluciones] = await pool.query(
+      `SELECT dp.id, dp.pedido_id, dp.cantidad, dp.subtotal, dp.monto_vendedor,
+              dp.monto_comision, p.fecha_pedido, ps.estado AS estado_pago
+         FROM detalle_pedidos dp
+         INNER JOIN pedidos p ON p.id = dp.pedido_id
+         LEFT JOIN pagos_simulados ps ON ps.pedido_id = p.id
+        WHERE dp.vendedor_id = ? AND dp.estado_envio = 'Cancelado'
+        ORDER BY dp.id`,
+      [vendedorId]
+    );
+
+    const devolucion = devoluciones.reduce(
+      (acc, d) => {
+        acc.lineas_canceladas += 1;
+        acc.unidades_restituidas_stock += Number(d.cantidad || 0);
+        acc.monto_reembolsado = round2(acc.monto_reembolsado + Number(d.subtotal || 0));
+        acc.monto_vendedor_descontado = round2(
+          acc.monto_vendedor_descontado + Number(d.monto_vendedor || 0)
+        );
+        if (d.estado_pago === "Reembolsado") acc.pagos_marcados_reembolsados += 1;
+        return acc;
+      },
+      {
+        lineas_canceladas: 0,
+        unidades_restituidas_stock: 0,
+        monto_reembolsado: 0,
+        monto_vendedor_descontado: 0,
+        pagos_marcados_reembolsados: 0,
+      }
+    );
+
+    const devolucionValida =
+      devolucion.lineas_canceladas === 0 || devolucion.pagos_marcados_reembolsados > 0;
+
+    const observaciones = [];
+    if (!cuentaBancaria.registrada) {
+      observaciones.push("El vendedor no ha registrado su cuenta bancaria (RF131).");
+    } else if (!cuentaBancaria.completa) {
+      observaciones.push("La cuenta bancaria registrada está incompleta o con formato inválido (RF132).");
+    }
+    if (!flujoPorLineasValido) {
+      observaciones.push(
+        `${incoherencias.length} línea(s) no cumplen monto_vendedor + monto_comision == subtotal (RF136/RF139).`
+      );
+    } else if (!globalCoherente) {
+      observaciones.push("Los totales acumulados del 90/10 no cuadran con el subtotal activo (RF136/RF139).");
+    }
+    if (devolucion.lineas_canceladas > 0 && devolucion.pagos_marcados_reembolsados === 0) {
+      observaciones.push("Existen líneas canceladas sin pago marcado como Reembolsado (RF35).");
+    }
+
+    const validado =
+      cuentaBancaria.registrada &&
+      cuentaBancaria.completa &&
+      flujoPorLineasValido &&
+      globalCoherente &&
+      devolucionValida;
+
+    return successResponse(res, "Validacion de Mi Tienda", {
+      vendedor_id: vendedorId,
+      cuenta_bancaria: cuentaBancaria,
+      flujo_90_10: {
+        lineas_analizadas: lineas.length,
+        lineas_activas: lineasActivas,
+        lineas_validas: lineas.length - incoherencias.length,
+        lineas_incoherentes: incoherencias.length,
+        incoherencias,
+        totales: {
+          subtotal: subtotalActivo,
+          vendedor_90: vendedorActivo,
+          vendedor_90_esperado: round2(subtotalActivo * 0.9),
+          comision_10: comisionActivo,
+          comision_10_esperada: round2(subtotalActivo * 0.1),
+        },
+        validado: flujoPorLineasValido && globalCoherente,
+      },
+      devoluciones: {
+        ...devolucion,
+        validado: devolucionValida,
+      },
+      validado,
+      observaciones,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
