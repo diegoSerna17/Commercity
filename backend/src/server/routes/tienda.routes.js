@@ -6,6 +6,7 @@ import {
   getHistorialVentas,
   getHistorialIngresos,
   getDashboardStats,
+  getValidacionMiTienda,
 } from "../controllers/tienda.controllers.js";
 import { authRequired } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
@@ -25,5 +26,8 @@ router.put("/mi-cuenta-bancaria", ...vendedor, upsertMiCuentaBancaria);
 router.get("/ventas", ...vendedor, getHistorialVentas);
 router.get("/ingresos", ...vendedor, getHistorialIngresos);
 router.get("/dashboard/stats", ...vendedor, getDashboardStats);
+
+// Validacion integral de Mi Tienda (RF130-RF139): cuenta bancaria, 90/10 y devoluciones
+router.get("/validacion", ...vendedor, getValidacionMiTienda);
 
 export default router;
