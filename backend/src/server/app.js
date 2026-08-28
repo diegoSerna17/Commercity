@@ -14,6 +14,7 @@ import pedidosRouter from "./routes/pedidos.routes.js";
 import tiendaRouter from "./routes/tienda.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import reportesRouter from "./routes/reportes.routes.js";
+import chatRouter from "./routes/chat.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
@@ -21,7 +22,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Seguridad centralizada (regla api-seguridad.md)
 app.disable("x-powered-by");
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(express.json({ limit: "10mb" }));
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
 
@@ -49,6 +50,7 @@ app.use("/api/pedidos", pedidosRouter);
 app.use("/api/tienda", tiendaRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/reportes", reportesRouter);
+app.use("/api/chat", chatRouter);
 app.use("/api", productosRouter);
 
 // Middleware de error centralizado al final de la cadena

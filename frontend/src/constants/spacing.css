@@ -1,0 +1,40 @@
+@theme {
+  /* Contenedor */
+  --spacing-container: 94%;
+  --spacing-container-lg: 96%;
+  --spacing-container-max: 1280px;
+
+  /* Margen mobile */
+  --spacing-margin-mobile: 16px;
+
+  /* Gap / Espaciado entre elementos */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+  --spacing-gutter: 24px;
+
+  /* Padding */
+  --spacing-padding-xs: 4px;
+  --spacing-padding-sm: 8px;
+  --spacing-padding-md: 16px;
+  --spacing-padding-lg: 24px;
+  --spacing-padding-xl: 32px;
+  --spacing-padding-2xl: 48px;
+
+  /* Alturas */
+  --spacing-header-height: 4rem;
+  --spacing-hero-height: 85vh;
+
+  /* Z-Index */
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-modal-backdrop: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+}

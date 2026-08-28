@@ -470,3 +470,64 @@ export const eliminarCuentaComprador = async (req, res) => {
         conn.release();
     }
 };
+
+/**
+ * GET /api/usuarios/directorio?q=
+ * Lista usuarios activos para poder iniciar un chat con cualquier persona.
+ * Excluye al usuario autenticado y no expone datos sensibles.
+ */
+export const listarUsuarios = async (req, res, next) => {
+    try {
+        const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+
+        let sql = `SELECT id, nombre_completo, foto_perfil
+                   FROM usuarios
+                   WHERE activo = 1 AND id <> ?`;
+        const params = [req.userId];
+
+        if (q) {
+            sql += " AND (nombre_completo LIKE ? OR email LIKE ?)";
+            params.push(`%${q}%`, `%${q}%`);
+        }
+
+        sql += " ORDER BY nombre_completo ASC LIMIT 50";
+
+        const [rows] = await pool.query(sql, params);
+        return successResponse(res, "Usuarios obtenidos", rows);
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * PATCH /api/usuarios/me
+ * Actualiza únicamente el nombre de perfil del usuario autenticado.
+ */
+export const actualizarPerfil = async (req, res, next) => {
+    try {
+        const nombre = typeof req.body?.nombre_completo === "string"
+            ? req.body.nombre_completo.trim()
+            : "";
+
+        if (!nombre) {
+            return errorResponse(res, "El nombre de perfil es obligatorio", 400);
+        }
+        if (nombre.length > 100) {
+            return errorResponse(res, "El nombre de perfil no puede superar 100 caracteres", 400);
+        }
+
+        await pool.query(
+            "UPDATE usuarios SET nombre_completo = ? WHERE id = ?",
+            [nombre, req.userId]
+        );
+
+        const [rows] = await pool.query(
+            "SELECT id, email, nombre_completo, foto_perfil FROM usuarios WHERE id = ?",
+            [req.userId]
+        );
+
+        return successResponse(res, "Perfil actualizado correctamente", rows[0]);
+    } catch (err) {
+        next(err);
+    }
+};
