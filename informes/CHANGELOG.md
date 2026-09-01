@@ -9,6 +9,17 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+
+## 2026-08-31 - DOCS: plan Sprint grupo API REST
+
+- **Autor**: Daniel Palacios
+- **Archivos**: informes/PLAN_SPRINT_API_REST_2026-08-31.md
+- **Descripcion**: plan con instrucciones detalladas por participante para conectar web/movil/escritorio al backend (13 routers, 69 endpoints). Gobernanza en conjunto entre lideres; movil se documenta en SRS antes de implementar.
+- **Motivo**: distribuir tareas del grupo API REST para la fase API del Sprint.
+- **Requerimientos**: N/A
+- **Evidencia**: documento de plan con tareas y evidencias por cada uno de los 13 integrantes.
+- **Estado**: Completado
+
 ## 2026-08-24 - FEAT: endpoint de validacion de Mi Tienda RF130-RF139 (integrado desde Erick)
 
 - **Autor**: Erick (integrado y verificado por Daniel Palacios)
