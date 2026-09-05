@@ -3,7 +3,7 @@
  * Convencion del proyecto: contrato { success, data } / { success, error }.
  * Integrado desde Carlos Perea (2026-08-09) y adaptado a la URL base central.
  */
-const API_BASE = import.meta.env?.VITE_API_URL || "http://localhost:5000";
+const API_BASE = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
 async function manejarRespuesta(response) {
   const datos = await response.json().catch(() => null);

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
 // API base del backend (misma convencion que el resto del proyecto).
-const API_BASE = import.meta.env?.VITE_API_URL || "http://localhost:5000";
+const API_BASE = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
 function useToast() {
   const [toast, setToast] = useState({ visible: false, msg: "", isError: false });

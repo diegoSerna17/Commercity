@@ -10,6 +10,28 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+
+
+## 2026-09-04 - FIX: alinear frontend local al puerto real del backend (3000)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: frontend/src/utils/productosApi.js, frontend/src/pages/Administrador/AjustesAdministrador.jsx, frontend/src/pages/Perfil/HistorialDeCompras.jsx
+- **Descripcion**: corregido el default de API_BASE de http://localhost:5000 a http://localhost:3000 en los 3 archivos que consumen la API (productos, admin, historial)
+- **Motivo**: el backend corre en 3000; el default 5000 rompia el consumo de API del frontend local (mismo incidente del puerto reportado por Erik)
+- **Requerimientos**: N/A (infraestructura de QA)
+- **Evidencia**: grep sin coincidencias de localhost:5000 en frontend/src; npm run build OK (1815 modulos, dist 526.69 kB)
+- **Estado**: Completado
+
+## 2026-09-04 - DOCS: revision entrega Erick (Mi Tienda E2E) y extension de Yepes/Sebastian
+
+- **Autor**: Daniel Palacios
+- **Archivos**: informes/INVENTARIO_ENDPOINTS_API_2026-08-28.md
+- **Descripcion**: revisada entrega de Erick (TEST Mi tienda APIREST.pdf, 8 capturas, todos 200/201), aprobada; extension de Yepes/Sebastian al martes 9/09 para diagramas y SRS (backend no se mueve); corregido inventario (register no recibe rol)
+- **Motivo**: cerrar revisiones del Sprint 1 API REST y registrar decision del Director
+- **Requerimientos**: RF130-RF139
+- **Evidencia**: capturas OCR del PDF de Erick (login, ventas, ingresos, dashboard, validacion, cuenta bancaria GET/POST/GET)
+- **Estado**: Completado
+
 ## 2026-08-31 - DOCS: plan Sprint grupo API REST
 
 - **Autor**: Daniel Palacios
