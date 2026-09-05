@@ -12,6 +12,39 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+
+
+
+## 2026-09-04 - DOCS: cierre QA Sprint 1 API REST - suite backend central 307/307
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/__tests__/ (20 archivos), AVANCES/SPRINT 1 API REST (revisiones: Erik, Diego, Cristian, Jary)
+- **Descripcion**: consolidada la entrega QA (plan 5.8, tarea asumida del integrante Jary Lizeth): suite completa del backend central 20/20 archivos, 307/307 tests, 0 failed con testTimeout 20000; cobertura global Lines 93.72% (1359/1450), Statements 93.17%, Branches 82.64%, Functions 99.38%. Conteo por modulo: usuarios 49, admin 35, notificaciones 27, productos.controllers 22, tienda 22, carrito 19, pedidos 18, chat 14, productos.vendedor 13, reportes 13, otros 75. Veredictos del Sprint: Erik APROBADA; Diego frontend VALIDADO (integracion a commercycity/main pendiente); Cristian NO APROBADA (tarea asumida: Productos 22+13, E2E real pendiente del grant P0 de BD); Jary PARCIAL (QA asumido y completado por el lider)
+- **Motivo**: cerrar las revisiones del Sprint 1 API REST (entrega domingo 6) y dejar evidencia consolidada para defensa ante el instructor
+- **Requerimientos**: RF44-RF49, RF54, RF78-RF94, RF99-RF107, RF116, RNF8-RNF11 (QA)
+- **Evidencia**: 307/307 passed; Lines 93.72%; corrida con node node_modules\vitest\vitest.mjs run --testTimeout=20000
+- **Estado**: Completado
+
+## 2026-09-04 - CHORE: testTimeout 20000 en Vitest del backend central
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/package.json
+- **Descripcion**: agregado testTimeout: 20000 al bloque vitest.test del backend central para estabilizar la suite completa en corridas paralelas (el default de 5000ms causaba 9 timeouts ambientales bajo OneDrive/carga, no errores logicos)
+- **Motivo**: la suite de 307 tests fallaba 9 por timeout solo en corrida completa; en ejecucion individual pasaban
+- **Requerimientos**: N/A (configuracion QA)
+- **Evidencia**: suite completa 307/307 (20/20 archivos) y cobertura Lines 93.72% con el timeout aplicado
+- **Estado**: Completado
+
+## 2026-09-04 - DOCS: tarea Backend Productos (Cristian Rosero) asumida por el lider y validada
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/__tests__/productos.controllers.test.js, backend/src/server/__tests__/productos.vendedor.test.js, AVANCES/SPRINT 1 API REST/CRISTIAN ROSERO (revision)
+- **Descripcion**: la entrega de Cristian Rosero (plan 5.4 Backend Productos) se rechazo por controllers con datos de ejemplo sin consultas a BD; el lider asumio la tarea y valido el modulo productos CENTRAL ya integrado: productos.controllers.test.js 22/22, productos.vendedor.test.js 13/13, cobertura Lines 93.72% (referencia 93.53%, no bajo). Servidor central arranca OK en puerto 3000; validaciones sin BD OK (validar-stock con id no numerico -> 400; POST /api/productos sin token -> 401). E2E contra BD real pendiente del grant P0 (commercy_user acceso a commercy_v2, escalado a Meneses).
+- **Motivo**: la entrega del integrante no cumplia el alcance del plan 5.4 (listado, detalle y paginacion reales del catalogo); se asumio para avanzar el Sprint 1 API REST.
+- **Requerimientos**: RF44-RF49, RF54, RF78, RF79, RF86, RF87-RF94
+- **Evidencia**: suites 22/22 y 13/13 passed; cobertura Lines 93.72%; HTTP 400 y 401 verificados en vivo
+- **Estado**: En revision (E2E real pendiente del grant P0 de BD)
+
 ## 2026-09-04 - FIX: alinear frontend local al puerto real del backend (3000)
 
 - **Autor**: Daniel Palacios
