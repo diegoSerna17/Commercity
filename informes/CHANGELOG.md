@@ -15,6 +15,28 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+
+
+## 2026-09-05 - DOCS: E2E real del modulo Productos completado (BD commercity_v2)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/.env (configuracion local DB_NAME), backend/src/server/controllers/productos.controllers.js (validado)
+- **Descripcion**: corregido DB_NAME del .env a commercity_v2 (se usaba commercy_v2, causa del bloqueo de acceso errno 1044) y completada la validacion E2E del modulo productos contra la BD real: listado paginado (total 310, pagina 2 con 78 paginas), tope limit 100, detalle RF78/RF79, validar-stock RF86, categorias y vendedores
+- **Motivo**: cerrar la tarea de Cristian Rosero asumida por el lider (plan 5.4) cuyo E2E real estaba pendiente por nombre de BD incorrecto en el .env
+- **Requerimientos**: RF78, RF79, RF86, RF87-RF94
+- **Evidencia**: GET /api/productos 200 (310 productos); limit=200 -> 100; detalle 585 200; validar-stock 585 200 {valido:true, stock:7}; categorias 17; vendedores 17
+- **Estado**: Completado
+
+## 2026-09-05 - DOCS: correccion de la entrega de Diego Serna (prueba-backend)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: AVANCES/SPRINT 1 API REST/DIEGO SERNA (copia de referencia); rama prueba-backend (config.js, backend/.gitignore)
+- **Descripcion**: corregido API_BASE_URL de frontend a puerto 3000 en constants/config.js; creado backend/.gitignore y sacado del indice git node_modules y src/server/uploads
+- **Motivo**: la rama de Diego apuntaba al puerto 5000 (el backend real corre en 3000) y versionaba dependencias y uploads binarios
+- **Requerimientos**: N/A (integracion/QA)
+- **Evidencia**: 0 referencias URL a 5000 en el frontend de la rama; commit 53b19ea en origin/prueba-backend
+- **Estado**: Completado (integracion a commercycity/main pendiente de Diego/Yepes)
+
 ## 2026-09-04 - DOCS: cierre QA Sprint 1 API REST - suite backend central 307/307
 
 - **Autor**: Daniel Palacios
