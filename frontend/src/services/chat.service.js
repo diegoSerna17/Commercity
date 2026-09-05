@@ -1,4 +1,4 @@
-import { request } from "./api.js";
+import { request } from "../api/client.js";
 
 // Funciones del módulo de Chat interno (RF101).
 
@@ -7,6 +7,10 @@ export const listarConversaciones = () => request("/api/chat/conversaciones");
 
 // Historial de mensajes con otro usuario.
 export const obtenerConversacion = (usuarioId) => request(`/api/chat/mensajes/${usuarioId}`);
+
+// Marca un mensaje recibido como leído.
+export const marcarMensajeLeido = (id) =>
+  request(`/api/chat/mensajes/${id}/leido`, { method: "PATCH" });
 
 // Envía un mensaje de texto.
 export const enviarMensaje = (receptorId, mensaje) =>

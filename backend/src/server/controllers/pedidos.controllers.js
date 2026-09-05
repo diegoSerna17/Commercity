@@ -230,6 +230,24 @@ export const confirmarPago = async (req, res, next) => {
     // El carrito se consume al confirmar la compra
     await conn.query("DELETE FROM carrito_items WHERE comprador_id = ?", [compradorId]);
 
+    // RF101/RF103: registrar notificación de compra al comprador. Un fallo aquí
+    // no debe romper el pedido ya confirmado.
+    try {
+      await conn.query(
+        `INSERT INTO notificaciones (usuario_id, tipo, descripcion, url_redireccion, estado)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          compradorId,
+          "compra",
+          `Tu pedido #${pedidoId} ha sido confirmado y está en preparación.`,
+          "/history",
+          "no leido",
+        ]
+      );
+    } catch {
+      // no romper la transacción por un fallo de notificación
+    }
+
     await conn.commit();
 
     return successResponse(res, "Pago confirmado y pedido creado con éxito", {
@@ -298,6 +316,33 @@ export const actualizarEstado = async (req, res, next) => {
       `UPDATE detalle_pedidos SET estado_envio = ? WHERE id IN (${ids.map(() => "?").join(",")})`,
       [estado, ...ids]
     );
+
+    // RF103: notificar al comprador el cambio de estado de su envío.
+    // Un fallo aquí no debe romper el update ya aplicado.
+    try {
+      const [pedidos] = await conn.query(
+        "SELECT comprador_id FROM pedidos WHERE id = ?",
+        [id]
+      );
+      const compradorId = pedidos[0]?.comprador_id;
+      if (compradorId) {
+        try {
+          const descripcion =
+            estado === "Entregado"
+              ? `Tu pedido #${id} fue entregado`
+              : `Tu pedido #${id} está en camino`;
+          await conn.query(
+            `INSERT INTO notificaciones (usuario_id, tipo, descripcion, url_redireccion, estado)
+             VALUES (?, ?, ?, ?, ?)`,
+            [compradorId, estado.toLowerCase(), descripcion, "/history", "no leido"]
+          );
+        } catch {
+          // no romper el update
+        }
+      }
+    } catch {
+      // no romper el update
+    }
 
     await conn.commit();
     return successResponse(res, "Estado de envío actualizado", {

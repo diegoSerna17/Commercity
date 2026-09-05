@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Navbar from './components/globales/Navbar';
+import NotificacionesEnVivo from './components/globales/NotificacionesEnVivo';
 import Home from './pages/Home';
 import IniciarSesion from './pages/IniciarSesion/IniciarSesion';
 import Registro from './pages/IniciarSesion/Registro';
@@ -75,6 +76,8 @@ function AppContent() {
           <Route path="/admin" element={<PanelAdministrador />} />
         </Routes>
       </main>
+
+      <NotificacionesEnVivo />
     </div>
   );
 }

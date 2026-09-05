@@ -25,7 +25,7 @@ import {
   History,
   Settings,
 } from "lucide-react";
-import { getCurrentUser } from "../../services/api.js";
+import { getCurrentUser } from "../../api/client.js";
 
 // JS Configuracion de secciones de navegacion con nombre, icono y ruta
 const NAV_SECTIONS = [

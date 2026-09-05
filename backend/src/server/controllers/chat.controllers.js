@@ -55,6 +55,25 @@ export const enviarMensaje = async (req, res, next) => {
             [req.userId, receptorId, tipoMensaje, texto || null, archivoUrl]
         );
 
+        // Genera la notificacion para que el receptor la vea en tiempo real.
+        try {
+            const [emisor] = await pool.query(
+                "SELECT nombre_completo FROM usuarios WHERE id = ?",
+                [req.userId]
+            );
+            const nombreEmisor = emisor[0]?.nombre_completo || "alguien";
+            const descripcion = archivoUrl
+                ? `Te envió un archivo: ${nombreEmisor}`
+                : `Nuevo mensaje de ${nombreEmisor}`;
+            await pool.query(
+                `INSERT INTO notificaciones (usuario_id, tipo, descripcion, url_redireccion, estado)
+                 VALUES (?, ?, ?, ?, ?)`,
+                [receptorId, "mensajes", descripcion, "/messages", "no leido"]
+            );
+        } catch {
+            // No romper el envio por un fallo de notificacion.
+        }
+
         return successResponse(res, "Mensaje enviado correctamente", {
             id: result.insertId,
         }, 201);

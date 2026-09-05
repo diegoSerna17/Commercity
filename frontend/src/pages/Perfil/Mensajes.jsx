@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
 import { listarConversaciones } from "../../services/chat.service.js";
-import { buscarUsuarios } from "../../services/usuarios.service.js";
 
-// JS Formatea un timestamp ISO a hora local (HH:MM)
 const formatearHora = (iso) => {
   if (!iso) return "";
   const d = new Date(iso);
@@ -12,7 +9,6 @@ const formatearHora = (iso) => {
   return d.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
 };
 
-// JS Texto de previsualizacion del ultimo mensaje segun su tipo
 const previewDe = (conv) => {
   const ultimo = conv.ultimo_mensaje || {};
   if (ultimo.mensaje) return ultimo.mensaje;
@@ -21,7 +17,6 @@ const previewDe = (conv) => {
   return "";
 };
 
-// JS Avatar del usuario (fallback con inicial si no tiene foto)
 const Avatar = ({ usuario }) => {
   if (usuario.foto_perfil) {
     return (
@@ -45,12 +40,6 @@ const Mensajes = () => {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
-  // JS Estado para buscar y abrir chat con cualquier usuario
-  const [busqueda, setBusqueda] = useState("");
-  const [directorio, setDirectorio] = useState([]);
-  const [buscando, setBuscando] = useState(false);
-
-  // RE Carga el listado de conversaciones del backend al montar
   useEffect(() => {
     const cargar = async () => {
       try {
@@ -65,31 +54,6 @@ const Mensajes = () => {
     cargar();
   }, []);
 
-  // RE Busca usuarios en el directorio con un pequeño debounce
-  useEffect(() => {
-    const q = busqueda.trim();
-    if (!q) {
-      setDirectorio([]);
-      setBuscando(false);
-      return;
-    }
-
-    setBuscando(true);
-    const timer = setTimeout(async () => {
-      try {
-        const res = await buscarUsuarios(q);
-        setDirectorio(res.data || []);
-      } catch (e) {
-        setDirectorio([]);
-      } finally {
-        setBuscando(false);
-      }
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [busqueda]);
-
-  // JS Guarda el contacto en sessionStorage y abre la conversacion
   const abrirChat = (usuario) => {
     sessionStorage.setItem(
       "activeChat",
@@ -102,12 +66,9 @@ const Mensajes = () => {
     navigate("/messages/chat");
   };
 
-  const mostrandoBusqueda = busqueda.trim().length > 0;
-
   return (
     <div className="flex h-screen bg-surface-container-lowest">
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* TW Encabezado con titulo y boton de retorno */}
         <header className="flex items-center justify-between px-4 md:px-padding-xl py-3 md:py-padding-lg border-b border-border-subtle shrink-0">
           <div className="flex-1 text-center">
             <h2 className="text-brand-orange text-headline-sm font-bold">Mensajes</h2>
@@ -120,116 +81,58 @@ const Mensajes = () => {
           </button>
         </header>
 
-        {/* TW Buscador para iniciar chat con cualquier usuario */}
-        <div className="px-4 md:px-padding-lg pt-padding-md shrink-0">
-          <label className="relative block max-w-5xl mx-auto w-full">
-            <span className="sr-only">Buscar usuario para chatear</span>
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-muted-text" />
-            <input
-              type="text"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar usuario para enviar mensaje..."
-              className="w-full rounded-card border border-figma-divider bg-surface-container/70 py-3 pl-11 pr-4 text-body-sm text-on-surface outline-none placeholder:text-brand-muted-text focus:border-border-focus focus:ring-1 focus:ring-border-focus"
-            />
-          </label>
-        </div>
-
-        {/* TW Cuerpo: resultados de busqueda o conversaciones */}
         <div className="flex-1 overflow-y-auto p-4 md:p-padding-lg lg:p-padding-2xl max-w-5xl mx-auto w-full">
-          {mostrandoBusqueda ? (
-            <div className="space-y-md">
-              <p className="text-xs uppercase tracking-wider text-brand-muted-text">
-                Usuarios
-              </p>
-              {buscando && (
-                <p className="text-brand-muted-text text-sm text-center py-8">
-                  Buscando usuarios...
-                </p>
-              )}
-              {!buscando && directorio.length === 0 && (
-                <p className="text-brand-muted-text text-sm text-center py-8">
-                  Sin resultados para tu busqueda.
-                </p>
-              )}
-              {directorio.map((usuario) => (
-                <article
-                  key={usuario.id}
-                  onClick={() => abrirChat(usuario)}
-                  className="group flex items-center gap-md p-padding-md rounded-card-lg transition-all cursor-pointer border border-transparent hover:border-surface-container hover:bg-surface-container-low"
-                >
-                  <Avatar usuario={usuario} />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-base text-on-surface truncate">
-                      {usuario.nombre_completo}
-                    </h4>
-                  </div>
-                  <span className="text-brand-orange text-sm font-bold shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Enviar mensaje
-                  </span>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <>
-              {cargando && (
-                <p className="text-brand-muted-text text-sm text-center py-8">
-                  Cargando conversaciones...
-                </p>
-              )}
-
-              {!cargando && error && (
-                <p className="text-report-red-text text-sm text-center py-8">{error}</p>
-              )}
-
-              {!cargando && !error && conversaciones.length === 0 && (
-                <p className="text-brand-muted-text text-sm text-center py-8">
-                  No tienes conversaciones. Busca un usuario arriba para empezar a chatear.
-                </p>
-              )}
-
-              <div className="space-y-md">
-                {conversaciones.map((conv) => (
-                  <article
-                    key={conv.usuario.id}
-                    onClick={() => abrirChat(conv.usuario)}
-                    className={`group flex items-center gap-md p-padding-md rounded-card-lg transition-all cursor-pointer ${
-                      conv.no_leidos > 0
-                        ? "border border-brand-orange/40 bg-surface-container-low hover:bg-surface-container"
-                        : "border border-transparent hover:border-surface-container hover:bg-surface-container-low"
-                    }`}
-                  >
-                    <div className="relative shrink-0">
-                      <Avatar usuario={conv.usuario} />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-xs">
-                        <h4
-                          className={`font-bold text-base ${
-                            conv.no_leidos > 0 ? "text-on-surface" : "text-brand-muted-text"
-                          }`}
-                        >
-                          {conv.usuario.nombre_completo}
-                        </h4>
-                        <span className="text-[10px] uppercase tracking-tighter text-brand-muted-text">
-                          {formatearHora(conv.ultimo_mensaje?.enviado_at)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm truncate pr-md text-brand-muted-text">{previewDe(conv)}</p>
-                        {conv.no_leidos > 0 && (
-                          <span className="bg-brand-orange text-auth-card-bg font-bold text-[11px] h-5 w-5 flex items-center justify-center rounded-full shrink-0">
-                            {conv.no_leidos}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </>
+          {cargando && (
+            <p className="text-brand-muted-text text-sm text-center py-8">
+              Cargando conversaciones...
+            </p>
           )}
+
+          {!cargando && error && (
+            <p className="text-report-red-text text-sm text-center py-8">{error}</p>
+          )}
+
+          {!cargando && !error && conversaciones.length === 0 && (
+            <p className="text-brand-muted-text text-sm text-center py-8">
+              No tienes conversaciones.
+            </p>
+          )}
+
+          <div className="space-y-md">
+            {conversaciones.map((conv) => (
+              <article
+                key={conv.usuario.id}
+                onClick={() => abrirChat(conv.usuario)}
+                className={`group flex items-center gap-md p-padding-md rounded-card-lg transition-all cursor-pointer ${
+                  conv.no_leidos > 0
+                    ? "border border-brand-orange/40 bg-surface-container-low hover:bg-surface-container"
+                    : "border border-transparent hover:border-surface-container hover:bg-surface-container-low"
+                }`}
+              >
+                <div className="relative shrink-0">
+                  <Avatar usuario={conv.usuario} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start mb-xs">
+                    <h4
+                      className={`font-bold text-base ${
+                        conv.no_leidos > 0 ? "text-on-surface" : "text-brand-muted-text"
+                      }`}
+                    >
+                      {conv.usuario.nombre_completo}
+                    </h4>
+                    <span className="text-[10px] uppercase tracking-tighter text-brand-muted-text">
+                      {formatearHora(conv.ultimo_mensaje?.enviado_at)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm truncate pr-md text-brand-muted-text">{previewDe(conv)}</p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </main>
     </div>

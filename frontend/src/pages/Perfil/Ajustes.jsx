@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Header from "../../components/globales/Header";
-import { getCurrentUser, setCurrentUser } from "../../services/api.js";
+import { getCurrentUser, setCurrentUser } from "../../api/client.js";
 import { actualizarPerfil } from "../../services/usuarios.service.js";
 
 function useToast() {

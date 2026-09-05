@@ -15,6 +15,7 @@ import tiendaRouter from "./routes/tienda.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import reportesRouter from "./routes/reportes.routes.js";
 import chatRouter from "./routes/chat.routes.js";
+import notificacionesRouter from "./routes/notificaciones.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
@@ -51,6 +52,7 @@ app.use("/api/tienda", tiendaRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/reportes", reportesRouter);
 app.use("/api/chat", chatRouter);
+app.use("/api/notificaciones", notificacionesRouter);
 app.use("/api", productosRouter);
 
 // Middleware de error centralizado al final de la cadena

@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, EyeOff, Check, ArrowRight } from "lucide-react";
-import { request, setToken, setCurrentUser } from "../../services/api.js";
+import { request, setToken, setCurrentUser } from "../../api/client.js";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -30,7 +30,7 @@ const Login = () => {
       });
       setToken(res.data.token);
       if (res.data.user) setCurrentUser(res.data.user);
-      navigate("/messages");
+      navigate("/");
     } catch (err) {
       setError(err.message || "No se pudo iniciar sesión");
     } finally {

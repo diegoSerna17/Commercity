@@ -4,7 +4,7 @@ import Header from "../../components/globales/Header";
 import AgregarProducto from "../../components/perfil/AgregarProducto";
 import SeguidoresModal from "../../components/perfil/SeguidoresModal";
 import { perfilVendedorSocial } from "../../data/perfilVendedorSocial";
-import { getCurrentUser } from "../../services/api.js";
+import { getCurrentUser } from "../../api/client.js";
 
 const BIO_MAX_LENGTH = 180;
 
