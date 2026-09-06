@@ -17,6 +17,17 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+
+## 2026-09-05 - DOCS: revision de la entrega de Carlos Vidal (Backend Usuarios) APROBADA
+
+- **Autor**: Daniel Palacios
+- **Archivos**: AVANCES/SPRINT 1 API REST/CARLOS VIDAL/Pruevas/evidencia.html
+- **Descripcion**: revisada la entrega de Carlos Vidal (plan 5.3 Backend Usuarios): 49/49 tests unitarios y 16/16 pasos E2E contra BD real (register 201 id=491, login, logout/revocacion de token, recuperacion RF4 anti-enumeracion y reset de un solo uso, RBAC admin 403/200, borrado logico de cuenta). Aprobada.
+- **Motivo**: cerrar la revision del modulo usuarios del Sprint 1 API REST
+- **Requerimientos**: RF2, RF4, RF40, RNF8/RNF10
+- **Evidencia**: evidencia.html con 49/49 unit y 16/16 E2E (generado 2026-09-05)
+- **Estado**: Completado
+
 ## 2026-09-05 - DOCS: E2E real del modulo Productos completado (BD commercity_v2)
 
 - **Autor**: Daniel Palacios
