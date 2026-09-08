@@ -18,6 +18,17 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+
+## 2026-09-07 - DOCS: informe estado entregas Sprint API REST y revisiones Brandon/Sebastian
+
+- **Autor**: Daniel Palacios
+- **Archivos**: informes/INFORME_ESTADO_ENTREGAS_SPRINT_API_REST_2026-09-07.md; AVANCES/SPRINT 1 API REST/BRANDON/REVISION_ENTREGA_BRANDON_2026-09-07.md; AVANCES/SPRINT 1 API REST/SEBASTIAN/REVISION_ENTREGA_SEBASTIAN_2026-09-07.md
+- **Descripcion**: cierre de revisiones: Cabrera y C. Perea cerrados con E2E real, Brandon y Sebastian en correccion, informe consolidado del sprint.
+- **Motivo**: consolidar estado de entregas API REST 7/09
+- **Requerimientos**: N/A
+- **Evidencia**: suite central 307/307, Lines 93.72%; E2E real comercity_v2 (pedido 87)
+- **Estado**: Completado
+
 ## 2026-09-05 - DOCS: revision de la entrega de Carlos Vidal (Backend Usuarios) APROBADA
 
 - **Autor**: Daniel Palacios
