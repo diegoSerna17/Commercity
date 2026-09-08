@@ -36,6 +36,7 @@
   "vitest": {
     "test": {
       "environment": "node",
+      "testTimeout": 20000,
       "coverage": {
         "provider": "v8",
         "include": [
