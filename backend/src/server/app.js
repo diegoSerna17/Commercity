@@ -29,7 +29,29 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.disable("x-powered-by");
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(express.json({ limit: "10mb" }));
-app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
+// CORS: clientes que consumen la API.
+// - Web (Vite) en FRONTEND_URL (por defecto http://localhost:5173).
+// - Escritorio (Electron): el renderer carga desde file:// y llega sin cabecera
+//   Origin o con Origin "null"; el main process no aplica CORS.
+// - Movil (Ionic/Capacitor): esquemas capacitor://localhost (iOS) y
+//   http(s)://localhost (WebView Android).
+// Restringirlo a FRONTEND_URL bloquearia escritorio y movil (Fase 2).
+const ORIGENES_PERMITIDOS = [
+  process.env.FRONTEND_URL || "http://localhost:5173",
+  "capacitor://localhost",
+  "http://localhost",
+  "https://localhost",
+];
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || ORIGENES_PERMITIDOS.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+  })
+);
 
 // Imagenes subidas por el vendedor (Perfil Vendedor RF45/RF49) y chat (RF105)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
