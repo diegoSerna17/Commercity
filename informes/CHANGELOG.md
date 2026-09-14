@@ -19,6 +19,17 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+
+## 2026-09-13 - FIX: CORS para los tres clientes (Electron y Capacitor)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/app.js; backend/src/server/__tests__/app.cors.test.js
+- **Descripcion**: lista blanca de origenes (FRONTEND_URL, capacitor://localhost, http/localhost) con soporte de peticiones sin Origin; test de 6 casos.
+- **Motivo**: el backend solo aceptaba http://localhost:5173 y bloqueaba a Electron e Ionic (Fase 2).
+- **Requerimientos**: N/A
+- **Evidencia**: vitest app.cors.test.js y suite completa en verde.
+- **Estado**: Completado
+
 ## 2026-09-07 - DOCS: informe estado entregas Sprint API REST y revisiones Brandon/Sebastian
 
 - **Autor**: Daniel Palacios
