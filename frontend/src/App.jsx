@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { Menu } from 'lucide-react';
 import Navbar from './components/globales/Navbar';
 import NotificacionesEnVivo from './components/globales/NotificacionesEnVivo';
+import RutaProtegidaAdmin from './components/globales/RutaProtegidaAdmin';
 import Home from './pages/Home';
 import IniciarSesion from './pages/IniciarSesion/IniciarSesion';
 import Registro from './pages/IniciarSesion/Registro';
@@ -72,8 +73,22 @@ function AppContent() {
           <Route path="/history" element={<HistorialDeCompras />} />
           <Route path="/settings" element={<Ajustes />} />
           <Route path="/store" element={<Tienda />} />
-          <Route path="/admin/dashboard" element={<PanelAdministrador />} />
-          <Route path="/admin" element={<PanelAdministrador />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <RutaProtegidaAdmin>
+                <PanelAdministrador />
+              </RutaProtegidaAdmin>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <RutaProtegidaAdmin>
+                <PanelAdministrador />
+              </RutaProtegidaAdmin>
+            }
+          />
         </Routes>
       </main>
 

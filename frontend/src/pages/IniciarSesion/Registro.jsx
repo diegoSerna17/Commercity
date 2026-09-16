@@ -14,20 +14,69 @@
 
 // JS Importaciones de hooks, Link e iconos para el formulario de registro
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { User, Mail, Lock, EyeOff, Eye, Check } from "lucide-react";
+import { request, setToken, setCurrentUser } from "../../api/client.js";
+
+// JS Validacion local simple del formato de correo antes de enviar al backend
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const Register = () => {
+  const navigate = useNavigate();
   // RE Estado para alternar visibilidad del campo de contrasena
   const [showPassword, setShowPassword] = useState(false);
   // RE Estado para controlar la aceptacion de terminos y condiciones
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // RE Estados controlados del formulario: nombre, correo y contrasena
+  const [nombreCompleto, setNombreCompleto] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  // RE Estados de envio: carga y mensaje de error del backend
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // JS Manejador de envio del formulario con prevencion de recarga
-  const handleSubmit = (e) => {
+  // JS Registra la cuenta contra POST /api/usuarios/register y deja la sesion iniciada
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // JS Logica de registro pendiente de implementar
-    console.log("Registering...");
+
+    const nombreLimpio = nombreCompleto.trim();
+    const emailLimpio = email.trim();
+
+    // JS Validaciones locales (el backend vuelve a validar)
+    if (!nombreLimpio) {
+      setError("El nombre completo es obligatorio");
+      return;
+    }
+    if (!EMAIL_REGEX.test(emailLimpio)) {
+      setError("Ingresa un correo electrónico válido");
+      return;
+    }
+    if (password.length < 8) {
+      setError("La contraseña debe tener mínimo 8 caracteres");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+    try {
+      const res = await request("/api/usuarios/register", {
+        method: "POST",
+        body: {
+          nombre_completo: nombreLimpio,
+          email: emailLimpio,
+          password,
+        },
+      });
+      // JS Mismo patron de sesion que la pantalla de inicio de sesion
+      setToken(res.data.token);
+      if (res.data.user) setCurrentUser(res.data.user);
+      navigate("/");
+    } catch (err) {
+      // JS El backend responde con el mensaje legible (ej: correo ya registrado)
+      setError(err.message || "No se pudo completar el registro");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,6 +99,8 @@ const Register = () => {
               type="text"
               required
               placeholder="Nombre completo"
+              value={nombreCompleto}
+              onChange={(e) => setNombreCompleto(e.target.value)}
               className="block w-full bg-input-bg border border-border-subtle rounded-2xl py-md pl-3xl pr-md text-on-surface placeholder-placeholder-gray-600 transition-all focus:ring-1 focus:ring-brand-orange focus:border-brand-orange outline-none h-12 text-body-md"
             />
           </div>
@@ -63,6 +114,8 @@ const Register = () => {
               name="email"
               type="email"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Correo electrónico"
               className="block w-full bg-input-bg border border-border-subtle rounded-2xl py-md pl-3xl pr-md text-on-surface placeholder-placeholder-gray-600 transition-all focus:ring-1 focus:ring-brand-orange focus:border-brand-orange outline-none h-12 text-body-md"
             />
@@ -78,6 +131,8 @@ const Register = () => {
               type={showPassword ? "text" : "password"}
               required
               placeholder="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="block w-full bg-input-bg border border-border-subtle rounded-2xl py-md pl-3xl pr-3xl text-on-surface placeholder-placeholder-gray-600 transition-all focus:ring-1 focus:ring-brand-orange focus:border-brand-orange outline-none h-12 text-body-md"
             />
             {/* JS Alterna visibilidad de la contrasena entre texto y password */}
@@ -117,13 +172,24 @@ const Register = () => {
             </label>
           </div>
 
+          {/* TW Bloque de alerta con el error del registro */}
+          {error && (
+            <div
+              role="alert"
+              className="rounded-2xl border border-report-red-text/40 bg-report-red-bg px-md py-sm"
+            >
+              <p className="text-body-sm font-medium text-report-red-text">{error}</p>
+            </div>
+          )}
+
           {/* TW Boton Registrarse */}
           <div className="pt-lg pb-md">
             <button
               type="submit"
-              className="w-full h-[68px] bg-brand-orange rounded-[16px] text-brand-dark-text font-bold text-label-lg uppercase tracking-wider transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-button flex items-center justify-center hover:brightness-110"
+              disabled={loading}
+              className="w-full h-[68px] bg-brand-orange rounded-[16px] text-brand-dark-text font-bold text-label-lg uppercase tracking-wider transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-button flex items-center justify-center hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Registrarse
+              {loading ? "Registrando..." : "Registrarse"}
             </button>
           </div>
         </form>

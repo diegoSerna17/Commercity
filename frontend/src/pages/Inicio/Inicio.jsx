@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay, EffectFade } from "swiper/modules";
 import FichaProducto from "../../components/inicio/FichaProducto";
 import Header from "../../components/globales/Header";
 import Reportar from "../../components/inicio/Reportar";
+import { listarProductos } from "../../services/productos.service.js";
+import { API_BASE_URL } from "../../constants/config.js";
 
 import "swiper/css";
 import "swiper/css/pagination";
@@ -40,121 +42,111 @@ const heroSlides = [
   },
 ];
 
-const productsData = [
-  {
-    id: 1,
-    name: "Zapatillas Urban Red",
-    category: "Calzado",
-    originalPrice: 138890,
-    price: 125000,
-    precioBase: 138890,
-    descuento: 10,
-    stock: 45,
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&auto=format&fit=crop",
-    imageAlt: "Zapatillas urbanas rojas",
-    description: "Zapatillas de alto rendimiento con amortiguacion avanzada. Ideales para uso diario, entrenamientos y recorridos urbanos con suela antideslizante.",
-    vendedorId: "juan_giraldo",
-    vendedorNombre: "Juan_Giraldo",
-    vendedorAvatar: "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true",
-    badge: "-10%",
-    badgeBg: "bg-figma-accent-blue",
-  },
-  {
-    id: 2,
-    name: "Auriculares Studio Pro",
-    category: "Tecnologia",
-    originalPrice: null,
-    price: 299000,
-    precioBase: 299000,
-    descuento: 0,
-    stock: 18,
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&auto=format&fit=crop",
-    imageAlt: "Auriculares de estudio",
-    description: "Auriculares premium con sonido envolvente, cancelacion pasiva de ruido y almohadillas comodas para sesiones largas.",
-    vendedorId: "juan_giraldo",
-    vendedorNombre: "Juan_Giraldo",
-    vendedorAvatar: "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true",
-    badge: null,
-    badgeBg: null,
-  },
-  {
-    id: 3,
-    name: "Calzado Heritage High",
-    category: "Calzado",
-    originalPrice: 126670,
-    price: 95000,
-    precioBase: 126670,
-    descuento: 25,
-    stock: 22,
-    image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=900&auto=format&fit=crop",
-    imageAlt: "Calzado heritage high",
-    description: "Tenis altos con diseño clasico, costuras reforzadas y plantilla suave para combinar estilo urbano con comodidad.",
-    vendedorId: "juan_giraldo",
-    vendedorNombre: "Juan_Giraldo",
-    vendedorAvatar: "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true",
-    badge: "-25%",
-    badgeBg: "bg-figma-accent-blue",
-  },
-  {
-    id: 4,
-    name: "Mochila City Stealth",
-    category: "Accesorios",
-    originalPrice: 83160,
-    price: 79000,
-    precioBase: 83160,
-    descuento: 5,
-    stock: 31,
-    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=900&auto=format&fit=crop",
-    imageAlt: "Mochila negra urbana",
-    description: "Mochila urbana resistente al uso diario, con compartimentos internos para portatil, accesorios y objetos personales.",
-    vendedorId: "juan_giraldo",
-    vendedorNombre: "Juan_Giraldo",
-    vendedorAvatar: "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true",
-    badge: "-5%",
-    badgeBg: "bg-figma-accent-blue",
-  },
-  {
-    id: 5,
-    name: "Reloj Elitist Gold",
-    category: "Accesorios",
-    originalPrice: null,
-    price: 345000,
-    precioBase: 345000,
-    descuento: 0,
-    stock: 9,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&auto=format&fit=crop",
-    imageAlt: "Reloj dorado elegante",
-    description: "Reloj elegante con acabado dorado, correa resistente y un diseno minimalista para ocasiones casuales o formales.",
-    vendedorId: "juan_giraldo",
-    vendedorNombre: "Juan_Giraldo",
-    vendedorAvatar: "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true",
-    badge: null,
-    badgeBg: null,
-  },
-  {
-    id: 6,
-    name: "Set Botánico Urban",
-    category: "Hogar",
-    originalPrice: 56250,
-    price: 45000,
-    precioBase: 56250,
-    descuento: 20,
-    stock: 16,
-    image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=900&auto=format&fit=crop",
-    imageAlt: "Set botanico urbano",
-    description: "Set decorativo botanico para interiores con macetas compactas, ideal para escritorios, salas y espacios pequenos.",
-    vendedorId: "juan_giraldo",
-    vendedorNombre: "Juan_Giraldo",
-    vendedorAvatar: "https://ui-avatars.com/api/?name=Juan+Giraldo&background=1a1a26&color=fff&bold=true&size=80&rounded=true",
-    badge: "-20%",
-    badgeBg: "bg-figma-accent-blue",
-  },
-];
+// JS Cantidad de productos que se piden por pagina a la API.
+const LIMITE_PRODUCTOS = 12;
+
+// JS Imagen de respaldo cuando el producto no tiene imagen publicada.
+const PRODUCTO_IMAGE_FALLBACK =
+  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&auto=format&fit=crop";
+
+// JS El backend devuelve rutas relativas (/uploads/...); se resuelven contra la API.
+function resolverImagen(imagen) {
+  if (!imagen) return PRODUCTO_IMAGE_FALLBACK;
+  if (/^https?:\/\//i.test(imagen)) return imagen;
+  return `${API_BASE_URL}${imagen}`;
+}
+
+// JS Avatar por defecto cuando el vendedor no tiene foto de perfil.
+function resolverAvatar(vendedor) {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    vendedor || "Vendedor"
+  )}&background=1a1a26&color=fff&bold=true&size=80&rounded=true`;
+}
+
+// JS Traduce el producto de la API al shape que consumen la tarjeta y FichaProducto.
+function mapearProducto(producto) {
+  const descuento = Number(producto.descuento_porcentaje) || 0;
+  const precio = Number(producto.precio) || 0;
+
+  return {
+    id: producto.id,
+    name: producto.nombre,
+    category: producto.categoria,
+    // JS Los precios monetarios se muestran sin decimales (COP)
+    price: Math.round(precio),
+    precioBase: Math.round(precio),
+    descuento,
+    stock: Number(producto.stock) || 0,
+    image: resolverImagen(producto.imagen),
+    imageAlt: producto.nombre,
+    description: producto.descripcion,
+    vendedorId: producto.vendedor_id,
+    vendedorNombre: producto.vendedor,
+    vendedorAvatar: producto.vendedor_foto || resolverAvatar(producto.vendedor),
+    badge: descuento > 0 ? `-${descuento}%` : null,
+    badgeBg: descuento > 0 ? "bg-figma-accent-blue" : null,
+  };
+}
+
+// JS Precio final con el descuento aplicado (misma formula del backend).
+function calcularPrecioFinal(producto) {
+  if (!producto.descuento) return producto.price;
+  return Math.round(producto.precioBase - (producto.precioBase * producto.descuento) / 100);
+}
 
 const Hero = () => {
   const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [mostrarReportar, setMostrarReportar] = useState(false);
+
+  // RE Estado del catalogo real: productos, paginacion, carga y error
+  const [productos, setProductos] = useState([]);
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [totalProductos, setTotalProductos] = useState(0);
+  const [hayPaginaSiguiente, setHayPaginaSiguiente] = useState(false);
+  const [cargando, setCargando] = useState(true);
+  const [cargandoMas, setCargandoMas] = useState(false);
+  const [error, setError] = useState("");
+
+  // JS Consulta el catalogo paginado contra GET /api/productos
+  const cargarProductos = useCallback(async (numeroPagina) => {
+    const primeraCarga = numeroPagina === 1;
+    if (primeraCarga) setCargando(true);
+    else setCargandoMas(true);
+    setError("");
+
+    try {
+      const res = await listarProductos({ page: numeroPagina, limit: LIMITE_PRODUCTOS });
+      const data = res.data || {};
+      const nuevos = (data.productos || []).map(mapearProducto);
+
+      setProductos((actuales) => (primeraCarga ? nuevos : [...actuales, ...nuevos]));
+      setPagina(data.pagina ?? numeroPagina);
+      setTotalPaginas(data.totalPaginas ?? 1);
+      setTotalProductos(data.totalProductos ?? nuevos.length);
+      setHayPaginaSiguiente(Boolean(data.hayPaginaSiguiente));
+    } catch (err) {
+      // Sin status significa que la peticion no llego al servidor
+      setError(
+        err.status
+          ? err.message || "No se pudieron cargar los productos"
+          : "No se pudo conectar con el servidor. Verifica que el backend este activo."
+      );
+      if (primeraCarga) setProductos([]);
+    } finally {
+      setCargando(false);
+      setCargandoMas(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    cargarProductos(1);
+  }, [cargarProductos]);
+
+  const cargarMasProductos = () => {
+    if (hayPaginaSiguiente && !cargandoMas) cargarProductos(pagina + 1);
+  };
 
   return (
     <div className="flex min-h-screen md:min-h-0 overflow-hidden bg-surface-container-lowest font-sans">
@@ -341,9 +333,81 @@ const Hero = () => {
             role="list"
             aria-labelledby="products-heading"
           >
-            {productsData.map((product) => (
+            {cargando && (
+              <div
+                className="col-span-full flex flex-col items-center justify-center gap-3 py-16"
+                role="status"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-bounce"
+                    style={{ animationDelay: "0ms" }}
+                  />
+                  <div
+                    className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <div
+                    className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  />
+                </div>
+                <span
+                  className="text-xs font-medium tracking-wide uppercase"
+                  style={{ color: "var(--color-brand-muted-text)" }}
+                >
+                  Cargando productos...
+                </span>
+              </div>
+            )}
+
+            {!cargando && error && (
+              <div
+                className="col-span-full flex flex-col items-center justify-center gap-4 rounded-3xl border px-4 py-16 text-center"
+                style={{
+                  borderColor: "var(--color-border-subtle)",
+                  backgroundColor: "var(--color-auth-card-bg)",
+                }}
+              >
+                <p className="text-sm md:text-base" style={{ color: "var(--color-on-surface)" }}>
+                  {error}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => cargarProductos(1)}
+                  className="px-6 py-2.5 rounded-full text-sm font-semibold transition-opacity hover:opacity-90"
+                  style={{
+                    backgroundColor: "var(--color-brand-orange)",
+                    color: "var(--color-brand-dark-text)",
+                  }}
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
+
+            {!cargando && !error && productos.length === 0 && (
+              <div
+                className="col-span-full flex flex-col items-center justify-center gap-2 rounded-3xl border px-4 py-16 text-center"
+                style={{
+                  borderColor: "var(--color-border-subtle)",
+                  backgroundColor: "var(--color-auth-card-bg)",
+                }}
+              >
+                <p className="text-sm md:text-base font-semibold" style={{ color: "var(--color-on-surface)" }}>
+                  No hay productos disponibles por ahora
+                </p>
+                <p className="text-xs md:text-sm" style={{ color: "var(--color-brand-muted-text)" }}>
+                  Vuelve mas tarde para ver las novedades de la ciudad.
+                </p>
+              </div>
+            )}
+
+            {!cargando &&
+              !error &&
+              productos.map((product) => (
               <article
-                key={product.name}
+                key={product.id}
                 role="listitem"
                 className="group relative rounded-3xl overflow-hidden flex flex-col transition-all duration-500 hover:-translate-y-2"
                 style={{
@@ -428,19 +492,19 @@ const Hero = () => {
                   </div>
 
                   <div className="flex items-baseline gap-2.5 mt-1.5">
-                    {product.originalPrice && (
+                    {product.descuento > 0 && (
                       <span
                         className="text-sm font-medium line-through"
                         style={{ color: "var(--color-brand-muted-text)" }}
                       >
-                        ${product.originalPrice.toLocaleString("es-CO")}
+                        ${product.precioBase.toLocaleString("es-CO")}
                       </span>
                     )}
                     <span
                       className="text-lg lg:text-xl font-bold"
                       style={{ color: "var(--color-brand-orange)" }}
                     >
-                      ${product.price.toLocaleString("es-CO")}
+                      ${Math.round(calcularPrecioFinal(product)).toLocaleString("es-CO")}
                     </span>
                   </div>
 
@@ -480,57 +544,72 @@ const Hero = () => {
             ))}
           </div>
 
-          <div className="flex justify-center mt-8 sm:hidden">
-            <button
-              className="px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
-              style={{
-                border: "1px solid var(--color-border-subtle)",
-                color: "var(--color-brand-orange)",
-              }}
-            >
-              Ver todos los productos
-            </button>
-          </div>
+          {hayPaginaSiguiente && !cargando && !error && (
+            <div className="flex justify-center mt-8 sm:hidden">
+              <button
+                type="button"
+                onClick={cargarMasProductos}
+                disabled={cargandoMas}
+                className="px-6 py-2.5 rounded-full text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{
+                  border: "1px solid var(--color-border-subtle)",
+                  color: "var(--color-brand-orange)",
+                }}
+              >
+                {cargandoMas ? "Cargando..." : "Cargar mas productos"}
+              </button>
+            </div>
+          )}
         </section>
 
-        {/* Loading */}
-        <div className="flex flex-col items-center justify-center gap-4 px-4 pb-16 md:pb-20">
-          <div className="flex items-center gap-3">
+        {/* Paginacion del catalogo */}
+        {!cargando && !error && productos.length > 0 && (
+          <div className="flex flex-col items-center justify-center gap-4 px-4 pb-16 md:pb-20">
+            <span
+              className="text-xs font-medium tracking-wide uppercase"
+              style={{ color: "var(--color-brand-muted-text)" }}
+            >
+              Mostrando {productos.length} de {totalProductos} productos
+            </span>
             <div
-              className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-bounce"
-              style={{ animationDelay: "0ms" }}
-            />
-            <div
-              className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-bounce"
-              style={{ animationDelay: "150ms" }}
-            />
-            <div
-              className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-bounce"
-              style={{ animationDelay: "300ms" }}
-            />
+              className="w-32 h-1 rounded-full overflow-hidden"
+              style={{
+                backgroundColor: "var(--color-surface-container-high)",
+              }}
+              role="progressbar"
+              aria-valuenow={pagina}
+              aria-valuemin={1}
+              aria-valuemax={totalPaginas}
+              aria-label="Pagina del catalogo"
+            >
+              <div
+                className="h-full rounded-full transition-all duration-700 ease-out"
+                style={{
+                  width: `${Math.min((pagina / totalPaginas) * 100, 100)}%`,
+                  backgroundColor: "var(--color-brand-orange)",
+                }}
+              />
+            </div>
+            {hayPaginaSiguiente ? (
+              <button
+                type="button"
+                onClick={cargarMasProductos}
+                disabled={cargandoMas}
+                className="hidden sm:block px-6 py-2.5 rounded-full text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{
+                  border: "1px solid var(--color-border-subtle)",
+                  color: "var(--color-brand-orange)",
+                }}
+              >
+                {cargandoMas ? "Cargando piezas..." : "Cargar mas productos"}
+              </button>
+            ) : (
+              <span className="text-xs" style={{ color: "var(--color-brand-muted-text)" }}>
+                Has visto todo el catalogo
+              </span>
+            )}
           </div>
-          <span
-            className="text-xs font-medium tracking-wide uppercase"
-            style={{ color: "var(--color-brand-muted-text)" }}
-          >
-            Cargando más piezas...
-          </span>
-          <div
-            className="w-32 h-1 rounded-full overflow-hidden"
-            style={{
-              backgroundColor: "var(--color-surface-container-high)",
-            }}
-            role="progressbar"
-            aria-valuenow={33}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div
-              className="w-1/3 h-full rounded-full animate-pulse"
-              style={{ backgroundColor: "var(--color-brand-orange)" }}
-            />
-          </div>
-        </div>
+        )}
       </main>
 
       {selectedProduct && (
