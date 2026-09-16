@@ -33,7 +33,7 @@ Referencia de calidad del backend central: suite completa 307/307 tests; cobertu
 | Carlos Perea | Seguidores (5.5, RF106) | controllers/routes/test + evidencias nuevas | CERRADA | Unit 15/15 (central) + E2E real: seguir seguido_id=2 200, siguiendo 200 [Vendedor id 2], dejar de seguir 200, listado final 0 (usuario 493) |
 | Juan Sebastian Cabrera | Carrito/Pedidos/Historial (5.6) | documentacion corregida + evidencia E2E nueva | CERRADA | Unit 48/48 (carrito 19 + pedidos 18 + historial 11) + E2E real: carrito 200 (resumen subtotal_global/total), pedidos/resumen (subtotal 16806.72, iva 3193.28, total 20000), confirmar-pago 201 (pedido 87, distribucion_90_10), cancelar 200 (detalle 122, stock 7->6->7) |
 | Brandon Perea | Calificaciones/Admin/Reportes (5.7) | clon backend + E2E | CERRADA POR EL LIDER | Clon no integrable (ver 4.4); modulo central validado con E2E real 14/14 (evidencia-E2E-calificaciones-admin-reportes.md) |
-| Sebastian Banguera | Modulo Escritorio (Electron) | PDF manual tecnico v2.0.0 | EN CORRECCION | Documentacion corregida por el lider; sin codigo ni evidencia E2E (ver seccion 4.5) |
+| Sebastian Banguera | Modulo Escritorio (Electron) | PDF manual tecnico v2.0.0 | EN CORRECCION | Documentacion corregida por el lider; repo oficial existente como maqueta (BLACK-CODE-JSB/VOCETO-E-COMERCITY-SENA-ADSO-35, push 22/08) pero sin cliente API (api.js) ni evidencia E2E (ver seccion 4.5) |
 | Cristian Rosero | Backend Productos | PDF + mocks | NO APROBADA | Controllers mock sin BD (productos vacios, stock fijo); modulo central ya implementado y validado por el lider (E2E real 5/09); tarea asumida |
 | Jary Lizeth | QA tests y contratos (5.8) | mini-app Usuarios | REORIENTAR | Patron correcto pero alcance incumplido: demo del modulo usuarios (tarea de Vidal); la tarea 5.8 exige QA de la suite central. QA del sprint 1 completo por el lider: 307/307 |
 | Diego Serna | Frontend Web (chat/notificaciones) | rama prueba-backend | VALIDADA (pendiente integracion) | Frontend compatible con la API central (1:1 con rutas RF99-RF104); rama corregida (puerto 3000, sin node_modules/uploads). Integracion a commercycity/main pendiente con Diego/Yepes |
@@ -82,8 +82,8 @@ Nota completa: `AVANCES/.../BRANDON/REVISION_ENTREGA_BRANDON_2026-09-07.md`.
 Nota completa: `AVANCES/.../SEBASTIAN/REVISION_ENTREGA_SEBASTIAN_2026-09-07.md`.
 
 - Positivo: arquitectura Offline-First correcta (Electron + apiService); parametros de conexion ya correctos (localhost:3000, `commercy_v2`).
-- Hallazgos: (1) carrito documentado sin `comprador_id`; (2) IVA/90-10 atribuido al GET /carrito (corresponde a /api/pedidos/*); (3) sin codigo de `src/api.js` en AVANCES ni en su repo oficial (repo de escritorio VACIO); (4) sin evidencia E2E; (5) matriz RF con numeracion antigua (RF47/RF131; oficial RF48/RF120/RF121/RF140).
-- Correcciones requeridas: ajustar `src/api.js` al contrato canonico del anexo; subir el codigo del modulo; ejecutar E2E real contra `commercy_v2` con el backend en 3000 y adjuntar capturas.
+- Hallazgos: (1) carrito documentado sin `comprador_id`; (2) IVA/90-10 atribuido al GET /carrito (corresponde a /api/pedidos/*); (3) sin `src/api.js` en AVANCES ni en el repo oficial de escritorio (`BLACK-CODE-JSB/VOCETO-E-COMERCITY-SENA-ADSO-35`, que SI existe: Electron con main.js, src/app.js, index.html, styles.css y HANDOFF.md, ultimo push 22/08, pero como maqueta con usuarios en memoria, sin cliente API); (4) sin evidencia E2E; (5) matriz RF con numeracion antigua (RF47/RF131; oficial RF48/RF120/RF121/RF140).
+- Correcciones requeridas: ajustar `src/api.js` al contrato canonico del anexo; subir el cliente API (apiService) al repo de escritorio; reemplazar los usuarios en memoria por login real; ejecutar E2E real contra `commercity_v2` con el backend en 3000 y adjuntar capturas.
 
 ## 5. Pendientes
 
