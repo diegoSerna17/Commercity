@@ -21,6 +21,27 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+
+## 2026-09-16 - FIX: normalizar imagenes rotas del catalogo de productos
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/db/012_normalizar_imagenes_productos.sql
+- **Descripcion**: migracion de datos con respaldo productos_imagenes_bkp_20260913 que sustituye por picsum.photos (semilla = id del producto) las imagenes nulas, vacias, de example.com, de /uploads o de Unsplash sin parametros de query. Diagnostico previo: 250 URL de Unsplash con IDs inexistentes (404/ERR_BLOCKED_BY_ORB), 2 de example.com y 1 PNG 1x1.
+- **Motivo**: el catalogo conectado a la API real mostraba tarjetas sin imagen cargable.
+- **Requerimientos**: RF78, RF79, RF87-RF94
+- **Evidencia**: migracion con consulta de verificacion (0 filas invalidas esperadas) y rollback documentado; pendiente de aplicar sobre commercity_v2.
+- **Estado**: En revision (pendiente de aplicar y verificar en BD real)
+
+## 2026-09-16 - DOCS: notas de integracion web y sincronizacion de main (reemplazo)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: rama merge-web-main; frontend/; backend/; informes/CHANGELOG.md
+- **Descripcion**: se documenta la estrategia de sincronizacion por reemplazo: partir de commercycity/main, integrar el frontend conectado a la API desde feature/web-integracion-api y el backend central limpio de origin/main, excluyendo node_modules y uploads. La publicacion en commercycity/main queda supeditada al visto bueno de Diego/Yepes.
+- **Motivo**: el PR contra main exigia resolucion masiva de conflictos por historiales divergentes; se opta por una rama de reemplazo que preserve el backend central probado y el frontend integrado.
+- **Requerimientos**: N/A (integracion/versionado)
+- **Evidencia**: preflight local aislado: npm run build del frontend OK (1815 modulos, dist 537.18 kB); vitest del backend 313/313 en 21 archivos; 0 archivos generados (node_modules/uploads) en el arbol.
+- **Estado**: En revision (pendiente visto bueno y push a commercycity/main)
+
 ## 2026-09-13 - FEAT: integracion del frontend web a la API real (rama feature/web-integracion-api)
 
 - **Autor**: Daniel Palacios
