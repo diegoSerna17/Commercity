@@ -20,6 +20,17 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+
+## 2026-09-13 - FEAT: integracion del frontend web a la API real (rama feature/web-integracion-api)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: rama feature/web-integracion-api (worktree C:\Users\dpalaciosr\commercity-web): frontend/src/constants/config.js; frontend/src/services/productos.service.js; frontend/src/pages/Inicio/Inicio.jsx; frontend/src/pages/IniciarSesion/Registro.jsx; frontend/src/components/globales/RutaProtegidaAdmin.jsx; frontend/src/App.jsx; frontend/src/pages/Administrador/PanelControl.jsx
+- **Descripcion**: catalogo de Inicio conectado a GET /api/productos (con paginacion real y sin mocks), registro real contra POST /api/usuarios/register con auto-login, guard de administrador para /admin y /admin/dashboard, API_BASE_URL por defecto en 3000 y correccion de mojibake en el panel admin.
+- **Motivo**: la rama prueba-backend tenia catalogo mock y registro sin implementar, lo que impedia el cierre de la Fase 2 (pantallas del alcance con datos reales).
+- **Requerimientos**: RF87-RF94 (catalogo), RF1-RF4 (registro), RNF de seguridad (control de acceso admin)
+- **Evidencia**: navegador contra backend real en 3000 -> /api/productos 200 con 312 productos, 12 tarjetas y paginacion page=2 a 24; guard admin redirige a /login; sin errores CORS.
+- **Estado**: Completado
+
 ## 2026-09-13 - FIX: CORS para los tres clientes (Electron y Capacitor)
 
 - **Autor**: Daniel Palacios
