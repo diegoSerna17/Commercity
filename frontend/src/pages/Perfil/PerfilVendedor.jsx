@@ -240,6 +240,20 @@ export default function PerfilVendedor() {
 
   const toggleFollow = () => setIsFollowing((p) => !p);
 
+  const recargarSeguidores = async () => {
+    const [resSiguiendo, resSeguidores] = await Promise.all([
+      listarSiguiendo(),
+      listarSeguidores(),
+    ]);
+
+    setSiguiendo(
+      (Array.isArray(resSiguiendo?.data) ? resSiguiendo.data : []).map(mapearUsuarioSocial)
+    );
+    setSeguidores(
+      (Array.isArray(resSeguidores?.data) ? resSeguidores.data : []).map(mapearUsuarioSocial)
+    );
+  };
+
   /**
    * Recarga los productos propios del vendedor desde la API (RF54)
    * y actualiza la grilla con los datos reales del backend.
@@ -915,6 +929,7 @@ export default function PerfilVendedor() {
           datos={{ usuario: nombrePerfil, seguidores, siguiendo }}
           initialTab="seguidores"
           onClose={() => setMostrarSeguidores(false)}
+          onChanged={recargarSeguidores}
         />
       )}
     </div>

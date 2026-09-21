@@ -26,7 +26,7 @@ function Avatar({ usuario }) {
   );
 }
 
-export default function SeguidoresModal({ datos, initialTab = "seguidores", onClose }) {
+export default function SeguidoresModal({ datos, initialTab = "seguidores", onClose, onChanged }) {
   const [tabActiva, setTabActiva] = useState(initialTab);
   const [busqueda, setBusqueda] = useState("");
   // Estado por fila de la accion seguir / dejar de seguir: { cargando, siguiendo, error }
@@ -102,6 +102,7 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
           ...previas,
           [usuario.id]: { siguiendo: false, cargando: false, error: "" },
         }));
+        onChanged?.();
       } else {
         try {
           await seguirUsuario(usuario.id);
@@ -113,6 +114,7 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
           ...previas,
           [usuario.id]: { siguiendo: true, cargando: false, error: "" },
         }));
+        onChanged?.();
       }
     } catch (err) {
       setAcciones((previas) => ({
