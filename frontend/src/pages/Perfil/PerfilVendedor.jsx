@@ -1,74 +1,36 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "../../components/globales/Header";
 import AgregarProducto from "../../components/perfil/AgregarProducto";
 import SeguidoresModal from "../../components/perfil/SeguidoresModal";
-import { perfilVendedorSocial } from "../../data/perfilVendedorSocial";
 import { getCurrentUser } from "../../api/client.js";
+import { API_BASE_URL } from "../../constants/config.js";
+import {
+  actualizarProducto,
+  crearProducto,
+  listarMisProductos,
+} from "../../services/productos.service.js";
+import {
+  listarSeguidores,
+  listarSiguiendo,
+} from "../../services/seguidores.service.js";
 
 const BIO_MAX_LENGTH = 180;
+
+// JS Imagen de respaldo cuando el producto no tiene imagen publicada.
+const PRODUCTO_IMAGE_FALLBACK = (id) =>
+  `https://picsum.photos/seed/cc${id}/400/400`;
+
+// JS Avatar de respaldo cuando el usuario no tiene foto de perfil.
+const AVATAR_FALLBACK = "https://picsum.photos/seed/avatar1/400/400";
+
+// JS Color de fondo de las iniciales en las listas de seguidores.
+const AVATAR_COLOR = "#32324d";
 
 const STAR_PATH =
   "M2.86875 14.25L4.0875 8.98125L0 5.4375L5.4 4.96875L7.5 0L9.6 4.96875L15 5.4375L10.9125 8.98125L12.1313 14.25L7.5 11.4563L2.86875 14.25Z";
 const PENCIL_PATH =
   "M1.66667 13.3333H2.85417L11 5.1875L9.8125 4L1.66667 12.1458V13.3333ZM0 15V11.4583L11 0.479167C11.1667 0.326389 11.3507 0.208333 11.5521 0.125C11.7535 0.0416667 11.9653 0 12.1875 0C12.4097 0 12.625 0.0416667 12.8333 0.125C13.0417 0.208333 13.2222 0.333333 13.375 0.5L14.5208 1.66667C14.6875 1.81944 14.809 2 14.8854 2.20833C14.9618 2.41667 15 2.625 15 2.83333C15 3.05556 14.9618 3.26736 14.8854 3.46875C14.809 3.67014 14.6875 3.85417 14.5208 4.02083L3.54167 15H0ZM13.3333 2.83333L12.1667 1.66667L13.3333 2.83333ZM10.3958 4.60417L9.8125 4L11 5.1875L10.3958 4.60417Z";
-
-const PRODUCTS = [
-  {
-    id: 1,
-    name: "Bolso Boutique",
-    originalPrice: "$138.880",
-    price: "$125.000",
-    discount: "-10%",
-    image: "https://picsum.photos/seed/bolso1/400/400",
-    bgColor: "#f1f1f4",
-  },
-  {
-    id: 2,
-    name: "Cuadro Decorativo Minimalista",
-    originalPrice: null,
-    price: "$29.000",
-    discount: null,
-    image: "https://picsum.photos/seed/cuadro1/400/400",
-    bgColor: "#f1f1f4",
-  },
-  {
-    id: 3,
-    name: "Cuadro Decorativo",
-    originalPrice: "$6.000",
-    price: "$25.000",
-    discount: "-25%",
-    image: "https://picsum.photos/seed/cuadro3/400/400",
-    bgColor: "#f1f1f4",
-  },
-  {
-    id: 4,
-    name: "Bascula de Oro",
-    originalPrice: "$4.000",
-    price: "$40.000",
-    discount: "-20%",
-    image: "https://picsum.photos/seed/bascula1/400/400",
-    bgColor: "#f1f1f4",
-  },
-  {
-    id: 5,
-    name: "Bascula de Oro",
-    originalPrice: "$4.000",
-    price: "$40.000",
-    discount: "-20%",
-    image: "https://picsum.photos/seed/bascula2/400/400",
-    bgColor: "#f1f1f4",
-  },
-  {
-    id: 6,
-    name: "Cuadro Decorativo",
-    originalPrice: "$6.000",
-    price: "$25.000",
-    discount: "-25%",
-    image: "https://picsum.photos/seed/cuadro4/400/400",
-    bgColor: "#f1f1f4",
-  },
-];
 
 const TABS = [
   { id: "mis-productos", label: "Mis Productos" },
@@ -76,9 +38,93 @@ const TABS = [
   { id: "resenas", label: "Reseñas" },
 ];
 
+/**
+ * Resuelve una ruta de archivo del backend a una URL absoluta.
+ * @param {string|null|undefined} ruta Ruta relativa (/uploads/x.jpg) o URL absoluta
+ * @returns {string|null} URL lista para usar en un src, o null si no hay ruta
+ */
+function resolverUrlArchivo(ruta) {
+  if (!ruta) return null;
+  if (/^https?:\/\//i.test(ruta)) return ruta;
+  return `${API_BASE_URL}${ruta}`;
+}
+
+/**
+ * Imagen del producto: usa la del backend o una de respaldo estable por id.
+ * @param {string|null|undefined} imagenUrl
+ * @param {number|string} id
+ * @returns {string}
+ */
+function resolverImagenProducto(imagenUrl, id) {
+  return resolverUrlArchivo(imagenUrl) ?? PRODUCTO_IMAGE_FALLBACK(id);
+}
+
+/**
+ * Formatea un valor monetario en pesos sin decimales.
+ * @param {number} valor
+ * @returns {string} Ej: "$125.000"
+ */
+function formatearPrecio(valor) {
+  return "$" + Math.round(valor).toLocaleString("es-CO");
+}
+
+/**
+ * Extrae la lista de productos de la respuesta de /api/productos/mis-productos,
+ * que puede venir como array directo o envuelta en la propiedad productos.
+ * @param {object|null|undefined} respuesta
+ * @returns {Array<object>}
+ */
+function extraerListaProductos(respuesta) {
+  if (Array.isArray(respuesta?.data)) return respuesta.data;
+  return respuesta?.data?.productos ?? [];
+}
+
+/**
+ * Traduce el producto de /api/productos/mis-productos al shape de la tarjeta.
+ * Conserva el producto original en "raw" para precargar la edicion (RF49).
+ * @param {object} producto
+ */
+function mapearProducto(producto) {
+  const descuento = Number(producto.descuento_porcentaje) || 0;
+  const precio = Number(producto.precio) || 0;
+  const precioConDescuento = precio * (1 - descuento / 100);
+
+  return {
+    id: producto.id,
+    name: producto.nombre,
+    originalPrice: descuento > 0 ? formatearPrecio(precio) : null,
+    price: formatearPrecio(descuento > 0 ? precioConDescuento : precio),
+    discount: descuento > 0 ? `-${Math.round(descuento)}%` : null,
+    image: resolverImagenProducto(producto.imagen_url, producto.id),
+    bgColor: "#f1f1f4",
+    raw: producto,
+  };
+}
+
+/**
+ * Traduce un usuario de la API de seguidores al shape del SeguidoresModal.
+ * @param {{id: number, nombre_completo: string, foto_perfil: string|null}} usuario
+ */
+function mapearUsuarioSocial(usuario) {
+  const nombreCompleto = (usuario.nombre_completo || "").trim();
+  const primerNombre = nombreCompleto.split(/\s+/)[0] || "";
+
+  return {
+    id: usuario.id,
+    nombre: nombreCompleto || "Usuario",
+    usuario: "@" + primerNombre.toLowerCase(),
+    avatar: resolverUrlArchivo(usuario.foto_perfil),
+    inicial: (nombreCompleto.charAt(0) || "U").toUpperCase(),
+    color: AVATAR_COLOR,
+  };
+}
+
 export default function PerfilVendedor() {
   const currentUser = getCurrentUser();
   const nombrePerfil = currentUser?.nombre_completo || "Usuario";
+  const [productos, setProductos] = useState([]);
+  const [seguidores, setSeguidores] = useState([]);
+  const [siguiendo, setSiguiendo] = useState([]);
   const [activeTab, setActiveTab] = useState("mis-productos");
   const [sellerRatingSum, setSellerRatingSum] = useState(0);
   const [sellerRatingCount, setSellerRatingCount] = useState(0);
@@ -90,15 +136,62 @@ export default function PerfilVendedor() {
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState("");
   const [avatarSrc, setAvatarSrc] = useState(
-    "https://picsum.photos/seed/avatar1/400/400"
+    () => resolverUrlArchivo(currentUser?.foto_perfil) ?? AVATAR_FALLBACK
   );
   const [avatarError, setAvatarError] = useState(false);
   const [brokenImages, setBrokenImages] = useState({});
   const [mostrarAgregarProducto, setMostrarAgregarProducto] = useState(false);
+  const [productoEnEdicion, setProductoEnEdicion] = useState(null);
   const [mostrarSeguidores, setMostrarSeguidores] = useState(false);
 
   const avatarInputRef = useRef(null);
   const textareaRef = useRef(null);
+
+  useEffect(() => {
+    let activo = true;
+
+    /**
+     * Carga en paralelo los productos y las relaciones sociales del vendedor
+     * autenticado. Si una peticion falla se registra el error y esa lista
+     * queda vacia, de modo que el perfil siga visible.
+     */
+    const cargarDatosPerfil = async () => {
+      const [resProductos, resSiguiendo, resSeguidores] = await Promise.all([
+        listarMisProductos().catch((error) => {
+          console.error("No se pudieron cargar los productos del vendedor:", error);
+          return null;
+        }),
+        listarSiguiendo().catch((error) => {
+          console.error("No se pudo cargar la lista de seguidos:", error);
+          return null;
+        }),
+        listarSeguidores().catch((error) => {
+          console.error("No se pudo cargar la lista de seguidores:", error);
+          return null;
+        }),
+      ]);
+
+      if (!activo) return;
+
+      const listaProductos = extraerListaProductos(resProductos);
+      const listaSiguiendo = Array.isArray(resSiguiendo?.data)
+        ? resSiguiendo.data
+        : [];
+      const listaSeguidores = Array.isArray(resSeguidores?.data)
+        ? resSeguidores.data
+        : [];
+
+      setProductos(listaProductos.map(mapearProducto));
+      setSiguiendo(listaSiguiendo.map(mapearUsuarioSocial));
+      setSeguidores(listaSeguidores.map(mapearUsuarioSocial));
+    };
+
+    cargarDatosPerfil();
+
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   const sellerAverage =
     sellerRatingCount === 0 ? 5 : sellerRatingSum / sellerRatingCount;
@@ -147,12 +240,38 @@ export default function PerfilVendedor() {
 
   const toggleFollow = () => setIsFollowing((p) => !p);
 
-  const handleAgregarProducto = async (formData) => {
-    console.log("Producto agregado:", Object.fromEntries(formData));
-    setMostrarAgregarProducto(false);
+  /**
+   * Recarga los productos propios del vendedor desde la API (RF54)
+   * y actualiza la grilla con los datos reales del backend.
+   */
+  const recargarProductos = async () => {
+    const respuesta = await listarMisProductos();
+    setProductos(extraerListaProductos(respuesta).map(mapearProducto));
   };
 
+  /**
+   * Crea el producto en la API (POST /api/productos, RF45/RF46/RF48) y
+   * recarga la lista real de productos propios.
+   * @param {object} datos Campos del producto
+   * @param {File} imagen Imagen seleccionada
+   */
+  const handleAgregarProducto = async (datos, imagen) => {
+    const respuesta = await crearProducto(datos, imagen);
+    await recargarProductos();
+    return respuesta;
+  };
 
+  /**
+   * Actualiza el producto en edicion (PUT /api/productos/:id, RF49) y
+   * recarga la lista real de productos propios.
+   * @param {object} datos Campos modificados
+   * @param {File|null} imagen Nueva imagen (opcional)
+   */
+  const handleActualizarProducto = async (datos, imagen) => {
+    const respuesta = await actualizarProducto(productoEnEdicion.id, datos, imagen);
+    await recargarProductos();
+    return respuesta;
+  };
 
   return (
     <div
@@ -355,7 +474,7 @@ export default function PerfilVendedor() {
                       color: "var(--color-on-surface)",
                     }}
                   >
-                    {perfilVendedorSocial.seguidores.length}
+                    {seguidores.length}
                   </p>
                   <p
                     style={{
@@ -385,7 +504,7 @@ export default function PerfilVendedor() {
                       color: "var(--color-on-surface)",
                     }}
                   >
-                    {perfilVendedorSocial.siguiendo.length}
+                    {siguiendo.length}
                   </p>
                   <p
                     style={{
@@ -412,7 +531,7 @@ export default function PerfilVendedor() {
                       color: "var(--color-on-surface)",
                     }}
                   >
-                    {PRODUCTS.length}
+                    {productos.length}
                   </p>
                   <p
                     style={{
@@ -660,7 +779,7 @@ export default function PerfilVendedor() {
             gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
           }}
         >
-          {PRODUCTS.map((p) => (
+          {productos.map((p) => (
             <div
               key={p.id}
               className="rounded-2xl overflow-hidden cursor-pointer transition-shadow"
@@ -711,6 +830,7 @@ export default function PerfilVendedor() {
                 {isMisProductos && (
                   <button
                     title="Editar producto"
+                    onClick={() => setProductoEnEdicion(p.raw)}
                     className="absolute top-3 right-3 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
                     style={{
                       width: "31px",
@@ -782,9 +902,17 @@ export default function PerfilVendedor() {
         />
       )}
 
+      {productoEnEdicion && (
+        <AgregarProducto
+          producto={productoEnEdicion}
+          onCancel={() => setProductoEnEdicion(null)}
+          onSubmit={handleActualizarProducto}
+        />
+      )}
+
       {mostrarSeguidores && (
         <SeguidoresModal
-          datos={perfilVendedorSocial}
+          datos={{ usuario: nombrePerfil, seguidores, siguiendo }}
           initialTab="seguidores"
           onClose={() => setMostrarSeguidores(false)}
         />

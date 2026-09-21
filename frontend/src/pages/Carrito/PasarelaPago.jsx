@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { confirmarPago } from "../../services/pedidos.service.js";
 
 function IconoTarjeta() {
   return (
@@ -22,18 +23,18 @@ function formatPeso(valor) {
   return "$" + Math.round(valor).toLocaleString("es-CO");
 }
 
-export default function PasarelaPago({ productos, onCancelar, onPagoExitoso }) {
+export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
   const [numeroTarjeta, setNumeroTarjeta] = useState("");
   const [nombreTarjeta, setNombreTarjeta] = useState("");
+  const [direccionEnvio, setDireccionEnvio] = useState("");
   const [pagado, setPagado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState("");
 
-  const precioPublicadoTotal = productos.reduce(
-    (acc, p) => acc + p.precioUnitario * p.cantidad,
-    0
-  );
-
-  const subtotal = precioPublicadoTotal / 1.19;
-  const iva = subtotal * 0.19;
+  // Desglose real de IVA 19% calculado por el backend (RF113/RF114).
+  const subtotal = totales?.subtotal ?? 0;
+  const iva = totales?.iva ?? 0;
+  const total = totales?.total ?? 0;
 
   function manejarNumeroTarjeta(e) {
     const solo = e.target.value.replace(/\D/g, "").slice(0, 16);
@@ -41,9 +42,30 @@ export default function PasarelaPago({ productos, onCancelar, onPagoExitoso }) {
     setNumeroTarjeta(grupos);
   }
 
-  function manejarPago(e) {
+  // RF118/RF134: confirma el pago y crea el pedido contra la API real.
+  async function manejarPago(e) {
     e.preventDefault();
-    setPagado(true);
+    setError("");
+
+    if (direccionEnvio.trim().length < 5) {
+      setError("Ingresa una dirección de envío válida (mínimo 5 caracteres)");
+      return;
+    }
+
+    setEnviando(true);
+    try {
+      await confirmarPago({
+        direccion_envio: direccionEnvio.trim(),
+        metodo_pago: "tarjeta",
+        numero_tarjeta: numeroTarjeta.replace(/\s/g, ""),
+        nombre_tarjeta: nombreTarjeta.trim(),
+      });
+      setPagado(true);
+    } catch (err) {
+      setError(err.message || "No se pudo procesar el pago");
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
@@ -141,11 +163,40 @@ export default function PasarelaPago({ productos, onCancelar, onPagoExitoso }) {
                 </div>
               </div>
 
+              <div>
+                <p className="text-brand-muted-text text-xs font-extrabold uppercase tracking-widest mb-2">
+                  Dirección de envío
+                </p>
+                <input
+                  type="text"
+                  placeholder="Dirección completa de entrega"
+                  value={direccionEnvio}
+                  onChange={(e) => setDireccionEnvio(e.target.value)}
+                  required
+                  minLength={5}
+                  className="w-full bg-input-bg border border-surface-container-high rounded-card px-4 py-3.5 text-on-surface placeholder:text-brand-muted-text text-base outline-none focus:border-brand-orange transition-colors"
+                />
+              </div>
+
+              <div className="flex justify-between items-center bg-input-bg rounded-card px-5 py-4">
+                <span className="font-bold text-on-surface text-base">Total a pagar</span>
+                <span className="font-bold text-brand-orange text-base">
+                  {formatPeso(total)}
+                </span>
+              </div>
+
+              {error && (
+                <p className="text-report-red-text text-sm font-medium text-center">
+                  {error}
+                </p>
+              )}
+
               <button
                 type="submit"
-                className="w-full bg-brand-orange text-brand-dark-text font-bold text-lg py-4 rounded-card-lg shadow-lg hover:bg-primary-container active:scale-95 transition-all duration-150"
+                disabled={enviando}
+                className="w-full bg-brand-orange text-brand-dark-text font-bold text-lg py-4 rounded-card-lg shadow-lg hover:bg-primary-container active:scale-95 transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Total a Pagar {formatPeso(precioPublicadoTotal)}
+                {enviando ? "Procesando pago..." : `Total a Pagar ${formatPeso(total)}`}
               </button>
 
               <button

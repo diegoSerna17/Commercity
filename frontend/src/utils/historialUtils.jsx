@@ -7,6 +7,7 @@ export function EstadoBadge({ estado, withBorder = false }) {
       border: withBorder ? "border border-secondary-fixed-dim/40" : "",
     },
     Pendiente: { bg: "bg-error-container/20", text: "text-error", border: withBorder ? "border border-error/40" : "" },
+    Cancelado: { bg: "bg-surface-container/40", text: "text-brand-muted-text", border: withBorder ? "border border-brand-muted-text/40" : "" },
   };
   const c = configs[estado] || { bg: "bg-surface-container/30", text: "text-brand-muted-text", border: "" };
 

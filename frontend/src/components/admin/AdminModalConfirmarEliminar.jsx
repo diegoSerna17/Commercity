@@ -1,5 +1,12 @@
 import { IconTrashRed } from "./AdminIcons";
 
+// Sustantivo de cada entidad para el mensaje de confirmacion.
+const NOMBRES_TIPO = {
+  Usuario: "al usuario",
+  Producto: "el producto",
+  Reporte: "el reporte",
+};
+
 export default function AdminModalConfirmarEliminar({
   tipo = "Usuario",
   nombre,
@@ -27,7 +34,7 @@ export default function AdminModalConfirmarEliminar({
 
         {/* RE Mensaje de confirmacion con nombre resaltado */}
         <p className="text-sm font-sans leading-relaxed text-brand-muted-text">
-          Seguro que quieres eliminar {tipo === "Usuario" ? "al usuario" : "el producto"}{" "}
+          Seguro que quieres eliminar {NOMBRES_TIPO[tipo] || "el registro"}{" "}
           <span className="font-bold text-white">
             {nombre}
           </span>

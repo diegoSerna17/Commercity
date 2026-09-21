@@ -1,7 +1,15 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Header from "../../components/globales/Header";
 import PasarelaPago from "./PasarelaPago";
+import { getCurrentUser } from "../../api/client.js";
+import {
+  eliminarProducto,
+  listarCarrito,
+  modificarCantidad,
+} from "../../services/carrito.service.js";
+import { obtenerResumenPedido } from "../../services/pedidos.service.js";
 
+/** Icono de la accion eliminar producto del carrito. */
 function IconoEliminar() {
   return (
     <svg width="18" height="20" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -16,79 +24,105 @@ function IconoEliminar() {
   );
 }
 
-function IconoZapato() {
+/** Icono de respaldo para productos que no tienen imagen cargada. */
+function IconoProducto() {
   return (
     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand-muted-text)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 18h1.4c.5 0 .9-.3 1.1-.8L7 9h10l2.6 7.6c.2.5.6.4 1.1.4H22" />
-      <path d="M7 9V6a2 2 0 0 1 2-2h2" />
-      <circle cx="16" cy="9" r="1" fill="var(--color-brand-muted-text)" stroke="none" />
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+      <path d="M3 6h18" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
     </svg>
   );
 }
-
-function IconoAuriculares() {
-  return (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand-muted-text)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 14h2a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a7 7 0 0 1 14 0v7a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h2" />
-    </svg>
-  );
-}
-
-const iconosPorTipo = {
-  zapato: { Icono: IconoZapato, colorFondo: "#eef0ff" },
-  auricular: { Icono: IconoAuriculares, colorFondo: "var(--color-input-bg)" },
-};
-
-const productosIniciales = [
-  {
-    id: 1,
-    nombre: "Zapatos Deportivos",
-    categoria: "Calzado",
-    precioUnitario: 79000,
-    precioOriginal: 83000,
-    cantidad: 1,
-    tipo: "zapato",
-  },
-  {
-    id: 2,
-    nombre: "Auriculares Studio Pro",
-    categoria: "Tecnología",
-    precioUnitario: 299000,
-    precioOriginal: null,
-    cantidad: 2,
-    tipo: "auricular",
-  },
-];
 
 function formatPeso(valor) {
   return "$" + Math.round(valor).toLocaleString("es-CO");
 }
 
 export default function Carrito() {
-  const [productos, setProductos] = useState(productosIniciales);
+  // El comprador sale de la sesion (login real); el carrito no usa JWT, usa id.
+  const compradorId = getCurrentUser()?.id;
+  const [productos, setProductos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
   const [mostrarPago, setMostrarPago] = useState(false);
+  const [totales, setTotales] = useState(null);
 
-  function sumar(id) {
-    setProductos((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, cantidad: p.cantidad + 1 } : p))
-    );
+  /** Carga el carrito real desde GET /api/carrito y aplana los grupos. */
+  const cargarCarrito = useCallback(async () => {
+    if (!compradorId) {
+      setProductos([]);
+      setCargando(false);
+      setError("Inicia sesión para ver tu carrito");
+      return;
+    }
+
+    setCargando(true);
+    try {
+      const res = await listarCarrito(compradorId);
+      const items = (res.data?.vendedores ?? []).flatMap((vendedor) =>
+        vendedor.items.map((item) => ({
+          id: item.producto_id,
+          nombre: item.nombre,
+          vendedor: vendedor.vendedor_nombre,
+          precioUnitario: item.precio_final,
+          precioOriginal: item.descuento_porcentaje > 0 ? item.precio : null,
+          cantidad: item.cantidad,
+          imagenUrl: item.imagen_url,
+        }))
+      );
+      setProductos(items);
+      setError("");
+    } catch (err) {
+      setProductos([]);
+      setError(err.message || "No se pudo cargar el carrito");
+    } finally {
+      setCargando(false);
+    }
+  }, [compradorId]);
+
+  useEffect(() => {
+    cargarCarrito();
+  }, [cargarCarrito]);
+
+  async function cambiarCantidad(productoId, cantidad) {
+    if (cantidad < 1) {
+      return eliminar(productoId);
+    }
+    try {
+      await modificarCantidad(compradorId, productoId, cantidad);
+      await cargarCarrito();
+    } catch (err) {
+      setError(err.message || "No se pudo actualizar la cantidad");
+    }
   }
 
-  function restar(id) {
-    setProductos((prev) =>
-      prev
-        .map((p) => (p.id === id ? { ...p, cantidad: p.cantidad - 1 } : p))
-        .filter((p) => p.cantidad > 0)
-    );
+  async function eliminar(productoId) {
+    try {
+      await eliminarProducto(compradorId, productoId);
+      await cargarCarrito();
+    } catch (err) {
+      setError(err.message || "No se pudo eliminar el producto");
+    }
   }
 
-  function eliminar(id) {
-    setProductos((prev) => prev.filter((p) => p.id !== id));
+  /** Abre la pasarela con los totales reales de GET /api/pedidos/resumen. */
+  async function abrirPasarela() {
+    try {
+      const res = await obtenerResumenPedido();
+      setTotales(res.data?.totales ?? null);
+      setError("");
+      setMostrarPago(true);
+    } catch (err) {
+      setError(err.message || "No se pudo obtener el resumen del pedido");
+    }
   }
 
+  /** Tras el pago confirmado el backend ya vacio el carrito: solo se recarga. */
   function finalizarCompra() {
-    setProductos([]);
     setMostrarPago(false);
+    setTotales(null);
+    cargarCarrito();
   }
 
   const totalArticulos = productos.reduce(
@@ -111,12 +145,6 @@ export default function Carrito() {
 
   const carritoVacio = productos.length === 0;
 
-  const productosParaPago = productos.map((p) => ({
-    nombre: p.nombre,
-    cantidad: p.cantidad,
-    precioUnitario: p.precioUnitario,
-  }));
-
   return (
     <div className="flex h-dvh bg-surface-container-lowest overflow-hidden">
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -129,7 +157,17 @@ export default function Carrito() {
               Carrito de Compras
             </h1>
 
-            {carritoVacio ? (
+            {error && (
+              <p className="text-report-red-text font-medium text-sm mb-4">
+                {error}
+              </p>
+            )}
+
+            {cargando ? (
+              <div className="flex flex-col items-center py-20 text-brand-muted-text gap-4">
+                <p className="text-lg font-semibold">Cargando tu carrito...</p>
+              </div>
+            ) : carritoVacio ? (
               <div className="flex flex-col items-center py-20 text-brand-muted-text gap-4">
                 <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand-muted-text)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
@@ -140,7 +178,6 @@ export default function Carrito() {
             ) : (
               <div className="flex flex-col gap-4 mb-8">
                 {productos.map((producto) => {
-                  const { Icono, colorFondo } = iconosPorTipo[producto.tipo] ?? iconosPorTipo.zapato;
                   const precioLinea = producto.precioUnitario * producto.cantidad;
                   const precioOriginalLinea = producto.precioOriginal
                     ? producto.precioOriginal * producto.cantidad
@@ -160,11 +197,16 @@ export default function Carrito() {
                       </button>
 
                       <div className="flex items-center gap-4 pr-8 sm:pr-0 sm:flex-1 min-w-0">
-                        <div
-                          className="flex-shrink-0 w-[70px] h-[70px] flex items-center justify-center rounded-card"
-                          style={{ backgroundColor: colorFondo }}
-                        >
-                          <Icono />
+                        <div className="flex-shrink-0 w-[70px] h-[70px] flex items-center justify-center rounded-card overflow-hidden bg-input-bg">
+                          {producto.imagenUrl ? (
+                            <img
+                              src={producto.imagenUrl}
+                              alt={producto.nombre}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <IconoProducto />
+                          )}
                         </div>
 
                         <div className="flex-1 min-w-0">
@@ -172,7 +214,7 @@ export default function Carrito() {
                             {producto.nombre}
                           </p>
                           <p className="text-brand-muted-text font-extrabold text-sm mb-1">
-                            {producto.categoria}
+                            {producto.vendedor}
                           </p>
                           <div className="flex items-center gap-3 flex-wrap">
                             <span className="text-brand-orange font-medium text-lg">
@@ -195,7 +237,9 @@ export default function Carrito() {
                         </span>
                         <div className="flex items-center">
                           <button
-                            onClick={() => restar(producto.id)}
+                            onClick={() =>
+                              cambiarCantidad(producto.id, producto.cantidad - 1)
+                            }
                             className="w-9 h-9 sm:w-8 sm:h-8 bg-input-bg border-2 border-figma-divider text-on-surface font-medium text-xl flex items-center justify-center hover:bg-surface-container-highest active:scale-95 transition-all"
                           >
                             −
@@ -204,7 +248,9 @@ export default function Carrito() {
                             {producto.cantidad}
                           </div>
                           <button
-                            onClick={() => sumar(producto.id)}
+                            onClick={() =>
+                              cambiarCantidad(producto.id, producto.cantidad + 1)
+                            }
                             className="w-9 h-9 sm:w-8 sm:h-8 bg-input-bg border-2 border-figma-divider text-on-surface font-medium text-xl flex items-center justify-center hover:bg-surface-container-highest active:scale-95 transition-all"
                           >
                             +
@@ -217,7 +263,7 @@ export default function Carrito() {
               </div>
             )}
 
-            {!carritoVacio && (
+            {!cargando && !carritoVacio && (
               <>
                 <div className="h-px bg-figma-divider mb-5" />
 
@@ -253,7 +299,7 @@ export default function Carrito() {
                 </div>
 
                 <button
-                  onClick={() => setMostrarPago(true)}
+                  onClick={abrirPasarela}
                   className="w-full bg-brand-orange text-brand-dark-text font-bold text-xl sm:text-2xl py-4 rounded-hero shadow-lg hover:bg-primary-container active:scale-95 transition-all duration-150"
                 >
                   Comprar
@@ -267,7 +313,7 @@ export default function Carrito() {
 
       {mostrarPago && (
         <PasarelaPago
-          productos={productosParaPago}
+          totales={totales}
           onCancelar={() => setMostrarPago(false)}
           onPagoExitoso={finalizarCompra}
         />

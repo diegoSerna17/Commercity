@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Search, X } from "lucide-react";
 
 import { formatSocialCount } from "../../data/perfilVendedorSocial";
+import { dejarDeSeguir, seguirUsuario } from "../../services/seguidores.service.js";
 
 function Avatar({ usuario }) {
   if (usuario.avatar) {
@@ -28,6 +29,8 @@ function Avatar({ usuario }) {
 export default function SeguidoresModal({ datos, initialTab = "seguidores", onClose }) {
   const [tabActiva, setTabActiva] = useState(initialTab);
   const [busqueda, setBusqueda] = useState("");
+  // Estado por fila de la accion seguir / dejar de seguir: { cargando, siguiendo, error }
+  const [acciones, setAcciones] = useState({});
   const buscadorRef = useRef(null);
 
   useEffect(() => {
@@ -47,7 +50,9 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
     };
   }, [onClose]);
 
-  const fuente = tabActiva === "seguidores" ? datos.seguidores : datos.siguiendo;
+  const listaSeguidores = datos?.seguidores ?? [];
+  const listaSiguiendo = datos?.siguiendo ?? [];
+  const fuente = tabActiva === "seguidores" ? listaSeguidores : listaSiguiendo;
   const busquedaNormalizada = busqueda.trim().toLowerCase();
   const filtrados = fuente.filter(
     (usuario) =>
@@ -59,6 +64,73 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
     setTabActiva(tab);
     setBusqueda("");
   }
+
+  // En la pestana "siguiendo" el usuario ya lo sigue; en "seguidores" se asume
+  // que aun no (la API no expone el estado de seguimiento en estas listas).
+  function estaSiguiendo(usuario) {
+    const estado = acciones[usuario.id];
+    if (estado) return estado.siguiendo;
+    return tabActiva === "siguiendo";
+  }
+
+  /**
+   * Alterna el seguimiento contra la API (RF106).
+   * El 409 de POST /api/seguidores significa "ya lo sigues": se refleja como
+   * estado ya seguido, sin tratarlo como error. De igual forma, el 404 de
+   * DELETE significa que ya no lo seguías.
+   * @param {{id: number, nombre: string}} usuario
+   */
+  async function alternarSeguimiento(usuario) {
+    const estadoActual = acciones[usuario.id];
+    if (estadoActual?.cargando) return;
+
+    const siguiendo = estaSiguiendo(usuario);
+    setAcciones((previas) => ({
+      ...previas,
+      [usuario.id]: { siguiendo, cargando: true, error: "" },
+    }));
+
+    try {
+      if (siguiendo) {
+        try {
+          await dejarDeSeguir(usuario.id);
+        } catch (err) {
+          // 404: ya no lo seguías, el estado deseado ya esta aplicado.
+          if (err.status !== 404) throw err;
+        }
+        setAcciones((previas) => ({
+          ...previas,
+          [usuario.id]: { siguiendo: false, cargando: false, error: "" },
+        }));
+      } else {
+        try {
+          await seguirUsuario(usuario.id);
+        } catch (err) {
+          // 409: ya seguías a este usuario, se refleja como seguido.
+          if (err.status !== 409) throw err;
+        }
+        setAcciones((previas) => ({
+          ...previas,
+          [usuario.id]: { siguiendo: true, cargando: false, error: "" },
+        }));
+      }
+    } catch (err) {
+      setAcciones((previas) => ({
+        ...previas,
+        [usuario.id]: {
+          siguiendo,
+          cargando: false,
+          error: err.message || "No se pudo actualizar el seguimiento",
+        },
+      }));
+    }
+  }
+
+  // MENSAJE Lista vacia segun la pestana activa (API real sin registros).
+  const mensajeVacio =
+    tabActiva === "seguidores"
+      ? "Aun no tienes seguidores"
+      : "Aun no sigues a ningun usuario";
 
   return createPortal(
     <div
@@ -77,7 +149,7 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
           <div className="flex items-center justify-between border-b border-figma-divider px-padding-lg py-4 shrink-0">
             <span className="w-8" />
             <h2 id="seguidores-title" className="text-headline-sm font-bold text-brand-orange">
-              {datos.usuario}
+              {datos?.usuario}
             </h2>
             <button
               onClick={() => onClose?.()}
@@ -97,7 +169,7 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
                   : "border-transparent text-brand-muted-text hover:text-on-surface"
               }`}
             >
-              Seguidores {formatSocialCount(datos.seguidores.length)}
+              Seguidores {formatSocialCount(listaSeguidores.length)}
             </button>
             <button
               onClick={() => cambiarTab("siguiendo")}
@@ -107,7 +179,7 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
                   : "border-transparent text-brand-muted-text hover:text-on-surface"
               }`}
             >
-              Siguiendo {formatSocialCount(datos.siguiendo.length)}
+              Siguiendo {formatSocialCount(listaSiguiendo.length)}
             </button>
           </div>
 
@@ -126,29 +198,57 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
             </label>
           </div>
 
-          {filtrados.length === 0 ? (
+          {fuente.length === 0 ? (
+            <p className="px-padding-lg py-padding-2xl text-center text-body-sm text-brand-muted-text">
+              {mensajeVacio}
+            </p>
+          ) : filtrados.length === 0 ? (
             <p className="px-padding-lg py-padding-2xl text-center text-body-sm text-brand-muted-text">
               Sin resultados para tu busqueda
             </p>
           ) : (
             <ul className="min-h-[160px] flex-1 overflow-y-auto px-padding-sm py-padding-xs" role="list">
-              {filtrados.map((usuario) => (
-                <li
-                  key={usuario.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-card px-padding-sm py-2.5 transition-colors hover:bg-white/5"
-                  role="listitem"
-                >
-                  <Avatar usuario={usuario} />
-                  <div className="min-w-0">
-                    <span className="block truncate text-body-md font-bold text-on-surface">
-                      {usuario.nombre}
-                    </span>
-                    <span className="block truncate text-body-sm text-brand-muted-text">
-                      @{usuario.usuario}
-                    </span>
-                  </div>
-                </li>
-              ))}
+              {filtrados.map((usuario) => {
+                const estadoFila = acciones[usuario.id];
+                const siguiendo = estaSiguiendo(usuario);
+
+                return (
+                  <li
+                    key={usuario.id}
+                    className="flex cursor-pointer items-center gap-3 rounded-card px-padding-sm py-2.5 transition-colors hover:bg-white/5"
+                    role="listitem"
+                  >
+                    <Avatar usuario={usuario} />
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-body-md font-bold text-on-surface">
+                        {usuario.nombre}
+                      </span>
+                      <span className="block truncate text-body-sm text-brand-muted-text">
+                        {usuario.usuario}
+                      </span>
+                      {estadoFila?.error && (
+                        <span className="block text-body-sm text-error">{estadoFila.error}</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => alternarSeguimiento(usuario)}
+                      disabled={Boolean(estadoFila?.cargando)}
+                      className={`shrink-0 rounded-card border px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                        siguiendo
+                          ? "border-figma-divider bg-transparent text-brand-muted-text hover:bg-surface-container"
+                          : "border-brand-orange bg-brand-orange text-brand-dark-text hover:opacity-90"
+                      }`}
+                    >
+                      {estadoFila?.cargando
+                        ? "Guardando..."
+                        : siguiendo
+                          ? "Dejar de seguir"
+                          : "Seguir"}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "../../components/globales/Header";
-import { getCurrentUser, setCurrentUser } from "../../api/client.js";
-import { actualizarPerfil } from "../../services/usuarios.service.js";
+import {
+  getCurrentUser,
+  setCurrentUser,
+  clearToken,
+} from "../../api/client.js";
+import {
+  actualizarPerfil,
+  cambiarRol,
+  eliminarCuenta,
+} from "../../services/usuarios.service.js";
 
 function useToast() {
   const [toast, setToast] = useState({ visible: false, msg: "", isError: false });
@@ -47,24 +56,35 @@ const inputClass =
   "input-field bg-input-bg border-input-bg text-on-surface placeholder:text-brand-muted-text focus:ring-border-focus";
 
 export default function Ajustes() {
+  const navigate = useNavigate();
   const currentUser = getCurrentUser();
   const [usuario, setUsuario] = useState(currentUser?.nombre_completo || "");
   const [email] = useState(currentUser?.email || "");
+  // RE Roles del usuario autenticado (RF20/RF21: comprador <-> vendedor)
+  const [roles, setRoles] = useState(currentUser?.roles || []);
   const [guardandoNombre, setGuardandoNombre] = useState(false);
   const [direccion, setDireccion] = useState("");
   const [ciudad, setCiudad] = useState("");
   const [depto, setDepto] = useState("");
   const [modalEliminar, setModalEliminar] = useState(false);
+  const [modalRol, setModalRol] = useState(false);
+  const [enviandoRol, setEnviandoRol] = useState(false);
+  const [eliminandoCuenta, setEliminandoCuenta] = useState(false);
 
   const { toast: toastPersonal, showToast: showToastPersonal } = useToast();
   const { toast: toastDir, showToast: showToastDir } = useToast();
 
+  // JS Rol actual y rol destino del cambio (el backend solo acepta comprador/vendedor)
+  const esVendedor = roles.includes("vendedor");
+  const rolDestino = esVendedor ? "comprador" : "vendedor";
+
   useEffect(() => {
-    document.body.style.overflow = modalEliminar ? "hidden" : "";
+    const modalAbierto = modalEliminar || modalRol;
+    document.body.style.overflow = modalAbierto ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [modalEliminar]);
+  }, [modalEliminar, modalRol]);
 
   async function handlePersonal(event) {
     event.preventDefault();
@@ -100,12 +120,45 @@ export default function Ajustes() {
   }
 
   function handleVendedor() {
-    showToastPersonal("Felicidades, ya podras vender en CommerCity.");
+    setModalRol(true);
   }
 
-  function confirmarEliminar() {
-    setModalEliminar(false);
-    showToastPersonal("Cuenta eliminada. Hasta pronto.", true);
+  // JS Cambia el rol del usuario (RF20/RF21) y actualiza la sesion local
+  async function confirmarCambioRol() {
+    setEnviandoRol(true);
+    try {
+      const res = await cambiarRol(rolDestino);
+      const nuevosRoles = res.data?.roles || [rolDestino];
+      setRoles(nuevosRoles);
+
+      const usuarioActual = getCurrentUser();
+      if (usuarioActual) {
+        setCurrentUser({ ...usuarioActual, roles: nuevosRoles });
+      }
+
+      setModalRol(false);
+      showToastPersonal("Rol actualizado correctamente.");
+    } catch (err) {
+      // JS El backend responde 403 si es administrador (no puede autodegradarse)
+      setModalRol(false);
+      showToastPersonal(err.message || "No se pudo cambiar el rol.", true);
+    } finally {
+      setEnviandoRol(false);
+    }
+  }
+
+  // JS Elimina la cuenta del comprador (RF40) y cierra la sesion local
+  async function confirmarEliminar() {
+    setEliminandoCuenta(true);
+    try {
+      await eliminarCuenta();
+      clearToken();
+      navigate("/login");
+    } catch (err) {
+      setEliminandoCuenta(false);
+      setModalEliminar(false);
+      showToastPersonal(err.message || "No se pudo eliminar la cuenta.", true);
+    }
   }
 
   return (
@@ -247,18 +300,23 @@ export default function Ajustes() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-5 rounded-card border border-brand-orange bg-brand-orange/5 p-padding-lg mb-padding-xl shadow-lg">
               <div className="flex-1">
                 <h3 className="text-headline-sm font-bold text-on-surface mb-2">
-                  ¿Quieres vender en CommerCity?
+                  {esVendedor
+                    ? "Administra tu rol en CommerCity"
+                    : "¿Quieres vender en CommerCity?"}
                 </h3>
                 <p className="text-brand-muted-text text-body-sm font-medium leading-6">
-                  Crea tu tienda y construye tu futuro en CommerCity, llega a mas compradores en esta comunidad.
+                  {esVendedor
+                    ? "Si cambias a comprador perderas los permisos para publicar y gestionar tus productos."
+                    : "Crea tu tienda y construye tu futuro en CommerCity, llega a mas compradores en esta comunidad."}
                 </p>
               </div>
               <button
                 id="btn-vendedor"
                 onClick={handleVendedor}
-                className="shrink-0 rounded-button bg-gradient-to-r from-brand-orange to-tertiary-container px-6 py-3 text-body-sm font-bold text-brand-dark-text transition hover:opacity-90 active:scale-[0.99]"
+                disabled={enviandoRol}
+                className="shrink-0 rounded-button bg-gradient-to-r from-brand-orange to-tertiary-container px-6 py-3 text-body-sm font-bold text-brand-dark-text transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Cambiar a vendedor
+                {esVendedor ? "Cambiar a comprador" : "Cambiar a vendedor"}
               </button>
             </div>
 
@@ -273,14 +331,45 @@ export default function Ajustes() {
               </p>
               <button
                 onClick={() => setModalEliminar(true)}
-                className="rounded-card border border-report-red-text bg-report-red-bg px-6 py-3 text-body-sm font-bold text-report-red-text transition hover:bg-report-red-text hover:text-white"
+                disabled={eliminandoCuenta}
+                className="rounded-card border border-report-red-text bg-report-red-bg px-6 py-3 text-body-sm font-bold text-report-red-text transition hover:bg-report-red-text hover:text-white disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Eliminar Cuenta
+                {eliminandoCuenta ? "Eliminando..." : "Eliminar Cuenta"}
               </button>
             </div>
           </div>
         </section>
       </main>
+
+      {/* --- BACKDROP Y CONTENEDOR DEL MODAL DE CAMBIO DE ROL --- */}
+      <div className={`fixed inset-0 items-center justify-center bg-black/70 px-6 sm:px-10 z-[999999] ${modalRol ? "flex" : "hidden"}`} onClick={(event) => { if (event.target === event.currentTarget) setModalRol(false); }}>
+        <div className="w-full max-w-lg rounded-hero border border-brand-orange bg-auth-card-bg p-6 sm:p-10 shadow-2xl overflow-y-auto max-h-[90vh]">
+          <h4 className="text-headline-sm sm:text-headline-md font-bold text-on-surface mb-4">
+            {rolDestino === "vendedor" ? "¿Cambiar a vendedor?" : "¿Cambiar a comprador?"}
+          </h4>
+          <p className="text-brand-muted-text text-body-sm sm:text-body-md leading-6 mb-8">
+            {rolDestino === "vendedor"
+              ? "Podras publicar productos y gestionar tu tienda en CommerCity."
+              : "Dejaras de tener los permisos de vendedor para publicar y gestionar productos."}
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-5">
+            <button
+              onClick={() => setModalRol(false)}
+              className="flex-1 rounded-card border border-figma-divider bg-transparent px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-brand-muted-text transition hover:bg-input-bg"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmarCambioRol}
+              disabled={enviandoRol}
+              className="flex-1 rounded-card bg-gradient-to-r from-brand-orange to-tertiary-container px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-brand-dark-text transition hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {enviandoRol ? "Cambiando..." : "Si, cambiar rol"}
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* --- BACKDROP Y CONTENEDOR DEL MODAL MODIFICADO --- */}
       <div className={`fixed inset-0 items-center justify-center bg-black/70 px-6 sm:px-10 z-[999999] ${modalEliminar ? "flex" : "hidden"}`} onClick={(event) => { if (event.target === event.currentTarget) setModalEliminar(false); }}>
@@ -316,9 +405,10 @@ export default function Ajustes() {
             </button>
             <button
               onClick={confirmarEliminar}
-              className="flex-1 rounded-card bg-report-red-text px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-white transition hover:opacity-90"
+              disabled={eliminandoCuenta}
+              className="flex-1 rounded-card bg-report-red-text px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-white transition hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Si, eliminar cuenta
+              {eliminandoCuenta ? "Eliminando..." : "Si, eliminar cuenta"}
             </button>
           </div>
         </div>

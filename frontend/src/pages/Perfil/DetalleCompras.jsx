@@ -1,12 +1,16 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { formatCOP, calcSubtotal, calcIVA, calcTotal } from "../../utils/historialUtils.js";
+import { formatCOP } from "../../utils/historialUtils.js";
 import { EstadoBadge, Avatar } from "../../utils/historialUtils.jsx";
 
-export default function DetalleCompras({ order, onClose }) {
-  const subtotal = calcSubtotal(order.productos);
-  const iva = calcIVA(subtotal);
-  const total = calcTotal(subtotal);
+export default function DetalleCompras({
+  order,
+  onClose,
+  onCancelar,
+  cancelandoId,
+}) {
+  // JS Los totales vienen calculados por el backend (IVA 19% en vuelo, RF31).
+  const resumen = order.resumen ?? { subtotal: 0, iva: 0, total: 0 };
 
   useEffect(() => {
     function handleKeyDown(e) {
@@ -52,22 +56,38 @@ export default function DetalleCompras({ order, onClose }) {
           <p className="text-brand-muted-text font-bold text-xs sm:text-sm mb-2">Tu dirección de envío</p>
           <div className="bg-input-bg rounded-card px-3 sm:px-4 py-2 sm:py-3">
             <p className="text-on-surface font-semibold text-xs sm:text-sm">{order.direccion}</p>
-            <p className="text-brand-muted-text text-[11px] sm:text-xs mt-0.5">{order.ciudad}</p>
+            {order.ciudad && (
+              <p className="text-brand-muted-text text-[11px] sm:text-xs mt-0.5">{order.ciudad}</p>
+            )}
           </div>
         </div>
 
         <div className="px-4 sm:px-6 pb-3 sm:pb-4">
           <p className="text-brand-muted-text font-bold text-xs sm:text-sm mb-2">Productos comprados</p>
           <div className={productListClass}>
-            {order.productos.map((p, i) => (
-              <div key={i} className="px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2">
+            {order.productos.map((p) => (
+              <div key={p.detalleId} className="px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-on-surface font-semibold text-xs sm:text-sm">{p.nombre}</p>
-                  <p className="text-brand-muted-text text-[11px] sm:text-xs mt-0.5">Cantidad {p.cantidad}</p>
+                  <p className="text-brand-muted-text text-[11px] sm:text-xs mt-0.5">
+                    Cantidad {p.cantidad} · {p.estado}
+                  </p>
                 </div>
-                <span className="text-brand-orange font-extrabold text-xs sm:text-sm flex-shrink-0">
-                  {formatCOP(p.cantidad * p.precioUnit)}
-                </span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-brand-orange font-extrabold text-xs sm:text-sm">
+                    {formatCOP(p.cantidad * p.precioUnit)}
+                  </span>
+                  {/* RF135: solo las lineas en estado Pendiente se pueden cancelar */}
+                  {p.estado === "Pendiente" && (
+                    <button
+                      onClick={() => onCancelar?.(p.detalleId)}
+                      disabled={cancelandoId === p.detalleId}
+                      className="text-[11px] sm:text-xs font-bold text-error border border-error/40 rounded-full px-3 py-1 hover:bg-error/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {cancelandoId === p.detalleId ? "Cancelando..." : "Cancelar"}
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -76,14 +96,14 @@ export default function DetalleCompras({ order, onClose }) {
         <div className="px-6 pb-3">
           <div className="bg-input-bg border border-brand-orange rounded-card px-4 py-3 flex justify-between items-center">
             <span className="text-brand-muted-text font-bold text-sm">IVA incluido (%19)</span>
-            <span className="text-brand-orange font-extrabold text-base">{formatCOP(iva)}</span>
+            <span className="text-brand-orange font-extrabold text-base">{formatCOP(resumen.iva)}</span>
           </div>
         </div>
 
         <div className="px-6 pb-4">
           <div className="bg-sidebar-active-bg/70 border border-brand-orange rounded-card px-4 py-4 flex justify-between items-center">
             <span className="text-brand-muted-text font-bold text-base">Precio total del pedido</span>
-            <span className="text-brand-orange font-extrabold text-lg">{formatCOP(total)}</span>
+            <span className="text-brand-orange font-extrabold text-lg">{formatCOP(resumen.total)}</span>
           </div>
         </div>
 

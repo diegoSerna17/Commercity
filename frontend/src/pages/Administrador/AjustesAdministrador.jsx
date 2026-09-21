@@ -1,22 +1,56 @@
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
+import {
+  guardarMiCuentaBancaria,
+  obtenerMiCuentaBancaria,
+} from "../../services/admin.service.js";
+
+// Bancos ofrecidos en el selector; el valor es el que se guarda en la BD.
+const BANCOS = [
+  { valor: "bancolombia", etiqueta: "Bancolombia" },
+  { valor: "davivienda", etiqueta: "Davivienda" },
+  { valor: "bbva", etiqueta: "BBVA" },
+  { valor: "bogota", etiqueta: "Banco de Bogotá" },
+  { valor: "occidente", etiqueta: "Banco de Occidente" },
+  { valor: "nequi", etiqueta: "Nequi" },
+  { valor: "daviplata", etiqueta: "Daviplata" },
+];
+
+const VALORES_BANCOS = BANCOS.map((b) => b.valor);
+
+/**
+ * Traduce el error del backend a un mensaje para el usuario.
+ * Zod devuelve el detalle por campo en error.details.
+ */
+function mensajeDeError(error) {
+  const detalles = error?.data?.error?.details;
+  if (Array.isArray(detalles) && detalles.length > 0) {
+    const mensajes = detalles.map((d) => d.mensaje).filter(Boolean);
+    if (mensajes.length > 0) return mensajes.join(" ");
+  }
+  return error?.message || "No se pudo guardar la cuenta bancaria.";
+}
 
 function useToast() {
   const [toast, setToast] = useState({ visible: false, msg: "", isError: false });
   const timerRef = useRef(null);
 
-  function showToast(msg, isError = false) {
+  const showToast = useCallback((msg, isError = false) => {
     clearTimeout(timerRef.current);
     setToast({ visible: true, msg, isError });
     timerRef.current = setTimeout(() => {
       setToast((t) => ({ ...t, visible: false }));
     }, 3000);
-  }
+  }, []);
 
   return { toast, showToast };
 }
 
 export default function AjustesAdministrador({ onClose }) {
+  // RF75/RF76: la cuenta bancaria de Commercity se guarda en el backend cifrada.
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [registrado, setRegistrado] = useState(false);
   const [titular, setTitular] = useState("");
   const [banco, setBanco] = useState("");
   const [tipo, setTipo] = useState("");
@@ -24,13 +58,32 @@ export default function AjustesAdministrador({ onClose }) {
   const { toast, showToast } = useToast();
 
   useEffect(() => {
-    const datos = JSON.parse(localStorage.getItem("commercity_banco") || "null");
-    if (!datos) return;
-    setTitular(datos.titular || "");
-    setBanco(datos.banco || "");
-    setTipo(datos.tipo || "");
-    setNumero(datos.numero || "");
-  }, []);
+    let activo = true;
+
+    async function cargarCuenta() {
+      try {
+        const res = await obtenerMiCuentaBancaria();
+        const datos = res?.data?.datos;
+        if (!activo || !res?.data?.registrado || !datos) return;
+        setRegistrado(true);
+        setTitular(datos.titular_nombre || "");
+        setBanco(datos.banco || "");
+        setTipo(datos.tipo_cuenta || "");
+        setNumero(datos.numero_cuenta || "");
+      } catch (err) {
+        if (activo) {
+          showToast(err?.message || "No se pudo cargar la cuenta bancaria.", true);
+        }
+      } finally {
+        if (activo) setCargando(false);
+      }
+    }
+
+    cargarCuenta();
+    return () => {
+      activo = false;
+    };
+  }, [showToast]);
 
   function validar() {
     if (!titular.trim()) {
@@ -56,13 +109,27 @@ export default function AjustesAdministrador({ onClose }) {
     return true;
   }
 
-  function guardar() {
+  async function guardar() {
+    if (cargando || guardando) return;
     if (!validar()) return;
-    localStorage.setItem(
-      "commercity_banco",
-      JSON.stringify({ titular: titular.trim(), banco, tipo, numero: numero.trim() })
-    );
-    showToast("Cuenta bancaria guardada correctamente.", false);
+    setGuardando(true);
+    try {
+      const res = await guardarMiCuentaBancaria(
+        {
+          titular_nombre: titular.trim(),
+          banco,
+          tipo_cuenta: tipo,
+          numero_cuenta: numero.trim(),
+        },
+        { actualizar: registrado }
+      );
+      setRegistrado(true);
+      showToast(res?.message || "Cuenta bancaria guardada correctamente.", false);
+    } catch (err) {
+      showToast(mensajeDeError(err), true);
+    } finally {
+      setGuardando(false);
+    }
   }
 
   function handleKeyDown(e) {
@@ -118,7 +185,8 @@ export default function AjustesAdministrador({ onClose }) {
                 value={titular}
                 onChange={(e) => setTitular(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full"
+                disabled={cargando}
+                className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full disabled:opacity-60"
                 style={{
                   backgroundColor: "var(--color-surface-container-high)",
                   border: "1px solid var(--color-surface-container-high)",
@@ -135,7 +203,8 @@ export default function AjustesAdministrador({ onClose }) {
                   id="banco"
                   value={banco}
                   onChange={(e) => setBanco(e.target.value)}
-                  className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full appearance-none cursor-pointer"
+                  disabled={cargando}
+                  className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full appearance-none cursor-pointer disabled:opacity-60"
                   style={{
                     backgroundColor: "var(--color-surface-container-high)",
                     border: "1px solid var(--color-surface-container-high)",
@@ -143,13 +212,13 @@ export default function AjustesAdministrador({ onClose }) {
                   }}
                 >
                   <option value="" disabled>Selecciona un banco</option>
-                  <option value="bancolombia">Bancolombia</option>
-                  <option value="davivienda">Davivienda</option>
-                  <option value="bbva">BBVA</option>
-                  <option value="bogota">Banco de Bogotá</option>
-                  <option value="occidente">Banco de Occidente</option>
-                  <option value="nequi">Nequi</option>
-                  <option value="daviplata">Daviplata</option>
+                  {BANCOS.map((b) => (
+                    <option key={b.valor} value={b.valor}>{b.etiqueta}</option>
+                  ))}
+                  {/* Conserva el banco guardado cuando no esta en el listado */}
+                  {banco && !VALORES_BANCOS.includes(banco) && (
+                    <option value={banco}>{banco}</option>
+                  )}
                 </select>
                 <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -167,7 +236,8 @@ export default function AjustesAdministrador({ onClose }) {
                   id="tipo"
                   value={tipo}
                   onChange={(e) => setTipo(e.target.value)}
-                  className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full appearance-none cursor-pointer"
+                  disabled={cargando}
+                  className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full appearance-none cursor-pointer disabled:opacity-60"
                   style={{
                     backgroundColor: "var(--color-surface-container-high)",
                     border: "1px solid var(--color-surface-container-high)",
@@ -196,7 +266,8 @@ export default function AjustesAdministrador({ onClose }) {
                 value={numero}
                 onChange={(e) => setNumero(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full"
+                disabled={cargando}
+                className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full disabled:opacity-60"
                 style={{
                   backgroundColor: "var(--color-surface-container-high)",
                   border: "1px solid var(--color-surface-container-high)",
@@ -213,14 +284,15 @@ export default function AjustesAdministrador({ onClose }) {
           >
             <button
               onClick={guardar}
-              className="font-semibold text-sm rounded-3xl px-8 h-12 hover:brightness-110 active:scale-95 transition-all"
+              disabled={cargando || guardando}
+              className="font-semibold text-sm rounded-3xl px-8 h-12 hover:brightness-110 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               style={{
                 background: "linear-gradient(169deg, var(--color-brand-orange) 0%, #e08a0b 100%)",
                 color: "var(--color-brand-dark-text)",
                 fontFamily: "Poppins, sans-serif",
               }}
             >
-              Guardar cuenta bancaria
+              {guardando ? "Guardando..." : "Guardar cuenta bancaria"}
             </button>
           </div>
         </div>

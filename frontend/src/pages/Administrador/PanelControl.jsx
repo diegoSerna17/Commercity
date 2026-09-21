@@ -1,148 +1,138 @@
-﻿import { useState, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminModalConfirmarEliminar from "../../components/admin/AdminModalConfirmarEliminar";
 import AdminModalReporte from "../../components/admin/AdminModalReporte";
 import AjustesAdministrador from "./AjustesAdministrador";
+import { formatPrice } from "../../utils/formatPrice.js";
+import {
+  cambiarEstadoUsuarioAdmin,
+  eliminarProductoAdmin,
+  eliminarReporteAdmin,
+  eliminarUsuarioAdmin,
+  listarProductosAdmin,
+  listarReportesAdmin,
+  listarUsuariosAdmin,
+  obtenerStatsAdmin,
+  restaurarProductoAdmin,
+  resolverReporteAdmin,
+} from "../../services/admin.service.js";
 
-// JS Datos iniciales de usuarios mock
-const USUARIOS_INICIALES = [
-  { id: 1, nombre: "Carlos Martinez", rol: "Vendedor", estado: "activo" },
-  { id: 2, nombre: "Lucia Fernandez", rol: "Comprador", estado: "baneado" },
-  { id: 3, nombre: "Cristiano Ronaldo", rol: "Vendedor", estado: "activo" },
-  { id: 4, nombre: "Multigangas", rol: "Vendedor", estado: "activo" },
-  { id: 5, nombre: "Andres Torres", rol: "Comprador", estado: "activo" },
-  { id: 6, nombre: "Sara Rios", rol: "Vendedor", estado: "baneado" },
-];
-
-// JS Datos iniciales de productos mock
-const PRODUCTOS_INICIALES = [
-  { id: 1, nombre: "Teclado Gamer Pro", precio: "$55.000", vendedor: "Carlos Martinez" },
-  { id: 2, nombre: "Balon Trionda", precio: "$150.000", vendedor: "Natural Sport" },
-  { id: 3, nombre: "Zapatillas Converse", precio: "$250.000", vendedor: "Calzado Bucaramanga" },
-  { id: 4, nombre: "Buso Oversize", precio: "$70.000", vendedor: "La locura de los precios bajos" },
-  { id: 5, nombre: "Camiseta Colombia", precio: "$85.000", vendedor: "Multigangas" },
-  { id: 6, nombre: "Zapatillas NIKE F1", precio: "$320.000", vendedor: "SportZone" },
-];
-
-// JS Datos iniciales de reportes mock
-const REPORTES_INICIALES = [
-  {
-    id: 1, tipo: "usuario", reportado: "Julian Guerrero",
-    reportadoInfo: "Comprador · julian@mail.com",
-    reportadoPor: "Maria Lopez", reportadoPorInfo: "Vendedora · maria@mail.com",
-    fecha: "24 Oct, 2026", estado: "pendiente",
-    motivo: "Comportamiento inapropiado",
-    descripcion: "El usuario ha estado enviando mensajes ofensivos y amenazantes a varios vendedores de la plataforma durante los ultimos dias.",
-    evidencias: 3, respuesta: "",
-  },
-  {
-    id: 2, tipo: "producto", reportado: "Teclado Gamer Pro",
-    reportadoPrecio: "$55.000", reportadoVendedor: "Carlos Martinez",
-    reportadoPor: "Luis Perez", reportadoPorInfo: "Comprador · luis@mail.com",
-    fecha: "22 Oct, 2026", estado: "resuelto",
-    motivo: "Producto no corresponde a la descripcion",
-    descripcion: "El teclado recibido no tiene retroiluminacion como se anuncia en las fotos. Las especificaciones son incorrectas.",
-    evidencias: 2,
-    respuesta: "Se ha contactado al vendedor y se ha procedido a retirar el producto. Se emitio un reembolso al comprador.",
-  },
-  {
-    id: 3, tipo: "producto", reportado: "Camiseta Seleccion Colombia",
-    reportadoPrecio: "$85.000", reportadoVendedor: "Multigangas",
-    reportadoPor: "Pedro Gomez", reportadoPorInfo: "Comprador · pedro@mail.com",
-    fecha: "22 Oct, 2026", estado: "pendiente",
-    motivo: "Producto falsificado",
-    descripcion: "La camiseta recibida tiene costuras de mala calidad y la numeracion es incorrecta. Se sospecha que es una replica no autorizada.",
-    evidencias: 4, respuesta: "",
-  },
-  {
-    id: 4, tipo: "usuario", reportado: "Mario Alberto",
-    reportadoInfo: "Vendedor · mario@mail.com",
-    reportadoPor: "Clara Soto", reportadoPorInfo: "Compradora · clara@mail.com",
-    fecha: "20 Oct, 2026", estado: "pendiente",
-    motivo: "Fraude / Estafa",
-    descripcion: "El vendedor recibio el pago pero nunca despacho el producto. No responde mensajes y ha bloqueado al comprador.",
-    evidencias: 2, respuesta: "",
-  },
-  {
-    id: 5, tipo: "producto", reportado: "Zapatillas NIKE F1",
-    reportadoPrecio: "$320.000", reportadoVendedor: "SportZone",
-    reportadoPor: "Dominick Toreto", reportadoPorInfo: "Comprador · dom@mail.com",
-    fecha: "19 Oct, 2026", estado: "resuelto",
-    motivo: "Precio abusivo",
-    descripcion: "El precio del producto fue modificado despues de que el comprador realizo el pago, cobrando $120.000 adicionales.",
-    evidencias: 1,
-    respuesta: "Se ha bloqueado temporalmente al vendedor y se ha revertido el cobro adicional. El caso esta cerrado.",
-  },
-  {
-    id: 6, tipo: "usuario", reportado: "Dominick Toreto",
-    reportadoInfo: "Comprador · dom@mail.com",
-    reportadoPor: "Santiago Vega", reportadoPorInfo: "Vendedor · santi@mail.com",
-    fecha: "16 Oct, 2026", estado: "resuelto",
-    motivo: "Acoso al vendedor",
-    descripcion: "El comprador ha estado dejando resenas falsas y negativas repetidamente en todos los productos del vendedor.",
-    evidencias: 3,
-    respuesta: "Se han eliminado las resenas abusivas y se ha enviado una advertencia formal al usuario.",
-  },
-];
+// Formatea cifras y conteos en formato colombiano (COP, RF133).
+function formatearNumero(valor) {
+  return Number(valor || 0).toLocaleString("es-CO");
+}
 
 export default function PanelAdministrador() {
-  // RE Estados principales: usuarios, productos, reportes
-  const [usuarios, setUsuarios] = useState(USUARIOS_INICIALES);
-  const [productos, setProductos] = useState(PRODUCTOS_INICIALES);
-  const [reportes, setReportes] = useState(REPORTES_INICIALES);
+  // Datos del panel cargados desde /api/admin/*
+  const [stats, setStats] = useState(null);
+  const [usuarios, setUsuarios] = useState([]);
+  const [productos, setProductos] = useState([]);
+  const [reportes, setReportes] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
 
-  // RE Estados de busqueda y filtros
+  // Estados de busqueda y filtros
   const [buscarUsuarios, setBuscarUsuarios] = useState("");
   const [buscarProductos, setBuscarProductos] = useState("");
   const [buscarReportes, setBuscarReportes] = useState("");
   const [filtroReporte, setFiltroReporte] = useState("todo");
 
-  // RE Estado del modal de confirmacion para eliminar usuario
+  // Estado del modal de confirmacion para eliminar usuario
   const [modalEliminarUsuario, setModalEliminarUsuario] = useState({
     abierto: false,
     id: null,
-    nombreDesdeReporte: null,
+    desdeReporte: false,
   });
 
-  // RE Estado del modal de confirmacion para eliminar producto
+  // Estado del modal de confirmacion para eliminar producto
   const [modalEliminarProducto, setModalEliminarProducto] = useState({
     abierto: false,
     id: null,
-    nombreDesdeReporte: null,
+    desdeReporte: false,
   });
 
-  // RE Estado del modal de detalle de reporte
+  // Estado del modal de confirmacion para archivar un reporte
+  const [modalEliminarReporte, setModalEliminarReporte] = useState({
+    abierto: false,
+    id: null,
+  });
+
+  // Estado del modal de detalle de reporte
   const [modalReporte, setModalReporte] = useState({
     abierto: false,
     reporteId: null,
     modo: "ver",
   });
 
-  // RE Estado de baneos para usuarios reportados que no estan en la tabla de Usuarios
-  const [baneosExternos, setBaneosExternos] = useState({});
-
-  // RE Registro de usuarios y productos ya eliminados desde el modal de reporte
+  // Usuarios y productos sobre los que ya se actuo desde el modal de reporte,
+  // para reflejar la accion en la interfaz mientras se recargan los listados.
   const [usuariosEliminadosDesdeReporte, setUsuariosEliminadosDesdeReporte] = useState(new Set());
   const [productosEliminadosDesdeReporte, setProductosEliminadosDesdeReporte] = useState(new Set());
+
   const [mostrarAjustes, setMostrarAjustes] = useState(false);
 
-  // RE Derivado: reporte actualmente abierto en el modal
+  /**
+   * Carga estadisticas y los tres listados del panel en paralelo.
+   * @param {{silencioso?: boolean}} [opciones] true evita el estado de carga
+   */
+  const cargarDatos = useCallback(async ({ silencioso = false } = {}) => {
+    if (!silencioso) setCargando(true);
+    try {
+      const [statsRes, usuariosRes, productosRes, reportesRes] = await Promise.all([
+        obtenerStatsAdmin(),
+        listarUsuariosAdmin(),
+        listarProductosAdmin(),
+        listarReportesAdmin(),
+      ]);
+      setStats(statsRes?.data ?? null);
+      setUsuarios(usuariosRes?.data ?? []);
+      setProductos(productosRes?.data ?? []);
+      setReportes(reportesRes?.data ?? []);
+      setError("");
+    } catch (err) {
+      setError(err?.message || "No se pudieron cargar los datos del panel.");
+    } finally {
+      if (!silencioso) setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    cargarDatos();
+  }, [cargarDatos]);
+
+  /** Ejecuta una accion contra la API y recarga los listados. */
+  async function ejecutarAccion(accion, mensajeError) {
+    try {
+      await accion();
+      await cargarDatos({ silencioso: true });
+      return true;
+    } catch (err) {
+      setError(err?.message || mensajeError);
+      return false;
+    }
+  }
+
+  // Derivado: reporte actualmente abierto en el modal
   const reporteActual = useMemo(
     () => reportes.find((r) => r.id === modalReporte.reporteId) || null,
     [reportes, modalReporte.reporteId]
   );
 
-  // RE Derivado: listas filtradas para busquedas
+  // Derivado: listas filtradas para busquedas
   const usuariosFiltrados = useMemo(() => {
     const q = buscarUsuarios.toLowerCase();
     return usuarios.filter(
-      (u) => u.nombre.toLowerCase().includes(q) || u.rol.toLowerCase().includes(q)
+      (u) =>
+        (u.nombre || "").toLowerCase().includes(q) ||
+        (u.rol || "").toLowerCase().includes(q)
     );
   }, [usuarios, buscarUsuarios]);
 
   const productosFiltrados = useMemo(() => {
     const q = buscarProductos.toLowerCase();
     return productos.filter(
-      (p) => p.nombre.toLowerCase().includes(q) || p.vendedor.toLowerCase().includes(q)
+      (p) =>
+        (p.nombre || "").toLowerCase().includes(q) ||
+        (p.vendedor || "").toLowerCase().includes(q)
     );
   }, [productos, buscarProductos]);
 
@@ -151,164 +141,182 @@ export default function PanelAdministrador() {
     return reportes.filter((r) => {
       const matchFiltro = filtroReporte === "todo" || r.estado === filtroReporte;
       const matchQ =
-        r.reportado.toLowerCase().includes(q) ||
-        r.reportadoPor.toLowerCase().includes(q) ||
-        r.tipo.toLowerCase().includes(q);
+        (r.reportado || "").toLowerCase().includes(q) ||
+        (r.reportadoPor || "").toLowerCase().includes(q) ||
+        (r.tipo || "").toLowerCase().includes(q);
       return matchFiltro && matchQ;
     });
   }, [reportes, buscarReportes, filtroReporte]);
 
-  // â”€â”€â”€ ACCIONES USUARIOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- ACCIONES USUARIOS ---
 
-  // JS Cambia el estado de un usuario a baneado
-  function banearUsuario(id) {
-    setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...u, estado: "baneado" } : u)));
+  /** Banea o reactiva un usuario (RF74). */
+  function cambiarEstadoUsuario(id, estado) {
+    ejecutarAccion(
+      () => cambiarEstadoUsuarioAdmin(id, estado),
+      "No se pudo cambiar el estado del usuario."
+    );
   }
 
-  // JS Cambia el estado de un usuario a activo
-  function activarUsuario(id) {
-    setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...u, estado: "activo" } : u)));
-  }
-
-  // JS Abre el modal de confirmacion para eliminar desde la tabla de usuarios
+  /** Abre el modal de confirmacion para eliminar desde la tabla de usuarios */
   function pedirEliminarUsuario(id) {
-    const u = usuarios.find((u) => u.id === id);
-    if (!u) return;
-    setModalEliminarUsuario({ abierto: true, id, nombreDesdeReporte: null });
+    setModalEliminarUsuario({ abierto: true, id, desdeReporte: false });
   }
 
-  // JS Abre el modal de confirmacion para eliminar desde el modal de reporte
+  /** Abre el modal de confirmacion para eliminar desde el modal de reporte */
   function pedirEliminarUsuarioDesdeReporte() {
-    if (!reporteActual) return;
-    if (usuariosEliminadosDesdeReporte.has(reporteActual.reportado)) return;
+    if (!reporteActual || reporteActual.reportadoId == null) return;
+    if (usuariosEliminadosDesdeReporte.has(reporteActual.reportadoId)) return;
     setModalEliminarUsuario({
       abierto: true,
-      id: null,
-      nombreDesdeReporte: reporteActual.reportado,
+      id: reporteActual.reportadoId,
+      desdeReporte: true,
     });
   }
 
-  // JS Confirma eliminacion de usuario y actualiza el registro de eliminados
-  function confirmarEliminarUsuario() {
-    if (modalEliminarUsuario.nombreDesdeReporte) {
-      const nombre = modalEliminarUsuario.nombreDesdeReporte;
-      setUsuarios((prev) => prev.filter((u) => u.nombre !== nombre));
-      setUsuariosEliminadosDesdeReporte((prev) => new Set(prev).add(nombre));
-    } else {
-      setUsuarios((prev) => prev.filter((u) => u.id !== modalEliminarUsuario.id));
+  /** Confirma la desactivacion del usuario y recarga los listados */
+  async function confirmarEliminarUsuario() {
+    const { id, desdeReporte } = modalEliminarUsuario;
+    setModalEliminarUsuario({ abierto: false, id: null, desdeReporte: false });
+    if (id == null) return;
+    const exito = await ejecutarAccion(
+      () => eliminarUsuarioAdmin(id),
+      "No se pudo eliminar el usuario."
+    );
+    if (exito && desdeReporte) {
+      setUsuariosEliminadosDesdeReporte((prev) => new Set(prev).add(id));
     }
-    setModalEliminarUsuario({ abierto: false, id: null, nombreDesdeReporte: null });
   }
 
-  // JS Cierra el modal de confirmacion sin ejecutar la eliminacion
+  /** Cierra el modal de confirmacion sin ejecutar la eliminacion */
   function cancelarEliminarUsuario() {
-    setModalEliminarUsuario({ abierto: false, id: null, nombreDesdeReporte: null });
+    setModalEliminarUsuario({ abierto: false, id: null, desdeReporte: false });
   }
 
-  // â”€â”€â”€ ACCIONES PRODUCTOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- ACCIONES PRODUCTOS ---
 
-  // JS Abre el modal de confirmacion para eliminar desde la tabla de productos
+  /** Abre el modal de confirmacion para eliminar desde la tabla de productos */
   function pedirEliminarProducto(id) {
-    const p = productos.find((p) => p.id === id);
-    if (!p) return;
-    setModalEliminarProducto({ abierto: true, id, nombreDesdeReporte: null });
+    setModalEliminarProducto({ abierto: true, id, desdeReporte: false });
   }
 
-  // JS Abre el modal de confirmacion para eliminar desde el modal de reporte
+  /** Abre el modal de confirmacion para eliminar desde el modal de reporte */
   function pedirEliminarProductoDesdeReporte() {
-    if (!reporteActual) return;
-    if (productosEliminadosDesdeReporte.has(reporteActual.reportado)) return;
+    if (!reporteActual || reporteActual.reportadoId == null) return;
+    if (productosEliminadosDesdeReporte.has(reporteActual.reportadoId)) return;
     setModalEliminarProducto({
       abierto: true,
-      id: null,
-      nombreDesdeReporte: reporteActual.reportado,
+      id: reporteActual.reportadoId,
+      desdeReporte: true,
     });
   }
 
-  // JS Confirma eliminacion de producto y actualiza el registro de eliminados
-  function confirmarEliminarProducto() {
-    if (modalEliminarProducto.nombreDesdeReporte) {
-      const nombre = modalEliminarProducto.nombreDesdeReporte;
-      setProductos((prev) => prev.filter((p) => p.nombre !== nombre));
-      setProductosEliminadosDesdeReporte((prev) => new Set(prev).add(nombre));
-    } else {
-      setProductos((prev) => prev.filter((p) => p.id !== modalEliminarProducto.id));
+  /** Confirma la suspension del producto y recarga los listados */
+  async function confirmarEliminarProducto() {
+    const { id, desdeReporte } = modalEliminarProducto;
+    setModalEliminarProducto({ abierto: false, id: null, desdeReporte: false });
+    if (id == null) return;
+    const exito = await ejecutarAccion(
+      () => eliminarProductoAdmin(id),
+      "No se pudo eliminar el producto."
+    );
+    if (exito && desdeReporte) {
+      setProductosEliminadosDesdeReporte((prev) => new Set(prev).add(id));
     }
-    setModalEliminarProducto({ abierto: false, id: null, nombreDesdeReporte: null });
   }
 
-  // JS Cierra el modal de confirmacion sin ejecutar la eliminacion
+  /** Cierra el modal de confirmacion sin ejecutar la eliminacion */
   function cancelarEliminarProducto() {
-    setModalEliminarProducto({ abierto: false, id: null, nombreDesdeReporte: null });
+    setModalEliminarProducto({ abierto: false, id: null, desdeReporte: false });
   }
 
-  // â”€â”€â”€ ACCIONES REPORTES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /** Restaura un producto suspendido por error (RF68) */
+  function restaurarProducto(id) {
+    ejecutarAccion(
+      () => restaurarProductoAdmin(id),
+      "No se pudo restaurar el producto."
+    );
+  }
 
-  // JS Abre el modal de detalle de reporte en modo ver o responder
+  // --- ACCIONES REPORTES ---
+
+  /** Abre el modal de detalle de reporte en modo ver o responder */
   function abrirModalReporte(id, modo) {
     setModalReporte({ abierto: true, reporteId: id, modo });
   }
 
-  // JS Cierra el modal de detalle de reporte
+  /** Cierra el modal de detalle de reporte */
   function cerrarModalReporte() {
     setModalReporte({ abierto: false, reporteId: null, modo: "ver" });
   }
 
-  // JS Envia la respuesta del admin, cambia el estado del reporte a resuelto
-  function enviarRespuesta(texto) {
-    setReportes((prev) =>
-      prev.map((r) =>
-        r.id === modalReporte.reporteId
-          ? { ...r, estado: "resuelto", respuesta: texto }
-          : r
-      )
+  /** Abre el modal de confirmacion para archivar un reporte */
+  function pedirEliminarReporte(id) {
+    setModalEliminarReporte({ abierto: true, id });
+  }
+
+  /** Archiva el reporte en el backend y recarga los listados */
+  async function confirmarEliminarReporte() {
+    const { id } = modalEliminarReporte;
+    setModalEliminarReporte({ abierto: false, id: null });
+    if (id == null) return;
+    await ejecutarAccion(
+      () => eliminarReporteAdmin(id),
+      "No se pudo eliminar el reporte."
     );
-    setModalReporte((prev) => ({ ...prev, modo: "ver" }));
   }
 
-  // â”€â”€â”€ ACCIONES BANEO DESDE REPORTE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-  // JS Verifica si un usuario por nombre esta baneado
-  function estaBaneado(nombre) {
-    const u = usuarios.find((u) => u.nombre === nombre);
-    if (u) return u.estado === "baneado";
-    return !!baneosExternos[nombre];
+  /** Cancela el archivado del reporte */
+  function cancelarEliminarReporte() {
+    setModalEliminarReporte({ abierto: false, id: null });
   }
 
-  // JS Alterna el estado de baneo de un usuario reportado
+  /** Envia la respuesta del admin y resuelve el reporte (RF66) */
+  async function enviarRespuesta(texto) {
+    const id = modalReporte.reporteId;
+    if (id == null) return;
+    const exito = await ejecutarAccion(
+      () => resolverReporteAdmin(id, texto),
+      "No se pudo resolver el reporte."
+    );
+    if (exito) setModalReporte((prev) => ({ ...prev, modo: "ver" }));
+  }
+
+  // --- ACCIONES DE ESTADO DESDE EL REPORTE ---
+
+  /** Indica si el usuario reportado esta baneado */
+  function estaBaneado(reporte) {
+    if (!reporte || reporte.reportadoId == null) return false;
+    const u = usuarios.find((usr) => usr.id === reporte.reportadoId);
+    return u?.estado === "baneado";
+  }
+
+  /** Alterna el baneo del usuario reportado (RF74) */
   function toggleBanearDesdeReporte() {
-    if (!reporteActual) return;
-    if (usuariosEliminadosDesdeReporte.has(reporteActual.reportado)) return;
+    if (!reporteActual || reporteActual.reportadoId == null) return;
+    if (usuariosEliminadosDesdeReporte.has(reporteActual.reportadoId)) return;
 
-    const nombre = reporteActual.reportado;
-    const u = usuarios.find((u) => u.nombre === nombre);
-    if (u) {
-      setUsuarios((prev) =>
-        prev.map((usr) =>
-          usr.nombre === nombre
-            ? { ...usr, estado: usr.estado === "baneado" ? "activo" : "baneado" }
-            : usr
-        )
-      );
-    } else {
-      setBaneosExternos((prev) => ({ ...prev, [nombre]: !prev[nombre] }));
-    }
+    const u = usuarios.find((usr) => usr.id === reporteActual.reportadoId);
+    if (!u) return;
+    cambiarEstadoUsuario(u.id, u.estado === "baneado" ? "activo" : "baneado");
   }
 
-  // â”€â”€â”€ RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- RENDER ---
 
-  // JS Nombre de la entidad a mostrar en el modal de confirmacion
+  // Nombre de la entidad a mostrar en el modal de confirmacion
   const nombreParaConfirmarUsuario =
-    modalEliminarUsuario.nombreDesdeReporte ||
-    (modalEliminarUsuario.id !== null
-      ? usuarios.find((u) => u.id === modalEliminarUsuario.id)?.nombre
-      : "");
+    usuarios.find((u) => u.id === modalEliminarUsuario.id)?.nombre || "";
 
   const nombreParaConfirmarProducto =
-    modalEliminarProducto.nombreDesdeReporte ||
-    (modalEliminarProducto.id !== null
-      ? productos.find((p) => p.id === modalEliminarProducto.id)?.nombre
-      : "");
+    productos.find((p) => p.id === modalEliminarProducto.id)?.nombre || "";
+
+  const nombreParaConfirmarReporte =
+    reportes.find((r) => r.id === modalEliminarReporte.id)?.reportado || "";
+
+  const totalVendedores = stats ? formatearNumero(stats.totalVendedores) : "—";
+  const totalCompradores = stats ? formatearNumero(stats.totalCompradores) : "—";
+  const totalProductos = stats ? formatearNumero(stats.totalProductos) : "—";
+  const totalComisiones = stats ? `$${formatearNumero(stats.totalComisiones)}` : "—";
 
   return (
     <div className="bg-[#0a0a0f] text-white min-h-screen font-inter h-screen overflow-y-auto">
@@ -339,6 +347,19 @@ export default function PanelAdministrador() {
         <main className="pt-20 pb-12 px-4 sm:px-6 md:px-8 max-w-[1320px] mx-auto">
           <h1 className="font-inter font-extrabold text-2xl sm:text-3xl text-white tracking-tight mb-6">Panel De Control</h1>
 
+          {/* Estado de error del panel con reintento */}
+          {error && (
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[rgba(239,68,68,0.4)] bg-[rgba(239,68,68,0.08)] px-4 py-3">
+              <p className="text-sm font-semibold font-jakarta text-[#f87171]">{error}</p>
+              <button
+                onClick={() => cargarDatos()}
+                className="border border-[#ef9918] text-[#ef9918] text-[11px] font-bold px-3 py-1.5 rounded font-jakarta hover:bg-[rgba(239,153,24,0.1)] transition-colors"
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+
           {/* STAT CARDS */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <div className="bg-[#12121a] rounded-xl p-6 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]">
@@ -348,7 +369,7 @@ export default function PanelAdministrador() {
                 </svg>
               </div>
               <p className="text-[#797998] text-xs font-bold uppercase tracking-widest mb-1">TOTAL VENDEDORES</p>
-              <p className="text-[#f0f0f8] text-3xl font-bold">1,248</p>
+              <p className="text-[#f0f0f8] text-3xl font-bold">{totalVendedores}</p>
             </div>
             <div className="bg-[#12121a] rounded-xl p-6 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]">
               <div className="bg-[#1a1a26] w-10 h-10 rounded-lg flex items-center justify-center mb-4">
@@ -357,7 +378,7 @@ export default function PanelAdministrador() {
                 </svg>
               </div>
               <p className="text-[#797998] text-xs font-bold uppercase tracking-widest mb-1">TOTAL COMPRADORES</p>
-              <p className="text-[#f0f0f8] text-3xl font-bold">8,902</p>
+              <p className="text-[#f0f0f8] text-3xl font-bold">{totalCompradores}</p>
             </div>
             <div className="bg-[#12121a] rounded-xl p-6 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]">
               <div className="bg-[#1a1a26] w-10 h-10 rounded-lg flex items-center justify-center mb-4">
@@ -366,7 +387,7 @@ export default function PanelAdministrador() {
                 </svg>
               </div>
               <p className="text-[#797998] text-xs font-bold uppercase tracking-widest mb-1">PRODUCTOS PUBLICADOS</p>
-              <p className="text-[#f0f0f8] text-3xl font-bold">15,670</p>
+              <p className="text-[#f0f0f8] text-3xl font-bold">{totalProductos}</p>
             </div>
             <div className="bg-[#12121a] rounded-xl p-6 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]">
               <div className="bg-[#1a1a26] w-10 h-10 rounded-lg flex items-center justify-center mb-4">
@@ -378,7 +399,7 @@ export default function PanelAdministrador() {
                 <p className="text-[#797998] text-xs font-bold uppercase tracking-widest">COMISIONES TOTALES</p>
                 <span className="bg-[rgba(239,153,24,0.2)] text-[#ef9918] text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">Comisión %10</span>
               </div>
-              <p className="text-[#f0f0f8] text-3xl font-bold">$45,280.50</p>
+              <p className="text-[#f0f0f8] text-3xl font-bold">{totalComisiones}</p>
             </div>
           </div>
 
@@ -412,7 +433,9 @@ export default function PanelAdministrador() {
                     </tr>
                   </thead>
                   <tbody>
-                    {usuariosFiltrados.length === 0 ? (
+                    {cargando ? (
+                      <tr><td colSpan={4} className="text-[#797998] text-sm text-center py-8">Cargando usuarios...</td></tr>
+                    ) : usuariosFiltrados.length === 0 ? (
                       <tr><td colSpan={4} className="text-[#797998] text-sm text-center py-8">Sin resultados</td></tr>
                     ) : (
                       usuariosFiltrados.map((u) => (
@@ -425,7 +448,10 @@ export default function PanelAdministrador() {
                                   <circle cx="12" cy="7" r="4" />
                                 </svg>
                               </div>
-                              <span className="text-white text-sm font-bold font-jakarta truncate">{u.nombre}</span>
+                              <div className="min-w-0">
+                                <p className="text-white text-sm font-bold font-jakarta truncate">{u.nombre}</p>
+                                <p className="text-[#797998] text-xs truncate">{u.email}</p>
+                              </div>
                             </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
@@ -442,14 +468,14 @@ export default function PanelAdministrador() {
                             <div className="flex items-center justify-end gap-1.5">
                               {u.estado === "activo" ? (
                                 <button
-                                  onClick={() => banearUsuario(u.id)}
+                                  onClick={() => cambiarEstadoUsuario(u.id, "baneado")}
                                   className="border border-[#797998] text-[#797998] text-[11px] font-bold px-2.5 py-1 rounded font-jakarta hover:bg-[#32324d] transition-colors"
                                 >
                                   Banear
                                 </button>
                               ) : (
                                 <button
-                                  onClick={() => activarUsuario(u.id)}
+                                  onClick={() => cambiarEstadoUsuario(u.id, "activo")}
                                   className="border border-[#ef9918] text-[#ef9918] text-[11px] font-bold px-2.5 py-1 rounded font-jakarta hover:bg-[rgba(239,153,24,0.1)] transition-colors"
                                 >
                                   Activar
@@ -498,7 +524,9 @@ export default function PanelAdministrador() {
                     </tr>
                   </thead>
                   <tbody>
-                    {productosFiltrados.length === 0 ? (
+                    {cargando ? (
+                      <tr><td colSpan={3} className="text-[#797998] text-sm text-center py-8">Cargando productos...</td></tr>
+                    ) : productosFiltrados.length === 0 ? (
                       <tr><td colSpan={3} className="text-[#797998] text-sm text-center py-8">Sin resultados</td></tr>
                     ) : (
                       productosFiltrados.map((p) => (
@@ -512,7 +540,12 @@ export default function PanelAdministrador() {
                               </div>
                               <div className="min-w-0">
                                 <p className="text-white text-sm font-bold font-jakarta truncate">{p.nombre}</p>
-                                <p className="text-[#797998] text-xs">{p.precio}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-[#797998] text-xs">{formatPrice(p.precio)}</p>
+                                  {p.suspendido && (
+                                    <span className="bg-[rgba(239,68,68,0.1)] text-[#f87171] text-[10px] font-bold px-1.5 py-0.5 rounded font-jakarta">Suspendido</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </td>
@@ -520,16 +553,26 @@ export default function PanelAdministrador() {
                             <span className="text-[#797998] text-sm font-semibold font-jakarta">{p.vendedor}</span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-right">
-                            <button
-                              onClick={() => pedirEliminarProducto(p.id)}
-                              className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-[rgba(239,68,68,0.08)] transition-colors ml-auto"
-                              title="Eliminar producto"
-                            >
-                              <svg width="18" height="18" fill="none" stroke="#7F1D1D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 20 20">
-                                <polyline points="2.5 5 4.17 5 17.5 5" />
-                                <path d="M15.83 5v11.67a1.67 1.67 0 0 1-1.66 1.66H5.83a1.67 1.67 0 0 1-1.66-1.66V5m2.5 0V3.33a1.67 1.67 0 0 1 1.66-1.66h3.34a1.67 1.67 0 0 1 1.66 1.66V5" />
-                              </svg>
-                            </button>
+                            {p.suspendido ? (
+                              <button
+                                onClick={() => restaurarProducto(p.id)}
+                                className="border border-[#ef9918] text-[#ef9918] text-[11px] font-bold px-2.5 py-1 rounded font-jakarta hover:bg-[rgba(239,153,24,0.1)] transition-colors"
+                                title="Restaurar producto"
+                              >
+                                Restaurar
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => pedirEliminarProducto(p.id)}
+                                className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-[rgba(239,68,68,0.08)] transition-colors ml-auto"
+                                title="Eliminar producto"
+                              >
+                                <svg width="18" height="18" fill="none" stroke="#7F1D1D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 20 20">
+                                  <polyline points="2.5 5 4.17 5 17.5 5" />
+                                  <path d="M15.83 5v11.67a1.67 1.67 0 0 1-1.66 1.66H5.83a1.67 1.67 0 0 1-1.66-1.66V5m2.5 0V3.33a1.67 1.67 0 0 1 1.66-1.66h3.34a1.67 1.67 0 0 1 1.66 1.66V5" />
+                                </svg>
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -586,7 +629,9 @@ export default function PanelAdministrador() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reportesFiltrados.length === 0 ? (
+                  {cargando ? (
+                    <tr><td colSpan={6} className="text-[#797998] text-sm text-center py-8">Cargando reportes...</td></tr>
+                  ) : reportesFiltrados.length === 0 ? (
                     <tr><td colSpan={6} className="text-[#797998] text-sm text-center py-8">Sin resultados</td></tr>
                   ) : (
                     reportesFiltrados.map((r) => (
@@ -615,12 +660,20 @@ export default function PanelAdministrador() {
                           )}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-right">
-                          <button
-                            onClick={() => abrirModalReporte(r.id, r.estado === "pendiente" ? "responder" : "ver")}
-                            className="border border-[#797998] text-[#797998] text-[11px] font-bold px-3 py-1.5 rounded font-jakarta hover:bg-[#32324d] transition-colors"
-                          >
-                            {r.estado === "pendiente" ? "Responder" : "Ver"}
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => abrirModalReporte(r.id, r.estado === "pendiente" ? "responder" : "ver")}
+                              className="border border-[#797998] text-[#797998] text-[11px] font-bold px-3 py-1.5 rounded font-jakarta hover:bg-[#32324d] transition-colors"
+                            >
+                              {r.estado === "pendiente" ? "Responder" : "Ver"}
+                            </button>
+                            <button
+                              onClick={() => pedirEliminarReporte(r.id)}
+                              className="border border-[rgba(127,29,29,0.5)] text-[#ef4444] text-[11px] font-bold px-2.5 py-1.5 rounded font-jakarta hover:bg-[rgba(239,68,68,0.08)] transition-colors"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -632,7 +685,7 @@ export default function PanelAdministrador() {
         </main>
       </div>
 
-      {/* RE Modal de confirmacion para eliminar usuario */}
+      {/* Modal de confirmacion para eliminar usuario */}
       {modalEliminarUsuario.abierto && (
         <AdminModalConfirmarEliminar
           tipo="Usuario"
@@ -642,7 +695,7 @@ export default function PanelAdministrador() {
         />
       )}
 
-      {/* RE Modal de confirmacion para eliminar producto */}
+      {/* Modal de confirmacion para eliminar producto */}
       {modalEliminarProducto.abierto && (
         <AdminModalConfirmarEliminar
           tipo="Producto"
@@ -652,14 +705,24 @@ export default function PanelAdministrador() {
         />
       )}
 
-      {/* RE Modal de detalle de reporte */}
+      {/* Modal de confirmacion para archivar reporte */}
+      {modalEliminarReporte.abierto && (
+        <AdminModalConfirmarEliminar
+          tipo="Reporte"
+          nombre={nombreParaConfirmarReporte}
+          onConfirmar={confirmarEliminarReporte}
+          onCancelar={cancelarEliminarReporte}
+        />
+      )}
+
+      {/* Modal de detalle de reporte */}
       {modalReporte.abierto && reporteActual && (
         <AdminModalReporte
           reporte={reporteActual}
           modo={modalReporte.modo}
-          estaBaneado={estaBaneado(reporteActual.reportado)}
-          usuarioEliminadoDesdeReporte={usuariosEliminadosDesdeReporte.has(reporteActual.reportado)}
-          productoEliminadoDesdeReporte={productosEliminadosDesdeReporte.has(reporteActual.reportado)}
+          estaBaneado={estaBaneado(reporteActual)}
+          usuarioEliminadoDesdeReporte={usuariosEliminadosDesdeReporte.has(reporteActual.reportadoId)}
+          productoEliminadoDesdeReporte={productosEliminadosDesdeReporte.has(reporteActual.reportadoId)}
           onEnviarRespuesta={enviarRespuesta}
           onCerrar={cerrarModalReporte}
           onToggleBanear={toggleBanearDesdeReporte}

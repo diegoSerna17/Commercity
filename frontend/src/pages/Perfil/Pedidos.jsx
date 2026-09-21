@@ -1,118 +1,154 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Header from "../../components/globales/Header";
 import DetallePedidos from "./DetallePedidos";
+import {
+  avanzarEstadoPedido,
+  listarVentas,
+} from "../../services/tienda.service.js";
 
-const PEDIDOS_INICIALES = [
-  {
-    id: 1,
-    cliente: "Alex Rivera",
-    avatar: null,
-    avatarInicial: true,
-    avatarLetra: "AR",
-    avatarColor: "#4a3a6a",
-    productos: [
-      { nombre: "Teclado mecánico", cantidad: 1, precioUnitario: 699000 },
-      { nombre: "Mouse inalámbrico", cantidad: 1, precioUnitario: 600000 },
-    ],
-    fecha: "24 Oct, 2026",
-    fechaLarga: "24 octubre, 2026",
-    estado: "Entregado",
-    direccion: "Calle 45 # 23-10, Apartamento 301",
-    ciudad: "Bogotá, Cundinamarca",
-    monto: 1299000,
-  },
-  {
-    id: 2,
-    cliente: "Elena Sanz",
-    avatar: null,
-    avatarInicial: true,
-    avatarLetra: "ES",
-    avatarColor: "#3a4a6a",
-    productos: [
-      { nombre: "Monitor 4K", cantidad: 1, precioUnitario: 1900000 },
-    ],
-    fecha: "23 Oct, 2026",
-    fechaLarga: "23 octubre, 2026",
-    estado: "En Camino",
-    direccion: "Av. El Poblado # 10-20, Oficina 5",
-    ciudad: "Medellín, Antioquia",
-    monto: 1900000,
-  },
-  {
-    id: 3,
-    cliente: "Julian Torres",
-    avatar: null,
-    avatarInicial: true,
-    avatarLetra: "JT",
-    avatarColor: "#2a5a3a",
-    productos: [
-      { nombre: "Audifonos Gamer", cantidad: 2, precioUnitario: 350000 },
-      { nombre: "Cargador universal", cantidad: 1, precioUnitario: 300000 },
-      { nombre: "Mouse pc gamer", cantidad: 2, precioUnitario: 700000 },
-      { nombre: "Estuche PC", cantidad: 2, precioUnitario: 300000 },
-    ],
-    fecha: "22 Oct, 2026",
-    fechaLarga: "22 octubre, 2026",
-    estado: "Entregado",
-    direccion: "Carrera 7 # 12-34, Apartamento 201",
-    ciudad: "Medellin, Antioquia",
-    monto: 3000000,
-  },
-  {
-    id: 4,
-    cliente: "Marco Rossi",
-    avatar: null,
-    avatarInicial: true,
-    avatarLetra: "MR",
-    avatarColor: "#32324d",
-    productos: [
-      { nombre: "Laptop ultrabook", cantidad: 1, precioUnitario: 1200000 },
-      { nombre: "Base enfriadora", cantidad: 1, precioUnitario: 300000 },
-      { nombre: "Hub USB-C", cantidad: 2, precioUnitario: 250000 },
-      { nombre: "Mochila laptop", cantidad: 1, precioUnitario: 349000 },
-      { nombre: "Pad escritorio XL", cantidad: 2, precioUnitario: 150000 },
-      { nombre: "Webcam HD", cantidad: 1, precioUnitario: 300000 },
-    ],
-    fecha: "21 Oct, 2026",
-    fechaLarga: "21 octubre, 2026",
-    estado: "Pendiente",
-    direccion: "Calle 100 # 50-30, Casa 12",
-    ciudad: "Cali, Valle del Cauca",
-    monto: 2799000,
-  },
+// JS Filtros de Pedidos (RF129): el valor se envia al backend.
+const FILTROS = [
+  { label: "Todo", valor: null },
+  { label: "Pendiente", valor: "Pendiente" },
+  { label: "En Camino", valor: "En camino" },
+  { label: "Entregado", valor: "Entregado" },
+  { label: "Cancelado", valor: "Cancelado" },
 ];
 
-const FILTROS = ["Todo", "Pendiente", "En Camino", "Entregado"];
-
-const ESTADOS = ["Pendiente", "En Camino", "Entregado"];
+// JS El backend entrega el estado por linea; la interfaz usa "En Camino".
+const ETIQUETA_ESTADO = { "En camino": "En Camino" };
+const ESTADO_API = { "En Camino": "En camino" };
+// RF124: el backend solo acepta el avance de UN nivel.
+const SIGUIENTE_ESTADO = { Pendiente: "En camino", "En camino": "Entregado" };
 
 const estadoBadge = {
   Entregado: "bg-primary-fixed-dim/10 text-primary-fixed-dim border border-primary-fixed-dim/40",
   "En Camino": "bg-secondary-fixed-dim/10 text-secondary-fixed-dim border border-secondary-fixed-dim/40",
   Pendiente: "bg-error-container/20 text-error border border-error/40",
+  Cancelado: "bg-surface-container/40 text-brand-muted-text border border-brand-muted-text/40",
 };
 
-const fmt = (n) => "$" + n.toLocaleString("es-CO");
+const fmt = (n) => "$" + Math.round(n).toLocaleString("es-CO");
+
+function formatearFecha(valor) {
+  const fecha = new Date(valor);
+  if (Number.isNaN(fecha.getTime())) return { corta: "", larga: "" };
+
+  return {
+    corta: fecha.toLocaleDateString("es-CO", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }),
+    larga: fecha.toLocaleDateString("es-CO", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }),
+  };
+}
+
+function iniciales(nombre) {
+  return (nombre || "")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((parte) => parte[0].toUpperCase())
+    .join("");
+}
+
+/** Traduce la linea de venta de la API a la forma que consumen la tabla y el detalle. */
+function mapearVenta(item) {
+  const { corta, larga } = formatearFecha(item.fecha_pedido);
+
+  return {
+    id: item.id,
+    pedidoId: item.pedido_id,
+    referencia: item.referencia_pedido,
+    cliente: item.nombre_comprador || "Comprador",
+    email: item.email_comprador || "",
+    avatarColor: "#32324d",
+    avatarLetra: iniciales(item.nombre_comprador),
+    productos: [
+      {
+        nombre: item.nombre_producto,
+        cantidad: item.cantidad,
+        precioUnitario: Number(item.valor_unitario || 0),
+      },
+    ],
+    fecha: corta,
+    fechaLarga: larga,
+    estado: ETIQUETA_ESTADO[item.estado_envio] || item.estado_envio || "Pendiente",
+    monto: Number(item.valor_subtotal || 0),
+    neto: Number(item.monto_vendedor || 0),
+    comision: Number(item.monto_comision || 0),
+  };
+}
 
 export default function Pedidos() {
-  const [pedidos, setPedidos] = useState(PEDIDOS_INICIALES);
-  const [filtro, setFiltro] = useState("Todo");
+  const [ventas, setVentas] = useState([]);
+  const [resumen, setResumen] = useState(null);
+  const [filtro, setFiltro] = useState(FILTROS[0]);
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
   const [pedidoSeleccionadoId, setPedidoSeleccionadoId] = useState(null);
+  const [cambiandoId, setCambiandoId] = useState(null);
 
-  const pedidosFiltrados =
-    filtro === "Todo"
-      ? pedidos
-      : pedidos.filter((p) => p.estado === filtro);
+  /** Consulta GET /api/tienda/ventas del vendedor autenticado (RF119/RF120). */
+  const cargarVentas = useCallback(async (filtroActual, numeroPagina) => {
+    setCargando(true);
+    try {
+      const res = await listarVentas({
+        estado: filtroActual?.valor,
+        pagina: numeroPagina,
+      });
+      const data = res.data ?? {};
+      const nuevas = (data.items ?? []).map(mapearVenta);
 
-  const pedidoSeleccionado = pedidoSeleccionadoId
-    ? pedidos.find((p) => p.id === pedidoSeleccionadoId)
-    : null;
+      setVentas((actuales) =>
+        numeroPagina === 1 ? nuevas : [...actuales, ...nuevas]
+      );
+      setResumen(data.resumen ?? null);
+      setTotalPaginas(data.total_paginas ?? 1);
+      setError("");
+    } catch (err) {
+      if (numeroPagina === 1) setVentas([]);
+      setError(err.message || "No se pudieron cargar tus pedidos");
+    } finally {
+      setCargando(false);
+    }
+  }, []);
 
-  function handleCambiarEstado(id, nuevoEstado) {
-    setPedidos((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, estado: nuevoEstado } : p))
-    );
+  useEffect(() => {
+    setPagina(1);
+    cargarVentas(filtro, 1);
+  }, [filtro, cargarVentas]);
+
+  /** RF122/RF124: avanza un nivel el estado de los envios del pedido. */
+  async function manejarCambiarEstado(venta, etiquetaDestino) {
+    const estadoApi = ESTADO_API[etiquetaDestino] || etiquetaDestino;
+    setCambiandoId(venta.id);
+    try {
+      await avanzarEstadoPedido(venta.pedidoId, estadoApi);
+      await cargarVentas(filtro, 1);
+      setPagina(1);
+    } catch (err) {
+      setError(err.message || "No se pudo actualizar el estado del pedido");
+    } finally {
+      setCambiandoId(null);
+    }
   }
+
+  function cargarMas() {
+    const siguiente = pagina + 1;
+    setPagina(siguiente);
+    cargarVentas(filtro, siguiente);
+  }
+
+  const pedidoSeleccionado =
+    ventas.find((v) => v.id === pedidoSeleccionadoId) ?? null;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -131,18 +167,36 @@ export default function Pedidos() {
       <div className="flex gap-2 flex-wrap mb-6">
         {FILTROS.map((f) => (
           <button
-            key={f}
+            key={f.label}
             onClick={() => setFiltro(f)}
             className={`h-[32px] px-5 rounded-full text-[12px] tracking-[0.6px] font-semibold transition-colors ${
-              filtro === f
+              filtro.label === f.label
                 ? "bg-brand-orange text-brand-dark-text"
                 : "bg-surface-variant2 text-on-surface-variant hover:bg-surface-container-highest"
             }`}
           >
-            {f}
+            {f.label}
           </button>
         ))}
       </div>
+
+      {resumen && (
+        <div className="flex flex-wrap gap-x-6 gap-y-1 mb-4 text-[13px]">
+          <span className="text-brand-muted-text">
+            Ventas: <span className="text-on-surface font-semibold">{resumen.total_ventas}</span>
+          </span>
+          <span className="text-brand-muted-text">
+            Total vendido: <span className="text-on-surface font-semibold">{fmt(resumen.total_bruto)}</span>
+          </span>
+          <span className="text-brand-muted-text">
+            Neto (90%): <span className="text-brand-orange font-semibold">{fmt(resumen.total_neto_vendedor)}</span>
+          </span>
+        </div>
+      )}
+
+      {error && (
+        <p className="text-report-red-text font-medium text-sm mb-4">{error}</p>
+      )}
 
       <div
         className="w-full overflow-x-auto rounded-card"
@@ -172,7 +226,16 @@ export default function Pedidos() {
             </tr>
           </thead>
           <tbody>
-            {pedidosFiltrados.length === 0 ? (
+            {cargando && ventas.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="text-center py-12 text-brand-muted-text text-[14px]"
+                >
+                  Cargando tus pedidos...
+                </td>
+              </tr>
+            ) : ventas.length === 0 ? (
               <tr>
                 <td
                   colSpan={6}
@@ -182,7 +245,7 @@ export default function Pedidos() {
                 </td>
               </tr>
             ) : (
-              pedidosFiltrados.map((pedido) => (
+              ventas.map((pedido) => (
                 <tr
                   key={pedido.id}
                   style={{ borderTop: "1px solid rgba(50,50,77,0.1)" }}
@@ -199,18 +262,14 @@ export default function Pedidos() {
                       >
                         {pedido.avatarLetra}
                       </div>
-                      <span
-                        className="text-on-surface text-[16px]"
-                      >
+                      <span className="text-on-surface text-[16px]">
                         {pedido.cliente}
                       </span>
                     </div>
                   </td>
 
                   <td className="px-[24px] py-[20px] whitespace-nowrap">
-                    <span
-                      className="text-on-surface text-[16px] font-medium"
-                    >
+                    <span className="text-on-surface text-[16px] font-medium">
                       {pedido.productos.length === 1
                         ? "1 producto"
                         : `${pedido.productos.length} productos`}
@@ -218,26 +277,33 @@ export default function Pedidos() {
                   </td>
 
                   <td className="px-[24px] py-[20px] whitespace-nowrap">
-                    <span
-                      className="text-brand-muted-text text-[14px]"
-                    >
+                    <span className="text-brand-muted-text text-[14px]">
                       {pedido.fecha}
                     </span>
                   </td>
 
                   <td className="px-[24px] py-[20px] whitespace-nowrap">
+                    {/* RF124: solo se ofrece el siguiente nivel de estado */}
                     <select
                       value={pedido.estado}
-                      onChange={(e) =>
-                        handleCambiarEstado(pedido.id, e.target.value)
+                      onChange={(e) => manejarCambiarEstado(pedido, e.target.value)}
+                      disabled={
+                        !SIGUIENTE_ESTADO[pedido.estado] ||
+                        cambiandoId === pedido.id
                       }
-                      className={`h-[23px] pl-[12px] pr-[8px] rounded-full text-[12px] font-medium cursor-pointer outline-none ${estadoBadge[pedido.estado] ?? "bg-surface-variant2 text-on-surface-variant"}`}
+                      className={`h-[23px] pl-[12px] pr-[8px] rounded-full text-[12px] font-medium cursor-pointer outline-none disabled:cursor-not-allowed disabled:opacity-70 ${estadoBadge[pedido.estado] ?? "bg-surface-variant2 text-on-surface-variant"}`}
                     >
-                      {ESTADOS.map((e) => (
-                        <option key={e} value={e} className="bg-auth-card-bg text-on-surface">
-                          {e}
+                      <option value={pedido.estado} className="bg-auth-card-bg text-on-surface">
+                        {pedido.estado}
+                      </option>
+                      {SIGUIENTE_ESTADO[pedido.estado] && (
+                        <option
+                          value={ETIQUETA_ESTADO[SIGUIENTE_ESTADO[pedido.estado]] ?? SIGUIENTE_ESTADO[pedido.estado]}
+                          className="bg-auth-card-bg text-on-surface"
+                        >
+                          {ETIQUETA_ESTADO[SIGUIENTE_ESTADO[pedido.estado]] ?? SIGUIENTE_ESTADO[pedido.estado]}
                         </option>
-                      ))}
+                      )}
                     </select>
                   </td>
 
@@ -251,9 +317,7 @@ export default function Pedidos() {
                   </td>
 
                   <td className="px-[24px] py-[20px] whitespace-nowrap text-right">
-                    <span
-                      className="text-on-surface text-[16px]"
-                    >
+                    <span className="text-on-surface text-[16px]">
                       {fmt(pedido.monto)}
                     </span>
                   </td>
@@ -263,6 +327,16 @@ export default function Pedidos() {
           </tbody>
         </table>
       </div>
+
+      {pagina < totalPaginas && (
+        <button
+          onClick={cargarMas}
+          disabled={cargando}
+          className="mt-4 self-center h-[36px] px-6 rounded-full bg-surface-variant2 text-on-surface text-[13px] font-semibold hover:bg-surface-container-highest transition-colors disabled:opacity-60"
+        >
+          {cargando ? "Cargando..." : "Cargar mas pedidos"}
+        </button>
+      )}
 
       {pedidoSeleccionado && (
         <DetallePedidos

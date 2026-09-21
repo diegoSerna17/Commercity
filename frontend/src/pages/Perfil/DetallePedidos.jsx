@@ -91,13 +91,19 @@ export default function DetallePedidos({ pedido, onClose }) {
 
         <div className="px-6 pb-4">
           <p className="text-brand-muted-text font-bold text-sm mb-2">
-            Dirección de envío
+            {pedido.direccion ? "Dirección de envío" : "Referencia del pago"}
           </p>
           <div className="bg-input-bg rounded-card px-4 py-3">
             <p className="text-on-surface font-semibold text-sm">
-              {pedido.direccion}
+              {pedido.direccion ?? pedido.referencia}
             </p>
-            <p className="text-brand-muted-text text-xs mt-0.5">{pedido.ciudad}</p>
+            {pedido.direccion ? (
+              pedido.ciudad && (
+                <p className="text-brand-muted-text text-xs mt-0.5">{pedido.ciudad}</p>
+              )
+            ) : (
+              <p className="text-brand-muted-text text-xs mt-0.5">{pedido.email}</p>
+            )}
           </div>
         </div>
 
@@ -124,6 +130,25 @@ export default function DetallePedidos({ pedido, onClose }) {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="px-6 pb-4 flex flex-col gap-2">
+          <div className="bg-input-bg rounded-card px-4 py-3 flex justify-between items-center">
+            <span className="text-brand-muted-text font-bold text-sm">
+              Tu ganancia neta (90%)
+            </span>
+            <span className="text-brand-orange font-extrabold text-base">
+              {fmt(pedido.neto ?? 0)}
+            </span>
+          </div>
+          <div className="bg-input-bg rounded-card px-4 py-3 flex justify-between items-center">
+            <span className="text-brand-muted-text font-bold text-sm">
+              Comisión plataforma (10%)
+            </span>
+            <span className="text-brand-muted-text font-extrabold text-base">
+              {fmt(pedido.comision ?? 0)}
+            </span>
           </div>
         </div>
 

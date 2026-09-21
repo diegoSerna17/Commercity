@@ -1,94 +1,125 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Header from "../../components/globales/Header";
 import DetalleCompras from "./DetalleCompras";
-import {
-  formatCOP,
-  calcSubtotal,
-  calcTotal,
-  numProductosLabel,
-} from "../../utils/historialUtils.js";
+import { formatCOP, numProductosLabel } from "../../utils/historialUtils.js";
 import { EstadoBadge, Avatar } from "../../utils/historialUtils.jsx";
+import {
+  cancelarCompra,
+  listarHistorialCompras,
+} from "../../services/historial.service.js";
 
-const ORDERS = [
-  {
-    id: 1,
-    vendedor: "Alex Rivera",
-    initials: "AR",
-    initialsTextClass: "text-brand-orange",
-    fechaCorta: "24 Oct, 2026",
-    fechaLarga: "24 octubre, 2026",
-    estado: "Entregado",
-    direccion: "Calle 80 # 45-12, Apto 301",
-    ciudad: "Bogotá, Cundinamarca",
-    productos: [
-      { nombre: "Auriculares Bluetooth Sony WH-1000XM5", cantidad: 1, precioUnit: 680000 },
-      { nombre: "Teclado Mecánico Inalámbrico RGB", cantidad: 1, precioUnit: 411000 },
-    ],
-  },
-  {
-    id: 2,
-    vendedor: "Elena Sanz",
-    initials: "ES",
-    initialsTextClass: "text-[#86d0ff]",
-    fechaCorta: "23 Oct, 2026",
-    fechaLarga: "23 octubre, 2026",
-    estado: "En Camino",
-    direccion: "Av. Américas # 23-45, Piso 3",
-    ciudad: "Bogotá, Cundinamarca",
-    productos: [
-      { nombre: "Laptop Gaming ASUS ROG G15 i7", cantidad: 1, precioUnit: 1600000 },
-    ],
-  },
-  {
-    id: 3,
-    vendedor: "Julian Torres",
-    initials: "JT",
-    initialsTextClass: "text-brand-orange",
-    fechaCorta: "22 Oct, 2026",
-    fechaLarga: "22 octubre, 2026",
-    estado: "Entregado",
-    direccion: "Carrera 7 # 12-34, Apartamento 201",
-    ciudad: "Medellin, Antioquia",
-    productos: [
-      { nombre: "Audifonos Gamer", cantidad: 2, precioUnit: 283500 },
-      { nombre: "Cargador universal", cantidad: 1, precioUnit: 243000 },
-      { nombre: "Mouse pc gamer", cantidad: 2, precioUnit: 567000 },
-      { nombre: "Estuche premium pc", cantidad: 2, precioUnit: 243000 },
-    ],
-  },
-  {
-    id: 4,
-    vendedor: "Marco Rossi",
-    initials: "MR",
-    initialsTextClass: "text-[#ffba67]",
-    fechaCorta: "21 Oct, 2026",
-    fechaLarga: "21 octubre, 2026",
-    estado: "Pendiente",
-    direccion: "Transversal 45 # 67-89, Casa 5",
-    ciudad: "Cali, Valle del Cauca",
-    productos: [
-      { nombre: 'Monitor 4K Samsung 27"', cantidad: 1, precioUnit: 980000 },
-      { nombre: "Webcam HD Logitech C920", cantidad: 2, precioUnit: 125000 },
-      { nombre: "Hub USB-C 7 puertos", cantidad: 1, precioUnit: 120000 },
-      { nombre: "Silla ergonómica Pro", cantidad: 1, precioUnit: 650000 },
-      { nombre: "Lámpara LED escritorio", cantidad: 1, precioUnit: 80000 },
-      { nombre: "Alfombra gaming XL", cantidad: 1, precioUnit: 40000 },
-    ],
-  },
+// JS Filtros del historial (RF30). El valor es el que espera el backend.
+const FILTERS = [
+  { label: "Todo", valor: null },
+  { label: "Pendiente", valor: "Pendiente" },
+  { label: "En Camino", valor: "En camino" },
+  { label: "Entregado", valor: "Entregado" },
+  { label: "Cancelado", valor: "Cancelado" },
 ];
 
-const FILTERS = ["Todo", "Pendiente", "En Camino", "Entregado"];
+// JS El backend entrega el estado por linea; la insignia usa "En Camino".
+const ETIQUETA_ESTADO = { "En camino": "En Camino" };
+
+function etiquetaEstado(estado) {
+  return ETIQUETA_ESTADO[estado] || estado || "Pendiente";
+}
+
+function formatearFecha(valor) {
+  const fecha = new Date(valor);
+  if (Number.isNaN(fecha.getTime())) return { corta: "", larga: "" };
+
+  return {
+    corta: fecha.toLocaleDateString("es-CO", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }),
+    larga: fecha.toLocaleDateString("es-CO", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }),
+  };
+}
+
+function iniciales(nombre) {
+  return (nombre || "")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((parte) => parte[0].toUpperCase())
+    .join("");
+}
+
+/** Traduce el pedido de la API a la forma que consumen la tabla y el detalle. */
+function mapearPedido(pedido) {
+  const vendedores = pedido.vendedores ?? [];
+  const { corta, larga } = formatearFecha(pedido.fecha);
+
+  return {
+    id: pedido.pedido_id,
+    vendedor:
+      vendedores.length > 1
+        ? `${vendedores.length} vendedores`
+        : vendedores[0] || "Vendedor",
+    initials: iniciales(vendedores[0]),
+    initialsTextClass: "text-brand-orange",
+    fechaCorta: corta,
+    fechaLarga: larga,
+    estado: etiquetaEstado(pedido.estado),
+    direccion: pedido.direccion,
+    productos: (pedido.items ?? []).map((item) => ({
+      detalleId: item.detalle_id,
+      nombre: item.producto,
+      cantidad: item.cantidad,
+      precioUnit: Number(item.precio_unitario || 0),
+      estado: item.estado,
+    })),
+    resumen: pedido.resumen ?? { subtotal: 0, iva: 0, total: 0 },
+  };
+}
 
 export default function HistorialDeCompras() {
-  const [activeFilter, setActiveFilter] = useState("Todo");
+  const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
+  const [pedidos, setPedidos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [cancelandoId, setCancelandoId] = useState(null);
 
-  const filteredOrders =
-    activeFilter === "Todo" ? ORDERS : ORDERS.filter((o) => o.estado === activeFilter);
+  /** Consulta GET /api/historial/compras con el filtro de estado opcional. */
+  const cargarHistorial = useCallback(async (filtro) => {
+    setCargando(true);
+    try {
+      const res = await listarHistorialCompras(filtro?.valor);
+      setPedidos((res.data ?? []).map(mapearPedido));
+      setError("");
+    } catch (err) {
+      setPedidos([]);
+      setError(err.message || "No se pudo cargar el historial de compras");
+    } finally {
+      setCargando(false);
+    }
+  }, []);
 
-  const selectedOrder = selectedOrderId
-    ? ORDERS.find((o) => o.id === selectedOrderId)
-    : null;
+  useEffect(() => {
+    cargarHistorial(activeFilter);
+  }, [activeFilter, cargarHistorial]);
+
+  /** RF135: cancela la linea Pendiente y recarga el historial. */
+  async function manejarCancelar(detalleId) {
+    setCancelandoId(detalleId);
+    try {
+      await cancelarCompra(detalleId);
+      await cargarHistorial(activeFilter);
+    } catch (err) {
+      setError(err.message || "No se pudo cancelar la compra");
+    } finally {
+      setCancelandoId(null);
+    }
+  }
+
+  const selectedOrder = pedidos.find((o) => o.id === selectedOrderId) ?? null;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -107,20 +138,41 @@ export default function HistorialDeCompras() {
       <div className="flex gap-2 flex-wrap mb-6">
         {FILTERS.map((f) => (
           <button
-            key={f}
+            key={f.label}
             onClick={() => setActiveFilter(f)}
             className={`h-[32px] px-5 rounded-full text-[12px] tracking-[0.6px] font-semibold transition-colors ${
-              activeFilter === f
+              activeFilter.label === f.label
                 ? "bg-brand-orange text-brand-dark-text"
                 : "bg-surface-variant2 text-on-surface-variant hover:bg-surface-container-highest"
             }`}
           >
-            {f}
+            {f.label}
           </button>
         ))}
       </div>
 
-      {filteredOrders.length === 0 ? (
+      {error && (
+        <p className="text-report-red-text font-medium text-sm mb-4">{error}</p>
+      )}
+
+      {cargando ? (
+        <div className="w-full overflow-x-auto rounded-card"
+          style={{
+            backgroundColor: "var(--color-auth-card-bg)",
+            border: "1px solid var(--color-border-subtle)",
+          }}
+        >
+          <table className="w-full border-collapse">
+            <tbody>
+              <tr>
+                <td className="text-center py-12 text-brand-muted-text text-[14px]">
+                  Cargando tu historial...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : pedidos.length === 0 ? (
         <div className="w-full overflow-x-auto rounded-card"
           style={{
             backgroundColor: "var(--color-auth-card-bg)",
@@ -141,10 +193,7 @@ export default function HistorialDeCompras() {
         <>
           {/* Tarjetas — solo móvil */}
           <div className="flex flex-col gap-3 md:hidden">
-            {filteredOrders.map((order) => {
-              const subtotal = calcSubtotal(order.productos);
-              const total = calcTotal(subtotal);
-              return (
+            {pedidos.map((order) => (
                 <div
                   key={order.id}
                   className="bg-auth-card-bg rounded-card p-4 flex flex-col gap-3"
@@ -162,7 +211,7 @@ export default function HistorialDeCompras() {
 
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-brand-muted-text">{order.fechaCorta}</span>
-                    <span className="text-on-surface font-semibold">{formatCOP(total)}</span>
+                    <span className="text-on-surface font-semibold">{formatCOP(order.resumen.total)}</span>
                   </div>
 
                   <button
@@ -172,8 +221,7 @@ export default function HistorialDeCompras() {
                     Ver compra
                   </button>
                 </div>
-              );
-            })}
+              ))}
           </div>
 
           {/* Tabla — solo desktop */}
@@ -205,10 +253,7 @@ export default function HistorialDeCompras() {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((order) => {
-                  const subtotal = calcSubtotal(order.productos);
-                  const total = calcTotal(subtotal);
-                  return (
+                {pedidos.map((order) => (
                     <tr
                       key={order.id}
                       style={{ borderTop: "1px solid rgba(50,50,77,0.1)" }}
@@ -244,12 +289,11 @@ export default function HistorialDeCompras() {
                       </td>
                       <td className="px-[24px] py-[20px] whitespace-nowrap text-right">
                         <span className="text-on-surface text-[16px]">
-                          {formatCOP(total)}
+                          {formatCOP(order.resumen.total)}
                         </span>
                       </td>
                     </tr>
-                  );
-                })}
+                  ))}
               </tbody>
             </table>
           </div>
@@ -257,11 +301,14 @@ export default function HistorialDeCompras() {
       )}
 
         {selectedOrder && (
-          <DetalleCompras order={selectedOrder} onClose={() => setSelectedOrderId(null)} />
+          <DetalleCompras
+            order={selectedOrder}
+            onClose={() => setSelectedOrderId(null)}
+            onCancelar={manejarCancelar}
+            cancelandoId={cancelandoId}
+          />
         )}
       </section>
     </div>
   );
 }
-
-

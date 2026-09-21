@@ -1,5 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import {
+  guardarMiCuentaBancaria,
+  obtenerMiCuentaBancaria,
+} from "../../services/tienda.service.js";
 
 // ─── Validadores por campo del formulario bancario ───────────────────────────
 const BANK_VALIDATORS = {
@@ -107,7 +111,7 @@ function SelectField({ id, label, value, options, placeholder, error, onChange, 
 }
 
 // ─── Formulario de cuenta bancaria ────────────────────────────────────────────
-export default function BankAccountForm() {
+export default function BankAccountForm({ onGuardado }) {
   const [values, setValues] = useState({
     titular: "",
     banco: "",
@@ -116,6 +120,37 @@ export default function BankAccountForm() {
   });
   const [errors, setErrors] = useState({});
   const [formMsg, setFormMsg] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+
+  // JS Carga la cuenta bancaria real del vendedor autenticado (RF131-RF133).
+  useEffect(() => {
+    let activo = true;
+
+    (async () => {
+      try {
+        const res = await obtenerMiCuentaBancaria();
+        const datos = res.data?.datos;
+        if (!activo || !datos) return;
+        setValues({
+          titular: datos.titular_nombre || "",
+          banco: datos.banco || "",
+          tipoCuenta: datos.tipo_cuenta || "",
+          numeroCuenta: datos.numero_cuenta || "",
+        });
+      } catch (err) {
+        if (activo) {
+          setFormMsg({
+            text: err.message || "No se pudo cargar tu cuenta bancaria.",
+            type: "warning",
+          });
+        }
+      }
+    })();
+
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   function validateField(name, value) {
     const message = BANK_VALIDATORS[name](value);
@@ -136,7 +171,7 @@ export default function BankAccountForm() {
     return (e) => validateField(name, e.target.value);
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     const fieldNames = Object.keys(BANK_VALIDATORS);
@@ -144,13 +179,37 @@ export default function BankAccountForm() {
     const allValid = results.every(Boolean);
 
     if (!allValid) {
-      setFormMsg({ text: "⚠️ Revisa los campos marcados en rojo.", type: "warning" });
+      setFormMsg({ text: "Revisa los campos marcados en rojo.", type: "warning" });
       return;
     }
 
-    setFormMsg({ text: "✅ Cuenta bancaria guardada correctamente.", type: "success" });
-    setTimeout(() => setFormMsg(null), 4000);
+    // JS El backend valida con Zod y cifra titular y numero (RNF11).
+    setGuardando(true);
+    try {
+      await guardarMiCuentaBancaria({
+        titular_nombre: values.titular.trim(),
+        banco: values.banco,
+        tipo_cuenta: values.tipoCuenta,
+        numero_cuenta: values.numeroCuenta.trim(),
+      });
+      setFormMsg({ text: "Cuenta bancaria guardada correctamente.", type: "success" });
+      setTimeout(() => setFormMsg(null), 4000);
+      onGuardado?.();
+    } catch (err) {
+      setFormMsg({
+        text: err.message || "No se pudo guardar la cuenta bancaria.",
+        type: "warning",
+      });
+    } finally {
+      setGuardando(false);
+    }
   }
+
+  // JS Si la cuenta guardada usa un banco fuera de la lista, se agrega para no perderlo.
+  const opcionesBanco =
+    values.banco && !BANK_OPTIONS.some((opt) => opt.value === values.banco)
+      ? [...BANK_OPTIONS, { value: values.banco, label: values.banco }]
+      : BANK_OPTIONS;
 
   return (
     <section className="space-y-3 sm:space-y-4">
@@ -183,7 +242,7 @@ export default function BankAccountForm() {
             id="banco"
             label="Banco"
             placeholder="Selecciona un banco"
-            options={BANK_OPTIONS}
+            options={opcionesBanco}
             value={values.banco}
             error={errors.banco}
             onChange={handleChange("banco")}
@@ -225,9 +284,10 @@ export default function BankAccountForm() {
           <div className="sm:ml-auto w-full sm:w-auto">
             <button
               type="submit"
-              className="w-full sm:w-auto bg-gradient-to-b from-primary-container to-primary-fixed-dim text-on-primary font-sans font-bold text-sm sm:text-base px-6 h-11 sm:h-12 rounded-button hover:opacity-95 active:scale-95 transition-all whitespace-nowrap cursor-pointer shadow-button-hover"
+              disabled={guardando}
+              className="w-full sm:w-auto bg-gradient-to-b from-primary-container to-primary-fixed-dim text-on-primary font-sans font-bold text-sm sm:text-base px-6 h-11 sm:h-12 rounded-button hover:opacity-95 active:scale-95 transition-all whitespace-nowrap cursor-pointer shadow-button-hover disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Guardar cuenta bancaria
+              {guardando ? "Guardando..." : "Guardar cuenta bancaria"}
             </button>
           </div>
         </div>

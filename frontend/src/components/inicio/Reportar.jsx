@@ -1,12 +1,24 @@
 import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { getCurrentUser } from "../../api/client.js";
+import { crearReporte } from "../../services/reportes.service.js";
 
-export default function Reportar({ onClose }) {
+// Longitud maxima del motivo aceptada por el backend (POST /api/reportes).
+const MOTIVO_MAX = 2000;
+
+/**
+ * Modal para reportar un producto del catalogo (RF62/RF63, RF79, RF101).
+ * Recibe el producto reportado por prop y envia el reporte real a la API.
+ * @param {{producto?: {id: number|string, name?: string}, onClose?: Function}} props
+ */
+export default function Reportar({ producto, onClose }) {
   const [descripcion, setDescripcion] = useState("");
   const [archivos, setArchivos] = useState([]);
-  const [errorDescripcion, setErrorDescripcion] = useState(false);
-  const [errorEvidencia, setErrorEvidencia] = useState(false);
+  const [errorDescripcion, setErrorDescripcion] = useState("");
+  const [errorEvidencia, setErrorEvidencia] = useState("");
+  const [errorEnvio, setErrorEnvio] = useState("");
+  const [enviando, setEnviando] = useState(false);
   const [exitoEnvio, setExitoEnvio] = useState(false);
   const [enfocado, setEnfocado] = useState(false);
   const [arrastrando, setArrastrando] = useState(false);
@@ -25,7 +37,7 @@ export default function Reportar({ onClose }) {
       });
       return combinados;
     });
-    setErrorEvidencia(false);
+    setErrorEvidencia("");
   }
 
   function manejarClickDropZone() {
@@ -43,49 +55,73 @@ export default function Reportar({ onClose }) {
     agregarArchivos(Array.from(e.dataTransfer.files));
   }
 
-  function manejarEnviar() {
+  async function manejarEnviar() {
+    if (enviando) return;
+
+    const motivo = descripcion.trim();
     let valido = true;
 
-    if (!descripcion.trim()) {
-      setErrorDescripcion(true);
+    if (!motivo) {
+      setErrorDescripcion("La descripción es requerida.");
+      valido = false;
+    } else if (motivo.length > MOTIVO_MAX) {
+      setErrorDescripcion(
+        `La descripción no puede superar los ${MOTIVO_MAX} caracteres.`
+      );
       valido = false;
     } else {
-      setErrorDescripcion(false);
+      setErrorDescripcion("");
     }
 
     if (archivos.length === 0) {
-      setErrorEvidencia(true);
+      setErrorEvidencia("Debes subir al menos un archivo de evidencia.");
       valido = false;
     } else {
-      setErrorEvidencia(false);
+      setErrorEvidencia("");
     }
 
+    setErrorEnvio("");
     if (!valido) return;
 
-    const formData = new FormData();
-    formData.append("descripcion", descripcion.trim());
-    archivos.forEach((archivo) => formData.append("evidencia", archivo));
+    if (!producto?.id) {
+      setErrorEnvio("No se pudo identificar el producto reportado.");
+      return;
+    }
 
-    console.log("Reporte enviado:", {
-      descripcion: descripcion.trim(),
-      archivos: archivos.map((f) => f.name),
-    });
+    if (!getCurrentUser()) {
+      setErrorEnvio("Inicia sesión para reportar un producto.");
+      return;
+    }
 
-    setExitoEnvio(true);
-    setTimeout(() => {
-      setExitoEnvio(false);
-      onClose?.();
-    }, 2000);
+    try {
+      setEnviando(true);
+      await crearReporte({
+        tipo: "Producto",
+        motivo,
+        productoId: producto.id,
+        evidencia: archivos[0],
+      });
 
-    setDescripcion("");
-    setArchivos([]);
+      setExitoEnvio(true);
+      setDescripcion("");
+      setArchivos([]);
+      setTimeout(() => {
+        setExitoEnvio(false);
+        onClose?.();
+      }, 2000);
+    } catch (error) {
+      setErrorEnvio(error.message || "No se pudo enviar el reporte.");
+    } finally {
+      setEnviando(false);
+    }
   }
 
   function manejarCancelar() {
     setDescripcion("");
     setArchivos([]);
-    setErrorDescripcion(false);
-    setErrorEvidencia(false);
+    setErrorDescripcion("");
+    setErrorEvidencia("");
+    setErrorEnvio("");
     onClose?.();
   }
 
@@ -159,7 +195,7 @@ export default function Reportar({ onClose }) {
           </div>
           {errorDescripcion && (
             <p className="text-xs mt-1" style={{ color: "var(--color-error)" }}>
-              La descripción es requerida.
+              {errorDescripcion}
             </p>
           )}
         </div>
@@ -216,7 +252,7 @@ export default function Reportar({ onClose }) {
           </div>
           {errorEvidencia && (
             <p className="text-xs mt-1" style={{ color: "var(--color-error)" }}>
-              Debes subir al menos un archivo de evidencia.
+              {errorEvidencia}
             </p>
           )}
           {exitoEnvio && (
@@ -241,16 +277,23 @@ export default function Reportar({ onClose }) {
           </button>
           <button
             onClick={manejarEnviar}
-            className="font-semibold text-sm rounded-full px-6 py-3 active:scale-95 transition-all"
+            disabled={enviando}
+            className="font-semibold text-sm rounded-full px-6 py-3 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             style={{
               backgroundColor: "var(--color-brand-orange)",
               color: "var(--color-brand-dark-text)",
               fontFamily: "var(--font-sans)",
             }}
           >
-            Enviar reporte
+            {enviando ? "Enviando..." : "Enviar reporte"}
           </button>
         </div>
+
+        {errorEnvio && (
+          <p className="text-xs text-right" style={{ color: "var(--color-error)" }}>
+            {errorEnvio}
+          </p>
+        )}
       </div>
     </div>,
     document.body

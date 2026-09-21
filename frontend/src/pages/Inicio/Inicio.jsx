@@ -6,6 +6,8 @@ import FichaProducto from "../../components/inicio/FichaProducto";
 import Header from "../../components/globales/Header";
 import Reportar from "../../components/inicio/Reportar";
 import { listarProductos } from "../../services/productos.service.js";
+import { agregarProducto } from "../../services/carrito.service.js";
+import { getCurrentUser } from "../../api/client.js";
 import { API_BASE_URL } from "../../constants/config.js";
 
 import "swiper/css";
@@ -98,6 +100,8 @@ const Hero = () => {
   const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [mostrarReportar, setMostrarReportar] = useState(false);
+  // RF62/RF63: producto que se esta reportando en el modal.
+  const [productoReportado, setProductoReportado] = useState(null);
 
   // RE Estado del catalogo real: productos, paginacion, carga y error
   const [productos, setProductos] = useState([]);
@@ -108,6 +112,16 @@ const Hero = () => {
   const [cargando, setCargando] = useState(true);
   const [cargandoMas, setCargandoMas] = useState(false);
   const [error, setError] = useState("");
+
+  // RF104: persiste el producto en el carrito real del comprador autenticado.
+  async function manejarAgregarCarrito(product, cantidad) {
+    const compradorId = getCurrentUser()?.id;
+    if (!compradorId) {
+      navigate("/login");
+      throw new Error("Inicia sesión para agregar productos al carrito");
+    }
+    await agregarProducto(compradorId, product.id, cantidad);
+  }
 
   // JS Consulta el catalogo paginado contra GET /api/productos
   const cargarProductos = useCallback(async (numeroPagina) => {
@@ -616,13 +630,20 @@ const Hero = () => {
         <FichaProducto
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
-          onReportar={() => setMostrarReportar(true)}
+          onReportar={(product) => {
+            setProductoReportado(product);
+            setMostrarReportar(true);
+          }}
           onIrPerfilVendedor={() => navigate("/profile")}
+          onAgregarCarrito={manejarAgregarCarrito}
         />
       )}
 
       {mostrarReportar && (
-        <Reportar onClose={() => setMostrarReportar(false)} />
+        <Reportar
+          producto={productoReportado}
+          onClose={() => setMostrarReportar(false)}
+        />
       )}
     </div>
   );
