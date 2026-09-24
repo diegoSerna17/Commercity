@@ -20,6 +20,24 @@ import PanelAdministrador from './pages/Administrador/PanelControl';
 function AppContent() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const refreshUser = useCallback(async () => {
+    try {
+      const sessionUser = await currentUser();
+      setUser(sessionUser);
+      return sessionUser;
+    } catch {
+      setUser(null);
+      return null;
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
 
   const rutasSinNavbar = ['/login', '/register', '/recover', '/restore', '/admin', '/admin/dashboard'];
   const ocultarNavbar = rutasSinNavbar.some(ruta => location.pathname.toLowerCase().startsWith(ruta));
@@ -76,6 +94,7 @@ function AppContent() {
         </Routes>
       </main>
     </div>
+    </AuthContext.Provider>
   );
 }
 

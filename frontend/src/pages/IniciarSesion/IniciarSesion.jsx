@@ -78,7 +78,7 @@ const Login = () => {
             </p>
           </div>
 
-          <form className="space-y-lg">
+          <form className="space-y-lg" onSubmit={handleSubmit}>
             {/* TW Campo: Correo electronico */}
             <div>
               <label
@@ -163,12 +163,15 @@ const Login = () => {
               </Link>
             </div>
 
+            {recoveryNotice && <p className="text-sm text-brand-muted-text">El canal de correo para recuperación aún no está configurado.</p>}
+            {error && <p role="alert" className="text-sm text-error">{error}</p>}
             {/* TW Boton principal: Entrar */}
             <button
-              type="button"
-              className="w-full bg-brand-orange text-brand-dark-text text-label-md py-sm px-lg rounded-[10px] h-12 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-sm mt-xl font-bold shadow-button"
+              type="submit"
+              disabled={loading}
+              className="w-full bg-brand-orange text-brand-dark-text text-label-md py-sm px-lg rounded-[10px] h-12 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-sm mt-xl font-bold shadow-button disabled:opacity-60"
             >
-              Entrar
+              {loading ? "Ingresando..." : "Entrar"}
               <ArrowRight size={20} />
             </button>
 

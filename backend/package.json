@@ -1,12 +1,13 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "API de Commercity",
+  "main": "src/server/server.js",
   "scripts": {
     "dev": "nodemon src/server/server.js",
     "start": "node src/server/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "db:migrate": "node src/server/migrate.js",
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",
