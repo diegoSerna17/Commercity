@@ -26,7 +26,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.disable("x-powered-by");
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(express.json({ limit: "10mb" }));
-app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
+// CORS: ademas del frontend web se permiten los origenes estandar de la
+// WebView de Capacitor (app movil Ionic), que envian su propio Origin.
+const CORS_ORIGINS = [
+  process.env.FRONTEND_URL || "http://localhost:5173",
+  "https://localhost",      // Capacitor Android (androidScheme https por defecto)
+  "http://localhost",       // Capacitor Android con esquema http / dev
+  "capacitor://localhost",  // Capacitor iOS
+];
+app.use(cors({ origin: CORS_ORIGINS }));
 
 // Imagenes subidas por el vendedor (Perfil Vendedor RF45/RF49)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
