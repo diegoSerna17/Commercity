@@ -57,6 +57,19 @@ app.use("/api/notificaciones", notificacionesRouter);
 app.use("/api/seguidores", seguidoresRouter);
 app.use("/api", productosRouter);
 
+// Catch-all 404: cualquier ruta que no coincida con los routers anteriores
+// responde JSON uniforme en vez del HTML por defecto de Express.
+// Express 5 + path-to-regexp 8.x no soporta "*" en app.use(); se usa middleware sin ruta.
+app.use((_req, res) => {
+    res.status(404).json({
+        success: false,
+        error: {
+            code: "NOT_FOUND",
+            message: "Endpoint no encontrado. Revisa el método HTTP y la ruta."
+        }
+    });
+});
+
 // Middleware de error centralizado al final de la cadena
 app.use(errorHandler);
 

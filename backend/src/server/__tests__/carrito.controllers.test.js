@@ -3,7 +3,21 @@ import request from "supertest";
 
 // Mock de mysql2/promise: createPool devuelve un pool simulado (sin BD real).
 vi.mock("mysql2/promise", () => {
-  const pool = { query: vi.fn(), getConnection: vi.fn() };
+  // query envoltorio: responde de forma transparente la consulta que authRequired
+  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // el resto a la query interna que configura cada test con mockImplementation.
+  const queryInterna = vi.fn();
+  const query = vi.fn((sql, ...resto) => {
+    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
+      return Promise.resolve([[{ activo: 1 }], undefined]);
+    }
+    return queryInterna(sql, ...resto);
+  });
+  query.mockImplementation = (fn) => { queryInterna.mockImplementation(fn); return query; };
+  query.mockImplementationOnce = (fn) => { queryInterna.mockImplementationOnce(fn); return query; };
+  query.mockResolvedValue = (valor) => { queryInterna.mockResolvedValue(valor); return query; };
+  query.mockRejectedValue = (error) => { queryInterna.mockRejectedValue(error); return query; };
+  const pool = { query, getConnection: vi.fn() };
   const conn = {
     beginTransaction: vi.fn().mockResolvedValue(),
     commit: vi.fn().mockResolvedValue(),
@@ -66,10 +80,14 @@ function conexionSinItem() {
 }
 
 describe("GET /", () => {
-  it("responde 200 con el mensaje del servidor", async () => {
+  it("responde 200 con el mensaje del servidor en contrato JSON (DEF-02/DEF-03)", async () => {
     const res = await request(app).get("/");
     expect(res.status).toBe(200);
-    expect(res.text).toContain("servidor creado");
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.message).toContain("servidor creado");
+    expect(res.body.data.status).toBe("ok");
+    expect(res.body.data.version).toBeDefined();
+    expect(res.body.data.timestamp).toBeDefined();
   });
 });
 

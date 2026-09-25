@@ -42,6 +42,23 @@ export const authRequired = async (req, res, next) => {
             });
         }
 
+        // Fix DEF-01 (P1 seguridad): rechazar usuarios con activo = 0 (baneados /
+        // borrado lógico). Sin este check, un usuario desactivado conserva el
+        // acceso hasta que su JWT expira o es revocado explícitamente en logout.
+        const [usuarioFila] = await pool.query(
+            "SELECT activo FROM usuarios WHERE id = ? LIMIT 1",
+            [decoded.id]
+        );
+        if (usuarioFila.length === 0 || Number(usuarioFila[0].activo) === 0) {
+            return res.status(401).json({
+                success: false,
+                error: {
+                    code: "USER_DISABLED",
+                    message: "Cuenta desactivada o baneada. Contacta al administrador."
+                }
+            });
+        }
+
         req.userId = decoded.id;
         req.userEmail = decoded.email;
         next();

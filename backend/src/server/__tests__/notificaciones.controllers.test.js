@@ -4,7 +4,21 @@ import jwt from "jsonwebtoken";
 
 // Mock del pool MySQL (sin BD real) - cubre authRequired y el controller.
 vi.mock("mysql2/promise", () => {
-  const pool = { query: vi.fn(), getConnection: vi.fn() };
+  // query envoltorio: responde de forma transparente la consulta que authRequired
+  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // el resto a la query interna que configura cada test con mockImplementation.
+  const queryInterna = vi.fn();
+  const query = vi.fn((sql, ...resto) => {
+    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
+      return Promise.resolve([[{ activo: 1 }], undefined]);
+    }
+    return queryInterna(sql, ...resto);
+  });
+  query.mockImplementation = (fn) => { queryInterna.mockImplementation(fn); return query; };
+  query.mockImplementationOnce = (fn) => { queryInterna.mockImplementationOnce(fn); return query; };
+  query.mockResolvedValue = (valor) => { queryInterna.mockResolvedValue(valor); return query; };
+  query.mockRejectedValue = (error) => { queryInterna.mockRejectedValue(error); return query; };
+  const pool = { query, getConnection: vi.fn() };
   return {
     __esModule: true,
     default: { createPool: vi.fn(() => pool) },
@@ -391,9 +405,12 @@ describe("Registro por eventos (RF101/RF103)", () => {
       release: vi.fn().mockResolvedValue(),
     };
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT id, estado_envio")) return [[{ id: 10, estado_envio: "Pendiente" }], undefined];
-      if (sql.includes("UPDATE detalle_pedidos SET estado_envio")) return [{ affectedRows: 1 }, undefined];
-      if (sql.includes("SELECT comprador_id FROM pedidos")) return [[{ comprador_id: 8 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 8, fecha_creacion: new Date() }], undefined];
+      }
+      if (/SELECT id,\s+estado_envio/.test(sql)) return [[{ id: 10, estado_envio: "Pendiente" }], undefined];
+      if (/UPDATE detalle_pedidos\s+SET estado_envio/.test(sql)) return [{ affectedRows: 1 }, undefined];
+      if (sql.includes("INSERT INTO notificaciones")) return [{ insertId: 1 }, undefined];
       return [[], undefined];
     });
     pool.getConnection.mockResolvedValue(conn);
@@ -459,9 +476,12 @@ describe("Registro por eventos (RF101/RF103)", () => {
       release: vi.fn().mockResolvedValue(),
     };
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT id, estado_envio")) return [[{ id: 10, estado_envio: "En camino" }], undefined];
-      if (sql.includes("UPDATE detalle_pedidos SET estado_envio")) return [{ affectedRows: 1 }, undefined];
-      if (sql.includes("SELECT comprador_id FROM pedidos")) throw new Error("BD caida");
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 8, fecha_creacion: new Date() }], undefined];
+      }
+      if (/SELECT id,\s+estado_envio/.test(sql)) return [[{ id: 10, estado_envio: "En camino" }], undefined];
+      if (/UPDATE detalle_pedidos\s+SET estado_envio/.test(sql)) return [{ affectedRows: 1 }, undefined];
+      if (sql.includes("INSERT INTO notificaciones")) throw new Error("BD caida");
       return [[], undefined];
     });
     pool.getConnection.mockResolvedValue(conn);

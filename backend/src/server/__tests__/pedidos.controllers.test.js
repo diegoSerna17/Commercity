@@ -4,7 +4,21 @@ import jwt from "jsonwebtoken";
 
 // Mock del pool MySQL (sin BD real).
 vi.mock("mysql2/promise", () => {
-  const pool = { query: vi.fn(), getConnection: vi.fn() };
+  // query envoltorio: responde de forma transparente la consulta que authRequired
+  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // el resto a la query interna que configura cada test con mockImplementation.
+  const queryInterna = vi.fn();
+  const query = vi.fn((sql, ...resto) => {
+    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
+      return Promise.resolve([[{ activo: 1 }], undefined]);
+    }
+    return queryInterna(sql, ...resto);
+  });
+  query.mockImplementation = (fn) => { queryInterna.mockImplementation(fn); return query; };
+  query.mockImplementationOnce = (fn) => { queryInterna.mockImplementationOnce(fn); return query; };
+  query.mockResolvedValue = (valor) => { queryInterna.mockResolvedValue(valor); return query; };
+  query.mockRejectedValue = (error) => { queryInterna.mockRejectedValue(error); return query; };
+  const pool = { query, getConnection: vi.fn() };
   return {
     __esModule: true,
     default: { createPool: vi.fn(() => pool) },
@@ -43,6 +57,7 @@ describe("GET /api/pedidos/resumen (RF113/RF114 + RF74)", () => {
   it("agrupa items por vendedor con desglose de IVA y 90/10", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
       return [
         [
           { producto_id: 1, cantidad: 2, nombre: "Televisor", imagen_url: "tv.jpg", precio: 1190000, descuento_porcentaje: 0, vendedor_id: 3, vendedor_nombre: "Vendedor A", stock: 5, eliminado_por_admin: 0, activo: 1 },
@@ -66,6 +81,7 @@ describe("GET /api/pedidos/resumen (RF113/RF114 + RF74)", () => {
   it("RF74: excluye productos suspendidos o de vendedores inactivos", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
       return [
         [
           { producto_id: 1, cantidad: 1, nombre: "Bueno", precio: 119000, descuento_porcentaje: 0, vendedor_id: 3, vendedor_nombre: "A", stock: 5, eliminado_por_admin: 0, activo: 1 },
@@ -115,6 +131,12 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
     conn.commit.mockResolvedValue();
     conn.rollback.mockResolvedValue();
     conn.release.mockResolvedValue();
+    // authRequired (middleware) consulta el pool: lista negra de tokens vacia.
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      return [[], undefined];
+    });
+    // Flujo feliz del controller: todas las consultas de negocio van por conn.
     conn.query.mockImplementation((sql) => {
       if (sql.includes("FROM carrito_items")) {
         return [[{ producto_id: 1, cantidad: 2, nombre: "Televisor", precio: 1190000, descuento_porcentaje: 0, vendedor_id: 3, stock: 10 }], undefined];
@@ -180,6 +202,7 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
 
   it("rechaza carrito vacio (400)", async () => {
     conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
       if (sql.includes("FROM carrito_items")) return [[], undefined];
       return [[], undefined];
     });
@@ -216,6 +239,7 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
 
   it("RF74: rechaza producto suspendido (409)", async () => {
     conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
       if (sql.includes("FROM carrito_items")) {
         return [[{ producto_id: 9, cantidad: 1, nombre: "Mal", precio: 100, descuento_porcentaje: 0, vendedor_id: 4, stock: 5 }], undefined];
       }
@@ -233,6 +257,7 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
 
   it("rechaza stock insuficiente (409)", async () => {
     conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
       if (sql.includes("FROM carrito_items")) {
         return [[{ producto_id: 1, cantidad: 20, nombre: "Televisor", precio: 1190000, descuento_porcentaje: 0, vendedor_id: 3, stock: 10 }], undefined];
       }
@@ -250,7 +275,10 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
   });
 
   it("hace rollback y responde 500 si la BD falla", async () => {
-    conn.query.mockRejectedValue(new Error("DB boom"));
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      throw new Error("DB boom");
+    });
 
     const res = await request(app)
       .post("/api/pedidos/confirmar-pago")
@@ -280,6 +308,7 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
     conn.release.mockResolvedValue();
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       return [[], undefined];
     });
@@ -290,10 +319,18 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
     expect(res.status).toBe(401);
   });
 
-  it("rechaza a un comprador (403 - requireRoles)", async () => {
-    pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "comprador" }], undefined];
+  it("rechaza a un comprador que intenta avanzar envios (404 - no es vendedor de ninguna linea)", async () => {
+    // Nota: requireRoles se eliminó de la ruta; ahora el controller valida por
+    // ownership: si estado != Cancelado, se consulta con vendedor_id = token.sub,
+    // y un comprador normal no tendra lineas a su nombre en el pedido.
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      }
+      if (/SELECT id,\s+estado_envio\s+FROM detalle_pedidos/.test(sql)) {
+        return [[], undefined]; // el comprador (id=7) no es vendedor de ninguna linea
+      }
       return [[], undefined];
     });
 
@@ -301,15 +338,20 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
       .patch("/api/pedidos/5/estado")
       .set("Authorization", `Bearer ${token}`)
       .send({ estado: "En camino" });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
+    expect(res.body.error.message).toMatch(/vendedor no tiene envíos|no tiene envios/i);
   });
 
   it("avanza UN nivel las lineas del vendedor autenticado (200)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT id, estado_envio")) {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      }
+      if (/SELECT id,\s+estado_envio\s+FROM detalle_pedidos/.test(sql)) {
         return [[{ id: 10, estado_envio: "Pendiente" }], undefined];
       }
-      if (sql.includes("UPDATE detalle_pedidos SET estado_envio")) return [{ affectedRows: 1 }, undefined];
+      if (/UPDATE detalle_pedidos\s+SET estado_envio/.test(sql)) return [{ affectedRows: 1 }, undefined];
       return [[], undefined];
     });
 
@@ -329,7 +371,11 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
 
   it("rechaza saltar niveles (Pendiente -> Entregado) con 409", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT id, estado_envio")) {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      }
+      if (/SELECT id,\s+estado_envio\s+FROM detalle_pedidos/.test(sql)) {
         return [[{ id: 10, estado_envio: "Pendiente" }], undefined];
       }
       return [[], undefined];
@@ -346,7 +392,11 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
 
   it("devuelve 404 si el vendedor no tiene envios en el pedido", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT id, estado_envio")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      }
+      if (/SELECT id,\s+estado_envio\s+FROM detalle_pedidos/.test(sql)) return [[], undefined];
       return [[], undefined];
     });
 
@@ -356,5 +406,272 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
       .send({ estado: "En camino" });
 
     expect(res.status).toBe(404);
+  });
+});
+
+// ============================================================================
+// DEF-05 / RF35 — Cancelación de compra por el comprador
+// ============================================================================
+describe("PATCH /api/pedidos/:id/estado = Cancelado (RF35 - cancelación por comprador)", () => {
+  const conn = {
+    query: vi.fn(),
+    beginTransaction: vi.fn(),
+    commit: vi.fn(),
+    rollback: vi.fn(),
+    release: vi.fn(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    pool.getConnection.mockResolvedValue(conn);
+    conn.beginTransaction.mockResolvedValue();
+    conn.commit.mockResolvedValue();
+    conn.rollback.mockResolvedValue();
+    conn.release.mockResolvedValue();
+    // DEF-01: middleware auth debe verificar activo=1 para ambos tokens
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios WHERE id = ?")) {
+        return [[{ activo: 1 }], undefined];
+      }
+      return [[], undefined];
+    });
+  });
+
+  it("rechaza sin token (401)", async () => {
+    const res = await request(app)
+      .patch("/api/pedidos/5/estado")
+      .send({ estado: "Cancelado" });
+    expect(res.status).toBe(401);
+  });
+
+  it("rechaza si quien cancela NO es el comprador del pedido (403)", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        // pedido del comprador 7, pero viene tokenVendedor = 3
+        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      }
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/pedidos/5/estado")
+      .set("Authorization", `Bearer ${tokenVendedor}`) // 3 ≠ 7
+      .send({ estado: "Cancelado" });
+
+    expect(res.status).toBe(403);
+    expect(conn.rollback).toHaveBeenCalled();
+    expect(res.body.error.message).toMatch(/solo el comprador/i);
+  });
+
+it("rechaza (404) si detalle_id no pertenece al pedido", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      }
+      if (/WHERE dp\.id = \? AND dp\.pedido_id = \?/.test(sql)) {
+        return [[], undefined]; // detalle no existe / no pertenece
+      }
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/pedidos/5/estado")
+      .set("Authorization", `Bearer ${token}`) // comprador 7 = owner OK
+      .send({ estado: "Cancelado", detalle_id: 999 });
+
+    expect(res.status).toBe(404);
+    expect(conn.rollback).toHaveBeenCalled();
+  });
+
+it("rechaza (409) cancelar por detalle_id cuando la línea ya está Entregada", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      }
+      if (/WHERE dp\.id = \? AND dp\.pedido_id = \?/.test(sql)) {
+        return [[{
+          id: 22, cantidad: 2, producto_id: 101, estado_envio: "Entregado",
+          vendedor_id: 3, producto_nombre: "Zapatos"
+        }], undefined];
+      }
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/pedidos/5/estado")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ estado: "Cancelado", detalle_id: 22 });
+
+    expect(res.status).toBe(409);
+    expect(conn.rollback).toHaveBeenCalled();
+    expect(res.body.error.message).toMatch(/Entregado|no se puede cancelar/i);
+  });
+
+it("cancelación por detalle_id OK (200): restituye stock, marca línea, notifica", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      }
+      if (/WHERE dp\.id = \? AND dp\.pedido_id = \?/.test(sql)) {
+        return [[{
+          id: 22, cantidad: 2, producto_id: 101, estado_envio: "Pendiente",
+          vendedor_id: 3, producto_nombre: "Zapatos"
+        }], undefined];
+      }
+      if (sql.includes("UPDATE productos SET stock = stock + ?")) {
+        return [{ affectedRows: 1 }, undefined];
+      }
+      if (/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/.test(sql)) {
+        return [{ affectedRows: 1 }, undefined];
+      }
+      if (sql.includes("COUNT(*) AS total")) {
+        // 2 líneas total = 1 Cancelada + 1 Entregada → Parcial
+        return [[{ total: 2, entregadas: 1, canceladas: 1 }], undefined];
+      }
+      if (/UPDATE pagos_simulados\s+SET estado = \?/.test(sql)) {
+        return [{ affectedRows: 1 }, undefined];
+      }
+      if (sql.includes("INSERT INTO notificaciones")) {
+        return [{ insertId: 1 }, undefined];
+      }
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/pedidos/5/estado")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ estado: "Cancelado", detalle_id: 22 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.tipo).toBe("por_linea");
+    expect(res.body.data.lineas_canceladas).toBe(1);
+    expect(res.body.data.detalle_ids_cancelados).toEqual([22]);
+    expect(res.body.data.estado_pago).toBe("Parcial");
+    // Verifica restitución stock
+    expect(conn.query).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE productos SET stock = stock + ?"),
+      [2, 101]
+    );
+    // Verifica que se actualice a Parcial (no Reembolsado) por la línea Entregada que queda
+    expect(conn.query).toHaveBeenCalledWith(
+      expect.stringMatching(/UPDATE pagos_simulados\s+SET estado = \?/),
+      ["Parcial", 5]
+    );
+    expect(conn.commit).toHaveBeenCalled();
+  });
+
+it("cancelación general OK con mezcla Pendiente + Entregado → Parcial + no_canceladas", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        return [[{ id: 10, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      }
+      if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
+        return [[
+          { id: 1, cantidad: 1, producto_id: 50, estado_envio: "Pendiente",  vendedor_id: 3, producto_nombre: "A" },
+          { id: 2, cantidad: 2, producto_id: 51, estado_envio: "En camino", vendedor_id: 4, producto_nombre: "B" },
+          { id: 3, cantidad: 1, producto_id: 52, estado_envio: "Entregado", vendedor_id: 3, producto_nombre: "C" },
+        ], undefined];
+      }
+      if (sql.includes("UPDATE productos SET stock = stock + ?")) {
+        return [{ affectedRows: 1 }, undefined];
+      }
+      if (/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/.test(sql)) {
+        return [{ affectedRows: 1 }, undefined];
+      }
+      if (sql.includes("COUNT(*) AS total")) {
+        // 3 total: 2 canceladas, 1 entregada → Parcial
+        return [[{ total: 3, entregadas: 1, canceladas: 2 }], undefined];
+      }
+      if (/UPDATE pagos_simulados\s+SET estado = \?/.test(sql)) {
+        return [{ affectedRows: 1 }, undefined];
+      }
+      if (sql.includes("INSERT INTO notificaciones")) {
+        return [{ insertId: 1 }, undefined];
+      }
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/pedidos/10/estado")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ estado: "Cancelado" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.tipo).toBe("general");
+    expect(res.body.data.lineas_canceladas).toBe(2);
+    expect(res.body.data.detalle_ids_cancelados).toEqual([1, 2]);
+    expect(res.body.data.no_canceladas).toHaveLength(1);
+    expect(res.body.data.no_canceladas[0].detalle_id).toBe(3);
+    expect(res.body.data.no_canceladas[0].motivo).toBe("Entregado");
+    expect(res.body.data.estado_pago).toBe("Parcial");
+    expect(conn.commit).toHaveBeenCalled();
+  });
+
+it("cancelación general de pedido TODO Entregado → 409 (ninguna línea cancelable)", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        return [[{ id: 11, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      }
+      if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
+        return [[
+          { id: 5, cantidad: 1, producto_id: 10, estado_envio: "Entregado", vendedor_id: 3, producto_nombre: "X" },
+          { id: 6, cantidad: 1, producto_id: 11, estado_envio: "Entregado", vendedor_id: 3, producto_nombre: "Y" },
+        ], undefined];
+      }
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/pedidos/11/estado")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ estado: "Cancelado" });
+
+    expect(res.status).toBe(409);
+    expect(conn.rollback).toHaveBeenCalled();
+    expect(res.body.error.message).toMatch(/Ninguna línea|todas.*Entregadas/i);
+  });
+
+  it("cancelación general TODO el pedido (sin líneas Entregadas) → estado_pago Reembolsado", async () => {
+    conn.query.mockImplementation((sql) => {
+if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+        return [[{ id: 12, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      }
+      if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
+        return [[
+          { id: 7, cantidad: 3, producto_id: 20, estado_envio: "Pendiente", vendedor_id: 4, producto_nombre: "M" },
+        ], undefined];
+      }
+      if (sql.includes("UPDATE productos SET stock = stock + ?")) return [{ affectedRows: 1 }, undefined];
+      if (/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/.test(sql)) return [{ affectedRows: 1 }, undefined];
+      if (sql.includes("COUNT(*) AS total")) {
+        return [[{ total: 1, entregadas: 0, canceladas: 1 }], undefined]; // todas canceladas
+      }
+      if (/UPDATE pagos_simulados\s+SET estado = \?/.test(sql)) return [{ affectedRows: 1 }, undefined];
+      if (sql.includes("INSERT INTO notificaciones")) return [{ insertId: 1 }, undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/pedidos/12/estado")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ estado: "Cancelado" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.lineas_canceladas).toBe(1);
+    expect(res.body.data.no_canceladas).toEqual([]);
+    expect(res.body.data.estado_pago).toBe("Reembolsado");
+    expect(conn.query).toHaveBeenCalledWith(
+      expect.stringMatching(/UPDATE pagos_simulados\s+SET estado = \?/),
+      ["Reembolsado", 12]
+    );
+    expect(conn.commit).toHaveBeenCalled();
   });
 });

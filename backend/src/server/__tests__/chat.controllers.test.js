@@ -4,12 +4,26 @@ import jwt from "jsonwebtoken";
 
 // Mock del pool MySQL (sin BD real) - cubre authRequired y el controller.
 vi.mock("mysql2/promise", () => {
-    const pool = { query: vi.fn(), getConnection: vi.fn() };
-    return {
-        __esModule: true,
-        default: { createPool: vi.fn(() => pool) },
-        __pool: pool,
-    };
+  // query envoltorio: responde de forma transparente la consulta que authRequired
+  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // el resto a la query interna que configura cada test con mockImplementation.
+  const queryInterna = vi.fn();
+  const query = vi.fn((sql, ...resto) => {
+    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
+      return Promise.resolve([[{ activo: 1 }], undefined]);
+    }
+    return queryInterna(sql, ...resto);
+  });
+  query.mockImplementation = (fn) => { queryInterna.mockImplementation(fn); return query; };
+  query.mockImplementationOnce = (fn) => { queryInterna.mockImplementationOnce(fn); return query; };
+  query.mockResolvedValue = (valor) => { queryInterna.mockResolvedValue(valor); return query; };
+  query.mockRejectedValue = (error) => { queryInterna.mockRejectedValue(error); return query; };
+  const pool = { query, getConnection: vi.fn() };
+  return {
+    __esModule: true,
+    default: { createPool: vi.fn(() => pool) },
+    __pool: pool,
+  };
 });
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto_test";

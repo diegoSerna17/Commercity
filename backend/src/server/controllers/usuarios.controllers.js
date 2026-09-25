@@ -17,11 +17,26 @@ import { enviarCorreoRecuperacion } from "../utils/mailer.js";
 
 /**
  * Endpoint de verificación: responde que el servidor esta activo.
+ * Usado por GET / (routes/routes.js) y por GET /api/usuarios/
+ * (routes/usuarios.routes.js).
+ *
+ * Fix DEF-02 / DEF-03 (P1 contrato API uniforme): anteriormente devolvia
+ * texto plano, lo cual rompia el contrato { success, data } que usan los
+ * otros 67 endpoints. Ahora responde JSON conforme al contrato.
+ *
  * @param {import("express").Request} req
  * @param {import("express").Response} res
  */
 export const getUsuarios = (req, res) => {
-    res.send('servidor creado')
+    return res.json({
+        success: true,
+        data: {
+            message: "servidor creado",
+            status: "ok",
+            timestamp: new Date().toISOString(),
+            version: "Commercity API v1"
+        }
+    });
 };
 
 // ============================ REGISTRO ============================

@@ -82,9 +82,92 @@ nbdist/
 *.pid
 *.seed
 
-
 *.zip
 
 temp/
 tmp/
 logs/
+
+
+# ---------------------------------------------------------------------------
+# Exclusions propias del proyecto CommerCity
+# (regla limpieza-archivos-temporales.md)
+# ---------------------------------------------------------------------------
+
+# Imagenes y adjuntos subidos por los usuarios en tiempo de ejecucion:
+# no son fuente, son datos de la instalacion local.
+backend/src/server/uploads/
+
+# Logs y salidas de diagnostico de informes (temporales consumidos)
+informes/_*
+
+# Scripts temporales de consulta/diagnostico contra la BD
+backend/_*.mjs
+
+# Cache local de Vitest/Vite dentro de backend (si quedo rastreada por error)
+backend/node_modules/.vite/
+
+# Payload crudo del set E2E: contiene respuestas reales de la BD compartida
+# (listados de usuarios con nombres y correos). NO versionar.
+AVANCES/PRUEBAS/resultados.json
+
+# ---------------------------------------------------------------------------
+# Regla 2026-09-24: solo se suben archivos FUNCIONALES DE EJECUCIÓN.
+# Quedan FUERA: entregas parciales compañeros, informes entregables,
+#             documentación de módulos no integrados, binarios locales.
+# ---------------------------------------------------------------------------
+
+# Entregas de compañeros NO integradas en trunk (móvil, escritorio, chat,
+# proyecto Diego, scripts, drives, carpetas historicas, meneses, last version,
+# audios, docs paralelos, TES). Líder define si entran en carpetas paralelas
+# en otro repositorio o en ramas separadas.
+AVANCES/
+DRIVE/
+Meneses/
+"LAST VERSION"/
+Audios/
+docs/
+scripts/
+TES.MD
+INFORME_CALIDAD*.pdf
+INFORME_CALIDAD*.PDF
+
+# Informes .docx (versiones v4, v6, Final, 3.0, optimizado, Sugerencias)
+# ya convertidos o con equivalente .md: NO se versionan como fuente.
+informes/*.docx
+informes/**/*.docx
+informes/**/*.DOCX
+
+# Informes generados NUEVOS en .md que son entregables, no parte del
+# código ejecutable (decisión Daniel 2026-09-24). Quedan en el repo solo
+# si el líder los aprueba explícitamente en un commit específico.
+# (Dejar comentado para activar/desactivar por lote):
+# informes/EVIDENCIA_E2E_ENDPOINTS_*.md
+# informes/INFORME_CALIDAD_COMMERCITY_*.md
+
+# Entornos locales del desarrollador (Claude, Trae, Kilo, Continue):
+# NUNCA entran al repo.
+.trae/
+.kilo/
+.continue/
+skills-lock.json
+
+# Carpetas caches de Vite/Vitest de todo el arbol (raíz + backend + frontend):
+**/.vite/
+
+# Uploads de runtime en cualquier profundidad:
+**/uploads/
+
+# PDFs, archivos grandes binarios de presentaciones o entregas:
+*.pptx
+*.ppsx
+*.mp3
+*.mp4
+*.wav
+*.zip
+*.rar
+*.7z
+
+# Archivos Windows del perfil:
+*.lnk
+*.url

@@ -173,7 +173,6 @@ export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
                   value={direccionEnvio}
                   onChange={(e) => setDireccionEnvio(e.target.value)}
                   required
-                  minLength={5}
                   className="w-full bg-input-bg border border-surface-container-high rounded-card px-4 py-3.5 text-on-surface placeholder:text-brand-muted-text text-base outline-none focus:border-brand-orange transition-colors"
                 />
               </div>

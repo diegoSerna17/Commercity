@@ -129,7 +129,6 @@ export default function PerfilVendedor() {
   const [sellerRatingSum, setSellerRatingSum] = useState(0);
   const [sellerRatingCount, setSellerRatingCount] = useState(0);
   const [sellerHover, setSellerHover] = useState(0);
-  const [isFollowing, setIsFollowing] = useState(false);
   const [bioText, setBioText] = useState(
     'Me gusta encontrar productos de buena calidad y apoyar tiendas con excelente atención. Siempre busco compras con buenas recomendaciones."'
   );
@@ -143,6 +142,10 @@ export default function PerfilVendedor() {
   const [mostrarAgregarProducto, setMostrarAgregarProducto] = useState(false);
   const [productoEnEdicion, setProductoEnEdicion] = useState(null);
   const [mostrarSeguidores, setMostrarSeguidores] = useState(false);
+  // Pestana con la que se abre el modal de seguidores: "seguidores" (quienes me
+  // siguen) o "siguiendo" (a quienes sigo). Sin esto, los dos contadores abrian
+  // siempre la misma pestana.
+  const [tabInicialSeguidores, setTabInicialSeguidores] = useState("seguidores");
 
   const avatarInputRef = useRef(null);
   const textareaRef = useRef(null);
@@ -238,7 +241,15 @@ export default function PerfilVendedor() {
     setIsEditingBio(false);
   };
 
-  const toggleFollow = () => setIsFollowing((p) => !p);
+  /**
+   * Abre el modal de seguidores en la pestana que corresponde al contador
+   * pulsado: "seguidores" para quienes me siguen y "siguiendo" para los que sigo.
+   * @param {"seguidores"|"siguiendo"} tab
+   */
+  const abrirSeguidores = (tab) => {
+    setTabInicialSeguidores(tab);
+    setMostrarSeguidores(true);
+  };
 
   const recargarSeguidores = async () => {
     const [resSiguiendo, resSeguidores] = await Promise.all([
@@ -475,7 +486,7 @@ export default function PerfilVendedor() {
               {/* Stats Row */}
               <div className="flex items-center gap-10 mb-6">
                 <button
-                  onClick={() => setMostrarSeguidores(true)}
+                  onClick={() => abrirSeguidores("seguidores")}
                   className="group text-left transition-opacity hover:opacity-80"
                 >
                   <p
@@ -505,7 +516,7 @@ export default function PerfilVendedor() {
                 </button>
                 <div className="w-px h-8" style={{ backgroundColor: "var(--color-surface-container-high)" }} />
                 <button
-                  onClick={() => setMostrarSeguidores(true)}
+                  onClick={() => abrirSeguidores("siguiendo")}
                   className="group text-left transition-opacity hover:opacity-80"
                 >
                   <p
@@ -561,28 +572,6 @@ export default function PerfilVendedor() {
                   </p>
                 </div>
               </div>
-
-              {/* Follow Button */}
-              <button
-                onClick={toggleFollow}
-                className="rounded-full font-semibold text-[14px] transition-all duration-200 hover:shadow-md active:scale-[0.98] mb-6"
-                style={{
-                  padding: "10px 28px",
-                  fontFamily: "var(--font-sans)",
-                  ...(isFollowing
-                    ? {
-                        backgroundColor: "transparent",
-                        border: "1.5px solid var(--color-brand-orange)",
-                        color: "var(--color-brand-orange)",
-                      }
-                    : {
-                        backgroundColor: "var(--color-brand-orange)",
-                        color: "var(--color-auth-card-bg)",
-                      }),
-                }}
-              >
-                {isFollowing ? "Siguiendo" : "Seguir"}
-              </button>
 
               {/* Bio Section */}
               <div className="max-w-[500px]">
@@ -926,8 +915,9 @@ export default function PerfilVendedor() {
 
       {mostrarSeguidores && (
         <SeguidoresModal
+          key={tabInicialSeguidores}
           datos={{ usuario: nombrePerfil, seguidores, siguiendo }}
-          initialTab="seguidores"
+          initialTab={tabInicialSeguidores}
           onClose={() => setMostrarSeguidores(false)}
           onChanged={recargarSeguidores}
         />

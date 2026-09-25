@@ -4,7 +4,21 @@ import jwt from "jsonwebtoken";
 
 // Mock del pool MySQL (sin BD real).
 vi.mock("mysql2/promise", () => {
-  const pool = { query: vi.fn(), getConnection: vi.fn() };
+  // query envoltorio: responde de forma transparente la consulta que authRequired
+  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // el resto a la query interna que configura cada test con mockImplementation.
+  const queryInterna = vi.fn();
+  const query = vi.fn((sql, ...resto) => {
+    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
+      return Promise.resolve([[{ activo: 1 }], undefined]);
+    }
+    return queryInterna(sql, ...resto);
+  });
+  query.mockImplementation = (fn) => { queryInterna.mockImplementation(fn); return query; };
+  query.mockImplementationOnce = (fn) => { queryInterna.mockImplementationOnce(fn); return query; };
+  query.mockResolvedValue = (valor) => { queryInterna.mockResolvedValue(valor); return query; };
+  query.mockRejectedValue = (error) => { queryInterna.mockRejectedValue(error); return query; };
+  const pool = { query, getConnection: vi.fn() };
   return {
     __esModule: true,
     default: { createPool: vi.fn(() => pool) },
@@ -42,22 +56,23 @@ const filaCifrada = {
 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  // Default: auth OK (blacklist vacia) + rol administrador
-  pool.query.mockImplementation((sql) => {
-    if (sql.includes("tokens_invalidados")) return [[], undefined];
-    if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
-    return [[], undefined];
+    vi.clearAllMocks();
+    // Default: auth OK (blacklist vacia) + rol administrador + usuario activo
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      return [[], undefined];
+    });
+    // getConnection para upsert
+    pool.getConnection.mockResolvedValue({
+      beginTransaction: vi.fn().mockResolvedValue(),
+      commit: vi.fn().mockResolvedValue(),
+      rollback: vi.fn().mockResolvedValue(),
+      release: vi.fn().mockResolvedValue(),
+      query: vi.fn().mockResolvedValue([[], undefined]),
+    });
   });
-  // getConnection para upsert
-  pool.getConnection.mockResolvedValue({
-    beginTransaction: vi.fn().mockResolvedValue(),
-    commit: vi.fn().mockResolvedValue(),
-    rollback: vi.fn().mockResolvedValue(),
-    release: vi.fn().mockResolvedValue(),
-    query: vi.fn().mockResolvedValue([[], undefined]),
-  });
-});
 
 describe("GET /api/admin/mi-cuenta-bancaria (RF76)", () => {
   it("rechaza sin token (401)", async () => {
