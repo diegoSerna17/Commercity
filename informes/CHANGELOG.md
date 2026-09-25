@@ -4,6 +4,30 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## [Unreleased] - 2026-09-25 16:41 — CORS: orígenes de la WebView Capacitor (app móvil Ionic)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/app.js; backend/src/server/__tests__/cors.middleware.test.js (nuevo, reemplaza a backend/src/server/__tests__/app.cors.test.js)
+- **Descripción**: la configuración de CORS pasó de un único origen (`FRONTEND_URL` o `http://localhost:5173`) a la lista `CORS_ORIGINS` que conserva el frontend web y añade los orígenes estándar de la WebView de Capacitor: `https://localhost` (Android con `androidScheme https` por defecto), `http://localhost` (esquema http / desarrollo) y `capacitor://localhost` (iOS). Sin este cambio, toda petición desde la app móvil quedaba bloqueada por CORS al enviar la WebView su propio Origin. Se añadió el test permanente `cors.middleware.test.js` (5 pruebas de preflight OPTIONS contra la app real: 4 orígenes permitidos + 1 origen desconocido no reflejado).
+- **Motivo**: la app móvil del equipo (Ionic Capacitor 8.4.0) no podía llamar a la API; el bloqueo CORS no es visible hasta ejecutar la app en dispositivo/WebView.
+- **Requerimientos**: RNF de seguridad (regla `api-seguridad.md`: allow-list de orígenes, sin comodín `*`); habilita la integración de la app móvil con todos los RF expuestos por la API.
+- **Evidencia**: suite backend `npm test` 301/301 en 20 archivos (296 previos + 5 de CORS); cobertura Statements 91.81% / Branches 81.46% / Functions 97.54% / Lines 92.31% (umbral 60%). Verificación funcional con el servidor levantado (`npm start`) y preflight OPTIONS vía `curl` (el middleware cors corre antes de los routers, el chequeo aplica a cualquier ruta; el test permanente usa `/api/productos`): `Origin: https://localhost` → 204 con `Access-Control-Allow-Origin: https://localhost`; `http://localhost:5173` → 204 reflejado; `capacitor://localhost` → 204 reflejado; `https://malicioso.com` → 204 SIN el header `Access-Control-Allow-Origin` (el navegador bloquea la petición).
+- **Estado**: Verificado (unitarias + cobertura + verificación funcional en vivo)
+
+---
+
+## [Unreleased] - 2026-09-25 - Documentacion: README.md raiz del proyecto
+
+- **Autor**: Daniel Palacios
+- **Archivos**: README.md (nuevo, en la raiz del repositorio)
+- **Descripción**: se creó el README.md raíz para la sustentación final del proyecto: descripción, contexto académico SENA (ADSO, FPI, etapa productiva), características por módulo, arquitectura con diagrama Mermaid y pipeline de middlewares de autenticación, stack con versiones, estructura del repositorio, requisitos previos, variables de entorno del backend, instalación y ejecución, pruebas con resultados y cobertura, documentación de la API, roles del sistema, equipo y uso académico. Todo el contenido fue verificado por lectura directa del código (package.json de backend y frontend, app.js, server.js, client.js, constants/config.js, .env.example, vite.config.js, .nvmrc, estructura de carpetas).
+- **Motivo**: el repositorio no tenía README en la raíz; se requiere documentación precisa y verificable para la defensa ante el instructor evaluador.
+- **Requerimientos**: RNF de documentación y trazabilidad del proyecto formativo (GFPI-G-040).
+- **Evidencia**: documento creado de 264 líneas, sin cambios de código; cita los resultados vigentes de las suites (backend 296/296 en 19 archivos, cobertura Statements 91.81% / Branches 81.46% / Functions 97.54% / Lines 92.31%; frontend 17/17 en 4 archivos).
+- **Estado**: Verificado
+
+---
+
 ## [Unreleased] - 2026-09-25 15:55 — FASE 2: cierre de defectos P1 (DEF-01..DEF-05) y suite backend en verde
 
 - **Autor**: Daniel Palacios
@@ -77,7 +101,7 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 ## 2026-09-13 - FEAT: integracion del frontend web a la API real (rama feature/web-integracion-api)
 
 - **Autor**: Daniel Palacios
-- **Archivos**: rama feature/web-integracion-api (worktree C:\Users\dpalaciosr\commercity-web): frontend/src/constants/config.js; frontend/src/services/productos.service.js; frontend/src/pages/Inicio/Inicio.jsx; frontend/src/pages/IniciarSesion/Registro.jsx; frontend/src/components/globales/RutaProtegidaAdmin.jsx; frontend/src/App.jsx; frontend/src/pages/Administrador/PanelControl.jsx
+- **Archivos**: rama feature/web-integracion-api (worktree local): frontend/src/constants/config.js; frontend/src/services/productos.service.js; frontend/src/pages/Inicio/Inicio.jsx; frontend/src/pages/IniciarSesion/Registro.jsx; frontend/src/components/globales/RutaProtegidaAdmin.jsx; frontend/src/App.jsx; frontend/src/pages/Administrador/PanelControl.jsx
 - **Descripcion**: catalogo de Inicio conectado a GET /api/productos (con paginacion real y sin mocks), registro real contra POST /api/usuarios/register con auto-login, guard de administrador para /admin y /admin/dashboard, API_BASE_URL por defecto en 3000 y correccion de mojibake en el panel admin.
 - **Motivo**: la rama prueba-backend tenia catalogo mock y registro sin implementar, lo que impedia el cierre de la Fase 2 (pantallas del alcance con datos reales).
 - **Requerimientos**: RF87-RF94 (catalogo), RF1-RF4 (registro), RNF de seguridad (control de acceso admin)
@@ -1165,7 +1189,7 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 ## 2026-08-07 - DOCS: informe de actualizacion BD y requerimientos (guardado en Escritorio/INFO)
 
 - **Autor**: Daniel Palacios
-- **Archivos**: "C:\Users\dpalaciosr\OneDrive - Ufinet Latam\Escritorio\INFO\INFORME_ACTUALIZACION_BD_Y_REQUERIMIENTOS_2026-08-07.md"
+- **Archivos**: INFORME_ACTUALIZACION_BD_Y_REQUERIMIENTOS_2026-08-07.md (documento local externo, no versionado)
 - **Descripcion**: se creo un informe de actualizacion en primera persona (distinto al informe de revision) y se guardo en la ruta externa `Escritorio\INFO`. Documenta los cambios verificados del 6/08 a la madrugada del 7/08: (1) BD - ENUM `notificaciones.tipo` corregido, `detalle_pedidos` con `estado_envio`/`estado_pago_vendedor`/`fecha_desembolso`, `pedidos.estado_pedido` eliminado (N a 1), base vacia; (2) requerimientos - RF4 expiracion 5 min, RF115 ya no almacena IVA, RF132 corregido a 19% (modelo 119% en disputa), RF92 tarjeta incompleta; (3) decisiones pendientes - modelo de IVA (llamada 7/08), columna expiracion token, mojibake, seed; (4) recomendaciones de solucion con migraciones SQL.
 - **Motivo**: el usuario pidio guardar un informe diferente en la ruta INFO, no una copia del informe de revision.
 - **Requerimientos**: RF4, RF92, RF97, RF114, RF115, RF132, RFX (REVISION)
