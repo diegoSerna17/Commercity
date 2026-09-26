@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## [Unreleased] - 2026-09-25 20:15 — CORS: 6to test (peticion sin header Origin)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/__tests__/cors.middleware.test.js
+- **Descripción**: se añadió el 6to caso al test permanente de CORS: preflight OPTIONS contra `/api/productos` SIN header `Origin`, verificando que la API no refleja `Access-Control-Allow-Origin` (no hay CORS que aplicar para peticiones del mismo origen o clientes no navegador). Cierra el hallazgo menor M1 de la revisión de código 16.
+- **Motivo**: completar la matriz de casos de CORS (4 orígenes permitidos + origen desconocido + sin Origin) para el portafolio de evidencias de la inspección de entregas de API REST.
+- **Requerimientos**: RNF de seguridad (regla `api-seguridad.md`: allow-list de orígenes sin comodín `*`).
+- **Evidencia**: suite backend completa `npx vitest run --coverage`: 302/302 pruebas PASSED en 20 archivos (301 previas + 1 nueva), incluido el módulo Seguidores RF106 con 15 pruebas validadas (pendiente del informe de entregas del 21-sep). Cobertura: Statements 91.81% / Branches 81.46% / Functions 97.54% / Lines 92.31% (umbral 60%). Commit `3d27388` publicado en `origin/feature/web-integracion-api` y `commercycity/feature/web-integracion-api`.
+- **Estado**: Verificado (unitarias + cobertura)
+
+---
+
 ## [Unreleased] - 2026-09-25 16:41 — CORS: orígenes de la WebView Capacitor (app móvil Ionic)
 
 - **Autor**: Daniel Palacios

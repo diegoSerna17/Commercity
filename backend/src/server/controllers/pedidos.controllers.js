@@ -300,7 +300,7 @@ export const actualizarEstado = async (req, res, next) => {
 
     // Cargar pedido (comprador_id nos sirve para ambos caminos y para el RBAC).
     const [pedidos] = await conn.query(
-      "SELECT id, comprador_id, fecha_creacion FROM pedidos WHERE id = ? FOR UPDATE",
+      "SELECT id, comprador_id, fecha_pedido FROM pedidos WHERE id = ? FOR UPDATE",
       [id]
     );
     if (pedidos.length === 0) {
@@ -326,7 +326,7 @@ export const actualizarEstado = async (req, res, next) => {
       if (detalle_id !== undefined) {
         const [lineas] = await conn.query(
           `SELECT dp.id, dp.cantidad, dp.producto_id, dp.estado_envio, dp.vendedor_id,
-                  p.titulo AS producto_nombre
+                  p.nombre AS producto_nombre
              FROM detalle_pedidos dp
              JOIN productos p ON p.id = dp.producto_id
             WHERE dp.id = ? AND dp.pedido_id = ?
@@ -378,7 +378,7 @@ export const actualizarEstado = async (req, res, next) => {
       } else {
         const [todas] = await conn.query(
           `SELECT dp.id, dp.cantidad, dp.producto_id, dp.estado_envio, dp.vendedor_id,
-                  p.titulo AS producto_nombre
+                  p.nombre AS producto_nombre
              FROM detalle_pedidos dp
              JOIN productos p ON p.id = dp.producto_id
             WHERE dp.pedido_id = ?

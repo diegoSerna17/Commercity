@@ -405,8 +405,8 @@ describe("Registro por eventos (RF101/RF103)", () => {
       release: vi.fn().mockResolvedValue(),
     };
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
-        return [[{ id: 5, comprador_id: 8, fecha_creacion: new Date() }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 8, fecha_pedido: new Date() }], undefined];
       }
       if (/SELECT id,\s+estado_envio/.test(sql)) return [[{ id: 10, estado_envio: "Pendiente" }], undefined];
       if (/UPDATE detalle_pedidos\s+SET estado_envio/.test(sql)) return [{ affectedRows: 1 }, undefined];
@@ -476,8 +476,8 @@ describe("Registro por eventos (RF101/RF103)", () => {
       release: vi.fn().mockResolvedValue(),
     };
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
-        return [[{ id: 5, comprador_id: 8, fecha_creacion: new Date() }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 8, fecha_pedido: new Date() }], undefined];
       }
       if (/SELECT id,\s+estado_envio/.test(sql)) return [[{ id: 10, estado_envio: "En camino" }], undefined];
       if (/UPDATE detalle_pedidos\s+SET estado_envio/.test(sql)) return [{ affectedRows: 1 }, undefined];

@@ -325,8 +325,8 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
     // y un comprador normal no tendra lineas a su nombre en el pedido.
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
-        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
       if (/SELECT id,\s+estado_envio\s+FROM detalle_pedidos/.test(sql)) {
         return [[], undefined]; // el comprador (id=7) no es vendedor de ninguna linea
@@ -345,8 +345,8 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
   it("avanza UN nivel las lineas del vendedor autenticado (200)", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
-        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
       if (/SELECT id,\s+estado_envio\s+FROM detalle_pedidos/.test(sql)) {
         return [[{ id: 10, estado_envio: "Pendiente" }], undefined];
@@ -372,8 +372,8 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
   it("rechaza saltar niveles (Pendiente -> Entregado) con 409", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
-        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
       if (/SELECT id,\s+estado_envio\s+FROM detalle_pedidos/.test(sql)) {
         return [[{ id: 10, estado_envio: "Pendiente" }], undefined];
@@ -393,8 +393,8 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
   it("devuelve 404 si el vendedor no tiene envios en el pedido", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
-        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
       if (/SELECT id,\s+estado_envio\s+FROM detalle_pedidos/.test(sql)) return [[], undefined];
       return [[], undefined];
@@ -448,9 +448,9 @@ describe("PATCH /api/pedidos/:id/estado = Cancelado (RF35 - cancelación por com
   it("rechaza si quien cancela NO es el comprador del pedido (403)", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
         // pedido del comprador 7, pero viene tokenVendedor = 3
-        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+        return [[{ id: 5, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
       return [[], undefined];
     });
@@ -468,8 +468,8 @@ describe("PATCH /api/pedidos/:id/estado = Cancelado (RF35 - cancelación por com
 it("rechaza (404) si detalle_id no pertenece al pedido", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
-        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
       if (/WHERE dp\.id = \? AND dp\.pedido_id = \?/.test(sql)) {
         return [[], undefined]; // detalle no existe / no pertenece
@@ -489,8 +489,8 @@ it("rechaza (404) si detalle_id no pertenece al pedido", async () => {
 it("rechaza (409) cancelar por detalle_id cuando la línea ya está Entregada", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
-        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
       if (/WHERE dp\.id = \? AND dp\.pedido_id = \?/.test(sql)) {
         return [[{
@@ -514,8 +514,8 @@ it("rechaza (409) cancelar por detalle_id cuando la línea ya está Entregada", 
 it("cancelación por detalle_id OK (200): restituye stock, marca línea, notifica", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
-        return [[{ id: 5, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[{ id: 5, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
       if (/WHERE dp\.id = \? AND dp\.pedido_id = \?/.test(sql)) {
         return [[{
@@ -568,8 +568,8 @@ it("cancelación por detalle_id OK (200): restituye stock, marca línea, notific
 it("cancelación general OK con mezcla Pendiente + Entregado → Parcial + no_canceladas", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
-        return [[{ id: 10, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[{ id: 10, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
       if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
         return [[
@@ -616,8 +616,8 @@ it("cancelación general OK con mezcla Pendiente + Entregado → Parcial + no_ca
 it("cancelación general de pedido TODO Entregado → 409 (ninguna línea cancelable)", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
-        return [[{ id: 11, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[{ id: 11, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
       if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
         return [[
@@ -641,8 +641,8 @@ it("cancelación general de pedido TODO Entregado → 409 (ninguna línea cancel
   it("cancelación general TODO el pedido (sin líneas Entregadas) → estado_pago Reembolsado", async () => {
     conn.query.mockImplementation((sql) => {
 if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
-      if (sql.includes("SELECT id, comprador_id, fecha_creacion FROM pedidos")) {
-        return [[{ id: 12, comprador_id: 7, fecha_creacion: new Date() }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[{ id: 12, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
       if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
         return [[
