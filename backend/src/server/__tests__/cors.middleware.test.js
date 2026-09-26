@@ -61,4 +61,13 @@ describe("CORS (origenes permitidos: frontend web + WebView Capacitor)", () => {
     // Sin Access-Control-Allow-Origin el navegador bloquea la peticion cruzada.
     expect(res.headers["access-control-allow-origin"]).toBeUndefined();
   });
+
+  it("no refleja Access-Control-Allow-Origin cuando la peticion llega sin header Origin", async () => {
+    const res = await request(app)
+      .options("/api/productos")
+      .set("Access-Control-Request-Method", "POST");
+
+    // Sin Origin (mismo origen o cliente no navegador) no hay CORS que aplicar.
+    expect(res.headers["access-control-allow-origin"]).toBeUndefined();
+  });
 });
