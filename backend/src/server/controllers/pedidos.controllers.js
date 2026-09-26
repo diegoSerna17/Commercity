@@ -279,6 +279,20 @@ export const confirmarPago = async (req, res, next) => {
 };
 
 /**
+ * Mapea el estado de pago al vendedor tras cancelar la línea.
+ * detalle_pedidos.estado_pago_vendedor es ENUM('Pendiente','Desembolsado') en la
+ * BD real: NO existe un valor 'Reembolsado' para el vendedor. Si ya fue
+ * desembolsado se conserva 'Desembolsado'; en caso contrario la línea vuelve a
+ * 'Pendiente'. Pérdida semántica asumida y documentada en
+ * informes/PROPUESTA_MIGRACION_ENUM_ESTADOS.md (Opción A pendiente de decisión).
+ * @param {string} estadoActual valor actual de estado_pago_vendedor
+ * @returns {"Pendiente"|"Desembolsado"} valor válido dentro del ENUM real
+ */
+function estadoPagoVendedorTrasCancelacion(estadoActual) {
+  return estadoActual === "Desembolsado" ? "Desembolsado" : "Pendiente";
+}
+
+/**
  * PATCH /api/pedidos/:id/estado
  * DOS caminos dentro del mismo endpoint:
  *  - Camino 1 (Vendedor / RF122-RF124): estado = "En camino" | "Entregado"
@@ -326,7 +340,7 @@ export const actualizarEstado = async (req, res, next) => {
       if (detalle_id !== undefined) {
         const [lineas] = await conn.query(
           `SELECT dp.id, dp.cantidad, dp.producto_id, dp.estado_envio, dp.vendedor_id,
-                  p.nombre AS producto_nombre
+                  dp.estado_pago_vendedor, p.nombre AS producto_nombre
              FROM detalle_pedidos dp
              JOIN productos p ON p.id = dp.producto_id
             WHERE dp.id = ? AND dp.pedido_id = ?
@@ -358,13 +372,17 @@ export const actualizarEstado = async (req, res, next) => {
           "UPDATE productos SET stock = stock + ? WHERE id = ?",
           [linea.cantidad, linea.producto_id]
         );
-        // Marcar línea cancelada.
+        // Marcar línea cancelada. estado_pago_vendedor solo admite
+        // 'Pendiente' | 'Desembolsado' (ENUM real de la BD).
+        const pagoVendedorLinea = estadoPagoVendedorTrasCancelacion(
+          linea.estado_pago_vendedor
+        );
         await conn.query(
           `UPDATE detalle_pedidos
               SET estado_envio = 'Cancelado',
-                  estado_pago_vendedor = 'Reembolsado'
+                  estado_pago_vendedor = ?
             WHERE id = ?`,
-          [linea.id]
+          [pagoVendedorLinea, linea.id]
         );
         lineasCanceladas.push({
           detalle_id: linea.id,
@@ -378,7 +396,7 @@ export const actualizarEstado = async (req, res, next) => {
       } else {
         const [todas] = await conn.query(
           `SELECT dp.id, dp.cantidad, dp.producto_id, dp.estado_envio, dp.vendedor_id,
-                  p.nombre AS producto_nombre
+                  dp.estado_pago_vendedor, p.nombre AS producto_nombre
              FROM detalle_pedidos dp
              JOIN productos p ON p.id = dp.producto_id
             WHERE dp.pedido_id = ?
@@ -398,12 +416,15 @@ export const actualizarEstado = async (req, res, next) => {
               "UPDATE productos SET stock = stock + ? WHERE id = ?",
               [ln.cantidad, ln.producto_id]
             );
+            const pagoVendedorLinea = estadoPagoVendedorTrasCancelacion(
+              ln.estado_pago_vendedor
+            );
             await conn.query(
               `UPDATE detalle_pedidos
                   SET estado_envio = 'Cancelado',
-                      estado_pago_vendedor = 'Reembolsado'
+                      estado_pago_vendedor = ?
                 WHERE id = ?`,
-              [ln.id]
+              [pagoVendedorLinea, ln.id]
             );
             lineasCanceladas.push({
               detalle_id: ln.id,
@@ -427,10 +448,12 @@ export const actualizarEstado = async (req, res, next) => {
       }
 
       // ── Actualizar pagos_simulados según lo que quedó en el pedido ──
-      // Si después de cancelar siguen quedando líneas "vivas" (no canceladas,
-      // no entregadas? Ojo: Entregadas sí cobran comisión → estado Parcial.
-      // Si TODO lo que NO se canceló es Entregado → Parcial.
-      // Si TODO el pedido fue cancelado (0 líneas restantes no Cancelado) → Reembolsado.
+      // pagos_simulados.estado es ENUM('Aprobado','Rechazado','Pendiente','Reembolsado')
+      // en la BD real: NO existe 'Parcial'.
+      // Si TODO el pedido fue cancelado (0 líneas restantes no Cancelado) → 'Reembolsado'.
+      // Si quedan líneas vivas (Entregadas o por entregar) → 'Aprobado': el pago
+      // sigue vigente por lo no cancelado (ver
+      // informes/PROPUESTA_MIGRACION_ENUM_ESTADOS.md, Opción A pendiente).
       const [restantes] = await conn.query(
         `SELECT COUNT(*) AS total,
                 SUM(CASE WHEN estado_envio = 'Entregado' THEN 1 ELSE 0 END) AS entregadas,
@@ -443,9 +466,9 @@ export const actualizarEstado = async (req, res, next) => {
       if (Number(r.canceladas) === Number(r.total)) {
         nuevoEstadoPago = "Reembolsado";
       } else {
-        nuevoEstadoPago = "Parcial";
+        nuevoEstadoPago = "Aprobado";
       }
-      // Solo actualizar si el pago ya estaba Aprobado (no tocar Fallido/Pendiente).
+      // Solo actualizar si el pago ya estaba Aprobado (no tocar Rechazado/Pendiente).
       await conn.query(
         `UPDATE pagos_simulados
             SET estado = ?

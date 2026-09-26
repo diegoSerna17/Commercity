@@ -520,6 +520,7 @@ it("cancelación por detalle_id OK (200): restituye stock, marca línea, notific
       if (/WHERE dp\.id = \? AND dp\.pedido_id = \?/.test(sql)) {
         return [[{
           id: 22, cantidad: 2, producto_id: 101, estado_envio: "Pendiente",
+          estado_pago_vendedor: "Pendiente",
           vendedor_id: 3, producto_nombre: "Zapatos"
         }], undefined];
       }
@@ -530,7 +531,7 @@ it("cancelación por detalle_id OK (200): restituye stock, marca línea, notific
         return [{ affectedRows: 1 }, undefined];
       }
       if (sql.includes("COUNT(*) AS total")) {
-        // 2 líneas total = 1 Cancelada + 1 Entregada → Parcial
+        // 2 líneas total = 1 Cancelada + 1 Entregada → Aprobado (pago aún vigente)
         return [[{ total: 2, entregadas: 1, canceladas: 1 }], undefined];
       }
       if (/UPDATE pagos_simulados\s+SET estado = \?/.test(sql)) {
@@ -551,21 +552,26 @@ it("cancelación por detalle_id OK (200): restituye stock, marca línea, notific
     expect(res.body.data.tipo).toBe("por_linea");
     expect(res.body.data.lineas_canceladas).toBe(1);
     expect(res.body.data.detalle_ids_cancelados).toEqual([22]);
-    expect(res.body.data.estado_pago).toBe("Parcial");
+    expect(res.body.data.estado_pago).toBe("Aprobado");
     // Verifica restitución stock
     expect(conn.query).toHaveBeenCalledWith(
       expect.stringContaining("UPDATE productos SET stock = stock + ?"),
       [2, 101]
     );
-    // Verifica que se actualice a Parcial (no Reembolsado) por la línea Entregada que queda
+    // Verifica que se actualice a 'Aprobado' (no 'Reembolsado'): queda una línea Entregada
     expect(conn.query).toHaveBeenCalledWith(
       expect.stringMatching(/UPDATE pagos_simulados\s+SET estado = \?/),
-      ["Parcial", 5]
+      ["Aprobado", 5]
+    );
+    // La línea NO estaba desembolsada → estado_pago_vendedor = 'Pendiente' (ENUM real)
+    expect(conn.query).toHaveBeenCalledWith(
+      expect.stringMatching(/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/),
+      ["Pendiente", 22]
     );
     expect(conn.commit).toHaveBeenCalled();
   });
 
-it("cancelación general OK con mezcla Pendiente + Entregado → Parcial + no_canceladas", async () => {
+it("cancelación general OK con mezcla Pendiente + Entregado → Aprobado + no_canceladas", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -573,9 +579,9 @@ it("cancelación general OK con mezcla Pendiente + Entregado → Parcial + no_ca
       }
       if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
         return [[
-          { id: 1, cantidad: 1, producto_id: 50, estado_envio: "Pendiente",  vendedor_id: 3, producto_nombre: "A" },
-          { id: 2, cantidad: 2, producto_id: 51, estado_envio: "En camino", vendedor_id: 4, producto_nombre: "B" },
-          { id: 3, cantidad: 1, producto_id: 52, estado_envio: "Entregado", vendedor_id: 3, producto_nombre: "C" },
+          { id: 1, cantidad: 1, producto_id: 50, estado_envio: "Pendiente",  estado_pago_vendedor: "Pendiente", vendedor_id: 3, producto_nombre: "A" },
+          { id: 2, cantidad: 2, producto_id: 51, estado_envio: "En camino", estado_pago_vendedor: "Pendiente", vendedor_id: 4, producto_nombre: "B" },
+          { id: 3, cantidad: 1, producto_id: 52, estado_envio: "Entregado", estado_pago_vendedor: "Pendiente", vendedor_id: 3, producto_nombre: "C" },
         ], undefined];
       }
       if (sql.includes("UPDATE productos SET stock = stock + ?")) {
@@ -585,7 +591,7 @@ it("cancelación general OK con mezcla Pendiente + Entregado → Parcial + no_ca
         return [{ affectedRows: 1 }, undefined];
       }
       if (sql.includes("COUNT(*) AS total")) {
-        // 3 total: 2 canceladas, 1 entregada → Parcial
+        // 3 total: 2 canceladas, 1 entregada → Aprobado (pago aún vigente)
         return [[{ total: 3, entregadas: 1, canceladas: 2 }], undefined];
       }
       if (/UPDATE pagos_simulados\s+SET estado = \?/.test(sql)) {
@@ -609,7 +615,7 @@ it("cancelación general OK con mezcla Pendiente + Entregado → Parcial + no_ca
     expect(res.body.data.no_canceladas).toHaveLength(1);
     expect(res.body.data.no_canceladas[0].detalle_id).toBe(3);
     expect(res.body.data.no_canceladas[0].motivo).toBe("Entregado");
-    expect(res.body.data.estado_pago).toBe("Parcial");
+    expect(res.body.data.estado_pago).toBe("Aprobado");
     expect(conn.commit).toHaveBeenCalled();
   });
 
@@ -673,5 +679,176 @@ if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefi
       ["Reembolsado", 12]
     );
     expect(conn.commit).toHaveBeenCalled();
+  });
+
+  // ── Regresión: literales válidos según los ENUM reales de la BD ──
+  // detalle_pedidos.estado_pago_vendedor = enum('Pendiente','Desembolsado')
+  // pagos_simulados.estado = enum('Aprobado','Rechazado','Pendiente','Reembolsado')
+  // Ver informes/PROPUESTA_MIGRACION_ENUM_ESTADOS.md.
+  describe("regresión: valores dentro de los ENUM reales de la BD", () => {
+    // Parámetros planos de todas las consultas de la transacción.
+    const paramsQueries = () => conn.query.mock.calls.flatMap(([, params]) => params ?? []);
+
+    it("(a) cancelar línea NO desembolsada → estado_pago_vendedor = 'Pendiente'", async () => {
+      conn.query.mockImplementation((sql) => {
+        if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+        if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+          return [[{ id: 30, comprador_id: 7, fecha_pedido: new Date() }], undefined];
+        }
+        if (/WHERE dp\.id = \? AND dp\.pedido_id = \?/.test(sql)) {
+          return [[{
+            id: 301, cantidad: 1, producto_id: 9, estado_envio: "Pendiente",
+            estado_pago_vendedor: "Pendiente", vendedor_id: 3, producto_nombre: "A"
+          }], undefined];
+        }
+        if (sql.includes("UPDATE productos SET stock = stock + ?")) return [{ affectedRows: 1 }, undefined];
+        if (/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/.test(sql)) return [{ affectedRows: 1 }, undefined];
+        if (sql.includes("COUNT(*) AS total")) {
+          return [[{ total: 2, entregadas: 1, canceladas: 1 }], undefined];
+        }
+        if (/UPDATE pagos_simulados\s+SET estado = \?/.test(sql)) return [{ affectedRows: 1 }, undefined];
+        if (sql.includes("INSERT INTO notificaciones")) return [{ insertId: 1 }, undefined];
+        return [[], undefined];
+      });
+
+      const res = await request(app)
+        .patch("/api/pedidos/30/estado")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ estado: "Cancelado", detalle_id: 301 });
+
+      expect(res.status).toBe(200);
+      expect(conn.query).toHaveBeenCalledWith(
+        expect.stringMatching(/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/),
+        ["Pendiente", 301]
+      );
+    });
+
+    it("(b) cancelar línea YA desembolsada → permanece 'Desembolsado'", async () => {
+      conn.query.mockImplementation((sql) => {
+        if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+        if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+          return [[{ id: 31, comprador_id: 7, fecha_pedido: new Date() }], undefined];
+        }
+        if (/WHERE dp\.id = \? AND dp\.pedido_id = \?/.test(sql)) {
+          return [[{
+            id: 311, cantidad: 1, producto_id: 9, estado_envio: "Pendiente",
+            estado_pago_vendedor: "Desembolsado", vendedor_id: 3, producto_nombre: "A"
+          }], undefined];
+        }
+        if (sql.includes("UPDATE productos SET stock = stock + ?")) return [{ affectedRows: 1 }, undefined];
+        if (/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/.test(sql)) return [{ affectedRows: 1 }, undefined];
+        if (sql.includes("COUNT(*) AS total")) {
+          return [[{ total: 2, entregadas: 1, canceladas: 1 }], undefined];
+        }
+        if (/UPDATE pagos_simulados\s+SET estado = \?/.test(sql)) return [{ affectedRows: 1 }, undefined];
+        if (sql.includes("INSERT INTO notificaciones")) return [{ insertId: 1 }, undefined];
+        return [[], undefined];
+      });
+
+      const res = await request(app)
+        .patch("/api/pedidos/31/estado")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ estado: "Cancelado", detalle_id: 311 });
+
+      expect(res.status).toBe(200);
+      expect(conn.query).toHaveBeenCalledWith(
+        expect.stringMatching(/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/),
+        ["Desembolsado", 311]
+      );
+      // No se le debe quitar el 'Desembolsado' ya pagado al vendedor.
+      expect(conn.query).not.toHaveBeenCalledWith(
+        expect.stringMatching(/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/),
+        ["Pendiente", 311]
+      );
+    });
+
+    it("(c) cancelación total de líneas → pagos_simulados.estado = 'Reembolsado'", async () => {
+      conn.query.mockImplementation((sql) => {
+        if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+        if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+          return [[{ id: 32, comprador_id: 7, fecha_pedido: new Date() }], undefined];
+        }
+        if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
+          return [[
+            { id: 71, cantidad: 1, producto_id: 20, estado_envio: "Pendiente",  estado_pago_vendedor: "Pendiente",    vendedor_id: 4, producto_nombre: "M" },
+            { id: 72, cantidad: 1, producto_id: 21, estado_envio: "En camino", estado_pago_vendedor: "Desembolsado", vendedor_id: 4, producto_nombre: "N" },
+          ], undefined];
+        }
+        if (sql.includes("UPDATE productos SET stock = stock + ?")) return [{ affectedRows: 1 }, undefined];
+        if (/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/.test(sql)) return [{ affectedRows: 1 }, undefined];
+        if (sql.includes("COUNT(*) AS total")) {
+          return [[{ total: 2, entregadas: 0, canceladas: 2 }], undefined]; // todo cancelado
+        }
+        if (/UPDATE pagos_simulados\s+SET estado = \?/.test(sql)) return [{ affectedRows: 1 }, undefined];
+        if (sql.includes("INSERT INTO notificaciones")) return [{ insertId: 1 }, undefined];
+        return [[], undefined];
+      });
+
+      const res = await request(app)
+        .patch("/api/pedidos/32/estado")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ estado: "Cancelado" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.estado_pago).toBe("Reembolsado");
+      expect(conn.query).toHaveBeenCalledWith(
+        expect.stringMatching(/UPDATE pagos_simulados\s+SET estado = \?/),
+        ["Reembolsado", 32]
+      );
+      // Mapeo por línea: la desembolsada conserva su estado, la otra vuelve a 'Pendiente'.
+      expect(conn.query).toHaveBeenCalledWith(
+        expect.stringMatching(/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/),
+        ["Pendiente", 71]
+      );
+      expect(conn.query).toHaveBeenCalledWith(
+        expect.stringMatching(/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/),
+        ["Desembolsado", 72]
+      );
+      expect(paramsQueries()).not.toContain("Parcial");
+    });
+
+    it("(d) cancelación parcial → pagos_simulados.estado = 'Aprobado' y nunca 'Parcial'", async () => {
+      conn.query.mockImplementation((sql) => {
+        if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+        if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+          return [[{ id: 33, comprador_id: 7, fecha_pedido: new Date() }], undefined];
+        }
+        if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
+          return [[
+            { id: 81, cantidad: 1, producto_id: 30, estado_envio: "Pendiente",  estado_pago_vendedor: "Pendiente", vendedor_id: 3, producto_nombre: "X" },
+            { id: 82, cantidad: 1, producto_id: 31, estado_envio: "Entregado", estado_pago_vendedor: "Pendiente", vendedor_id: 3, producto_nombre: "Y" },
+          ], undefined];
+        }
+        if (sql.includes("UPDATE productos SET stock = stock + ?")) return [{ affectedRows: 1 }, undefined];
+        if (/UPDATE detalle_pedidos\s+SET estado_envio = 'Cancelado'/.test(sql)) return [{ affectedRows: 1 }, undefined];
+        if (sql.includes("COUNT(*) AS total")) {
+          return [[{ total: 2, entregadas: 1, canceladas: 1 }], undefined]; // queda 1 entregada
+        }
+        if (/UPDATE pagos_simulados\s+SET estado = \?/.test(sql)) return [{ affectedRows: 1 }, undefined];
+        if (sql.includes("INSERT INTO notificaciones")) return [{ insertId: 1 }, undefined];
+        return [[], undefined];
+      });
+
+      const res = await request(app)
+        .patch("/api/pedidos/33/estado")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ estado: "Cancelado" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.tipo).toBe("general");
+      expect(res.body.data.lineas_canceladas).toBe(1);
+      expect(res.body.data.no_canceladas[0].motivo).toBe("Entregado");
+      expect(res.body.data.estado_pago).toBe("Aprobado");
+      expect(conn.query).toHaveBeenCalledWith(
+        expect.stringMatching(/UPDATE pagos_simulados\s+SET estado = \?/),
+        ["Aprobado", 33]
+      );
+      // 'Parcial' no existe en pagos_simulados.estado: jamás debe escribirse,
+      // ni como parámetro ni dentro del SQL.
+      expect(paramsQueries()).not.toContain("Parcial");
+      for (const [sql] of conn.query.mock.calls) {
+        if (typeof sql === "string") expect(sql).not.toContain("Parcial");
+      }
+    });
   });
 });

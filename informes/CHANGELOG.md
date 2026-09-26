@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## [Unreleased] - 2026-09-25 22:38 — Bug latente ENUM: literales inválidos en la cancelación de pedidos
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/controllers/pedidos.controllers.js; backend/src/server/__tests__/pedidos.controllers.test.js; informes/PROPUESTA_MIGRACION_ENUM_ESTADOS.md (nuevo)
+- **Descripción**: se corrigieron juntos los dos bugs de literales fuera de los ENUM reales de la BD en la cancelación de pedidos (por línea y general): (1) `detalle_pedidos.estado_pago_vendedor` recibía `'Reembolsado'` y su ENUM real es `enum('Pendiente','Desembolsado')`; (2) `pagos_simulados.estado` recibía `'Parcial'` y su ENUM real es `enum('Aprobado','Rechazado','Pendiente','Reembolsado')`. Se aplicó la Opción B decidida por el líder de backend: mapeo a valores válidos sin DDL en la BD compartida. Línea cancelada no desembolsada → `'Pendiente'` (se conserva `'Desembolsado'` si ya se desembolsó, vía helper `estadoPagoVendedorTrasCancelacion`); pago del pedido → `'Reembolsado'` si se cancelan todas las líneas, `'Aprobado'` si quedan líneas vivas. Se añadieron 4 pruebas de regresión (casos a–d) que verifican que jamás se escriben literales fuera de los ENUM. La Opción A (migración `ALTER TABLE` para ampliar ambos ENUM con `'Reembolsado'` y `'Parcial'`) queda como propuesta documental pendiente de validación con el líder de BD y el instructor.
+- **Motivo**: bug latente que rompía la transacción de cancelación de pedidos con error de MySQL (los dos literales inválidos estaban en la misma transacción y estallaban al corregir el primero); coherencia RF vs BD vs código para la inspección de entregas.
+- **Requerimientos**: RF de gestión/cancelación de pedidos; RNF de integridad de datos (valores conformes al esquema real).
+- **Evidencia**: 4 nuevas pruebas de regresión en `pedidos.controllers.test.js` (mocks con los ENUM reales de `information_schema`); propuesta de migración con scripts ALTER, impacto y rollback en `informes/PROPUESTA_MIGRACION_ENUM_ESTADOS.md`. **Suite completa pendiente de ejecución manual por el usuario** (regla de tests manuales): comando sugerido `npx vitest run --coverage` desde `backend/`.
+- **Estado**: Implementado — pendiente de suite manual y de commit (confirmación explícita)
+
+---
+
 ## [Unreleased] - 2026-09-25 20:15 — CORS: 6to test (peticion sin header Origin)
 
 - **Autor**: Daniel Palacios
