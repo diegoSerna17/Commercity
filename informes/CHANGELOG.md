@@ -92,6 +92,19 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+
+---
+
+## 2026-09-27 - FIX: restaura rutas y mocks de calificaciones tras merge unificacion
+
+- **Autor**: Daniel Palacios (lider backend)
+- **Archivos**: backend/src/server/app.js; backend/src/server/__tests__/calificaciones.controllers.test.js
+- **Descripcion**: Se registro el router de /api/calificaciones en app.js (2 lineas descartadas por el merge -X theirs) y se agrego el ramo DEF-01 (SELECT activo FROM usuarios) a 6 mocks de authRequired en el test de calificaciones.
+- **Motivo**: El merge de unificacion 54932a3 dejo el modulo sin ruta (7 tests 404) y los mocks sin la verificacion de usuario activo introducida en 070c7ac (6 tests 401 fantasma).
+- **Requerimientos**: RF107 / RF125-RF128
+- **Evidencia**: npx vitest run --coverage desde backend -> 22/22 archivos, 320/320 tests, 0 errores; cobertura 92.46% Lines / 91.96% Stmts (umbral 60% cumplido).
+- **Estado**: Completado
+
 ## 2026-09-20 - FEAT: conectar toda la API REST a la web (comprador, vendedor, admin, cuenta y social)
 
 - **Autor**: Daniel Palacios
