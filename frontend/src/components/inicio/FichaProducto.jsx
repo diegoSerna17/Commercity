@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, Flag, Minus, Plus, X } from "lucide-react";
-import { validarStockProducto } from "../../utils/productosApi";
+import { ArrowLeft, Flag, Minus, Plus, Star, X } from "lucide-react";
+
+import { getCurrentUser } from "../../api/client.js";
+import { calificarVendedor } from "../../services/calificaciones.service.js";
+import { listarHistorialCompras } from "../../services/historial.service.js";
 
 const PRODUCT_IMAGE_SRC =
   "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&auto=format&fit=crop";
@@ -10,18 +13,45 @@ function formatearPrecio(numero) {
   return `$${Math.round(numero).toLocaleString("es-CO")}`;
 }
 
+/**
+ * Busca en el historial de compras del comprador el pedido mas reciente con una
+ * linea no cancelada hacia el vendedor indicado. RF107 exige calificar despues
+ * de una compra: el endpoint POST /api/calificaciones/vendedor recibe pedido_id
+ * y vendedor_id, y el historial expone el nombre del vendedor por linea (no su
+ * id), por lo que el emparejamiento se hace por nombre.
+ * @param {string} nombreVendedor
+ * @returns {Promise<number|null>} pedido_id o null si el comprador no le ha comprado
+ */
+async function buscarPedidoDelVendedor(nombreVendedor) {
+  const res = await listarHistorialCompras();
+  const pedidos = res?.data || [];
+
+  for (const pedido of pedidos) {
+    const linea = (pedido.items || []).find(
+      (item) => item.vendedor === nombreVendedor && item.estado !== "Cancelado"
+    );
+    if (linea) return pedido.pedido_id;
+  }
+
+  return null;
+}
+
 export default function FichaProducto({ product, onClose, onReportar, onIrPerfilVendedor, onAgregarCarrito }) {
   const [quantity, setQuantity] = useState(1);
   const [zoomAbierto, setZoomAbierto] = useState(false);
   const [toastMsg, setToastMsg] = useState(null);
-  const [validandoStock, setValidandoStock] = useState(false);
+  // RF107: calificacion del vendedor del producto que se esta viendo.
+  const [calificacionAbierta, setCalificacionAbierta] = useState(false);
+  const [estrellas, setEstrellas] = useState(0);
+  const [comentario, setComentario] = useState("");
+  const [enviandoCalificacion, setEnviandoCalificacion] = useState(false);
+  const [errorCalificacion, setErrorCalificacion] = useState("");
+  const [exitoCalificacion, setExitoCalificacion] = useState("");
 
   const stock = product?.stock ?? 0;
   const descuento = product?.descuento ?? 0;
   const precioBase = product?.precioBase ?? product?.price ?? 0;
-  // RF86: el estado (Disponible/Agotado) viene calculado por la BD segun el stock;
-  // si aun no llego del backend, se cae de respaldo al stock local.
-  const agotado = product?.estado ? product.estado === "Agotado" : stock === 0;
+  const agotado = stock === 0;
   const tieneDescuento = descuento > 0;
   const precioFinal = tieneDescuento
     ? precioBase - (precioBase * descuento) / 100
@@ -55,29 +85,70 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
 
   if (!product) return null;
 
-  // RF86: antes de agregar al carrito se valida el stock real en el backend,
-  // por si cambio desde que se abrio la ficha (otro comprador se lo pudo llevar).
+  const vendedorId = product.vendedorId ?? null;
+  const usuarioActual = getCurrentUser();
+  const esVendedorPropio = Boolean(vendedorId) && usuarioActual?.id === vendedorId;
+
+  // Motivo por el que la calificacion no esta disponible (vacio = disponible).
+  const motivoCalificacionDeshabilitada = !vendedorId
+    ? "No se pudo identificar al vendedor de este producto."
+    : !usuarioActual
+      ? "Inicia sesion para calificar a este vendedor."
+      : esVendedorPropio
+        ? "No puedes calificarte a ti mismo."
+        : "";
+
   async function handleCart() {
-    if (agotado || validandoStock) return;
+    if (agotado) return;
 
     const added = quantity;
+    try {
+      await onAgregarCarrito?.(product, added);
+      setQuantity(1);
+      setToastMsg(`${added} ${added === 1 ? "unidad agregada" : "unidades agregadas"} al carrito`);
+    } catch (err) {
+      setToastMsg(err.message || "No se pudo agregar el producto al carrito");
+    }
+  }
+
+  /**
+   * Envia la calificacion del vendedor (RF107). El backend exige un pedido del
+   * comprador con una linea no cancelada hacia ese vendedor, por lo que primero
+   * se resuelve el pedido_id en el historial de compras.
+   */
+  async function handleCalificar() {
+    if (enviandoCalificacion || motivoCalificacionDeshabilitada) return;
+
+    if (estrellas < 1 || estrellas > 5) {
+      setErrorCalificacion("Selecciona una puntuacion de 1 a 5 estrellas.");
+      return;
+    }
+
+    setEnviandoCalificacion(true);
+    setErrorCalificacion("");
+    setExitoCalificacion("");
 
     try {
-      setValidandoStock(true);
-      const resultado = await validarStockProducto(product.id, added);
-
-      if (!resultado.data?.valido) {
-        setToastMsg(resultado.data?.mensaje || "No hay stock suficiente");
+      const pedidoId = await buscarPedidoDelVendedor(product.vendedorNombre);
+      if (!pedidoId) {
+        setErrorCalificacion("Solo puedes calificar a un vendedor despues de comprarle.");
         return;
       }
 
-      setQuantity(1);
-      onAgregarCarrito?.(product, added);
-      setToastMsg(`${added} ${added === 1 ? "unidad agregada" : "unidades agregadas"} al carrito`);
-    } catch {
-      setToastMsg("No se pudo validar el stock, intenta de nuevo");
+      await calificarVendedor({
+        pedido_id: pedidoId,
+        vendedor_id: vendedorId,
+        estrellas,
+        comentario: comentario.trim() || undefined,
+      });
+
+      setExitoCalificacion("Calificacion registrada. Gracias por tu opinion.");
+      setEstrellas(0);
+      setComentario("");
+    } catch (err) {
+      setErrorCalificacion(err.message || "No se pudo registrar la calificacion.");
     } finally {
-      setValidandoStock(false);
+      setEnviandoCalificacion(false);
     }
   }
 
@@ -188,6 +259,79 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
             </p>
           </div>
 
+          <div className="mx-padding-lg mb-3 rounded-card bg-input-bg px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="mb-1 text-xs font-bold uppercase text-brand-muted-text">Calificar vendedor</p>
+                <p className="text-body-sm font-semibold text-on-surface">{product.vendedorNombre}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCalificacionAbierta((abierta) => !abierta)}
+                disabled={Boolean(motivoCalificacionDeshabilitada)}
+                className="h-9 rounded-card border border-brand-orange bg-transparent px-4 text-body-sm font-bold text-brand-orange transition hover:bg-brand-orange/10 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {calificacionAbierta ? "Cancelar" : "Calificar"}
+              </button>
+            </div>
+
+            {motivoCalificacionDeshabilitada && (
+              <p className="mt-2 text-body-sm text-brand-muted-text">{motivoCalificacionDeshabilitada}</p>
+            )}
+
+            {calificacionAbierta && !motivoCalificacionDeshabilitada && (
+              <div className="mt-3 flex flex-col gap-3">
+                <div className="flex items-center gap-1" role="group" aria-label="Puntuacion del vendedor">
+                  {[1, 2, 3, 4, 5].map((valor) => (
+                    <button
+                      key={valor}
+                      type="button"
+                      onClick={() => setEstrellas(valor)}
+                      aria-label={`${valor} ${valor === 1 ? "estrella" : "estrellas"}`}
+                      aria-pressed={estrellas === valor}
+                      className="rounded-full p-0.5 transition hover:scale-110"
+                    >
+                      <Star
+                        className={`h-6 w-6 ${
+                          valor <= estrellas
+                            ? "fill-brand-orange text-brand-orange"
+                            : "text-brand-muted-text"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  value={comentario}
+                  onChange={(event) => setComentario(event.target.value)}
+                  rows={2}
+                  maxLength={500}
+                  placeholder="Comentario (opcional)"
+                  className="w-full resize-none rounded-card border border-figma-divider bg-surface-container/70 px-3 py-2 text-body-sm text-on-surface outline-none placeholder:text-brand-muted-text focus:border-border-focus focus:ring-1 focus:ring-border-focus"
+                />
+
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCalificar}
+                    disabled={enviandoCalificacion || estrellas === 0}
+                    className="h-9 rounded-button bg-brand-orange px-5 text-body-sm font-bold text-brand-dark-text transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {enviandoCalificacion ? "Enviando..." : "Enviar calificacion"}
+                  </button>
+
+                  {errorCalificacion && (
+                    <p className="text-body-sm font-semibold text-error">{errorCalificacion}</p>
+                  )}
+                  {exitoCalificacion && (
+                    <p className="text-body-sm font-semibold text-success">{exitoCalificacion}</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="mx-padding-lg h-px shrink-0 bg-figma-divider" />
 
           <footer className="flex shrink-0 flex-col gap-4 px-padding-lg py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -238,10 +382,10 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
               <button
                 type="button"
                 onClick={handleCart}
-                disabled={agotado || validandoStock}
+                disabled={agotado}
                 className="h-11 rounded-button bg-brand-orange px-6 text-body-sm font-bold text-brand-dark-text transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {validandoStock ? "Validando..." : "Agregar al carrito"}
+                Agregar al carrito
               </button>
             </div>
           </footer>

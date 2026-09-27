@@ -17,11 +17,26 @@ import { enviarCorreoRecuperacion } from "../utils/mailer.js";
 
 /**
  * Endpoint de verificación: responde que el servidor esta activo.
+ * Usado por GET / (routes/routes.js) y por GET /api/usuarios/
+ * (routes/usuarios.routes.js).
+ *
+ * Fix DEF-02 / DEF-03 (P1 contrato API uniforme): anteriormente devolvia
+ * texto plano, lo cual rompia el contrato { success, data } que usan los
+ * otros 67 endpoints. Ahora responde JSON conforme al contrato.
+ *
  * @param {import("express").Request} req
  * @param {import("express").Response} res
  */
 export const getUsuarios = (req, res) => {
-    res.send('servidor creado')
+    return res.json({
+        success: true,
+        data: {
+            message: "servidor creado",
+            status: "ok",
+            timestamp: new Date().toISOString(),
+            version: "Commercity API v1"
+        }
+    });
 };
 
 // ============================ REGISTRO ============================
@@ -468,5 +483,66 @@ export const eliminarCuentaComprador = async (req, res) => {
         });
     } finally {
         conn.release();
+    }
+};
+
+/**
+ * GET /api/usuarios/directorio?q=
+ * Lista usuarios activos para poder iniciar un chat con cualquier persona.
+ * Excluye al usuario autenticado y no expone datos sensibles.
+ */
+export const listarUsuarios = async (req, res, next) => {
+    try {
+        const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+
+        let sql = `SELECT id, nombre_completo, foto_perfil
+                   FROM usuarios
+                   WHERE activo = 1 AND id <> ?`;
+        const params = [req.userId];
+
+        if (q) {
+            sql += " AND (nombre_completo LIKE ? OR email LIKE ?)";
+            params.push(`%${q}%`, `%${q}%`);
+        }
+
+        sql += " ORDER BY nombre_completo ASC LIMIT 50";
+
+        const [rows] = await pool.query(sql, params);
+        return successResponse(res, "Usuarios obtenidos", rows);
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * PATCH /api/usuarios/me
+ * Actualiza únicamente el nombre de perfil del usuario autenticado.
+ */
+export const actualizarPerfil = async (req, res, next) => {
+    try {
+        const nombre = typeof req.body?.nombre_completo === "string"
+            ? req.body.nombre_completo.trim()
+            : "";
+
+        if (!nombre) {
+            return errorResponse(res, "El nombre de perfil es obligatorio", 400);
+        }
+        if (nombre.length > 100) {
+            return errorResponse(res, "El nombre de perfil no puede superar 100 caracteres", 400);
+        }
+
+        await pool.query(
+            "UPDATE usuarios SET nombre_completo = ? WHERE id = ?",
+            [nombre, req.userId]
+        );
+
+        const [rows] = await pool.query(
+            "SELECT id, email, nombre_completo, foto_perfil FROM usuarios WHERE id = ?",
+            [req.userId]
+        );
+
+        return successResponse(res, "Perfil actualizado correctamente", rows[0]);
+    } catch (err) {
+        next(err);
     }
 };

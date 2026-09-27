@@ -15,6 +15,7 @@
 // TW y border-border-subtle
 
 // JS Importaciones de React Router para navegacion y deteccion de ruta activa
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Home,
@@ -25,6 +26,12 @@ import {
   History,
   Settings,
 } from "lucide-react";
+import {
+  getCurrentUser,
+  setCurrentUser,
+  clearToken,
+} from "../../api/client.js";
+import { cerrarSesion } from "../../services/usuarios.service.js";
 
 // JS Configuracion de secciones de navegacion con nombre, icono y ruta
 const NAV_SECTIONS = [
@@ -52,6 +59,10 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
   const navigate = useNavigate();
   // RE Hook para obtener la ruta actual y determinar item activo
   const location = useLocation();
+  // RE Usuario autenticado guardado en localStorage
+  const currentUser = getCurrentUser();
+  // RE Estado que indica si el cierre de sesion esta en curso
+  const [cerrandoSesion, setCerrandoSesion] = useState(false);
 
   // JS Verifica si la ruta del item coincide con la ubicacion actual
   const isActive = (path) => location.pathname === path;
@@ -60,6 +71,22 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
   const handleNav = (path) => {
     navigate(path);
     onClose();
+  };
+
+  // JS Cierra la sesion en el backend (RF2: revoca el JWT) y limpia la sesion local
+  const handleCerrarSesion = async () => {
+    if (cerrandoSesion) return;
+    setCerrandoSesion(true);
+    try {
+      await cerrarSesion();
+    } catch {
+      // JS Si falla la revocacion del token, se limpia igualmente la sesion local
+    } finally {
+      clearToken();
+      setCurrentUser(null);
+      navigate("/login");
+      onClose();
+    }
   };
 
   return (
@@ -134,14 +161,15 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
           </div>
           <div className="flex-grow min-w-0">
             <p className="text-body-sm font-medium truncate text-on-surface">
-              Juan Cabrera
+              {currentUser?.nombre_completo || "Usuario"}
             </p>
           </div>
         </div>
 
         <button
-          onClick={() => handleNav("/login")}
-          className="w-full bg-auth-card-bg/20 border border-figma-divider/80 rounded-[14px] py-2.5 md:py-3 text-body-sm font-extrabold text-brand-muted-text text-center transition-colors hover:bg-white/[0.06] hover:text-figma-text-primary"
+          onClick={handleCerrarSesion}
+          disabled={cerrandoSesion}
+          className="w-full bg-auth-card-bg/20 border border-figma-divider/80 rounded-[14px] py-2.5 md:py-3 text-body-sm font-extrabold text-brand-muted-text text-center transition-colors hover:bg-white/[0.06] hover:text-figma-text-primary disabled:opacity-60 disabled:cursor-not-allowed"
         >
           Cerrar Sesión
         </button>

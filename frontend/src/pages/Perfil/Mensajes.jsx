@@ -1,29 +1,77 @@
-
-
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../../components/globales/Navbar";
-import MESSAGES from "../../constants/chats";
+import { listarConversaciones } from "../../services/chat.service.js";
+
+const formatearHora = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+};
+
+const previewDe = (conv) => {
+  const ultimo = conv.ultimo_mensaje || {};
+  if (ultimo.mensaje) return ultimo.mensaje;
+  if (ultimo.tipo_mensaje === "imagen") return "Imagen";
+  if (ultimo.archivo_url) return "Archivo";
+  return "";
+};
+
+const Avatar = ({ usuario }) => {
+  if (usuario.foto_perfil) {
+    return (
+      <img
+        alt={usuario.nombre_completo}
+        src={usuario.foto_perfil}
+        className="w-14 h-14 rounded-full object-cover border border-surface-container-high"
+      />
+    );
+  }
+  return (
+    <div className="w-14 h-14 rounded-full flex items-center justify-center bg-brand-orange text-auth-card-bg font-bold text-lg border border-surface-container-high">
+      {(usuario.nombre_completo || "?").charAt(0).toUpperCase()}
+    </div>
+  );
+};
 
 const Mensajes = () => {
-  // RE Hook para navegacion programatica 
-  const navigate = useNavigate();   
+  const navigate = useNavigate();
+  const [conversaciones, setConversaciones] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
 
-  // JS Manejador de clic en conversacion: persiste en sessionStorage y navega
-  const handleOpenChat = (msg) => {
-    sessionStorage.setItem("activeChat", JSON.stringify(msg));
-    navigate("/messages/chat", { state: { message: msg } });
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        const res = await listarConversaciones();
+        setConversaciones(res.data || []);
+      } catch (e) {
+        setError(e.message || "No se pudieron cargar las conversaciones");
+      } finally {
+        setCargando(false);
+      }
+    };
+    cargar();
+  }, []);
+
+  const abrirChat = (usuario) => {
+    sessionStorage.setItem(
+      "activeChat",
+      JSON.stringify({
+        id: usuario.id,
+        name: usuario.nombre_completo,
+        avatar: usuario.foto_perfil || "",
+      })
+    );
+    navigate("/messages/chat");
   };
 
   return (
     <div className="flex h-screen bg-surface-container-lowest">
-      {/* TW Contenido principal de la pagina */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* TW Encabezado con titulo y boton de retorno */}
         <header className="flex items-center justify-between px-4 md:px-padding-xl py-3 md:py-padding-lg border-b border-border-subtle shrink-0">
           <div className="flex-1 text-center">
-            <h2 className="text-brand-orange text-headline-sm font-bold">
-              Mensajes
-            </h2>
+            <h2 className="text-brand-orange text-headline-sm font-bold">Mensajes</h2>
           </div>
           <button
             onClick={() => navigate(-1)}
@@ -33,64 +81,53 @@ const Mensajes = () => {
           </button>
         </header>
 
-        {/* TW Lista de conversaciones con avatares y previsualizacion */}
         <div className="flex-1 overflow-y-auto p-4 md:p-padding-lg lg:p-padding-2xl max-w-5xl mx-auto w-full">
-          {/* TW Mapeo de datos de mensajes a articulos de la lista */}
+          {cargando && (
+            <p className="text-brand-muted-text text-sm text-center py-8">
+              Cargando conversaciones...
+            </p>
+          )}
+
+          {!cargando && error && (
+            <p className="text-report-red-text text-sm text-center py-8">{error}</p>
+          )}
+
+          {!cargando && !error && conversaciones.length === 0 && (
+            <p className="text-brand-muted-text text-sm text-center py-8">
+              No tienes conversaciones.
+            </p>
+          )}
+
           <div className="space-y-md">
-            {MESSAGES.map((msg) => (
+            {conversaciones.map((conv) => (
               <article
-                key={msg.id}
-                onClick={() => handleOpenChat(msg)}
+                key={conv.usuario.id}
+                onClick={() => abrirChat(conv.usuario)}
                 className={`group flex items-center gap-md p-padding-md rounded-card-lg transition-all cursor-pointer ${
-                  msg.active
+                  conv.no_leidos > 0
                     ? "border border-brand-orange/40 bg-surface-container-low hover:bg-surface-container"
                     : "border border-transparent hover:border-surface-container hover:bg-surface-container-low"
                 }`}
               >
-                {/* TW Avatar del remitente */}
                 <div className="relative shrink-0">
-                  <img
-                    alt={msg.name}
-                    src={msg.avatar}
-                    // TW Aplica filtro de escala de grises a avatares inactivos
-                    className={`w-14 h-14 rounded-full object-cover border border-surface-container-high ${
-                      msg.grayscale ? "grayscale" : ""
-                    }`}
-                  />
+                  <Avatar usuario={conv.usuario} />
                 </div>
 
-                {/* TW Nombre, hora, previsualizacion y badge de no leidos */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-xs">
                     <h4
                       className={`font-bold text-base ${
-                        msg.active ? "text-on-surface" : "text-brand-muted-text"
+                        conv.no_leidos > 0 ? "text-on-surface" : "text-brand-muted-text"
                       }`}
                     >
-                      {msg.name}
+                      {conv.usuario.nombre_completo}
                     </h4>
-                    <span
-                      className={`text-[10px] uppercase tracking-tighter ${
-                        msg.active ? "text-app-text-muted" : "text-brand-muted-text"
-                      }`}
-                    >
-                      {msg.time}
+                    <span className="text-[10px] uppercase tracking-tighter text-brand-muted-text">
+                      {formatearHora(conv.ultimo_mensaje?.enviado_at)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <p
-                      className={`text-sm truncate pr-md ${
-                        msg.active ? "text-brand-muted-text" : "text-app-text-muted"
-                      }`}
-                    >
-                      {msg.preview}
-                    </p>
-                    {/* TW Renderiza badge con numero de mensajes no leidos */}
-                    {msg.unread > 0 && (
-                      <span className="bg-brand-orange text-auth-card-bg font-bold text-[11px] h-5 w-5 flex items-center justify-center rounded-full shrink-0">
-                        {msg.unread}
-                      </span>
-                    )}
+                    <p className="text-sm truncate pr-md text-brand-muted-text">{previewDe(conv)}</p>
                   </div>
                 </div>
               </article>

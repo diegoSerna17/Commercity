@@ -1,21 +1,66 @@
 
 // JS Importaciones de hooks, Link e iconos para restablecer contrasena
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Lock, EyeOff, Eye, ArrowLeft } from "lucide-react";
+import { restablecerPassword } from "../../services/usuarios.service.js";
+
+// JS Minimo de caracteres exigido a la nueva contrasena en el cliente
+const MIN_PASSWORD_LENGTH = 8;
 
 const Restore = () => {
+  // RE Hook para leer el token del enlace de recuperacion (?token=...)
+  const location = useLocation();
+  // JS Token de un solo uso que el backend envia en la URL del correo (RF4)
+  const token = new URLSearchParams(location.search).get("token") || "";
+
   // RE Estado para alternar visibilidad del campo nueva contrasena
   const [showNewPassword, setShowNewPassword] = useState(false);
   // RE Estado para alternar visibilidad del campo confirmar contrasena
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // JS Estados del formulario: contrasenas, envio, exito y error
+  const [nuevaPassword, setNuevaPassword] = useState("");
+  const [confirmarPassword, setConfirmarPassword] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [exito, setExito] = useState("");
+  const [error, setError] = useState("");
 
-  // JS Manejador de envio del formulario de restablecimiento
-  const handleSubmit = (e) => {
+  // JS Valida en cliente y llama a POST /api/usuarios/reset-password (RF4)
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // JS Logica de restablecimiento de contrasena pendiente de implementar
-    console.log("Resetting password...");
+    setError("");
+    setExito("");
+
+    if (!token) {
+      setError("El enlace no es válido: falta el token de recuperación.");
+      return;
+    }
+    if (nuevaPassword.length < MIN_PASSWORD_LENGTH) {
+      setError(`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+      return;
+    }
+    if (nuevaPassword !== confirmarPassword) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
+
+    setEnviando(true);
+    try {
+      const res = await restablecerPassword(token, nuevaPassword);
+      setExito(
+        res?.message ||
+          "Contraseña restablecida correctamente. Ya puedes iniciar sesión."
+      );
+    } catch (err) {
+      // JS El backend responde aqui si el enlace expiro (5 minutos) o ya fue usado
+      setError(err.message || "No se pudo restablecer la contraseña.");
+    } finally {
+      setEnviando(false);
+    }
   };
+
+  // JS El token es de un solo uso: tras el exito se bloquea el formulario
+  const formularioBloqueado = enviando || Boolean(exito);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-surface-container-lowest font-sans text-on-surface">
@@ -33,6 +78,18 @@ const Restore = () => {
 
           {/* TW Formulario */}
           <form onSubmit={handleSubmit} className="w-full space-y-6">
+            {/* JS Mensajes de exito o error devueltos por la API */}
+            {exito && (
+              <p className="rounded-2xl border border-success bg-success/15 px-4 py-3 text-sm text-green-200">
+                {exito}
+              </p>
+            )}
+            {error && (
+              <p className="rounded-2xl border border-error-container bg-error-container/20 px-4 py-3 text-sm text-error">
+                {error}
+              </p>
+            )}
+
             {/* TW Campo de nueva contrasena con toggle de visibilidad */}
             <div className="space-y-2">
               <label
@@ -52,6 +109,10 @@ const Restore = () => {
                   placeholder="Ingresa tu nueva contraseña"
                   className="block w-full bg-transparent border-none text-on-surface text-sm py-4 pl-12 pr-12 focus:outline-none focus:ring-0 rounded-2xl placeholder-placeholder-gray-600"
                   required
+                  minLength={MIN_PASSWORD_LENGTH}
+                  value={nuevaPassword}
+                  onChange={(e) => setNuevaPassword(e.target.value)}
+                  disabled={formularioBloqueado}
                 />
                 {/* JS Alterna visibilidad del campo nueva contrasena */}
                 <button
@@ -85,6 +146,10 @@ const Restore = () => {
                   placeholder="Confirma tu contraseña"
                   className="block w-full bg-transparent border-none text-on-surface text-sm py-4 pl-12 pr-12 focus:outline-none focus:ring-0 rounded-2xl placeholder-placeholder-gray-600"
                   required
+                  minLength={MIN_PASSWORD_LENGTH}
+                  value={confirmarPassword}
+                  onChange={(e) => setConfirmarPassword(e.target.value)}
+                  disabled={formularioBloqueado}
                 />
                 {/* JS Alterna visibilidad del campo confirmar contrasena */}
                 <button
@@ -103,9 +168,10 @@ const Restore = () => {
             <div className="pt-4">
               <button
                 type="submit"
-                className="bg-brand-orange w-full text-brand-dark-text font-bold py-4 rounded-[20px] transition-transform active:scale-[0.98] flex items-center justify-center"
+                disabled={formularioBloqueado}
+                className="bg-brand-orange w-full text-brand-dark-text font-bold py-4 rounded-[20px] transition-transform active:scale-[0.98] flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Restablecer contraseña
+                {enviando ? "Restableciendo..." : "Restablecer contraseña"}
               </button>
             </div>
           </form>

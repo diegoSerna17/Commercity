@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay, EffectFade } from "swiper/modules";
 import FichaProducto from "../../components/inicio/FichaProducto";
 import Header from "../../components/globales/Header";
 import Reportar from "../../components/inicio/Reportar";
-import { listarProductos, obtenerProducto } from "../../utils/productosApi";
-import { mapearProductoUI } from "../../utils/mapearProducto";
+import { listarProductos } from "../../services/productos.service.js";
+import { agregarProducto } from "../../services/carrito.service.js";
+import { getCurrentUser } from "../../api/client.js";
+import { API_BASE_URL } from "../../constants/config.js";
 
 import "swiper/css";
 import "swiper/css/pagination";
@@ -42,54 +44,123 @@ const heroSlides = [
   },
 ];
 
+// JS Cantidad de productos que se piden por pagina a la API.
+const LIMITE_PRODUCTOS = 12;
+
+// JS Imagen de respaldo cuando el producto no tiene imagen publicada.
+const PRODUCTO_IMAGE_FALLBACK =
+  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&auto=format&fit=crop";
+
+// JS El backend devuelve rutas relativas (/uploads/...); se resuelven contra la API.
+function resolverImagen(imagen) {
+  if (!imagen) return PRODUCTO_IMAGE_FALLBACK;
+  if (/^https?:\/\//i.test(imagen)) return imagen;
+  return `${API_BASE_URL}${imagen}`;
+}
+
+// JS Avatar por defecto cuando el vendedor no tiene foto de perfil.
+function resolverAvatar(vendedor) {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    vendedor || "Vendedor"
+  )}&background=1a1a26&color=fff&bold=true&size=80&rounded=true`;
+}
+
+// JS Traduce el producto de la API al shape que consumen la tarjeta y FichaProducto.
+function mapearProducto(producto) {
+  const descuento = Number(producto.descuento_porcentaje) || 0;
+  const precio = Number(producto.precio) || 0;
+
+  return {
+    id: producto.id,
+    name: producto.nombre,
+    category: producto.categoria,
+    // JS Los precios monetarios se muestran sin decimales (COP)
+    price: Math.round(precio),
+    precioBase: Math.round(precio),
+    descuento,
+    stock: Number(producto.stock) || 0,
+    image: resolverImagen(producto.imagen),
+    imageAlt: producto.nombre,
+    description: producto.descripcion,
+    vendedorId: producto.vendedor_id,
+    vendedorNombre: producto.vendedor,
+    vendedorAvatar: producto.vendedor_foto || resolverAvatar(producto.vendedor),
+    badge: descuento > 0 ? `-${descuento}%` : null,
+    badgeBg: descuento > 0 ? "bg-figma-accent-blue" : null,
+  };
+}
+
+// JS Precio final con el descuento aplicado (misma formula del backend).
+function calcularPrecioFinal(producto) {
+  if (!producto.descuento) return producto.price;
+  return Math.round(producto.precioBase - (producto.precioBase * producto.descuento) / 100);
+}
+
 const Hero = () => {
   const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [mostrarReportar, setMostrarReportar] = useState(false);
+  // RF62/RF63: producto que se esta reportando en el modal.
+  const [productoReportado, setProductoReportado] = useState(null);
+
+  // RE Estado del catalogo real: productos, paginacion, carga y error
   const [productos, setProductos] = useState([]);
-  const [cargandoProductos, setCargandoProductos] = useState(true);
-  const [errorProductos, setErrorProductos] = useState(null);
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [totalProductos, setTotalProductos] = useState(0);
+  const [hayPaginaSiguiente, setHayPaginaSiguiente] = useState(false);
+  const [cargando, setCargando] = useState(true);
+  const [cargandoMas, setCargandoMas] = useState(false);
+  const [error, setError] = useState("");
 
-  // RF87-RF94: carga los productos activos desde el backend para el panel principal
-  useEffect(() => {
-    let cancelado = false;
-
-    async function cargarProductos() {
-      try {
-        setCargandoProductos(true);
-        setErrorProductos(null);
-        const datos = await listarProductos({ limit: 24 });
-        if (!cancelado) {
-          setProductos((datos.data.productos || []).map(mapearProductoUI));
-        }
-      } catch (error) {
-        if (!cancelado) setErrorProductos(error.message);
-      } finally {
-        if (!cancelado) setCargandoProductos(false);
-      }
+  // RF104: persiste el producto en el carrito real del comprador autenticado.
+  async function manejarAgregarCarrito(product, cantidad) {
+    const compradorId = getCurrentUser()?.id;
+    if (!compradorId) {
+      navigate("/login");
+      throw new Error("Inicia sesión para agregar productos al carrito");
     }
+    await agregarProducto(compradorId, product.id, cantidad);
+  }
 
-    cargarProductos();
-    return () => {
-      cancelado = true;
-    };
+  // JS Consulta el catalogo paginado contra GET /api/productos
+  const cargarProductos = useCallback(async (numeroPagina) => {
+    const primeraCarga = numeroPagina === 1;
+    if (primeraCarga) setCargando(true);
+    else setCargandoMas(true);
+    setError("");
+
+    try {
+      const res = await listarProductos({ page: numeroPagina, limit: LIMITE_PRODUCTOS });
+      const data = res.data || {};
+      const nuevos = (data.productos || []).map(mapearProducto);
+
+      setProductos((actuales) => (primeraCarga ? nuevos : [...actuales, ...nuevos]));
+      setPagina(data.pagina ?? numeroPagina);
+      setTotalPaginas(data.totalPaginas ?? 1);
+      setTotalProductos(data.totalProductos ?? nuevos.length);
+      setHayPaginaSiguiente(Boolean(data.hayPaginaSiguiente));
+    } catch (err) {
+      // Sin status significa que la peticion no llego al servidor
+      setError(
+        err.status
+          ? err.message || "No se pudieron cargar los productos"
+          : "No se pudo conectar con el servidor. Verifica que el backend este activo."
+      );
+      if (primeraCarga) setProductos([]);
+    } finally {
+      setCargando(false);
+      setCargandoMas(false);
+    }
   }, []);
 
-  // RF78: al abrir la ficha se muestra de inmediato lo que ya se tiene en la
-  // tarjeta y en paralelo se trae el detalle fresco (stock/estado actualizados)
-  function verDetalleProducto(product) {
-    setSelectedProduct(product);
+  useEffect(() => {
+    cargarProductos(1);
+  }, [cargarProductos]);
 
-    obtenerProducto(product.id)
-      .then((datos) => {
-        setSelectedProduct((actual) =>
-          actual && actual.id === product.id ? mapearProductoUI(datos.data) : actual
-        );
-      })
-      .catch(() => {
-        // Si falla el refresco de detalle, se conserva lo que ya se ve en pantalla.
-      });
-  }
+  const cargarMasProductos = () => {
+    if (hayPaginaSiguiente && !cargandoMas) cargarProductos(pagina + 1);
+  };
 
   return (
     <div className="flex min-h-screen md:min-h-0 overflow-hidden bg-surface-container-lowest font-sans">
@@ -271,39 +342,84 @@ const Hero = () => {
             </button>
           </div>
 
-          {errorProductos && (
-            <p
-              className="mb-6 rounded-2xl border border-error-container bg-error-container/15 px-4 py-3 text-sm font-semibold text-error"
-              role="alert"
-            >
-              No se pudieron cargar los productos: {errorProductos}
-            </p>
-          )}
-
-          {!errorProductos && cargandoProductos && (
-            <p
-              className="mb-6 text-sm font-semibold"
-              style={{ color: "var(--color-brand-muted-text)" }}
-            >
-              Cargando productos...
-            </p>
-          )}
-
-          {!errorProductos && !cargandoProductos && productos.length === 0 && (
-            <p
-              className="mb-6 text-sm font-semibold"
-              style={{ color: "var(--color-brand-muted-text)" }}
-            >
-              Aun no hay productos publicados.
-            </p>
-          )}
-
           <div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 md:gap-7"
             role="list"
             aria-labelledby="products-heading"
           >
-            {productos.map((product) => (
+            {cargando && (
+              <div
+                className="col-span-full flex flex-col items-center justify-center gap-3 py-16"
+                role="status"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-bounce"
+                    style={{ animationDelay: "0ms" }}
+                  />
+                  <div
+                    className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <div
+                    className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  />
+                </div>
+                <span
+                  className="text-xs font-medium tracking-wide uppercase"
+                  style={{ color: "var(--color-brand-muted-text)" }}
+                >
+                  Cargando productos...
+                </span>
+              </div>
+            )}
+
+            {!cargando && error && (
+              <div
+                className="col-span-full flex flex-col items-center justify-center gap-4 rounded-3xl border px-4 py-16 text-center"
+                style={{
+                  borderColor: "var(--color-border-subtle)",
+                  backgroundColor: "var(--color-auth-card-bg)",
+                }}
+              >
+                <p className="text-sm md:text-base" style={{ color: "var(--color-on-surface)" }}>
+                  {error}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => cargarProductos(1)}
+                  className="px-6 py-2.5 rounded-full text-sm font-semibold transition-opacity hover:opacity-90"
+                  style={{
+                    backgroundColor: "var(--color-brand-orange)",
+                    color: "var(--color-brand-dark-text)",
+                  }}
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
+
+            {!cargando && !error && productos.length === 0 && (
+              <div
+                className="col-span-full flex flex-col items-center justify-center gap-2 rounded-3xl border px-4 py-16 text-center"
+                style={{
+                  borderColor: "var(--color-border-subtle)",
+                  backgroundColor: "var(--color-auth-card-bg)",
+                }}
+              >
+                <p className="text-sm md:text-base font-semibold" style={{ color: "var(--color-on-surface)" }}>
+                  No hay productos disponibles por ahora
+                </p>
+                <p className="text-xs md:text-sm" style={{ color: "var(--color-brand-muted-text)" }}>
+                  Vuelve mas tarde para ver las novedades de la ciudad.
+                </p>
+              </div>
+            )}
+
+            {!cargando &&
+              !error &&
+              productos.map((product) => (
               <article
                 key={product.id}
                 role="listitem"
@@ -324,7 +440,7 @@ const Hero = () => {
 
                 <button
                   type="button"
-                  onClick={() => verDetalleProducto(product)}
+                  onClick={() => setSelectedProduct(product)}
                   className="text-left relative overflow-hidden"
                   aria-label={`Ver ficha de ${product.name}`}
                 >
@@ -364,7 +480,7 @@ const Hero = () => {
                 <div className="flex flex-col gap-2 p-5 pt-4">
                   <button
                     type="button"
-                    onClick={() => verDetalleProducto(product)}
+                    onClick={() => setSelectedProduct(product)}
                     className="text-left group/btn"
                   >
                     <h3
@@ -387,31 +503,22 @@ const Hero = () => {
                     >
                       {product.vendedorNombre}
                     </span>
-                    {product.calificacionVendedor != null && (
-                      <span
-                        className="text-[11px] font-bold"
-                        style={{ color: "var(--color-brand-orange)" }}
-                        aria-label={`Calificación del vendedor: ${product.calificacionVendedor} de 5`}
-                      >
-                        {"★"} {product.calificacionVendedor}
-                      </span>
-                    )}
                   </div>
 
                   <div className="flex items-baseline gap-2.5 mt-1.5">
-                    {product.originalPrice && (
+                    {product.descuento > 0 && (
                       <span
                         className="text-sm font-medium line-through"
                         style={{ color: "var(--color-brand-muted-text)" }}
                       >
-                        ${product.originalPrice.toLocaleString("es-CO")}
+                        ${product.precioBase.toLocaleString("es-CO")}
                       </span>
                     )}
                     <span
                       className="text-lg lg:text-xl font-bold"
                       style={{ color: "var(--color-brand-orange)" }}
                     >
-                      ${product.price.toLocaleString("es-CO")}
+                      ${Math.round(calcularPrecioFinal(product)).toLocaleString("es-CO")}
                     </span>
                   </div>
 
@@ -451,31 +558,92 @@ const Hero = () => {
             ))}
           </div>
 
-          <div className="flex justify-center mt-8 sm:hidden">
-            <button
-              className="px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
-              style={{
-                border: "1px solid var(--color-border-subtle)",
-                color: "var(--color-brand-orange)",
-              }}
-            >
-              Ver todos los productos
-            </button>
-          </div>
+          {hayPaginaSiguiente && !cargando && !error && (
+            <div className="flex justify-center mt-8 sm:hidden">
+              <button
+                type="button"
+                onClick={cargarMasProductos}
+                disabled={cargandoMas}
+                className="px-6 py-2.5 rounded-full text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{
+                  border: "1px solid var(--color-border-subtle)",
+                  color: "var(--color-brand-orange)",
+                }}
+              >
+                {cargandoMas ? "Cargando..." : "Cargar mas productos"}
+              </button>
+            </div>
+          )}
         </section>
+
+        {/* Paginacion del catalogo */}
+        {!cargando && !error && productos.length > 0 && (
+          <div className="flex flex-col items-center justify-center gap-4 px-4 pb-16 md:pb-20">
+            <span
+              className="text-xs font-medium tracking-wide uppercase"
+              style={{ color: "var(--color-brand-muted-text)" }}
+            >
+              Mostrando {productos.length} de {totalProductos} productos
+            </span>
+            <div
+              className="w-32 h-1 rounded-full overflow-hidden"
+              style={{
+                backgroundColor: "var(--color-surface-container-high)",
+              }}
+              role="progressbar"
+              aria-valuenow={pagina}
+              aria-valuemin={1}
+              aria-valuemax={totalPaginas}
+              aria-label="Pagina del catalogo"
+            >
+              <div
+                className="h-full rounded-full transition-all duration-700 ease-out"
+                style={{
+                  width: `${Math.min((pagina / totalPaginas) * 100, 100)}%`,
+                  backgroundColor: "var(--color-brand-orange)",
+                }}
+              />
+            </div>
+            {hayPaginaSiguiente ? (
+              <button
+                type="button"
+                onClick={cargarMasProductos}
+                disabled={cargandoMas}
+                className="hidden sm:block px-6 py-2.5 rounded-full text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{
+                  border: "1px solid var(--color-border-subtle)",
+                  color: "var(--color-brand-orange)",
+                }}
+              >
+                {cargandoMas ? "Cargando piezas..." : "Cargar mas productos"}
+              </button>
+            ) : (
+              <span className="text-xs" style={{ color: "var(--color-brand-muted-text)" }}>
+                Has visto todo el catalogo
+              </span>
+            )}
+          </div>
+        )}
       </main>
 
       {selectedProduct && (
         <FichaProducto
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
-          onReportar={() => setMostrarReportar(true)}
+          onReportar={(product) => {
+            setProductoReportado(product);
+            setMostrarReportar(true);
+          }}
           onIrPerfilVendedor={() => navigate("/profile")}
+          onAgregarCarrito={manejarAgregarCarrito}
         />
       )}
 
       {mostrarReportar && (
-        <Reportar onClose={() => setMostrarReportar(false)} />
+        <Reportar
+          producto={productoReportado}
+          onClose={() => setMostrarReportar(false)}
+        />
       )}
     </div>
   );

@@ -2,14 +2,41 @@
 
 // JS Importaciones de hooks, Link e iconos para el formulario de login
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, EyeOff, Check, ArrowRight } from "lucide-react";
+import { request, setToken, setCurrentUser } from "../../api/client.js";
 
 const Login = () => {
+  const navigate = useNavigate();
   // RE Estado para controlar el checkbox Recordarme
   const [remember, setRemember] = useState(false);
   // RE Estado para alternar visibilidad de la contrasena
   const [showPassword, setShowPassword] = useState(false);
+  // RE Estado del formulario: correo, contrasena, carga y error
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // JS Maneja el envío del formulario contra POST /api/usuarios/login
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await request("/api/usuarios/login", {
+        method: "POST",
+        body: { email, password },
+      });
+      setToken(res.data.token);
+      if (res.data.user) setCurrentUser(res.data.user);
+      navigate("/");
+    } catch (err) {
+      setError(err.message || "No se pudo iniciar sesión");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen flex bg-surface text-on-surface overflow-hidden font-sans">
@@ -78,7 +105,7 @@ const Login = () => {
             </p>
           </div>
 
-          <form className="space-y-lg">
+          <form className="space-y-lg" onSubmit={handleSubmit}>
             {/* TW Campo: Correo electronico */}
             <div>
               <label
@@ -96,6 +123,8 @@ const Login = () => {
                   id="email"
                   type="email"
                   placeholder="tu@correo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-input-bg text-on-surface text-body-md rounded-lg pl-3xl pr-md py-sm focus:ring-1 focus:ring-brand-orange focus:border-brand-orange transition-colors h-12 outline-none placeholder-placeholder-gray-600 border border-border-subtle"
                 />
               </div>
@@ -118,6 +147,8 @@ const Login = () => {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-input-bg text-on-surface text-body-md rounded-lg pl-3xl pr-md py-sm focus:ring-1 focus:ring-brand-orange focus:border-brand-orange transition-colors h-12 outline-none placeholder-placeholder-gray-600 border border-border-subtle"
                 />
                 {/* JS Alterna entre tipo password y text para mostrar/ocultar contrasena */}
@@ -165,12 +196,20 @@ const Login = () => {
 
             {/* TW Boton principal: Entrar */}
             <button
-              type="button"
-              className="w-full bg-brand-orange text-brand-dark-text text-label-md py-sm px-lg rounded-[10px] h-12 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-sm mt-xl font-bold shadow-button"
+              type="submit"
+              disabled={loading}
+              className="w-full bg-brand-orange text-brand-dark-text text-label-md py-sm px-lg rounded-[10px] h-12 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-sm mt-xl font-bold shadow-button disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Entrar
+              {loading ? "Entrando..." : "Entrar"}
               <ArrowRight size={20} />
             </button>
+
+            {/* TW Mensaje de error de autenticacion */}
+            {error && (
+              <p className="text-report-red-text text-body-sm font-medium text-center">
+                {error}
+              </p>
+            )}
 
             {/* TW Separador decorativo entre botones */}
             <div className="relative flex items-center py-md">

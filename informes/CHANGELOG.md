@@ -1,8 +1,96 @@
 # Changelog de Cambios - CommerCity
 
-Registro central de cambios (segun regla \documentacion-cambios.md\). Entradas de la mas reciente a la mas antigua.
+Registro central de cambios (según regla `documentacion-cambios.md`). Entradas de la mas reciente a la mas antigua.
 
 ---
+
+## [Unreleased] - 2026-09-25 22:38 — Bug latente ENUM: literales inválidos en la cancelación de pedidos
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/controllers/pedidos.controllers.js; backend/src/server/__tests__/pedidos.controllers.test.js; informes/PROPUESTA_MIGRACION_ENUM_ESTADOS.md (nuevo)
+- **Descripción**: se corrigieron juntos los dos bugs de literales fuera de los ENUM reales de la BD en la cancelación de pedidos (por línea y general): (1) `detalle_pedidos.estado_pago_vendedor` recibía `'Reembolsado'` y su ENUM real es `enum('Pendiente','Desembolsado')`; (2) `pagos_simulados.estado` recibía `'Parcial'` y su ENUM real es `enum('Aprobado','Rechazado','Pendiente','Reembolsado')`. Se aplicó la Opción B decidida por el líder de backend: mapeo a valores válidos sin DDL en la BD compartida. Línea cancelada no desembolsada → `'Pendiente'` (se conserva `'Desembolsado'` si ya se desembolsó, vía helper `estadoPagoVendedorTrasCancelacion`); pago del pedido → `'Reembolsado'` si se cancelan todas las líneas, `'Aprobado'` si quedan líneas vivas. Se añadieron 4 pruebas de regresión (casos a–d) que verifican que jamás se escriben literales fuera de los ENUM. La Opción A (migración `ALTER TABLE` para ampliar ambos ENUM con `'Reembolsado'` y `'Parcial'`) queda como propuesta documental pendiente de validación con el líder de BD y el instructor.
+- **Motivo**: bug latente que rompía la transacción de cancelación de pedidos con error de MySQL (los dos literales inválidos estaban en la misma transacción y estallaban al corregir el primero); coherencia RF vs BD vs código para la inspección de entregas.
+- **Requerimientos**: RF de gestión/cancelación de pedidos; RNF de integridad de datos (valores conformes al esquema real).
+- **Evidencia**: 4 nuevas pruebas de regresión en `pedidos.controllers.test.js` (mocks con los ENUM reales de `information_schema`); propuesta de migración con scripts ALTER, impacto y rollback en `informes/PROPUESTA_MIGRACION_ENUM_ESTADOS.md`. Suite completa ejecutada manualmente por el usuario (regla de tests manuales): `npx vitest run --coverage` desde `backend/` → **306/306 PASSED en 20 archivos** (302 previas + 4 de regresión), Cobertura: Statements 91.83% / Branches 81.51% / Functions 97.56% / Lines 92.33% (umbral 60%). Stderr de "Error no controlado / DB boom" = casos negativos esperados, no fallos.
+- **Estado**: Verificado (unitarias + cobertura) — commit `7b2337c` (+500/−23, 5 archivos) publicado en `origin/feature/web-integracion-api` y `commercycity/feature/web-integracion-api` (`e06fe36..7b2337c`). Incluye `informes/INFORME_FINAL_SENA_2026-09-25.md`.
+
+---
+
+## [Unreleased] - 2026-09-25 20:15 — CORS: 6to test (peticion sin header Origin)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/__tests__/cors.middleware.test.js
+- **Descripción**: se añadió el 6to caso al test permanente de CORS: preflight OPTIONS contra `/api/productos` SIN header `Origin`, verificando que la API no refleja `Access-Control-Allow-Origin` (no hay CORS que aplicar para peticiones del mismo origen o clientes no navegador). Cierra el hallazgo menor M1 de la revisión de código 16.
+- **Motivo**: completar la matriz de casos de CORS (4 orígenes permitidos + origen desconocido + sin Origin) para el portafolio de evidencias de la inspección de entregas de API REST.
+- **Requerimientos**: RNF de seguridad (regla `api-seguridad.md`: allow-list de orígenes sin comodín `*`).
+- **Evidencia**: suite backend completa `npx vitest run --coverage`: 302/302 pruebas PASSED en 20 archivos (301 previas + 1 nueva), incluido el módulo Seguidores RF106 con 15 pruebas validadas (pendiente del informe de entregas del 21-sep). Cobertura: Statements 91.81% / Branches 81.46% / Functions 97.54% / Lines 92.31% (umbral 60%). Commit `3d27388` publicado en `origin/feature/web-integracion-api` y `commercycity/feature/web-integracion-api`.
+- **Estado**: Verificado (unitarias + cobertura)
+
+---
+
+## [Unreleased] - 2026-09-25 16:41 — CORS: orígenes de la WebView Capacitor (app móvil Ionic)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/app.js; backend/src/server/__tests__/cors.middleware.test.js (nuevo, reemplaza a backend/src/server/__tests__/app.cors.test.js)
+- **Descripción**: la configuración de CORS pasó de un único origen (`FRONTEND_URL` o `http://localhost:5173`) a la lista `CORS_ORIGINS` que conserva el frontend web y añade los orígenes estándar de la WebView de Capacitor: `https://localhost` (Android con `androidScheme https` por defecto), `http://localhost` (esquema http / desarrollo) y `capacitor://localhost` (iOS). Sin este cambio, toda petición desde la app móvil quedaba bloqueada por CORS al enviar la WebView su propio Origin. Se añadió el test permanente `cors.middleware.test.js` (5 pruebas de preflight OPTIONS contra la app real: 4 orígenes permitidos + 1 origen desconocido no reflejado).
+- **Motivo**: la app móvil del equipo (Ionic Capacitor 8.4.0) no podía llamar a la API; el bloqueo CORS no es visible hasta ejecutar la app en dispositivo/WebView.
+- **Requerimientos**: RNF de seguridad (regla `api-seguridad.md`: allow-list de orígenes, sin comodín `*`); habilita la integración de la app móvil con todos los RF expuestos por la API.
+- **Evidencia**: suite backend `npm test` 301/301 en 20 archivos (296 previos + 5 de CORS); cobertura Statements 91.81% / Branches 81.46% / Functions 97.54% / Lines 92.31% (umbral 60%). Verificación funcional con el servidor levantado (`npm start`) y preflight OPTIONS vía `curl` (el middleware cors corre antes de los routers, el chequeo aplica a cualquier ruta; el test permanente usa `/api/productos`): `Origin: https://localhost` → 204 con `Access-Control-Allow-Origin: https://localhost`; `http://localhost:5173` → 204 reflejado; `capacitor://localhost` → 204 reflejado; `https://malicioso.com` → 204 SIN el header `Access-Control-Allow-Origin` (el navegador bloquea la petición).
+- **Estado**: Verificado (unitarias + cobertura + verificación funcional en vivo)
+
+---
+
+## [Unreleased] - 2026-09-25 - Documentacion: README.md raiz del proyecto
+
+- **Autor**: Daniel Palacios
+- **Archivos**: README.md (nuevo, en la raiz del repositorio)
+- **Descripción**: se creó el README.md raíz para la sustentación final del proyecto: descripción, contexto académico SENA (ADSO, FPI, etapa productiva), características por módulo, arquitectura con diagrama Mermaid y pipeline de middlewares de autenticación, stack con versiones, estructura del repositorio, requisitos previos, variables de entorno del backend, instalación y ejecución, pruebas con resultados y cobertura, documentación de la API, roles del sistema, equipo y uso académico. Todo el contenido fue verificado por lectura directa del código (package.json de backend y frontend, app.js, server.js, client.js, constants/config.js, .env.example, vite.config.js, .nvmrc, estructura de carpetas).
+- **Motivo**: el repositorio no tenía README en la raíz; se requiere documentación precisa y verificable para la defensa ante el instructor evaluador.
+- **Requerimientos**: RNF de documentación y trazabilidad del proyecto formativo (GFPI-G-040).
+- **Evidencia**: documento creado de 264 líneas, sin cambios de código; cita los resultados vigentes de las suites (backend 296/296 en 19 archivos, cobertura Statements 91.81% / Branches 81.46% / Functions 97.54% / Lines 92.31%; frontend 17/17 en 4 archivos).
+- **Estado**: Verificado
+
+---
+
+## [Unreleased] - 2026-09-25 15:55 — FASE 2: cierre de defectos P1 (DEF-01..DEF-05) y suite backend en verde
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/middleware/auth.middleware.js; backend/src/server/controllers/pedidos.controllers.js; backend/src/server/controllers/usuarios.controllers.js; backend/src/server/app.js; backend/src/server/routes/pedidos.routes.js; backend/src/server/__tests__/ (14 archivos de test alineados con DEF-01); backend/.env.example (nuevo); frontend/src/pages/Carrito/PasarelaPago.jsx; frontend/src/pages/Perfil/PerfilVendedor.jsx; frontend/package.json; frontend/vite.config.js; frontend/src/api/client.test.js; frontend/src/components/globales/RutaProtegidaAdmin.test.jsx; frontend/src/pages/Carrito/Carrito.test.jsx; frontend/src/pages/Carrito/PasarelaPago.test.jsx; frontend/src/test/setup.js; frontend/.nvmrc
+- **Descripción**: cierre de los defectos P1 de seguridad y contrato de la API REST. (DEF-01) `authRequired` valida firma, lista negra de tokens (`tokens_invalidados`) y estado del usuario (`activo = 1`), con respuesta fail-closed (401 `USER_DISABLED`) en cualquier fallo; (DEF-02/DEF-03) contrato JSON uniforme `{ success, data }` en `GET /` y `GET /api/usuarios`; (DEF-05/RF35) cancelación de compra por el comprador con restitución de stock, `estado_pago_vendedor = 'Reembolsado'` y cálculo de reembolso Parcial/Reembolsado. Se auditan los dos handlers de cancelación (RF135 `POST /api/historial/compras/:id/cancelar` y RF35 `PATCH /api/pedidos/:id/estado`) confirmando que NO hay doble restitución de stock. Se alinearon los mocks de los 14 archivos de test que no contemplaban la segunda consulta de `authRequired`.
+- **Motivo**: al introducir DEF-01 la suite backend pasó a 95/296 fallos porque los mocks devolvían filas vacías para la consulta de estado del usuario; sin suite verde no es defendible el cierre de FASE 2 ante el instructor evaluador.
+- **Requerimientos**: RF2, RF35, RF40, RF41, RF46, RF122, RF134, RF135; RNF de seguridad, validación y contrato de API.
+- **Evidencia**: backend `npx vitest run` 296/296 en 19 archivos; cobertura 91.81% Statements, 81.46% Branches, 97.54% Functions, 92.31% Lines (umbral configurado 60%). Frontend desde `frontend/`: 4 archivos, 17/17 tests. E2E de endpoints NO ejecutado: `AVANCES/PRUEBAS/ejecutar_pruebas.mjs` fue retirado del árbol de trabajo y el set externo VOCETO no está en el working copy; queda pendiente levantando el backend con BD real.
+- **Estado**: Verificado técnicamente (unitarias + cobertura); E2E y sincronización con `commercycity/main` pendientes de autorización del líder
+
+---
+
+## [Unreleased] - 2026-09-21 09:01
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/controllers/seguidores.controllers.js; backend/src/server/routes/seguidores.routes.js; backend/src/server/__tests__/seguidores.controllers.test.js; backend/src/server/app.js; frontend/src/components/perfil/SeguidoresModal.jsx; frontend/src/pages/Perfil/PerfilVendedor.jsx; informes/PLAN_SPRINT_API_REST_2026-08-31.md; informes/INFORME_ESTADO_ENTREGAS_SPRINT_API_REST_2026-09-07.md; informes/INVENTARIO_ENDPOINTS_API_2026-08-28.md
+- **Descripción**: se reincorporó el módulo Seguidores al backend central, se montó `/api/seguidores`, se restauró su cobertura unitaria y se actualizó la integración web para recargar listas después de una acción. Se consolidaron las rutas documentales referenciadas por el changelog.
+- **Motivo**: cerrar la brecha entre la integración web declarada, el código local y la documentación del Sprint API REST.
+- **Requerimientos**: RF106 y RNF de seguridad, validación y trazabilidad.
+- **Evidencia**: `seguidores.controllers.test.js` 15/15; suite backend 288/288 en 19 archivos; cobertura Statements 91.77%, Branches 81.11%, Functions 98.11%, Lines 92.30%; E2E web 54/54 contra `http://localhost:3000` con `ADMIN_EMAIL=admin01@commercity.com`; diagnóstico estático sin errores. La sincronización con `commercycity/main` continúa pendiente por historiales sin merge-base y aprobación del líder.
+- **Estado**: Verificado técnicamente; sincronización pendiente
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## 2026-09-20 - FEAT: conectar toda la API REST a la web (comprador, vendedor, admin, cuenta y social)
 
@@ -13,29 +101,6 @@ Registro central de cambios (segun regla \documentacion-cambios.md\). Entradas d
 - **Requerimientos**: RF2, RF4, RF20, RF21, RF26-RF32, RF35, RF40, RF45-RF49, RF54, RF62/RF63, RF79, RF101, RF103-RF107, RF109-RF114, RF118-RF124, RF129-RF139
 - **Evidencia**: eslint sin hallazgos (EXIT_LINT=0) y vite build correcto (EXIT_BUILD=0). Cobertura de ~62 de 69 endpoints. PENDIENTE el E2E completo contra la BD real.
 - **Estado**: Pendiente
-��# Changelog de Cambios - CommerCity
-
-Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas de la mas reciente a la mas antigua.
-
----
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ## 2026-09-16 - FIX: normalizar imagenes rotas del catalogo de productos
 
@@ -60,7 +125,7 @@ Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas
 ## 2026-09-13 - FEAT: integracion del frontend web a la API real (rama feature/web-integracion-api)
 
 - **Autor**: Daniel Palacios
-- **Archivos**: rama feature/web-integracion-api (worktree C:\Users\dpalaciosr\commercity-web): frontend/src/constants/config.js; frontend/src/services/productos.service.js; frontend/src/pages/Inicio/Inicio.jsx; frontend/src/pages/IniciarSesion/Registro.jsx; frontend/src/components/globales/RutaProtegidaAdmin.jsx; frontend/src/App.jsx; frontend/src/pages/Administrador/PanelControl.jsx
+- **Archivos**: rama feature/web-integracion-api (worktree local): frontend/src/constants/config.js; frontend/src/services/productos.service.js; frontend/src/pages/Inicio/Inicio.jsx; frontend/src/pages/IniciarSesion/Registro.jsx; frontend/src/components/globales/RutaProtegidaAdmin.jsx; frontend/src/App.jsx; frontend/src/pages/Administrador/PanelControl.jsx
 - **Descripcion**: catalogo de Inicio conectado a GET /api/productos (con paginacion real y sin mocks), registro real contra POST /api/usuarios/register con auto-login, guard de administrador para /admin y /admin/dashboard, API_BASE_URL por defecto en 3000 y correccion de mojibake en el panel admin.
 - **Motivo**: la rama prueba-backend tenia catalogo mock y registro sin implementar, lo que impedia el cierre de la Fase 2 (pantallas del alcance con datos reales).
 - **Requerimientos**: RF87-RF94 (catalogo), RF1-RF4 (registro), RNF de seguridad (control de acceso admin)
@@ -266,7 +331,7 @@ Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas
 - **Motivo**: el frontend aun envia `estado` como select editable, generando incoherencia RF vs codigo ante el instructor; la BD ya es la unica fuente del estado.
 - **Requerimientos**: RF46, RF47, RF88
 - **Evidencia**: definicion del esquema verificada (`estado` GENERATED ALWAYS AS if(stock>0,'Disponible','Agotado') STORED); el backend ya cumple (INSERT de productos sin columna estado).
-- **Estado**: En revision   pendiente de aplicacion por Diego Serna (frontend)
+- **Estado**: En revision — pendiente de aplicacion por Diego Serna (frontend)
 
 ---
 
@@ -395,7 +460,7 @@ Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas
 - **Archivos**:
   - .trae/rules/revision-requerimientos.md (mapeo RF/RNF actualizado a la numeracion 20/08, checklist y conflictos)
   - LAST VERSION/Commercity (optimizado)/Commercity (optimizado).docx.md (nuevo: documento oficial final del Director)
-- **Descripcion**: se adopto como fuente unica de requerimientos la version final 2026-08-20 del Director (`Commercity (optimizado).docx.md`), que renumer� los RF: la cancelacion paso de RF135 a RF35, el perfil publico de RF106 a RF110, el IVA/desglose se reparte en RF48/RF120/RF121/RF140 y la moneda COP es RF141. Se actualizo la regla revision-requerimientos.md (tabla de mapeo por modulo, checklist y conflictos). El Director cerro: RF140 (subtotal SIN IVA = precio/1.19 en detalle_pedidos; monto_vendedor 90% y monto_comision 10% como columnas generadas; IVA solo en vuelo en la pasarela; sin columna de IVA) y RF141 (moneda COP vigente; el RF141 antiguo de almacenar IVA en BD fue eliminado; el seguimiento del IVA desde BD queda agendado post-entrega). RF36 cerrado (cubierto por frontend); RF129 queda pendiente de implementar (filtrar lineas canceladas en Pedidos del vendedor).
+- **Descripcion**: se adopto como fuente unica de requerimientos la version final 2026-08-20 del Director (`Commercity (optimizado).docx.md`), que renumeró los RF: la cancelacion paso de RF135 a RF35, el perfil publico de RF106 a RF110, el IVA/desglose se reparte en RF48/RF120/RF121/RF140 y la moneda COP es RF141. Se actualizo la regla revision-requerimientos.md (tabla de mapeo por modulo, checklist y conflictos). El Director cerro: RF140 (subtotal SIN IVA = precio/1.19 en detalle_pedidos; monto_vendedor 90% y monto_comision 10% como columnas generadas; IVA solo en vuelo en la pasarela; sin columna de IVA) y RF141 (moneda COP vigente; el RF141 antiguo de almacenar IVA en BD fue eliminado; el seguimiento del IVA desde BD queda agendado post-entrega). RF36 cerrado (cubierto por frontend); RF129 queda pendiente de implementar (filtrar lineas canceladas en Pedidos del vendedor).
 - **Motivo**: el Director envio el SRS final actualizado (20/08); se requiere alinear la numeracion oficial para las revisiones y asignaciones (el perfil publico pasa a RF110, afecta la asignacion de Cristian).
 - **Requerimientos**: RF140, RF141, RF36, RF129, RF110
 - **Evidencia**: lectura del documento oficial 20/08 (`LAST VERSION/Commercity (optimizado)/Commercity (optimizado).docx.md`) y confirmacion del Director en el grupo de lideres (20/08).
@@ -428,7 +493,7 @@ Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas
   - Rama `feature/frontend-modulos-s1`: frontend/src/utils/productosApi.js, frontend/src/utils/mapearProducto.js
   - .trae/rules/git-push-politica.md y .trae/rules/git-autorizacion-versionado.md (se permite subir frontend cuando hace parte de la actividad asignada al modulo)
   - .gitignore (excluir backend/src/server/uploads/ runtime)
-- **Descripcion**: se actualizo la politica de push para permitir archivos frontend cuando forman parte del modulo asignado al integrante. Se hizo push a `commercycity` v�a worktrees temporales: rama `backend` con el modulo Perfil Vendedor de Yepes (commit 956e0be, autor Jose Yepes) y rama nueva `feature/frontend-modulos-s1` desde main con los utils del Catalogo de Perea (commit aaf6360, autor Carlos Perea) para que Diego Serna revise y haga merge.
+- **Descripcion**: se actualizo la politica de push para permitir archivos frontend cuando forman parte del modulo asignado al integrante. Se hizo push a `commercycity` vía worktrees temporales: rama `backend` con el modulo Perfil Vendedor de Yepes (commit 956e0be, autor Jose Yepes) y rama nueva `feature/frontend-modulos-s1` desde main con los utils del Catalogo de Perea (commit aaf6360, autor Carlos Perea) para que Diego Serna revise y haga merge.
 - **Motivo**: el usuario indico que los archivos frontend de las actividades asignadas si se suben al repositorio del lider; se requeria subir el trabajo integrado de Yepes (backend) y el frontend de Perea que no existia en main.
 - **Requerimientos**: RF44-RF49, RF54, RF78-RF85
 - **Evidencia**: `git ls-remote commercycity` confirma refs/heads/backend=956e0be y refs/heads/feature/frontend-modulos-s1=aaf6360; worktrees y ramas locales temporales eliminados.
@@ -515,7 +580,7 @@ Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas
   - AVANCES/PRUEBAS/resultados.json (trazabilidad JSON)
   - AVANCES/PRUEBAS/informe_pruebas_final.md (informe consolidado)
   - AVANCES/PRUEBAS/capturas/*.png (10 capturas del frontend por modulo)
-- **Descripcion**: se genero y ejecuto un set de pruebas de integracion contra el backend desplegado (`http://localhost:5000`) validando login + un flujo completo por modulo: Autenticacion (12), Catalogo (4), Carrito (8), Pedidos/Pago (8), Historial (3), Tienda (7) y Admin (8). **Resultado: 50/50 OK (0 fallos)** contra la BD real `commercy_v2`. Se tomo captura de pantalla de cada modulo del frontend (10 PNG en `AVANCES/PRUEBAS/capturas/`). Ademas se verifico contra la BD real el reporte de Jorge Meneses: migraciones 009 (EVENT limpiar_carritos_inactivos + carrito_items.updated_at), 010 (tokens_invalidados + token_recuperacion_expiracion) y 011 (reportes.archivado)   todas aplicadas correctamente.
+- **Descripcion**: se genero y ejecuto un set de pruebas de integracion contra el backend desplegado (`http://localhost:5000`) validando login + un flujo completo por modulo: Autenticacion (12), Catalogo (4), Carrito (8), Pedidos/Pago (8), Historial (3), Tienda (7) y Admin (8). **Resultado: 50/50 OK (0 fallos)** contra la BD real `commercy_v2`. Se tomo captura de pantalla de cada modulo del frontend (10 PNG en `AVANCES/PRUEBAS/capturas/`). Ademas se verifico contra la BD real el reporte de Jorge Meneses: migraciones 009 (EVENT limpiar_carritos_inactivos + carrito_items.updated_at), 010 (tokens_invalidados + token_recuperacion_expiracion) y 011 (reportes.archivado) — todas aplicadas correctamente.
 - **Motivo**: el usuario pidio un set de pruebas (login + flujo por modulo) con capturas de pantalla guardadas en AVANCES/PRUEBAS, y pausar las pruebas para verificar el mensaje de BD de Meneses.
 - **Requerimientos**: RF2, RF3, RF26-RF32, RF39-RF42, RF55-RF77, RF83-RF90, RF107-RF109, RF111-RF118, RF119-RF125, RF134, RF135, RNF11 (VALIDADO E2E)
 - **Evidencia**: `AVANCES/PRUEBAS/INFORME_PRUEBAS.md` (50/50 PASS); verificado en BD: EVENT ENABLED, tabla tokens_invalidados (token_hash/expira_en/creado_en), columnas token_recuperacion_expiracion y reportes.archivado presentes. Hallazgo: el admin del seed (carlos.munoz) no existe en la BD real; admins reales admin01/02/03@commercity.com (ids 471-473, password 123456).
@@ -777,7 +842,7 @@ Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas
 
 - **Autor**: Daniel Palacios
 - **Archivos**: ".trae/rules/respuestas-chat-whatsapp.md" (nuevo, v1.0)
-- **Descripcion**: nueva regla del proyecto para responder conversaciones de WhatsApp pegadas con timestamps (`[9:26 a.m., 8/8/2026] Nombre: mensaje`). Define el formato de etiqueta por respuesta (`RESPUESTA N   Tema corto (hora a.m./p.m.):`), una respuesta por mensaje respetando el orden cronologico, agrupacion de mensajes duplicados citando todas las horas, tono formal sin emojis, texto listo para copiar y pegar, y verificacion de los RF contra la numeracion oficial vigente (actualizacion 2026-08-08).
+- **Descripcion**: nueva regla del proyecto para responder conversaciones de WhatsApp pegadas con timestamps (`[9:26 a.m., 8/8/2026] Nombre: mensaje`). Define el formato de etiqueta por respuesta (`RESPUESTA N — Tema corto (hora a.m./p.m.):`), una respuesta por mensaje respetando el orden cronologico, agrupacion de mensajes duplicados citando todas las horas, tono formal sin emojis, texto listo para copiar y pegar, y verificacion de los RF contra la numeracion oficial vigente (actualizacion 2026-08-08).
 - **Motivo**: el usuario pidio crear una regla para que al copiar textos del chat se le responda cada mensaje teniendo en cuenta la hora/minuto en que se envio.
 - **Requerimientos**: N/A
 - **Evidencia**: aplicacion de la regla en la conversacion de esta manana (8 respuestas generadas con el formato solicitado).
@@ -933,7 +998,7 @@ Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas
 
 - **Autor**: Daniel Palacios
 - **Archivos**: "LAST VERSION/INFORME_AUDITORIA_COMPLETA_2026-08-07.md" (v3.5)
-- **Descripcion**: revision de integridad del informe con 2 ajustes para evitar inconvenientes al ejecutar: (1) en la guia PASO 2 se agrego la limpieza previa de `notificaciones` antes de M2 (`DELETE FROM notificaciones;` cuando exista estado corrupto `le%�do`), para que el MODIFY del ENUM no falle en modo estricto, y la nota de ejecutar primero el schema si la BD es nueva; (2) se alinearon los estados de RF47 y RF116 en las tablas 2.2/2.8 de BLOQUEADO a "PARCIAL (decision B-R1/B-R2)" ya que las decisiones estan cerradas (RF97 sigue BLOQUEADO por depender de BD M1/M2).
+- **Descripcion**: revision de integridad del informe con 2 ajustes para evitar inconvenientes al ejecutar: (1) en la guia PASO 2 se agrego la limpieza previa de `notificaciones` antes de M2 (`DELETE FROM notificaciones;` cuando exista estado corrupto `le├¡do`), para que el MODIFY del ENUM no falle en modo estricto, y la nota de ejecutar primero el schema si la BD es nueva; (2) se alinearon los estados de RF47 y RF116 en las tablas 2.2/2.8 de BLOQUEADO a "PARCIAL (decision B-R1/B-R2)" ya que las decisiones estan cerradas (RF97 sigue BLOQUEADO por depender de BD M1/M2).
 - **Motivo**: el usuario pregunto si ya estaba todo completo para solucionar todo sin errores e inconvenientes.
 - **Requerimientos**: RF47, RF97, RF116 (REVISION)
 - **Evidencia**: revision de cada paso de la guia contra el DDL del schema v3 y la BD real.
@@ -1148,7 +1213,7 @@ Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas
 ## 2026-08-07 - DOCS: informe de actualizacion BD y requerimientos (guardado en Escritorio/INFO)
 
 - **Autor**: Daniel Palacios
-- **Archivos**: "C:\Users\dpalaciosr\OneDrive - Ufinet Latam\Escritorio\INFO\INFORME_ACTUALIZACION_BD_Y_REQUERIMIENTOS_2026-08-07.md"
+- **Archivos**: INFORME_ACTUALIZACION_BD_Y_REQUERIMIENTOS_2026-08-07.md (documento local externo, no versionado)
 - **Descripcion**: se creo un informe de actualizacion en primera persona (distinto al informe de revision) y se guardo en la ruta externa `Escritorio\INFO`. Documenta los cambios verificados del 6/08 a la madrugada del 7/08: (1) BD - ENUM `notificaciones.tipo` corregido, `detalle_pedidos` con `estado_envio`/`estado_pago_vendedor`/`fecha_desembolso`, `pedidos.estado_pedido` eliminado (N a 1), base vacia; (2) requerimientos - RF4 expiracion 5 min, RF115 ya no almacena IVA, RF132 corregido a 19% (modelo 119% en disputa), RF92 tarjeta incompleta; (3) decisiones pendientes - modelo de IVA (llamada 7/08), columna expiracion token, mojibake, seed; (4) recomendaciones de solucion con migraciones SQL.
 - **Motivo**: el usuario pidio guardar un informe diferente en la ruta INFO, no una copia del informe de revision.
 - **Requerimientos**: RF4, RF92, RF97, RF114, RF115, RF132, RFX (REVISION)
@@ -1160,8 +1225,8 @@ Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas
 ## 2026-08-07 - DOCS: revision esquema commercy_v2 post-trabajo de Meneses + audios 12-13
 
 - **Autor**: Daniel Palacios
-- **Archivos**: "informes/INFORME DE REVISION - BASE DE DATOS Y REQUERIMIENTOS COMMERCITY (commercity_v2).md" (v1.2); informes/Commercity 2.0 (optimizado4)/Commercity 2.0 (optimizado4).md; informes/An�lisis del proyecto/An�lisis del proyecto.md; Audios/12.txt; Audios/13.txt
-- **Descripcion**: se actualizo el informe a v1.2 tras la conversacion de la madrugada del 7/08 y la revision del esquema real. Hallazgos: (1) Meneses corregio el ENUM `notificaciones.tipo` (RF97) y agrego `estado_envio`, `estado_pago_vendedor`, `fecha_desembolso` en `detalle_pedidos` ("N a 1 en pedidos"; `pedidos.estado_pedido` eliminado); (2) la BD quedo VACIA de datos (0 registros; se eliminaron los usuarios vitest); (3) sigue el mojibake en `notificaciones.estado`; (4) el RF4 del docx optimizado4 ya define la expiracion del link (5 minutos, un solo uso) pero la BD no tiene `token_recuperacion_expiracion`; (5) IVA: Meneses planteo modelo adicional ("119%", vendedor define IVA por producto - audio 12) que contradice la regla del 6/08 (incluido); pendiente de definir en llamada del 7/08; posible columna `iva_porcentaje` en `productos`; (6) RF115 ya no exige almacenar IVA (conflicto resuelto); (7) RF92 tarjeta de producto incompleta (Yepes). Se transcribieron los audios 12 y 13 (faltantes) y se convirtieron a md el docx optimizado4 y el PDF "An�lisis del proyecto".
+- **Archivos**: "informes/INFORME DE REVISION - BASE DE DATOS Y REQUERIMIENTOS COMMERCITY (commercity_v2).md" (v1.2); informes/Commercity 2.0 (optimizado4)/Commercity 2.0 (optimizado4).md; informes/Análisis del proyecto/Análisis del proyecto.md; Audios/12.txt; Audios/13.txt
+- **Descripcion**: se actualizo el informe a v1.2 tras la conversacion de la madrugada del 7/08 y la revision del esquema real. Hallazgos: (1) Meneses corregio el ENUM `notificaciones.tipo` (RF97) y agrego `estado_envio`, `estado_pago_vendedor`, `fecha_desembolso` en `detalle_pedidos` ("N a 1 en pedidos"; `pedidos.estado_pedido` eliminado); (2) la BD quedo VACIA de datos (0 registros; se eliminaron los usuarios vitest); (3) sigue el mojibake en `notificaciones.estado`; (4) el RF4 del docx optimizado4 ya define la expiracion del link (5 minutos, un solo uso) pero la BD no tiene `token_recuperacion_expiracion`; (5) IVA: Meneses planteo modelo adicional ("119%", vendedor define IVA por producto - audio 12) que contradice la regla del 6/08 (incluido); pendiente de definir en llamada del 7/08; posible columna `iva_porcentaje` en `productos`; (6) RF115 ya no exige almacenar IVA (conflicto resuelto); (7) RF92 tarjeta de producto incompleta (Yepes). Se transcribieron los audios 12 y 13 (faltantes) y se convirtieron a md el docx optimizado4 y el PDF "Análisis del proyecto".
 - **Motivo**: el usuario pidio tomar todo el contexto de la conversacion del grupo y extraer los audios pendientes.
 - **Requerimientos**: RF4, RF92, RF97, RF114, RF115, RF132, RFX (REVISION)
 - **Evidencia**: consultas a information_schema de commercy_v2 (7/08), transcripciones de los audios 12 y 13, conversion de optimizado4 y analisis del proyecto.
@@ -1185,7 +1250,7 @@ Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas
 
 - **Autor**: Daniel Palacios
 - **Archivos**: informes/Commercity 2.0 Final (optimizado)/Commercity 2.0 Final (optimizado).md (conversion del docx)
-- **Descripcion**: se convirtio y reviso el docx `Commercity 2.0 Final (optimizado).docx`. El contenido de RF es equivalente al 3.0 (RF114 pasarela subtotal+IVA 19%, RF115 almacenar IVA por producto, RF131 con el error 90/10/15, RFX sin numero). Diferencia clave: **RF4 del Final especifica el link** ("cuando abra el link de restablecer contrase�a que le llegara por medio del correo electronico"), confirmando el flujo de recuperacion por link. Sigue faltando la **expiracion del link/token** como regla de negocio (ni el Final ni el 3.0 la mencionan) - pendiente de proponer en requerimientos.
+- **Descripcion**: se convirtio y reviso el docx `Commercity 2.0 Final (optimizado).docx`. El contenido de RF es equivalente al 3.0 (RF114 pasarela subtotal+IVA 19%, RF115 almacenar IVA por producto, RF131 con el error 90/10/15, RFX sin numero). Diferencia clave: **RF4 del Final especifica el link** ("cuando abra el link de restablecer contraseña que le llegara por medio del correo electronico"), confirmando el flujo de recuperacion por link. Sigue faltando la **expiracion del link/token** como regla de negocio (ni el Final ni el 3.0 la mencionan) - pendiente de proponer en requerimientos.
 - **Motivo**: el usuario pidio revisar el documento Final para confirmar que el paso a paso de recuperacion por link esta especificado.
 - **Requerimientos**: RF3, RF4 (REVISION)
 - **Evidencia**: conversion del docx Final a markdown y lectura de RF3/RF4 + secciones de IVA/comisiones.
@@ -1221,7 +1286,7 @@ Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas
 
 - **Autor**: Daniel Palacios
 - **Archivos**: "informes/INFORME DE REVISION - BASE DE DATOS Y REQUERIMIENTOS COMMERCITY (commercity_v2).md"
-- **Descripcion**: se creo el informe de revision completa de la base oficial `commercity_v2` contra el esquema real via information_schema y conteos de registros (solo lectura, sin modificar datos). Se confirmo la conexion externa (`commercy_user@%` habilitado por Meneses). La base ahora tiene 19 tablas (Meneses agrego `producto_variantes` el 2026-08-06). Hallazgos: (1) CRITICO - sin datos semilla (0 productos, 0 categorias, 0 pedidos; solo 4 usuarios de prueba vitest); (2) CRITICO - mojibake en `notificaciones.estado` (`enum('le%�do','no le%�do')`) y ENUM de tipo desalineado con RF97; (3) MEDIO - link de restablecimiento definido (RF4) pero sin expiracion del token; (4) decision oficial IVA 19% con CONFLICTO por RF115 (almacenar IVA) a resolver; (5) RF131 con error de redaccion (15% vs 19%). Se verificaron charset utf8mb4, FKs con indice y roles correctos. Se definieron acciones priorizadas para Meneses y recomendaciones de solucion por hallazgo (migraciones SQL sugeridas para ENUM, token y IVA condicional). Informe v1.1 dirigido a Jose Yepes (Director) y Jorge Meneses (Lider BD), que integra la revision de los requerimientos oficiales (seccion 3.6). El informe se mantiene **solo en formato .md** (sin conversion a PDF, por decision del lider backend).
+- **Descripcion**: se creo el informe de revision completa de la base oficial `commercity_v2` contra el esquema real via information_schema y conteos de registros (solo lectura, sin modificar datos). Se confirmo la conexion externa (`commercy_user@%` habilitado por Meneses). La base ahora tiene 19 tablas (Meneses agrego `producto_variantes` el 2026-08-06). Hallazgos: (1) CRITICO - sin datos semilla (0 productos, 0 categorias, 0 pedidos; solo 4 usuarios de prueba vitest); (2) CRITICO - mojibake en `notificaciones.estado` (`enum('le├¡do','no le├¡do')`) y ENUM de tipo desalineado con RF97; (3) MEDIO - link de restablecimiento definido (RF4) pero sin expiracion del token; (4) decision oficial IVA 19% con CONFLICTO por RF115 (almacenar IVA) a resolver; (5) RF131 con error de redaccion (15% vs 19%). Se verificaron charset utf8mb4, FKs con indice y roles correctos. Se definieron acciones priorizadas para Meneses y recomendaciones de solucion por hallazgo (migraciones SQL sugeridas para ENUM, token y IVA condicional). Informe v1.1 dirigido a Jose Yepes (Director) y Jorge Meneses (Lider BD), que integra la revision de los requerimientos oficiales (seccion 3.6). El informe se mantiene **solo en formato .md** (sin conversion a PDF, por decision del lider backend).
 - **Motivo**: el usuario pidio un informe completo en primera persona sobre la revision de base de datos para avisar a Meneses (lider BD) y destrabar el backend.
 - **Requerimientos**: RF109, RF110, RF127, RF128, RF129, RF40, RF72, RFX (REVISION)
 - **Evidencia**: consultas directas a commercy_v2 (information_schema, conteos de registros, prueba endpoint perfil publico HTTP 200).
@@ -1542,3 +1607,4 @@ Registro central de cambios (seg�n regla `documentacion-cambios.md`). Entradas
 - **Requerimientos**: N/A (proceso)
 - **Evidencia**: verificacion de directorios .trae/skills, .agents/skills y .claude/skills.
 - **Estado**: Completado
+

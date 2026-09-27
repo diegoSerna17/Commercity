@@ -8,6 +8,7 @@ import {
   IconTrashRed,
 } from "./AdminIcons";
 import { BadgeTipo, BadgeEstadoReporte } from "./AdminBadges";
+import { formatPrice } from "../../utils/formatPrice.js";
 
 export default function AdminModalReporte({
   reporte,
@@ -115,7 +116,7 @@ export default function AdminModalReporte({
                       {reporte.reportado}
                     </p>
                     <p className="text-xs font-bold mt-0.5 font-jakarta text-[#EF9918]">
-                      {reporte.reportadoPrecio || ""}
+                      {reporte.reportadoPrecio != null ? formatPrice(reporte.reportadoPrecio) : ""}
                     </p>
                     {reporte.reportadoVendedor && (
                       <p className="text-xs font-jakarta text-[#797998]">

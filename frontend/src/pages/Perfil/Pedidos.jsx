@@ -1,505 +1,350 @@
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Header from "../../components/globales/Header";
-import { estadosHistorial } from "../../data/historialCompras";
+import DetallePedidos from "./DetallePedidos";
+import {
+  avanzarEstadoPedido,
+  listarVentas,
+} from "../../services/tienda.service.js";
 
-const ordersData = [
-  {
-    id: 1,
-    cliente: "Alex Rivera",
-    initials: "AR",
-    avatarBg: "#1e3a5f",
-    avatarColor: "#86d0ff",
-    producto: "MacBook Air",
-    fecha: "24 Oct, 2026",
-    estado: "entregado",
-    monto: "$1.299.000",
-    direccion: "Carrera 12 # 56-78, Piso 3",
-    ciudad: "Bogotá, Cundinamarca",
-    cantidad: 1,
-  },
-  {
-    id: 2,
-    cliente: "Elena Sanz",
-    initials: "ES",
-    avatarBg: "#1a3a2c",
-    avatarColor: "#6ee7b7",
-    producto: "Tv LG 45 pulgadas",
-    fecha: "23 Oct, 2026",
-    estado: "encamino",
-    monto: "$1.900.000",
-    direccion: "Carrera 7 # 12-34, Apartamento 201",
-    ciudad: "Medellín, Antioquia",
-    cantidad: 2,
-  },
-  {
-    id: 3,
-    cliente: "Julian Thorne",
-    initials: "JT",
-    avatarBg: "#3b2a1a",
-    avatarColor: "#ffba67",
-    producto: "iPhone 15 Pro",
-    fecha: "22 Oct, 2026",
-    estado: "entregado",
-    monto: "$3.000.000",
-    direccion: "Calle 100 # 45-23, Apto 502",
-    ciudad: "Cali, Valle del Cauca",
-    cantidad: 1,
-  },
-  {
-    id: 4,
-    cliente: "Marco Rossi",
-    initials: "MR",
-    avatarBg: "#32324d",
-    avatarColor: "#ffba67",
-    producto: 'iPad Pro 11"',
-    fecha: "21 Oct, 2026",
-    estado: "pendiente",
-    monto: "$2.799.000",
-    direccion: "Avenida El Dorado # 103-12",
-    ciudad: "Bogotá, Cundinamarca",
-    cantidad: 1,
-  },
-  {
-    id: 5,
-    cliente: "Valentina Torres",
-    initials: "VT",
-    avatarBg: "#2a1a3b",
-    avatarColor: "#d4a0ff",
-    producto: "Samsung Galaxy S24",
-    fecha: "20 Oct, 2026",
-    estado: "pendiente",
-    monto: "$2.100.000",
-    direccion: "Calle 72 # 10-34, Apto 301",
-    ciudad: "Bogotá, Cundinamarca",
-    cantidad: 1,
-  },
-  {
-    id: 6,
-    cliente: "Sebastián Mora",
-    initials: "SM",
-    avatarBg: "#1a2e3b",
-    avatarColor: "#67d0e7",
-    producto: "Audífonos Sony",
-    fecha: "19 Oct, 2026",
-    estado: "encamino",
-    monto: "$1.450.000",
-    direccion: "Carrera 43A # 16-95, Oficina 204",
-    ciudad: "Medellín, Antioquia",
-    cantidad: 1,
-  },
-  {
-    id: 7,
-    cliente: "Camila Ríos",
-    initials: "CR",
-    avatarBg: "#1a3b22",
-    avatarColor: "#6ee7a0",
-    producto: "Teclado gamer",
-    fecha: "18 Oct, 2026",
-    estado: "entregado",
-    monto: "$580.000",
-    direccion: "Avenida 6N # 23-45, Casa 12",
-    ciudad: "Cali, Valle del Cauca",
-    cantidad: 2,
-  },
-  {
-    id: 8,
-    cliente: "Andrés Pedraza",
-    initials: "AP",
-    avatarBg: "#3b1a1a",
-    avatarColor: "#ff9a9a",
-    producto: 'Monitor LG"',
-    fecha: "17 Oct, 2026",
-    estado: "encamino",
-    monto: "$3.200.000",
-    direccion: "Calle 15 # 28-60, Barrio El Prado",
-    ciudad: "Barranquilla, Atlántico",
-    cantidad: 1,
-  },
+// JS Filtros de Pedidos (RF129): el valor se envia al backend.
+const FILTROS = [
+  { label: "Todo", valor: null },
+  { label: "Pendiente", valor: "Pendiente" },
+  { label: "En Camino", valor: "En camino" },
+  { label: "Entregado", valor: "Entregado" },
+  { label: "Cancelado", valor: "Cancelado" },
 ];
 
-const FILTERS = ["Todo", "Pendiente", "En camino", "Entregado"];
+// JS El backend entrega el estado por linea; la interfaz usa "En Camino".
+const ETIQUETA_ESTADO = { "En camino": "En Camino" };
+const ESTADO_API = { "En Camino": "En camino" };
+// RF124: el backend solo acepta el avance de UN nivel.
+const SIGUIENTE_ESTADO = { Pendiente: "En camino", "En camino": "Entregado" };
 
-function StatusDropdown({ order, onStatusChange }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+const estadoBadge = {
+  Entregado: "bg-primary-fixed-dim/10 text-primary-fixed-dim border border-primary-fixed-dim/40",
+  "En Camino": "bg-secondary-fixed-dim/10 text-secondary-fixed-dim border border-secondary-fixed-dim/40",
+  Pendiente: "bg-error-container/20 text-error border border-error/40",
+  Cancelado: "bg-surface-container/40 text-brand-muted-text border border-brand-muted-text/40",
+};
 
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+const fmt = (n) => "$" + Math.round(n).toLocaleString("es-CO");
 
-  const status = estadosHistorial[order.estado];
+function formatearFecha(valor) {
+  const fecha = new Date(valor);
+  if (Number.isNaN(fecha.getTime())) return { corta: "", larga: "" };
 
-  return (
-    <div className="relative inline-block" ref={ref}>
-      <button
-        onClick={() => setOpen((prev) => !prev)}
-        className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${status.className}`}
-      >
-        {status.label}
-        <svg className="w-3 h-3 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-          <path
-            fillRule="evenodd"
-            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-            clipRule="evenodd"
-          />
-        </svg>
-      </button>
-
-      {open && (
-        <div className="absolute left-0 mt-1 z-50 rounded-xl overflow-hidden shadow-xl min-w-[130px] bg-surface-container-high border border-surface-container">
-          {Object.entries(estadosHistorial).map(([val, c]) => (
-            <button
-              key={val}
-              onClick={() => {
-                onStatusChange(order.id, val);
-                setOpen(false);
-              }}
-              className={`w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-surface-container-highest transition-colors block ${c.className}`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return {
+    corta: fecha.toLocaleDateString("es-CO", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }),
+    larga: fecha.toLocaleDateString("es-CO", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }),
+  };
 }
 
-function OrderModal({ order, onClose }) {
-  const status = estadosHistorial[order.estado];
+function iniciales(nombre) {
+  return (nombre || "")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((parte) => parte[0].toUpperCase())
+    .join("");
+}
 
-  useEffect(() => {
-    function handleKey(e) {
-      if (e.key === "Escape") onClose();
-    }
+/** Traduce la linea de venta de la API a la forma que consumen la tabla y el detalle. */
+function mapearVenta(item) {
+  const { corta, larga } = formatearFecha(item.fecha_pedido);
 
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div
-        className="
-          relative
-          bg-surface-container-low
-          rounded-hero
-          shadow-2xl
-          flex
-          flex-col
-          overflow-hidden
-          w-full
-          max-w-[95vw]
-          sm:w-[820px]
-          sm:max-w-[820px]
-          sm:min-w-[700px]
-          h-[90vh]
-          shrink-0
-          flex-none
-        "
-      >
-        {/* Header */}
-        <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6 shrink-0">
-          <h2 className="text-headline-md font-bold text-on-surface tracking-tight mb-1">
-            Detalle del pedido
-          </h2>
-
-          <p className="text-brand-muted-text text-sm mb-4">
-            Fecha: {order.fecha}
-          </p>
-
-          <span
-            className={`inline-flex items-center rounded-full px-4 py-1.5 border font-bold text-sm ${status.className}`}
-          >
-            {status.label}
-          </span>
-        </div>
-
-        {/* Contenido */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-8 pb-4 sm:pb-6 space-y-4 sm:space-y-5">
-          <div>
-            <p className="text-brand-muted-text text-sm font-bold mb-3">
-              Cliente
-            </p>
-
-            <div className="bg-surface-container rounded-xl px-4 sm:px-5 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
-              <div
-                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
-                style={{
-                  backgroundColor: order.avatarBg,
-                  color: order.avatarColor,
-                }}
-              >
-                {order.initials}
-              </div>
-
-              <span className="font-semibold text-on-surface text-sm sm:text-base">
-                {order.cliente}
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-brand-muted-text text-sm font-bold mb-3">
-              Dirección de envío
-            </p>
-
-            <div className="bg-surface-container rounded-xl px-4 sm:px-5 py-3 sm:py-4">
-              <p className="font-semibold text-on-surface text-sm sm:text-base">
-                {order.direccion}
-              </p>
-
-              <p className="text-brand-muted-text text-xs sm:text-sm mt-1">
-                {order.ciudad}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-brand-muted-text text-sm font-bold mb-3">
-              Producto solicitado
-            </p>
-
-            <div className="bg-surface-container rounded-xl px-4 sm:px-5 py-3 sm:py-4">
-              <p className="font-semibold text-on-surface text-sm sm:text-base">
-                {order.producto}
-              </p>
-
-              <div className="border-t border-surface-container/50 mt-3 pt-3">
-                <p className="font-semibold text-brand-muted-text text-sm">
-                  Cantidad: {order.cantidad} unidad
-                  {order.cantidad > 1 ? "es" : ""}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="border border-primary bg-surface-container-high rounded-xl px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between">
-            <span className="text-brand-muted-text text-sm font-bold">
-              Precio total del pedido
-            </span>
-
-            <span className="text-primary font-bold text-lg sm:text-xl">
-              {order.monto}
-            </span>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-4 sm:px-8 py-4 sm:py-6 border-t border-surface-container shrink-0">
-          <button
-            onClick={onClose}
-            className="w-full border border-outline rounded-xl py-3 sm:py-3.5 font-bold text-brand-muted-text text-sm sm:text-base hover:bg-surface-container transition-colors"
-          >
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return {
+    id: item.id,
+    pedidoId: item.pedido_id,
+    referencia: item.referencia_pedido,
+    cliente: item.nombre_comprador || "Comprador",
+    email: item.email_comprador || "",
+    avatarColor: "#32324d",
+    avatarLetra: iniciales(item.nombre_comprador),
+    productos: [
+      {
+        nombre: item.nombre_producto,
+        cantidad: item.cantidad,
+        precioUnitario: Number(item.valor_unitario || 0),
+      },
+    ],
+    fecha: corta,
+    fechaLarga: larga,
+    estado: ETIQUETA_ESTADO[item.estado_envio] || item.estado_envio || "Pendiente",
+    monto: Number(item.valor_subtotal || 0),
+    neto: Number(item.monto_vendedor || 0),
+    comision: Number(item.monto_comision || 0),
+  };
 }
 
 export default function Pedidos() {
-  const [orders, setOrders] = useState(ordersData);
-  const [activeFilter, setActiveFilter] = useState("Todo");
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [ventas, setVentas] = useState([]);
+  const [resumen, setResumen] = useState(null);
+  const [filtro, setFiltro] = useState(FILTROS[0]);
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [pedidoSeleccionadoId, setPedidoSeleccionadoId] = useState(null);
+  const [cambiandoId, setCambiandoId] = useState(null);
 
-  const filteredOrders = orders.filter((order) => {
-    const statusMap = {
-      pendiente: "Pendiente",
-      encamino: "En camino",
-      entregado: "Entregado",
-    };
-    const orderEstado = statusMap[order.estado] || order.estado;
-    return activeFilter === "Todo" || orderEstado === activeFilter;
-  });
+  /** Consulta GET /api/tienda/ventas del vendedor autenticado (RF119/RF120). */
+  const cargarVentas = useCallback(async (filtroActual, numeroPagina) => {
+    setCargando(true);
+    try {
+      const res = await listarVentas({
+        estado: filtroActual?.valor,
+        pagina: numeroPagina,
+      });
+      const data = res.data ?? {};
+      const nuevas = (data.items ?? []).map(mapearVenta);
 
-  function handleStatusChange(orderId, newEstado) {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, estado: newEstado } : o))
-    );
+      setVentas((actuales) =>
+        numeroPagina === 1 ? nuevas : [...actuales, ...nuevas]
+      );
+      setResumen(data.resumen ?? null);
+      setTotalPaginas(data.total_paginas ?? 1);
+      setError("");
+    } catch (err) {
+      if (numeroPagina === 1) setVentas([]);
+      setError(err.message || "No se pudieron cargar tus pedidos");
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setPagina(1);
+    cargarVentas(filtro, 1);
+  }, [filtro, cargarVentas]);
+
+  /** RF122/RF124: avanza un nivel el estado de los envios del pedido. */
+  async function manejarCambiarEstado(venta, etiquetaDestino) {
+    const estadoApi = ESTADO_API[etiquetaDestino] || etiquetaDestino;
+    setCambiandoId(venta.id);
+    try {
+      await avanzarEstadoPedido(venta.pedidoId, estadoApi);
+      await cargarVentas(filtro, 1);
+      setPagina(1);
+    } catch (err) {
+      setError(err.message || "No se pudo actualizar el estado del pedido");
+    } finally {
+      setCambiandoId(null);
+    }
   }
 
+  function cargarMas() {
+    const siguiente = pagina + 1;
+    setPagina(siguiente);
+    cargarVentas(filtro, siguiente);
+  }
+
+  const pedidoSeleccionado =
+    ventas.find((v) => v.id === pedidoSeleccionadoId) ?? null;
+
   return (
-    <div className="flex h-screen bg-surface-container-lowest overflow-hidden">
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Pedidos" />
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <Header title="Pedidos" />
 
-        <section className="flex-1 p-padding-md sm:p-padding-lg lg:p-padding-xl overflow-y-auto overflow-x-hidden">
-          <div className="mb-padding-xl">
-            <h2 className="text-headline-md font-bold text-on-surface">
-              Pedidos
-            </h2>
-            <p className="text-brand-muted-text mt-1">
-              Gestiona y actualiza el estado de tus pedidos.
-            </p>
-          </div>
+      <section className="flex-1 p-padding-md sm:p-padding-lg lg:p-padding-xl overflow-y-auto overflow-x-hidden">
+        <div className="mb-padding-xl">
+          <h1 className="text-headline-md font-bold text-on-surface mb-1">
+            Pedidos
+          </h1>
+          <p className="text-brand-muted-text text-body-sm sm:text-body-md">
+            Gestiona y actualiza el estado de tus pedidos.
+          </p>
+        </div>
 
-          <div className="flex flex-wrap gap-2 sm:gap-3 mb-padding-xl">
-            {FILTERS.map((f) => {
-              const active = f === activeFilter;
-              return (
-                <button
-                  key={f}
-                  onClick={() => setActiveFilter(f)}
-                  className={`px-3 sm:px-5 py-1.5 rounded-button font-semibold text-xs sm:text-sm transition-colors ${
-                    active
-                      ? "bg-primary-container text-on-primary-container"
-                      : "bg-surface-container-high text-brand-muted-text hover:bg-surface-container-highest"
-                  }`}
+      <div className="flex gap-2 flex-wrap mb-6">
+        {FILTROS.map((f) => (
+          <button
+            key={f.label}
+            onClick={() => setFiltro(f)}
+            className={`h-[32px] px-5 rounded-full text-[12px] tracking-[0.6px] font-semibold transition-colors ${
+              filtro.label === f.label
+                ? "bg-brand-orange text-brand-dark-text"
+                : "bg-surface-variant2 text-on-surface-variant hover:bg-surface-container-highest"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {resumen && (
+        <div className="flex flex-wrap gap-x-6 gap-y-1 mb-4 text-[13px]">
+          <span className="text-brand-muted-text">
+            Ventas: <span className="text-on-surface font-semibold">{resumen.total_ventas}</span>
+          </span>
+          <span className="text-brand-muted-text">
+            Total vendido: <span className="text-on-surface font-semibold">{fmt(resumen.total_bruto)}</span>
+          </span>
+          <span className="text-brand-muted-text">
+            Neto (90%): <span className="text-brand-orange font-semibold">{fmt(resumen.total_neto_vendedor)}</span>
+          </span>
+        </div>
+      )}
+
+      {error && (
+        <p className="text-report-red-text font-medium text-sm mb-4">{error}</p>
+      )}
+
+      <div
+        className="w-full overflow-x-auto rounded-card"
+        style={{
+          backgroundColor: "var(--color-auth-card-bg)",
+          border: "1px solid var(--color-border-subtle)",
+        }}
+      >
+        <table className="w-full min-w-[700px] border-collapse">
+          <thead>
+            <tr className="bg-surface-variant2/50" style={{ borderBottom: "1px solid rgba(50,50,77,0.2)" }}>
+              {[
+                { label: "CLIENTE", align: "left" },
+                { label: "PRODUCTOS", align: "left" },
+                { label: "FECHA", align: "left" },
+                { label: "ESTADO", align: "left" },
+                { label: "ACCION", align: "left" },
+                { label: "MONTO", align: "right" },
+              ].map((col) => (
+                <th
+                  key={col.label}
+                  className={`px-[24px] py-[16px] text-[12px] tracking-[1.2px] uppercase whitespace-nowrap text-brand-muted-text font-semibold ${col.align === "right" ? "text-right" : "text-left"}`}
                 >
-                  {f}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Vista de tarjetas — solo móvil */}
-          <div className="flex flex-col gap-3 md:hidden">
-            {filteredOrders.length === 0 ? (
-              <div className="rounded-card border border-surface-container bg-brand-dark-text px-6 py-12 text-center text-brand-muted-text text-sm">
-                No hay pedidos para este filtro.
-              </div>
+                  {col.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {cargando && ventas.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="text-center py-12 text-brand-muted-text text-[14px]"
+                >
+                  Cargando tus pedidos...
+                </td>
+              </tr>
+            ) : ventas.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="text-center py-12 text-brand-muted-text text-[14px]"
+                >
+                  No hay pedidos para este filtro.
+                </td>
+              </tr>
             ) : (
-              filteredOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="bg-surface-container-low border border-surface-container rounded-card p-4 flex flex-col gap-3"
-                  >
-                    {/* Fila 1: Avatar + Cliente + Estado */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
-                          style={{
-                            backgroundColor: order.avatarBg,
-                            color: order.avatarColor,
-                          }}
-                        >
-                          {order.initials}
-                        </div>
-                        <span className="font-medium text-on-surface text-sm truncate">
-                          {order.cliente}
-                        </span>
+              ventas.map((pedido) => (
+                <tr
+                  key={pedido.id}
+                  style={{ borderTop: "1px solid rgba(50,50,77,0.1)" }}
+                >
+                  <td className="px-[24px] py-[20px] whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-[40px] h-[40px] rounded-full flex items-center justify-center text-primary-fixed-dim text-[16px] shrink-0"
+                        style={{
+                          backgroundColor: pedido.avatarColor ?? "#32324d",
+                          fontFamily: "var(--font-sans)",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {pedido.avatarLetra}
                       </div>
-                      <StatusDropdown
-                        order={order}
-                        onStatusChange={handleStatusChange}
-                      />
+                      <span className="text-on-surface text-[16px]">
+                        {pedido.cliente}
+                      </span>
                     </div>
+                  </td>
 
-                    {/* Fila 2: Producto */}
-                    <p className="text-on-surface font-medium text-sm">
-                      {order.producto}
-                    </p>
+                  <td className="px-[24px] py-[20px] whitespace-nowrap">
+                    <span className="text-on-surface text-[16px] font-medium">
+                      {pedido.productos.length === 1
+                        ? "1 producto"
+                        : `${pedido.productos.length} productos`}
+                    </span>
+                  </td>
 
-                    {/* Fila 3: Fecha + Monto */}
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-brand-muted-text">{order.fecha}</span>
-                      <span className="font-semibold text-on-surface">{order.monto}</span>
-                    </div>
+                  <td className="px-[24px] py-[20px] whitespace-nowrap">
+                    <span className="text-brand-muted-text text-[14px]">
+                      {pedido.fecha}
+                    </span>
+                  </td>
 
-                    {/* Fila 4: Botón detalle */}
+                  <td className="px-[24px] py-[20px] whitespace-nowrap">
+                    {/* RF124: solo se ofrece el siguiente nivel de estado */}
+                    <select
+                      value={pedido.estado}
+                      onChange={(e) => manejarCambiarEstado(pedido, e.target.value)}
+                      disabled={
+                        !SIGUIENTE_ESTADO[pedido.estado] ||
+                        cambiandoId === pedido.id
+                      }
+                      className={`h-[23px] pl-[12px] pr-[8px] rounded-full text-[12px] font-medium cursor-pointer outline-none disabled:cursor-not-allowed disabled:opacity-70 ${estadoBadge[pedido.estado] ?? "bg-surface-variant2 text-on-surface-variant"}`}
+                    >
+                      <option value={pedido.estado} className="bg-auth-card-bg text-on-surface">
+                        {pedido.estado}
+                      </option>
+                      {SIGUIENTE_ESTADO[pedido.estado] && (
+                        <option
+                          value={ETIQUETA_ESTADO[SIGUIENTE_ESTADO[pedido.estado]] ?? SIGUIENTE_ESTADO[pedido.estado]}
+                          className="bg-auth-card-bg text-on-surface"
+                        >
+                          {ETIQUETA_ESTADO[SIGUIENTE_ESTADO[pedido.estado]] ?? SIGUIENTE_ESTADO[pedido.estado]}
+                        </option>
+                      )}
+                    </select>
+                  </td>
+
+                  <td className="px-[24px] py-[20px] whitespace-nowrap">
                     <button
-                      onClick={() => setSelectedOrder(order)}
-                      className="w-full py-2 rounded-xl border border-surface-container text-xs text-brand-muted-text hover:bg-surface-container transition-colors"
+                      onClick={() => setPedidoSeleccionadoId(pedido.id)}
+                      className="bg-auth-card-bg border border-[#8e8e93] text-on-surface text-[12px] h-[23px] px-[14px] rounded-full hover:bg-input-bg transition-colors"
                     >
                       Ver detalle
                     </button>
-                  </div>
-                ))
-            )}
-          </div>
+                  </td>
 
-          {/* Tabla — solo desktop */}
-          <div className="hidden md:block rounded-card overflow-x-auto border border-surface-container bg-brand-dark-text">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="text-[11px] font-bold text-brand-muted-text uppercase bg-surface-variant2">
-                  <th className="px-6 py-4 text-left">Cliente</th>
-                  <th className="px-6 py-4 text-center">Producto</th>
-                  <th className="px-6 py-4 text-center">Fecha</th>
-                  <th className="px-6 py-4 text-center">Estado</th>
-                  <th className="px-6 py-4 text-center">Acción</th>
-                  <th className="px-6 py-4 text-center">Monto</th>
+                  <td className="px-[24px] py-[20px] whitespace-nowrap text-right">
+                    <span className="text-on-surface text-[16px]">
+                      {fmt(pedido.monto)}
+                    </span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-container/50">
-                {filteredOrders.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-12 text-center text-brand-muted-text text-sm"
-                    >
-                      No hay pedidos para este filtro.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredOrders.map((order) => (
-                      <tr
-                        key={order.id}
-                        className="hover:bg-surface-container/50 transition-colors group"
-                      >
-                        <td className="px-6 py-6">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
-                              style={{ backgroundColor: order.avatarBg, color: order.avatarColor }}
-                            >
-                              {order.initials}
-                            </div>
-                            <span className="font-medium text-on-surface">
-                              {order.cliente}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-6 text-on-surface font-medium text-center">
-                          {order.producto}
-                        </td>
-                        <td className="px-6 py-6 text-brand-muted-text text-sm text-center">
-                          {order.fecha}
-                        </td>
-                        <td className="px-6 py-6 text-center">
-                          <StatusDropdown
-                            order={order}
-                            onStatusChange={handleStatusChange}
-                          />
-                        </td>
-                        <td className="px-6 py-6 text-center">
-                          <button
-                            onClick={() => setSelectedOrder(order)}
-                            className="px-4 py-1 rounded-xl border border-surface-container text-xs text-brand-muted-text hover:bg-surface-container"
-                          >
-                            Ver detalle
-                          </button>
-                        </td>
-                        <td className="px-6 py-6 font-semibold text-on-surface text-center">
-                          {order.monto}
-                        </td>
-                      </tr>
-                    ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </main>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
-      {selectedOrder && (
-        <OrderModal
-          order={selectedOrder}
-          onClose={() => setSelectedOrder(null)}
+      {pagina < totalPaginas && (
+        <button
+          onClick={cargarMas}
+          disabled={cargando}
+          className="mt-4 self-center h-[36px] px-6 rounded-full bg-surface-variant2 text-on-surface text-[13px] font-semibold hover:bg-surface-container-highest transition-colors disabled:opacity-60"
+        >
+          {cargando ? "Cargando..." : "Cargar mas pedidos"}
+        </button>
+      )}
+
+      {pedidoSeleccionado && (
+        <DetallePedidos
+          pedido={pedidoSeleccionado}
+          onClose={() => setPedidoSeleccionadoId(null)}
         />
       )}
+      </section>
     </div>
   );
 }

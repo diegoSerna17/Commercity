@@ -12,11 +12,10 @@ import historialRouter from "./routes/historial.routes.js";
 import productosRouter from "./routes/productos.routes.js";
 import pedidosRouter from "./routes/pedidos.routes.js";
 import tiendaRouter from "./routes/tienda.routes.js";
-import chatRouter from "./routes/chat.routes.js";
-import notificacionesRouter from "./routes/notificaciones.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import reportesRouter from "./routes/reportes.routes.js";
-import calificacionesRouter from "./routes/calificaciones.routes.js";
+import chatRouter from "./routes/chat.routes.js";
+import notificacionesRouter from "./routes/notificaciones.routes.js";
 import seguidoresRouter from "./routes/seguidores.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 
@@ -24,36 +23,20 @@ const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Seguridad centralizada (regla api-seguridad.md)
-// Fix helmet (imagenes): crossOriginResourcePolicy permite que el frontend
-// muestre las imagenes/archivos servidos desde /uploads (RF45/RF49, chat RF105).
 app.disable("x-powered-by");
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(express.json({ limit: "10mb" }));
-// CORS: clientes que consumen la API.
-// - Web (Vite) en FRONTEND_URL (por defecto http://localhost:5173).
-// - Escritorio (Electron): el renderer carga desde file:// y llega sin cabecera
-//   Origin o con Origin "null"; el main process no aplica CORS.
-// - Movil (Ionic/Capacitor): esquemas capacitor://localhost (iOS) y
-//   http(s)://localhost (WebView Android).
-// Restringirlo a FRONTEND_URL bloquearia escritorio y movil (Fase 2).
-const ORIGENES_PERMITIDOS = [
+// CORS: ademas del frontend web se permiten los origenes estandar de la
+// WebView de Capacitor (app movil Ionic), que envian su propio Origin.
+const CORS_ORIGINS = [
   process.env.FRONTEND_URL || "http://localhost:5173",
-  "capacitor://localhost",
-  "http://localhost",
-  "https://localhost",
+  "https://localhost",      // Capacitor Android (androidScheme https por defecto)
+  "http://localhost",       // Capacitor Android con esquema http / dev
+  "capacitor://localhost",  // Capacitor iOS
 ];
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || ORIGENES_PERMITIDOS.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(null, false);
-    },
-  })
-);
+app.use(cors({ origin: CORS_ORIGINS }));
 
-// Imagenes subidas por el vendedor (Perfil Vendedor RF45/RF49) y chat (RF105)
+// Imagenes subidas por el vendedor (Perfil Vendedor RF45/RF49)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Rate limit para rutas de autenticacion (anti fuerza bruta / spam de correos).
@@ -75,13 +58,25 @@ app.use("/api/usuarios", usuariosRouter);
 app.use("/api/historial", historialRouter);
 app.use("/api/pedidos", pedidosRouter);
 app.use("/api/tienda", tiendaRouter);
-app.use("/api/chat", chatRouter);
-app.use("/api/notificaciones", notificacionesRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/reportes", reportesRouter);
-app.use("/api/calificaciones", calificacionesRouter);
+app.use("/api/chat", chatRouter);
+app.use("/api/notificaciones", notificacionesRouter);
 app.use("/api/seguidores", seguidoresRouter);
 app.use("/api", productosRouter);
+
+// Catch-all 404: cualquier ruta que no coincida con los routers anteriores
+// responde JSON uniforme en vez del HTML por defecto de Express.
+// Express 5 + path-to-regexp 8.x no soporta "*" en app.use(); se usa middleware sin ruta.
+app.use((_req, res) => {
+    res.status(404).json({
+        success: false,
+        error: {
+            code: "NOT_FOUND",
+            message: "Endpoint no encontrado. Revisa el método HTTP y la ruta."
+        }
+    });
+});
 
 // Middleware de error centralizado al final de la cadena
 app.use(errorHandler);

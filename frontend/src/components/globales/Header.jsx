@@ -1,14 +1,46 @@
 import { Bell, Search, User, X } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import NotificacionesDropdown from "./NotificacionesDropdown";
+import { contarNoLeidas } from "../../services/notificaciones.service.js";
 
 const Header = ({ title, showSearch = true, showCategories = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showNotifs, setShowNotifs] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [noLeidas, setNoLeidas] = useState(0);
+  const [prevPathname, setPrevPathname] = useState(location.pathname);
   const notifRef = useRef(null);
+
+  if (prevPathname !== location.pathname) {
+    setPrevPathname(location.pathname);
+    setMobileSearchOpen(false);
+  }
+
+  const cargarNoLeidas = useCallback(async () => {
+    try {
+      const res = await contarNoLeidas();
+      setNoLeidas(res.data?.total_no_leidas ?? 0);
+    } catch {
+      // silencio
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      try {
+        const res = await contarNoLeidas();
+        if (!cancelado) setNoLeidas(res.data?.total_no_leidas ?? 0);
+      } catch {
+        // silencio
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   const displayTitle = title || (location.pathname === "/" ? "Inicio" : "");
   const isHome = location.pathname === "/";
@@ -23,10 +55,6 @@ const Header = ({ title, showSearch = true, showCategories = false }) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    setMobileSearchOpen(false);
-  }, [location.pathname]);
 
   return (
     <header className="sticky top-0 z-10 bg-surface-container-lowest/60 backdrop-blur-lg border-b border-figma-divider h-[68px] flex items-center justify-between px-4 sm:px-6 md:px-padding-xl gap-3">
@@ -126,11 +154,17 @@ const Header = ({ title, showSearch = true, showCategories = false }) => {
               aria-label="Notificaciones"
             >
               <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-accent-red rounded-full" />
+              {noLeidas > 0 ? (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-accent-red text-white text-[10px] font-bold rounded-full">
+                  {noLeidas > 99 ? "99+" : noLeidas}
+                </span>
+              ) : (
+                <span className="absolute top-0 right-0 w-2 h-2 bg-accent-red rounded-full" />
+              )}
             </button>
             {showNotifs && (
-              <div className="fixed top-[68px] left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-2rem)] max-w-[390px] min-w-[340px]">
-                <NotificacionesDropdown />
+              <div className="fixed top-[68px] right-4 z-50 w-[calc(100vw-2rem)] max-w-[390px]">
+                <NotificacionesDropdown onChange={cargarNoLeidas} />
               </div>
             )}
           </div>

@@ -3,7 +3,6 @@ import { z } from "zod";
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { calcularLinea, calcularTotales, validarLuhn, round2 } from "../utils/finanzas.js";
-import { registrarNotificacion } from "./notificaciones.controllers.js";
 
 // ============================================================================
 // MODULO DE PEDIDOS Y PAGO (integrado desde AVANCES/SPRING 1/CARLOS VIDAL/Entrega)
@@ -29,7 +28,13 @@ const confirmarPagoSchema = z
 
 const estadoSchema = z
   .object({
-    estado: z.enum(["En camino", "Entregado"]),
+    // Vendedor: "En camino" | "Entregado" (avanza 1 nivel).
+    // Comprador: "Cancelado" (RF35 reembolso y restitución de stock).
+    estado: z.enum(["En camino", "Entregado", "Cancelado"]),
+    // Opcional. Solo se usa cuando estado = "Cancelado": si se pasa detalle_id
+    // se cancela SOLO esa línea; si no, se cancela TODO el pedido
+    // (líneas que aún no están Entregado).
+    detalle_id: z.coerce.number().int().positive().optional(),
   })
   .strict();
 
@@ -231,15 +236,23 @@ export const confirmarPago = async (req, res, next) => {
     // El carrito se consume al confirmar la compra
     await conn.query("DELETE FROM carrito_items WHERE comprador_id = ?", [compradorId]);
 
-    // RF101/RF103: notificar al comprador la confirmacion de su compra
-    // (best-effort; el helper jamas propaga errores al pedido ACID).
-    await registrarNotificacion({
-      db: conn,
-      usuario_id: compradorId,
-      tipo: "compra",
-      descripcion: `Tu pedido #${pedidoId} ha sido confirmado y está en preparación.`,
-      url_redireccion: "/history",
-    });
+    // RF101/RF103: registrar notificación de compra al comprador. Un fallo aquí
+    // no debe romper el pedido ya confirmado.
+    try {
+      await conn.query(
+        `INSERT INTO notificaciones (usuario_id, tipo, descripcion, url_redireccion, estado)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          compradorId,
+          "compra",
+          `Tu pedido #${pedidoId} ha sido confirmado y está en preparación.`,
+          "/history",
+          "no leido",
+        ]
+      );
+    } catch {
+      // no romper la transacción por un fallo de notificación
+    }
 
     await conn.commit();
 
@@ -266,18 +279,255 @@ export const confirmarPago = async (req, res, next) => {
 };
 
 /**
- * PATCH /api/pedidos/:id/estado  (RF122/RF124)
- * El vendedor avanza UN nivel el estado de SUS envios en el pedido:
- * Pendiente -> En camino -> Entregado. El id del vendedor sale del token.
+ * Mapea el estado de pago al vendedor tras cancelar la línea.
+ * detalle_pedidos.estado_pago_vendedor es ENUM('Pendiente','Desembolsado') en la
+ * BD real: NO existe un valor 'Reembolsado' para el vendedor. Si ya fue
+ * desembolsado se conserva 'Desembolsado'; en caso contrario la línea vuelve a
+ * 'Pendiente'. Pérdida semántica asumida y documentada en
+ * informes/PROPUESTA_MIGRACION_ENUM_ESTADOS.md (Opción A pendiente de decisión).
+ * @param {string} estadoActual valor actual de estado_pago_vendedor
+ * @returns {"Pendiente"|"Desembolsado"} valor válido dentro del ENUM real
+ */
+function estadoPagoVendedorTrasCancelacion(estadoActual) {
+  return estadoActual === "Desembolsado" ? "Desembolsado" : "Pendiente";
+}
+
+/**
+ * PATCH /api/pedidos/:id/estado
+ * DOS caminos dentro del mismo endpoint:
+ *  - Camino 1 (Vendedor / RF122-RF124): estado = "En camino" | "Entregado"
+ *    Avanza UN nivel las líneas del vendedor autenticado:
+ *      Pendiente -> En camino -> Entregado.
+ *  - Camino 2 (Comprador / RF35): estado = "Cancelado"
+ *    Cancela líneas del pedido (restituye stock, marca líneas, actualiza pago,
+ *    notifica). Dos sub-casos:
+ *      · body.detalle_id  -> cancela SOLO esa línea.
+ *      · sin detalle_id   -> cancela TODO el pedido (líneas no Entregado).
  */
 export const actualizarEstado = async (req, res, next) => {
   const conn = await pool.getConnection();
   try {
     const { id } = parse(paramsIdSchema, req.params);
-    const { estado } = parse(estadoSchema, req.body);
-    const vendedorId = req.userId;
+    const { estado, detalle_id } = parse(estadoSchema, req.body);
 
     await conn.beginTransaction();
+
+    // Cargar pedido (comprador_id nos sirve para ambos caminos y para el RBAC).
+    const [pedidos] = await conn.query(
+      "SELECT id, comprador_id, fecha_pedido FROM pedidos WHERE id = ? FOR UPDATE",
+      [id]
+    );
+    if (pedidos.length === 0) {
+      await conn.rollback();
+      return errorResponse(res, "Pedido no encontrado", 404);
+    }
+    const pedido = pedidos[0];
+
+    // ─────────────────────────────────────────────────────────────
+    // CAMINO 2 — Cancelación por el comprador (RF35)
+    // ─────────────────────────────────────────────────────────────
+    if (estado === "Cancelado") {
+      // RBAC: solo el dueño del pedido puede cancelar.
+      if (Number(pedido.comprador_id) !== Number(req.userId)) {
+        await conn.rollback();
+        return errorResponse(res, "Solo el comprador del pedido puede cancelarlo", 403);
+      }
+
+      const lineasCanceladas = [];
+      const lineasNoCanceladas = [];
+
+      // ── Sub-caso A: cancelar SOLO una línea por detalle_id ──
+      if (detalle_id !== undefined) {
+        const [lineas] = await conn.query(
+          `SELECT dp.id, dp.cantidad, dp.producto_id, dp.estado_envio, dp.vendedor_id,
+                  dp.estado_pago_vendedor, p.nombre AS producto_nombre
+             FROM detalle_pedidos dp
+             JOIN productos p ON p.id = dp.producto_id
+            WHERE dp.id = ? AND dp.pedido_id = ?
+              FOR UPDATE`,
+          [detalle_id, id]
+        );
+        if (lineas.length === 0) {
+          await conn.rollback();
+          return errorResponse(
+            res,
+            `Detalle #${detalle_id} no existe o no pertenece al pedido #${id}`,
+            404
+          );
+        }
+        const linea = lineas[0];
+
+        // No se puede cancelar lo que ya está Entregado o ya Cancelado.
+        if (linea.estado_envio === "Entregado" || linea.estado_envio === "Cancelado") {
+          await conn.rollback();
+          return errorResponse(
+            res,
+            `Línea en estado '${linea.estado_envio}' no se puede cancelar`,
+            409
+          );
+        }
+
+        // Restituir stock.
+        await conn.query(
+          "UPDATE productos SET stock = stock + ? WHERE id = ?",
+          [linea.cantidad, linea.producto_id]
+        );
+        // Marcar línea cancelada. estado_pago_vendedor solo admite
+        // 'Pendiente' | 'Desembolsado' (ENUM real de la BD).
+        const pagoVendedorLinea = estadoPagoVendedorTrasCancelacion(
+          linea.estado_pago_vendedor
+        );
+        await conn.query(
+          `UPDATE detalle_pedidos
+              SET estado_envio = 'Cancelado',
+                  estado_pago_vendedor = ?
+            WHERE id = ?`,
+          [pagoVendedorLinea, linea.id]
+        );
+        lineasCanceladas.push({
+          detalle_id: linea.id,
+          producto_id: linea.producto_id,
+          producto_nombre: linea.producto_nombre,
+          cantidad: linea.cantidad,
+          vendedor_id: linea.vendedor_id,
+        });
+
+      // ── Sub-caso B: cancelar todo el pedido (líneas cancelables) ──
+      } else {
+        const [todas] = await conn.query(
+          `SELECT dp.id, dp.cantidad, dp.producto_id, dp.estado_envio, dp.vendedor_id,
+                  dp.estado_pago_vendedor, p.nombre AS producto_nombre
+             FROM detalle_pedidos dp
+             JOIN productos p ON p.id = dp.producto_id
+            WHERE dp.pedido_id = ?
+              FOR UPDATE`,
+          [id]
+        );
+
+        for (const ln of todas) {
+          if (ln.estado_envio === "Entregado" || ln.estado_envio === "Cancelado") {
+            lineasNoCanceladas.push({
+              detalle_id: ln.id,
+              producto_nombre: ln.producto_nombre,
+              motivo: ln.estado_envio === "Entregado" ? "Entregado" : "Ya estaba Cancelado",
+            });
+          } else {
+            await conn.query(
+              "UPDATE productos SET stock = stock + ? WHERE id = ?",
+              [ln.cantidad, ln.producto_id]
+            );
+            const pagoVendedorLinea = estadoPagoVendedorTrasCancelacion(
+              ln.estado_pago_vendedor
+            );
+            await conn.query(
+              `UPDATE detalle_pedidos
+                  SET estado_envio = 'Cancelado',
+                      estado_pago_vendedor = ?
+                WHERE id = ?`,
+              [pagoVendedorLinea, ln.id]
+            );
+            lineasCanceladas.push({
+              detalle_id: ln.id,
+              producto_id: ln.producto_id,
+              producto_nombre: ln.producto_nombre,
+              cantidad: ln.cantidad,
+              vendedor_id: ln.vendedor_id,
+            });
+          }
+        }
+
+        // Si tras revisar no había NADA cancelable, rechazamos.
+        if (lineasCanceladas.length === 0) {
+          await conn.rollback();
+          return errorResponse(
+            res,
+            "Ninguna línea del pedido se puede cancelar (todas están Entregadas o Canceladas)",
+            409
+          );
+        }
+      }
+
+      // ── Actualizar pagos_simulados según lo que quedó en el pedido ──
+      // pagos_simulados.estado es ENUM('Aprobado','Rechazado','Pendiente','Reembolsado')
+      // en la BD real: NO existe 'Parcial'.
+      // Si TODO el pedido fue cancelado (0 líneas restantes no Cancelado) → 'Reembolsado'.
+      // Si quedan líneas vivas (Entregadas o por entregar) → 'Aprobado': el pago
+      // sigue vigente por lo no cancelado (ver
+      // informes/PROPUESTA_MIGRACION_ENUM_ESTADOS.md, Opción A pendiente).
+      const [restantes] = await conn.query(
+        `SELECT COUNT(*) AS total,
+                SUM(CASE WHEN estado_envio = 'Entregado' THEN 1 ELSE 0 END) AS entregadas,
+                SUM(CASE WHEN estado_envio = 'Cancelado' THEN 1 ELSE 0 END) AS canceladas
+           FROM detalle_pedidos WHERE pedido_id = ?`,
+        [id]
+      );
+      const r = restantes[0];
+      let nuevoEstadoPago;
+      if (Number(r.canceladas) === Number(r.total)) {
+        nuevoEstadoPago = "Reembolsado";
+      } else {
+        nuevoEstadoPago = "Aprobado";
+      }
+      // Solo actualizar si el pago ya estaba Aprobado (no tocar Rechazado/Pendiente).
+      await conn.query(
+        `UPDATE pagos_simulados
+            SET estado = ?
+          WHERE pedido_id = ? AND estado = 'Aprobado'`,
+        [nuevoEstadoPago, id]
+      );
+
+      // ── Notificaciones fail-soft ──
+      try {
+        // 1. Notificar al comprador (cambio cancelación).
+        const vendedoresAfectados = [...new Set(lineasCanceladas.map((l) => l.vendedor_id))];
+        try {
+          await conn.query(
+            `INSERT INTO notificaciones (usuario_id, tipo, descripcion, url_redireccion, estado)
+             VALUES (?, ?, ?, ?, ?)`,
+            [
+              pedido.comprador_id,
+              "cancelado",
+              `Pedido #${id}: ${lineasCanceladas.length} línea(s) cancelada(s). Estado pago: ${nuevoEstadoPago}.`,
+              "/history",
+              "no leido",
+            ]
+          );
+        } catch { /* skip notif */ }
+
+        // 2. Notificar a cada vendedor afectado (x vendedor, 1 notif).
+        for (const vid of vendedoresAfectados) {
+          const countV = lineasCanceladas.filter((l) => l.vendedor_id === vid).length;
+          try {
+            await conn.query(
+              `INSERT INTO notificaciones (usuario_id, tipo, descripcion, url_redireccion, estado)
+               VALUES (?, ?, ?, ?, ?)`,
+              [
+                vid,
+                "cancelado",
+                `Pedido #${id}: ${countV} venta(s) cancelada(s) y reembolsada(s). Stock restituidos.`,
+                "/store",
+                "no leido",
+              ]
+            );
+          } catch { /* skip notif */ }
+        }
+      } catch { /* skip all notifs */ }
+
+      await conn.commit();
+      return successResponse(res, "Cancelación procesada", {
+        pedido_id: id,
+        tipo: detalle_id !== undefined ? "por_linea" : "general",
+        estado_pago: nuevoEstadoPago,
+        lineas_canceladas: lineasCanceladas.length,
+        detalle_ids_cancelados: lineasCanceladas.map((l) => l.detalle_id),
+        no_canceladas: lineasNoCanceladas,
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CAMINO 1 — Vendedor avanza estado (Pendiente -> En camino -> Entregado)
+    // ─────────────────────────────────────────────────────────────
+    const vendedorId = req.userId;
 
     const [detalles] = await conn.query(
       `SELECT id, estado_envio
@@ -310,33 +560,29 @@ export const actualizarEstado = async (req, res, next) => {
       [estado, ...ids]
     );
 
-    await conn.commit();
-
-    // RF101/RF103: notificar al comprador el avance del envio (best-effort).
-    // Un fallo al notificar NUNCA debe romper la actualizacion ya confirmada.
+    // RF103: notificar al comprador el cambio de estado de su envío.
     try {
-      const [pedido] = await conn.query(
-        "SELECT comprador_id FROM pedidos WHERE id = ?",
-        [id]
-      );
-      if (pedido.length > 0) {
-        const tipoNotif = estado === "En camino" ? "en camino" : "entregado";
-        const descripcion =
-          estado === "En camino"
-            ? `Tu pedido #${id} está en camino. ¡Muy pronto llegará a tu puerta!`
-            : `Tu pedido #${id} ha sido entregado. ¡Disfruta tu compra!`;
-        await registrarNotificacion({
-          db: conn,
-          usuario_id: pedido[0].comprador_id,
-          tipo: tipoNotif,
-          descripcion,
-          url_redireccion: "/history",
-        });
+      const compradorId = pedido.comprador_id;
+      if (compradorId) {
+        try {
+          const descripcion =
+            estado === "Entregado"
+              ? `Tu pedido #${id} fue entregado`
+              : `Tu pedido #${id} está en camino`;
+          await conn.query(
+            `INSERT INTO notificaciones (usuario_id, tipo, descripcion, url_redireccion, estado)
+             VALUES (?, ?, ?, ?, ?)`,
+            [compradorId, estado.toLowerCase(), descripcion, "/history", "no leido"]
+          );
+        } catch {
+          // no romper el update
+        }
       }
-    } catch (err) {
-      console.warn("No se pudo notificar el cambio de estado:", err.message);
+    } catch {
+      // no romper el update
     }
 
+    await conn.commit();
     return successResponse(res, "Estado de envío actualizado", {
       pedido_id: id,
       estado_envio: estado,

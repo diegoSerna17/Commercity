@@ -1,318 +1,314 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Header from "../../components/globales/Header";
-import { formatPrice } from "../../utils/formatPrice";
+import DetalleCompras from "./DetalleCompras";
+import { formatCOP, numProductosLabel } from "../../utils/historialUtils.js";
+import { EstadoBadge, Avatar } from "../../utils/historialUtils.jsx";
+import {
+  cancelarCompra,
+  listarHistorialCompras,
+} from "../../services/historial.service.js";
 
-// API base del backend (misma convencion que el resto del proyecto).
-const API_BASE = import.meta.env?.VITE_API_URL || "http://localhost:3000";
+// JS Filtros del historial (RF30). El valor es el que espera el backend.
+const FILTERS = [
+  { label: "Todo", valor: null },
+  { label: "Pendiente", valor: "Pendiente" },
+  { label: "En Camino", valor: "En camino" },
+  { label: "Entregado", valor: "Entregado" },
+  { label: "Cancelado", valor: "Cancelado" },
+];
 
-const FILTERS = ["Todo", "Pendiente", "En camino", "Entregado", "Cancelado"];
+// JS El backend entrega el estado por linea; la insignia usa "En Camino".
+const ETIQUETA_ESTADO = { "En camino": "En Camino" };
 
-const ESTADOS_UI = {
-  Entregado: { className: "bg-primary/20 text-primary", label: "Entregado" },
-  "En camino": { className: "bg-accent-blue/20 text-accent-blue", label: "En camino" },
-  Pendiente: { className: "bg-error-container/30 text-error", label: "Pendiente" },
-  Cancelado: { className: "bg-surface-variant text-brand-muted-text", label: "Cancelado" },
-};
-
-/** Formatea una fecha DATETIME a "24 Oct, 2026". */
-function formatFecha(d) {
-  if (!d) return "-";
-  const fecha = new Date(d);
-  if (Number.isNaN(fecha.getTime())) return String(d);
-  return fecha
-    .toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-    .replace(/\s(\d{4})$/, ", $1");
+function etiquetaEstado(estado) {
+  return ETIQUETA_ESTADO[estado] || estado || "Pendiente";
 }
 
-/**
- * Historial de compras del comprador (RF26-RF32).
- * Consume GET /api/historial/compras con el token JWT.
- */
+function formatearFecha(valor) {
+  const fecha = new Date(valor);
+  if (Number.isNaN(fecha.getTime())) return { corta: "", larga: "" };
+
+  return {
+    corta: fecha.toLocaleDateString("es-CO", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }),
+    larga: fecha.toLocaleDateString("es-CO", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }),
+  };
+}
+
+function iniciales(nombre) {
+  return (nombre || "")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((parte) => parte[0].toUpperCase())
+    .join("");
+}
+
+/** Traduce el pedido de la API a la forma que consumen la tabla y el detalle. */
+function mapearPedido(pedido) {
+  const vendedores = pedido.vendedores ?? [];
+  const { corta, larga } = formatearFecha(pedido.fecha);
+
+  return {
+    id: pedido.pedido_id,
+    vendedor:
+      vendedores.length > 1
+        ? `${vendedores.length} vendedores`
+        : vendedores[0] || "Vendedor",
+    initials: iniciales(vendedores[0]),
+    initialsTextClass: "text-brand-orange",
+    fechaCorta: corta,
+    fechaLarga: larga,
+    estado: etiquetaEstado(pedido.estado),
+    direccion: pedido.direccion,
+    productos: (pedido.items ?? []).map((item) => ({
+      detalleId: item.detalle_id,
+      nombre: item.producto,
+      cantidad: item.cantidad,
+      precioUnit: Number(item.precio_unitario || 0),
+      estado: item.estado,
+    })),
+    resumen: pedido.resumen ?? { subtotal: 0, iva: 0, total: 0 },
+  };
+}
+
 export default function HistorialDeCompras() {
-  const [activeFilter, setActiveFilter] = useState("Todo");
+  const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
   const [pedidos, setPedidos] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(null);
-  const [sinSesion, setSinSesion] = useState(false);
+  const [error, setError] = useState("");
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [cancelandoId, setCancelandoId] = useState(null);
 
-  const cargarHistorial = useCallback(async () => {
-    const token = localStorage.getItem("commercity_token") || null;
-    if (!token) {
-      setSinSesion(true);
-      setCargando(false);
-      return;
-    }
-    setSinSesion(false);
+  /** Consulta GET /api/historial/compras con el filtro de estado opcional. */
+  const cargarHistorial = useCallback(async (filtro) => {
     setCargando(true);
-    setError(null);
     try {
-      const resp = await fetch(`${API_BASE}/api/historial/compras`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const body = await resp.json().catch(() => null);
-      if (!resp.ok) {
-        setError(body?.error?.message || "Error al cargar el historial.");
-      } else {
-        setPedidos(body?.data || []);
-      }
-    } catch (e) {
-      setError("Error de conexión con el servidor.");
+      const res = await listarHistorialCompras(filtro?.valor);
+      setPedidos((res.data ?? []).map(mapearPedido));
+      setError("");
+    } catch (err) {
+      setPedidos([]);
+      setError(err.message || "No se pudo cargar el historial de compras");
     } finally {
       setCargando(false);
     }
   }, []);
 
   useEffect(() => {
-    cargarHistorial();
-  }, [cargarHistorial]);
+    cargarHistorial(activeFilter);
+  }, [activeFilter, cargarHistorial]);
 
-  // Filtro por estado (RF30) — aplicado en el cliente sobre el historial cargado.
-  const orders = pedidos.filter(
-    (p) => activeFilter === "Todo" || p.estado === activeFilter
-  );
+  /** RF135: cancela la linea Pendiente y recarga el historial. */
+  async function manejarCancelar(detalleId) {
+    setCancelandoId(detalleId);
+    try {
+      await cancelarCompra(detalleId);
+      await cargarHistorial(activeFilter);
+    } catch (err) {
+      setError(err.message || "No se pudo cancelar la compra");
+    } finally {
+      setCancelandoId(null);
+    }
+  }
 
-  const estados = (estado) => ESTADOS_UI[estado] || ESTADOS_UI.Pendiente;
+  const selectedOrder = pedidos.find((o) => o.id === selectedOrderId) ?? null;
 
   return (
-    <div className="flex h-screen bg-surface-container-lowest overflow-hidden">
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Historial de compras" />
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <Header title="Historial de compras" />
 
-        <section className="flex-1 p-padding-md sm:p-padding-lg lg:p-padding-xl overflow-y-auto overflow-x-hidden">
-          <div className="mb-padding-xl">
-            <h2 className="text-headline-md font-bold text-on-surface">
-              Historial de compras
-            </h2>
-            <p className="text-brand-muted-text mt-1">
-              Visualiza y haz seguimiento de tus compras en el historial.
-            </p>
-          </div>
+      <section className="flex-1 p-padding-md sm:p-padding-lg lg:p-padding-xl overflow-y-auto overflow-x-hidden">
+        <div className="mb-padding-xl">
+        <h1 className="text-headline-md font-bold text-on-surface mb-1">
+          Historial Compras
+        </h1>
+        <p className="text-brand-muted-text text-body-sm sm:text-body-md">
+          Visualiza y haz seguimiento de tus compras en el historial.
+        </p>
+      </div>
 
-          {/* Filtros por estado (RF30) */}
-          <div className="flex flex-wrap gap-2 sm:gap-3 mb-padding-xl">
-            {FILTERS.map((f) => {
-              const active = f === activeFilter;
-              return (
-                <button
-                  key={f}
-                  onClick={() => setActiveFilter(f)}
-                  className={`px-3 sm:px-5 py-1.5 rounded-button font-semibold text-xs sm:text-sm transition-colors ${
-                    active
-                      ? "bg-primary-container text-on-primary-container"
-                      : "bg-surface-container-high text-brand-muted-text hover:bg-surface-container-highest"
-                  }`}
+      <div className="flex gap-2 flex-wrap mb-6">
+        {FILTERS.map((f) => (
+          <button
+            key={f.label}
+            onClick={() => setActiveFilter(f)}
+            className={`h-[32px] px-5 rounded-full text-[12px] tracking-[0.6px] font-semibold transition-colors ${
+              activeFilter.label === f.label
+                ? "bg-brand-orange text-brand-dark-text"
+                : "bg-surface-variant2 text-on-surface-variant hover:bg-surface-container-highest"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <p className="text-report-red-text font-medium text-sm mb-4">{error}</p>
+      )}
+
+      {cargando ? (
+        <div className="w-full overflow-x-auto rounded-card"
+          style={{
+            backgroundColor: "var(--color-auth-card-bg)",
+            border: "1px solid var(--color-border-subtle)",
+          }}
+        >
+          <table className="w-full border-collapse">
+            <tbody>
+              <tr>
+                <td className="text-center py-12 text-brand-muted-text text-[14px]">
+                  Cargando tu historial...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : pedidos.length === 0 ? (
+        <div className="w-full overflow-x-auto rounded-card"
+          style={{
+            backgroundColor: "var(--color-auth-card-bg)",
+            border: "1px solid var(--color-border-subtle)",
+          }}
+        >
+          <table className="w-full border-collapse">
+            <tbody>
+              <tr>
+                <td className="text-center py-12 text-brand-muted-text text-[14px]">
+                  No hay pedidos para este filtro.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <>
+          {/* Tarjetas — solo móvil */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {pedidos.map((order) => (
+                <div
+                  key={order.id}
+                  className="bg-auth-card-bg rounded-card p-4 flex flex-col gap-3"
+                  style={{ border: "1px solid var(--color-border-subtle)" }}
                 >
-                  {f}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Estados: SIN SESION */}
-          {sinSesion && (
-            <div className="rounded-card border border-surface-container bg-brand-dark-text px-6 py-12 text-center text-brand-muted-text text-sm">
-              Inicia sesión para ver tu historial de compras.
-            </div>
-          )}
-
-          {/* Estados: CARGANDO */}
-          {!sinSesion && cargando && (
-            <div className="rounded-card border border-surface-container bg-brand-dark-text px-6 py-12 text-center text-brand-muted-text text-sm">
-              Cargando historial...
-            </div>
-          )}
-
-          {/* Estados: ERROR */}
-          {!sinSesion && !cargando && error && (
-            <div className="rounded-card border border-error/40 bg-brand-dark-text px-6 py-12 text-center text-error text-sm">
-              {error}
-              <div className="mt-4">
-                <button
-                  onClick={cargarHistorial}
-                  className="px-5 py-2 rounded-button font-semibold text-sm bg-primary-container text-on-primary-container"
-                >
-                  Reintentar
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Estados: VACIO */}
-          {!sinSesion && !cargando && !error && orders.length === 0 && (
-            <div className="rounded-card border border-surface-container bg-brand-dark-text px-6 py-12 text-center text-brand-muted-text text-sm">
-              No hay pedidos para este filtro.
-            </div>
-          )}
-
-          {/* Estados: SUCCESS — vista tarjetas (movil) */}
-          {!sinSesion && !cargando && !error && orders.length > 0 && (
-            <div className="flex flex-col gap-4 md:hidden">
-              {orders.map((pedido) => {
-                const status = estados(pedido.estado);
-                return (
-                  <div
-                    key={pedido.pedido_id}
-                    className="bg-surface-container-low border border-surface-container rounded-card p-4 flex flex-col gap-3"
-                  >
-                    {/* Cabecera del pedido */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-semibold text-on-surface text-sm">
-                          Pedido #{pedido.pedido_id}
-                        </span>
-                        <span className="text-brand-muted-text text-xs truncate">
-                          {pedido.vendedores?.join(", ")}
-                        </span>
-                      </div>
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-xl text-[11px] font-bold shrink-0 ${status.className}`}
-                      >
-                        {status.label}
-                      </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Avatar order={order} />
+                      <span className="text-on-surface text-sm font-medium truncate">{order.vendedor}</span>
                     </div>
-
-                    {/* Direccion de envio (RF31) */}
-                    <p className="text-brand-muted-text text-xs">
-                      Envío: {pedido.direccion || "-"}
-                    </p>
-
-                    {/* Items del pedido */}
-                    {pedido.items?.map((item) => (
-                      <div
-                        key={item.detalle_id}
-                        className="flex items-center gap-3 border-t border-surface-container/60 pt-3"
-                      >
-                        {item.imagen ? (
-                          <img
-                            src={item.imagen}
-                            alt={item.producto}
-                            className="w-10 h-10 rounded-lg object-cover shrink-0"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-surface-container-high shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-on-surface font-medium text-sm truncate">
-                            {item.producto}
-                          </p>
-                          <p className="text-brand-muted-text text-xs">
-                            {item.cantidad} x {formatPrice(item.precio_unitario)}
-                          </p>
-                        </div>
-                        <span className="font-semibold text-on-surface text-sm">
-                          {formatPrice(item.total)}
-                        </span>
-                      </div>
-                    ))}
-
-                    {/* Resumen del pedido (RF31: IVA + total) */}
-                    <div className="border-t border-surface-container/60 pt-3 flex flex-col gap-1 text-xs">
-                      <div className="flex justify-between text-brand-muted-text">
-                        <span>Subtotal</span>
-                        <span>{formatPrice(pedido.resumen?.subtotal || 0)}</span>
-                      </div>
-                      <div className="flex justify-between text-brand-muted-text">
-                        <span>IVA (19%)</span>
-                        <span>{formatPrice(pedido.resumen?.iva || 0)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-on-surface text-sm">
-                        <span>Total</span>
-                        <span>{formatPrice(pedido.resumen?.total || 0)}</span>
-                      </div>
-                    </div>
-
-                    <p className="text-brand-muted-text text-xs">
-                      {formatFecha(pedido.fecha)}
-                    </p>
+                    <EstadoBadge estado={order.estado} withBorder />
                   </div>
-                );
-              })}
-            </div>
-          )}
 
-          {/* Estados: SUCCESS — tabla (desktop) */}
-          {!sinSesion && !cargando && !error && orders.length > 0 && (
-            <div className="hidden md:block rounded-card overflow-x-auto border border-surface-container bg-brand-dark-text">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="text-[11px] font-bold text-brand-muted-text uppercase bg-surface-variant2">
-                    <th className="px-6 py-4 text-left">Pedido</th>
-                    <th className="px-6 py-4 text-left">Producto</th>
-                    <th className="px-6 py-4 text-center">Vendedor</th>
-                    <th className="px-6 py-4 text-center">Fecha</th>
-                    <th className="px-6 py-4 text-center">Estado</th>
-                    <th className="px-6 py-4 text-center">Cantidad</th>
-                    <th className="px-6 py-4 text-right">Precio unit.</th>
-                    <th className="px-6 py-4 text-right">IVA 19%</th>
-                    <th className="px-6 py-4 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-container/50">
-                  {orders.map((pedido) =>
-                    pedido.items?.map((item) => {
-                      const status = estados(item.estado || pedido.estado);
-                      return (
-                        <tr
-                          key={item.detalle_id}
-                          className="hover:bg-surface-container/50 transition-colors group"
+                  <p className="text-on-surface text-sm">{order.productos.map((p) => p.nombre).join(", ")}</p>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-brand-muted-text">{order.fechaCorta}</span>
+                    <span className="text-on-surface font-semibold">{formatCOP(order.resumen.total)}</span>
+                  </div>
+
+                  <button
+                    onClick={() => setSelectedOrderId(order.id)}
+                    className="bg-auth-card-bg border border-[#8e8e93] text-on-surface text-[12px] h-[23px] px-[14px] rounded-full hover:bg-input-bg transition-colors w-fit"
+                  >
+                    Ver compra
+                  </button>
+                </div>
+              ))}
+          </div>
+
+          {/* Tabla — solo desktop */}
+          <div
+            className="hidden md:block w-full overflow-x-auto rounded-card"
+            style={{
+              backgroundColor: "var(--color-auth-card-bg)",
+              border: "1px solid var(--color-border-subtle)",
+            }}
+          >
+            <table className="w-full min-w-[700px] border-collapse">
+              <thead>
+                <tr className="bg-surface-variant2/50" style={{ borderBottom: "1px solid rgba(50,50,77,0.2)" }}>
+                  {[
+                    { label: "VENDEDOR", align: "left" },
+                    { label: "PRODUCTOS", align: "left" },
+                    { label: "FECHA", align: "left" },
+                    { label: "ESTADO", align: "left" },
+                    { label: "ACCIÓN", align: "left" },
+                    { label: "MONTO", align: "right" },
+                  ].map((col) => (
+                    <th
+                      key={col.label}
+                      className={`px-[24px] py-[16px] text-[12px] tracking-[1.2px] uppercase whitespace-nowrap text-brand-muted-text font-semibold ${col.align === "right" ? "text-right" : "text-left"}`}
+                    >
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {pedidos.map((order) => (
+                    <tr
+                      key={order.id}
+                      style={{ borderTop: "1px solid rgba(50,50,77,0.1)" }}
+                    >
+                      <td className="px-[24px] py-[20px] whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <Avatar order={order} />
+                          <span className="text-on-surface text-[16px]">
+                            {order.vendedor}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-[24px] py-[20px] whitespace-nowrap">
+                        <span className="text-on-surface text-[16px] font-medium">
+                          {numProductosLabel(order.productos)}
+                        </span>
+                      </td>
+                      <td className="px-[24px] py-[20px] whitespace-nowrap">
+                        <span className="text-brand-muted-text text-[14px]">
+                          {order.fechaCorta}
+                        </span>
+                      </td>
+                      <td className="px-[24px] py-[20px] whitespace-nowrap">
+                        <EstadoBadge estado={order.estado} withBorder />
+                      </td>
+                      <td className="px-[24px] py-[20px] whitespace-nowrap">
+                        <button
+                          onClick={() => setSelectedOrderId(order.id)}
+                          className="bg-auth-card-bg border border-[#8e8e93] text-on-surface text-[12px] h-[23px] px-[14px] rounded-full hover:bg-input-bg transition-colors"
                         >
-                          <td className="px-6 py-6 text-brand-muted-text text-sm whitespace-nowrap">
-                            #{pedido.pedido_id}
-                            <span className="block text-[11px]">
-                              {pedido.direccion || "-"}
-                            </span>
-                          </td>
-                          <td className="px-6 py-6">
-                            <div className="flex items-center gap-3">
-                              {item.imagen ? (
-                                <img
-                                  src={item.imagen}
-                                  alt={item.producto}
-                                  className="w-9 h-9 rounded-lg object-cover shrink-0"
-                                />
-                              ) : (
-                                <div className="w-9 h-9 rounded-lg bg-surface-container-high shrink-0" />
-                              )}
-                              <span className="font-medium text-on-surface">
-                                {item.producto}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-6 text-brand-muted-text text-sm text-center">
-                            {item.vendedor}
-                          </td>
-                          <td className="px-6 py-6 text-brand-muted-text text-sm text-center whitespace-nowrap">
-                            {formatFecha(pedido.fecha)}
-                          </td>
-                          <td className="px-6 py-6 text-center">
-                            <span
-                              className={`inline-flex items-center px-3 py-1 rounded-xl text-[11px] font-bold ${status.className}`}
-                            >
-                              {status.label}
-                            </span>
-                          </td>
-                          <td className="px-6 py-6 text-on-surface text-center">
-                            {item.cantidad}
-                          </td>
-                          <td className="px-6 py-6 text-on-surface text-right whitespace-nowrap">
-                            {formatPrice(item.precio_unitario)}
-                          </td>
-                          <td className="px-6 py-6 text-brand-muted-text text-right whitespace-nowrap">
-                            {formatPrice(item.iva)}
-                          </td>
-                          <td className="px-6 py-6 font-semibold text-on-surface text-right whitespace-nowrap">
-                            {formatPrice(item.total)}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </main>
+                          Ver compra
+                        </button>
+                      </td>
+                      <td className="px-[24px] py-[20px] whitespace-nowrap text-right">
+                        <span className="text-on-surface text-[16px]">
+                          {formatCOP(order.resumen.total)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+        {selectedOrder && (
+          <DetalleCompras
+            order={selectedOrder}
+            onClose={() => setSelectedOrderId(null)}
+            onCancelar={manejarCancelar}
+            cancelandoId={cancelandoId}
+          />
+        )}
+      </section>
     </div>
   );
 }

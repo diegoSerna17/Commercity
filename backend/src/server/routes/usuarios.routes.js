@@ -11,6 +11,8 @@ import {
     solicitarRecuperacion,
     restablecerPassword,
     adminGetDatos,
+    listarUsuarios,
+    actualizarPerfil,
 } from "../controllers/usuarios.controllers.js";
 import { authRequired } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
@@ -31,6 +33,9 @@ router.get("/", getUsuarios);
 // Endpoint publico para ver el perfil de otro usuario por su ID
 router.get("/perfil-publico/:id", getPerfilPublico);
 
+// Directorio de usuarios para iniciar un chat con cualquier persona.
+router.get("/directorio", authRequired, listarUsuarios);
+
 // RF40: el comprador elimina su cuenta (desactivacion logica, usa req.userId del token)
 router.delete("/cuenta", authRequired, eliminarCuentaComprador);
 
@@ -44,6 +49,7 @@ router.post("/reset-password", validate(resetSchema), restablecerPassword);
 // Fix 3.3: logout exige token para poder revocarlo (RF2)
 router.post("/logout", authRequired, logout);
 router.get("/me", authRequired, getPerfil);
+router.patch("/me", authRequired, actualizarPerfil);
 router.patch("/me/rol", authRequired, validate(cambiarRolSchema), cambiarRol);
 
 // ===== Ruta admin (requiere rol administrador) =====

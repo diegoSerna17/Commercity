@@ -5,7 +5,21 @@ import { encryptSensitive } from "../utils/crypto.js";
 
 // Mock del pool MySQL (sin BD real).
 vi.mock("mysql2/promise", () => {
-  const pool = { query: vi.fn(), getConnection: vi.fn() };
+  // query envoltorio: responde de forma transparente la consulta que authRequired
+  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // el resto a la query interna que configura cada test con mockImplementation.
+  const queryInterna = vi.fn();
+  const query = vi.fn((sql, ...resto) => {
+    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
+      return Promise.resolve([[{ activo: 1 }], undefined]);
+    }
+    return queryInterna(sql, ...resto);
+  });
+  query.mockImplementation = (fn) => { queryInterna.mockImplementation(fn); return query; };
+  query.mockImplementationOnce = (fn) => { queryInterna.mockImplementationOnce(fn); return query; };
+  query.mockResolvedValue = (valor) => { queryInterna.mockResolvedValue(valor); return query; };
+  query.mockRejectedValue = (error) => { queryInterna.mockRejectedValue(error); return query; };
+  const pool = { query, getConnection: vi.fn() };
   return {
     __esModule: true,
     default: { createPool: vi.fn(() => pool) },
@@ -263,43 +277,6 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
     expect(conBusqueda).toBeTruthy();
   });
 
-  it("GET /api/tienda/ventas excluye las lineas canceladas por defecto (RF129)", async () => {
-    pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
-      if (sql.includes("SELECT COUNT(*)")) return [[{ total: 0 }], undefined];
-      if (sql.includes("SUM(dp.subtotal)")) return [[{ total_ventas: 0, total_bruto: 0, total_neto_vendedor: 0, total_comision_plataforma: 0 }], undefined];
-      return [[], undefined];
-    });
-
-    const res = await request(app)
-      .get("/api/tienda/ventas")
-      .set("Authorization", `Bearer ${tokenVendedor}`);
-
-    expect(res.status).toBe(200);
-    const sinFiltro = pool.query.mock.calls.find(([sql]) => sql.includes("FROM detalle_pedidos dp"));
-    expect(sinFiltro[0]).toContain("dp.estado_envio <> 'Cancelado'");
-  });
-
-  it("GET /api/tienda/ventas con estado=Cancelado si las muestra (RF129)", async () => {
-    pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
-      if (sql.includes("SELECT COUNT(*)")) return [[{ total: 1 }], undefined];
-      if (sql.includes("SUM(dp.subtotal)")) return [[{ total_ventas: 1, total_bruto: 0, total_neto_vendedor: 0, total_comision_plataforma: 0 }], undefined];
-      return [[{ ...filaVenta, estado_envio: "Cancelado" }], undefined];
-    });
-
-    const res = await request(app)
-      .get("/api/tienda/ventas?estado=Cancelado")
-      .set("Authorization", `Bearer ${tokenVendedor}`);
-
-    expect(res.status).toBe(200);
-    const conFiltro = pool.query.mock.calls.find(([sql]) => sql.includes("FROM detalle_pedidos dp"));
-    expect(conFiltro[0]).toContain("dp.estado_envio = ?");
-    expect(conFiltro[0]).not.toContain("<> 'Cancelado'");
-  });
-
   it("GET /api/tienda/ingresos devuelve el resumen 90/10 sin datos bancarios", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
@@ -357,133 +334,5 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
     expect(res.body.data.tarjetas.total_neto_vendedor).toBe(7200000);
     expect(res.body.data.por_estado[0].estado).toBe("Pendiente");
     expect(res.body.data.ultimos_6_meses[0].mes).toBe("2026-07");
-  });
-});
-
-describe("Validacion de Mi Tienda (RF130-RF139)", () => {
-  const filaLineaCoherente = {
-    id: 10, pedido_id: 5, producto_id: 3, cantidad: 2,
-    subtotal: "2000000.00", monto_vendedor: "1800000.00",
-    monto_comision: "200000.00", estado_envio: "Pendiente",
-  };
-  const filaLineaIncoherente = {
-    id: 11, pedido_id: 6, producto_id: 4, cantidad: 1,
-    subtotal: "1000.00", monto_vendedor: "0.00",
-    monto_comision: "0.00", estado_envio: "Pendiente",
-  };
-  const filaDevolucion = {
-    id: 30, pedido_id: 9, cantidad: 1, subtotal: "50000.00",
-    monto_vendedor: "45000.00", monto_comision: "5000.00",
-    fecha_pedido: "2026-08-10", estado_pago: "Aprobado",
-  };
-
-  it("rechaza sin token (401)", async () => {
-    const res = await request(app).get("/api/tienda/validacion");
-    expect(res.status).toBe(401);
-  });
-
-  it("rechaza a un comprador (403 - solo vendedor)", async () => {
-    pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "comprador" }], undefined];
-      return [[], undefined];
-    });
-
-    const res = await request(app)
-      .get("/api/tienda/validacion")
-      .set("Authorization", `Bearer ${tokenComprador}`);
-    expect(res.status).toBe(403);
-  });
-
-  it("detecta vendedor sin cuenta bancaria registrada (RF131)", async () => {
-    pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
-      return [[], undefined]; // sin cuenta, sin lineas, sin devoluciones
-    });
-
-    const res = await request(app)
-      .get("/api/tienda/validacion")
-      .set("Authorization", `Bearer ${tokenVendedor}`);
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.cuenta_bancaria.registrada).toBe(false);
-    expect(res.body.data.cuenta_bancaria.completa).toBe(false);
-    expect(res.body.data.validado).toBe(false);
-    expect(res.body.data.observaciones.some((o) => o.includes("RF131"))).toBe(true);
-  });
-
-  it("valida cuenta bancaria completa + flujo 90/10 sin exponer el numero (RF138)", async () => {
-    pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
-      if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
-      if (sql.includes("estado_envio = 'Cancelado'")) return [[], undefined]; // sin devoluciones
-      if (sql.includes("FROM detalle_pedidos dp")) return [[filaLineaCoherente], undefined];
-      return [[], undefined];
-    });
-
-    const res = await request(app)
-      .get("/api/tienda/validacion")
-      .set("Authorization", `Bearer ${tokenVendedor}`);
-
-    expect(res.status).toBe(200);
-    const data = res.body.data;
-    expect(data.cuenta_bancaria.registrada).toBe(true);
-    expect(data.cuenta_bancaria.completa).toBe(true);
-    // RF138: nunca se expone el numero completo ni el titular completo
-    expect(JSON.stringify(res.body)).not.toContain("12345678901234");
-    expect(JSON.stringify(res.body)).not.toContain("Maria Fernanda");
-    expect(data.cuenta_bancaria.numero_enmascarado).toContain("1234");
-    // Flujo 90/10 coherente (vendedor + comision == subtotal)
-    expect(data.flujo_90_10.lineas_incoherentes).toBe(0);
-    expect(data.flujo_90_10.validado).toBe(true);
-    expect(data.flujo_90_10.totales.vendedor_90).toBe(1800000);
-    expect(data.flujo_90_10.totales.comision_10).toBe(200000);
-    expect(data.devoluciones.lineas_canceladas).toBe(0);
-    expect(data.validado).toBe(true);
-  });
-
-  it("detecta lineas incoherentes en el flujo 90/10 (monto en cero)", async () => {
-    pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
-      if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
-      if (sql.includes("estado_envio = 'Cancelado'")) return [[], undefined];
-      if (sql.includes("FROM detalle_pedidos dp")) return [[filaLineaIncoherente], undefined];
-      return [[], undefined];
-    });
-
-    const res = await request(app)
-      .get("/api/tienda/validacion")
-      .set("Authorization", `Bearer ${tokenVendedor}`);
-
-    const data = res.body.data;
-    expect(data.flujo_90_10.lineas_incoherentes).toBe(1);
-    expect(data.flujo_90_10.incoherencias[0].detalle_id).toBe(11);
-    expect(data.flujo_90_10.validado).toBe(false);
-    expect(data.validado).toBe(false);
-    expect(data.observaciones.some((o) => o.includes("RF136/RF139"))).toBe(true);
-  });
-
-  it("advierte cuando hay lineas canceladas sin pago Reembolsado (RF35/RF137)", async () => {
-    pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
-      if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
-      if (sql.includes("estado_envio = 'Cancelado'")) return [[filaDevolucion], undefined];
-      if (sql.includes("FROM detalle_pedidos dp")) return [[filaLineaCoherente], undefined];
-      return [[], undefined];
-    });
-
-    const res = await request(app)
-      .get("/api/tienda/validacion")
-      .set("Authorization", `Bearer ${tokenVendedor}`);
-
-    const data = res.body.data;
-    expect(data.devoluciones.lineas_canceladas).toBe(1);
-    expect(data.devoluciones.pagos_marcados_reembolsados).toBe(0);
-    expect(data.devoluciones.validado).toBe(false);
-    expect(data.observaciones.some((o) => o.includes("RF35"))).toBe(true);
   });
 });

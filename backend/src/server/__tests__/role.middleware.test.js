@@ -3,10 +3,24 @@ import request from "supertest";
 import express from "express";
 import jwt from "jsonwebtoken";
 
-// Mock del pool para no depender de la BD real
-vi.mock("../config/db.js", () => ({
-    default: { query: vi.fn() }
-}));
+// Mock del pool para no depender de la BD real.
+// La query es un envoltorio: responde de forma transparente la consulta que
+// authRequired hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")
+// y delega todas las demas consultas a la query interna que configura cada test.
+vi.mock("../config/db.js", () => {
+    const queryInterna = vi.fn();
+    const query = vi.fn((sql, ...resto) => {
+        if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
+            return Promise.resolve([[{ activo: 1 }], undefined]);
+        }
+        return queryInterna(sql, ...resto);
+    });
+    query.mockImplementation = (fn) => { queryInterna.mockImplementation(fn); return query; };
+    query.mockImplementationOnce = (fn) => { queryInterna.mockImplementationOnce(fn); return query; };
+    query.mockResolvedValue = (valor) => { queryInterna.mockResolvedValue(valor); return query; };
+    query.mockRejectedValue = (error) => { queryInterna.mockRejectedValue(error); return query; };
+    return { default: { query } };
+});
 
 import pool from "../config/db.js";
 import { authRequired } from "../middleware/auth.middleware.js";
