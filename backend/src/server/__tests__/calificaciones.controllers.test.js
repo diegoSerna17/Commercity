@@ -28,6 +28,8 @@ const tokenComprador = jwt.sign(
 function mockAuth() {
   pool.query.mockImplementation((sql) => {
     if (sql.includes("tokens_invalidados")) return [[], undefined];
+    // DEF-01: authRequired verifica que el usuario este activo antes de continuar.
+    if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
     return [[], undefined];
   });
 }
@@ -58,6 +60,7 @@ describe("Calificacion de vendedor (RF107)", () => {
   it("pedido inexistente -> 404", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
       if (sql.includes("FROM pedidos WHERE id")) return [[], undefined];
       return [[], undefined];
     });
@@ -72,6 +75,7 @@ describe("Calificacion de vendedor (RF107)", () => {
   it("pedido de otro comprador -> 403", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
       if (sql.includes("FROM pedidos WHERE id")) return [[{ id: 1, comprador_id: 7 }], undefined];
       return [[], undefined];
     });
@@ -86,6 +90,7 @@ describe("Calificacion de vendedor (RF107)", () => {
   it("pedido sin compra de ese vendedor -> 400", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
       if (sql.includes("FROM pedidos WHERE id")) return [[{ id: 5, comprador_id: 9 }], undefined];
       if (sql.includes("FROM detalle_pedidos")) return [[], undefined];
       return [[], undefined];
@@ -101,6 +106,7 @@ describe("Calificacion de vendedor (RF107)", () => {
   it("pedido ya calificado -> 400", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
       if (sql.includes("FROM pedidos WHERE id")) return [[{ id: 5, comprador_id: 9 }], undefined];
       if (sql.includes("FROM detalle_pedidos")) return [[{ id: 1 }], undefined];
       if (sql.includes("FROM calificaciones_vendedores")) return [[{ id: 1 }], undefined];
@@ -117,6 +123,7 @@ describe("Calificacion de vendedor (RF107)", () => {
   it("crea la calificacion (201) y parametriza el INSERT", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
       if (sql.includes("FROM pedidos WHERE id")) return [[{ id: 5, comprador_id: 9 }], undefined];
       if (sql.includes("FROM detalle_pedidos")) return [[{ id: 1 }], undefined];
       if (sql.includes("FROM calificaciones_vendedores")) return [[], undefined];
