@@ -72,14 +72,14 @@ async function cargarCatalogoDesdeAPI() {
 function productCardHTML(key, p, withEdit) {
   const badge = (p.disc > 0) ? `<div class="prod-badge disc-badge">-${p.disc}%</div>` : '';
   const old = (p.disc > 0) ? `<div class="prod-price-old">${fmtCOP(Math.round(p.price / (1 - p.disc / 100)))}</div>` : '';
-  const edit = withEdit ? `<button class="prod-edit-btn seller-only" onclick="event.stopPropagation(); openEditProductModal('${key}')" title="Editar producto">
+  const edit = withEdit ? `<button class="prod-edit-btn seller-only" onclick="event.stopPropagation(); openEditProductModal('${escAttr(key)}')" title="Editar producto">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
   </button>` : '';
-  const img = p.img ? `<img src="${p.img}" alt="${p.name}" class="prod-img" style="object-fit:cover;" />`
+  const img = p.img ? `<img src="${escAttr(p.img)}" alt="${escAttr(p.name)}" class="prod-img" style="object-fit:cover;" />`
     : `<div style="width:100%;aspect-ratio:1;background:var(--bg-input);display:flex;align-items:center;justify-content:center;font-size:48px;">📦</div>`;
-  return `<div class="prod-card" style="animation:fadeIn 0.3s ease;" onclick="openProductDetail('${key}')">
+  return `<div class="prod-card" style="animation:fadeIn 0.3s ease;" onclick="openProductDetail('${escAttr(key)}')">
     ${badge}${edit}${img}
-    <div class="prod-info"><div class="prod-name">${p.name}</div>${old}<div class="prod-price">${fmtCOP(p.price)}</div></div>
+    <div class="prod-info"><div class="prod-name">${escAttr(p.name)}</div>${old}<div class="prod-price">${fmtCOP(p.price)}</div></div>
   </div>`;
 }
 
@@ -304,10 +304,20 @@ async function cargarTienda() {
   if (!apiReady() || !localStorage.getItem('commercity_token')) return;
   try {
     const s = (await api.statsTienda()).data || {};
+    // GET /api/tienda/dashboard/stats -> { tarjetas:{...}, por_estado:[...], ultimos_6_meses:[...] }
+    const t = s.tarjetas || {};
     const vals = document.querySelectorAll('.tienda-stat-val');
-    const map = [s.ventas_totales ?? s.total_ventas, s.dinero_recaudado ?? s.total_ingresos ?? s.ingresos_totales];
-    if (vals[0] && map[0] != null) vals[0].textContent = map[0];
-    if (vals[1] && map[1] != null) vals[1].textContent = fmtCOP(map[1]);
+    const unidades = t.unidades_vendidas ?? s.ventas_totales ?? s.total_ventas;
+    const neto = t.total_neto_vendedor ?? s.dinero_recaudado ?? s.total_ingresos ?? s.ingresos_totales;
+    if (vals[0] && unidades != null) vals[0].textContent = unidades;
+    if (vals[1] && neto != null) vals[1].textContent = fmtCOP(neto);
+    const setStat = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
+    setStat('tienda-comision', fmtCOP(t.total_comision ?? 0));
+    const porEstado = Array.isArray(s.por_estado) ? s.por_estado : [];
+    const cantEstado = (est) => porEstado.filter(e => e && e.estado === est)
+      .reduce((a, e) => a + Number(e.cantidad || 0), 0);
+    setStat('tienda-entregados', cantEstado('Entregado'));
+    setStat('tienda-pendientes', cantEstado('Pendiente'));
   } catch (e) {}
   try {
     const c = (await api.cuentaBancaria()).data || {};
@@ -474,7 +484,7 @@ async function cargarMensajes(uid) {
       const out = (yo != null && Number(m.emisor_id) === yo);
       if (!out && m.id != null && Number(m.leido) === 0) porLeer.push(Number(m.id));
       return `<div class="msg-wrap ${out ? 'outgoing' : 'incoming'}">
-        <div class="msg-bubble">${escAttr(m.mensaje || '')}${m.archivo_url ? `<br><a href="${apiBaseUrl() + m.archivo_url}" target="_blank">📎 archivo</a>` : ''}</div>
+        <div class="msg-bubble">${escAttr(m.mensaje || '')}${m.archivo_url ? `<br><a href="${escAttr(apiBaseUrl() + m.archivo_url)}" target="_blank">📎 archivo</a>` : ''}</div>
         <div class="msg-time">${horaCorta(m.enviado_at || m.fecha)}</div>
       </div>`;
     }).join('');
@@ -889,7 +899,7 @@ function togglePwd(id, btn) {
   btn.textContent = inp.type === 'password' ? '👁️' : '🙈';
 }
 
-function toggleNotifs(e) {
+async function toggleNotifs(e) {
   if (e) e.stopPropagation();
   const panel = document.getElementById('notifs-panel');
   const overlay = document.getElementById('notifs-overlay');
@@ -898,9 +908,13 @@ function toggleNotifs(e) {
     panel.classList.toggle('open');
     if (overlay) overlay.classList.toggle('open');
     if (willOpen) {
-      // Al abrir el panel se marcan todas como leídas (PATCH /api/notificaciones/leidas)
-      if (apiReady() && localStorage.getItem('commercity_token')) api.marcarTodasLeidas().catch(() => {});
-      cargarNotificaciones();
+      // Al abrir el panel se marcan todas como leídas (PATCH /api/notificaciones/leidas).
+      // Se AWAITA antes de repintar para que la lista no muestre filas no leídas
+      // mientras el PATCH sigue en vuelo.
+      if (apiReady() && localStorage.getItem('commercity_token')) {
+        try { await api.marcarTodasLeidas(); } catch (err) { /* best-effort */ }
+      }
+      await cargarNotificaciones();
     }
   }
 }
@@ -1070,10 +1084,10 @@ async function renderCart() {
     return `
       <div class="cart-item">
         <div class="cart-item-main">
-          <img src="${img}" alt="${nombre}" class="cart-item-img" />
+          <img src="${escAttr(img)}" alt="${escAttr(nombre)}" class="cart-item-img" />
           <div class="cart-item-info">
-            <div class="cart-item-name">${nombre}</div>
-            <div class="cart-item-cat">${cat}</div>
+            <div class="cart-item-name">${escAttr(nombre)}</div>
+            <div class="cart-item-cat">${escAttr(cat)}</div>
             <div class="cart-item-prices">
               <span class="cart-item-price">$${final.toLocaleString('es-CO')}</span>
               ${damt > 0 ? `<span class="cart-item-old">$${base.toLocaleString('es-CO')}</span>` : ''}
@@ -1175,10 +1189,11 @@ async function openPasarela() {
   let subtotal, iva, total;
   try {
     const body = await api.resumenPedido();
-    const r = body.data || {};
-    subtotal = Number(r.subtotal ?? r.sub_total ?? r.subTotal ?? 0);
-    iva = Number(r.iva ?? r.monto_iva ?? r.montoIva ?? 0);
-    total = Number(r.total ?? r.total_con_iva ?? r.totalConIva ?? (subtotal + iva));
+    // El backend devuelve { comprador_id, por_vendedor, totales:{subtotal,iva,total} }
+    const t = (body.data || {}).totales || body.data || {};
+    subtotal = Number(t.subtotal ?? t.sub_total ?? t.subTotal ?? 0) || 0;
+    iva = Number(t.iva ?? t.monto_iva ?? t.montoIva ?? 0) || 0;
+    total = Number(t.total ?? t.total_con_iva ?? t.totalConIva ?? (subtotal + iva)) || (subtotal + iva);
   } catch (err) {
     toast('⚠️ ' + apiErrorMessage(err));
     return;
@@ -1522,11 +1537,18 @@ async function saveBankAccount() {
   const type   = document.getElementById('bank-type')?.value;
   const number = document.getElementById('bank-number')?.value.trim();
   if (!name || !bank || !type || !number) { toast('⚠️ Completa todos los campos'); return; }
+  // El backend exige z.enum(["ahorros","corriente"]): el placeholder del select
+  // ("Selecciona tipo") u otro valor no válido deben rechazarse en cliente.
+  const tipoCuenta = String(type).trim().toLowerCase();
+  if (/^seleccion/i.test(tipoCuenta) || !['ahorros', 'corriente'].includes(tipoCuenta)) {
+    toast('⚠️ Selecciona un tipo de cuenta válido (Ahorros o Corriente)');
+    return;
+  }
   if (!apiReady()) { toast('⚠️ API no disponible (falta api.js)'); return; }
   const payload = {
     titular_nombre: name,
     banco: bank,
-    tipo_cuenta: String(type).toLowerCase(),
+    tipo_cuenta: tipoCuenta,
     numero_cuenta: String(number).replace(/\D/g, '')
   };
   if (!/^\d+$/.test(payload.numero_cuenta)) { toast('⚠️ El número de cuenta solo admite dígitos'); return; }
@@ -1809,14 +1831,15 @@ async function renderFollowersList(tab) {
         list.innerHTML = data.map(u => {
           const uid = u.id ?? u.usuario_id ?? u.seguidor_id ?? u.seguido_id;
           const nombre = u.nombre_completo || u.nombre || 'Usuario';
-          const letter = (nombre.charAt(0) || '?').toUpperCase();
-          const btn = (uid != null) ? `<button class="btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="toggleFollow(${uid}, ${tab === 'siguiendo'})">${tab === 'siguiendo' ? 'Dejar de seguir' : 'Seguir'}</button>` : '';
+          const letter = escAttr((nombre.charAt(0) || '?').toUpperCase());
+          const uidNum = Number(uid);
+          const btn = Number.isFinite(uidNum) ? `<button class="btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="toggleFollow(${uidNum}, ${tab === 'siguiendo'})">${tab === 'siguiendo' ? 'Dejar de seguir' : 'Seguir'}</button>` : '';
           return `
           <div class="follow-item">
             <div class="follow-ava" style="background:linear-gradient(135deg,#7c3aed,#7c3aed99);">${letter}</div>
             <div class="follow-info">
-              <div class="follow-name">${nombre}</div>
-              <div class="follow-type">${u.rol || u.tipo || ''}</div>
+              <div class="follow-name">${escAttr(nombre)}</div>
+              <div class="follow-type">${escAttr(u.rol || u.tipo || '')}</div>
             </div>${btn}
           </div>`;
         }).join('');
@@ -1996,10 +2019,10 @@ async function cargarAdminUsuarios() {
       const rol = u.rol || 'Comprador';
       const estado = String(u.estado || (u.activo === 0 ? 'Baneado' : 'Activo'));
       const ban = /ban/i.test(estado);
-      return `<div class="admin-list-card admin-user-card" data-user-id="${uid}" onclick="currentAdminTarget=this; openAdminUserDetail('${nombre}','${rol}','${estado}','${u.email || ''}','${u.productos ?? u.publicados ?? 0}','${u.reportes ?? 0}')">
-        <div class="admin-card-left"><div class="tbl-ava" style="background:#4b5563;">${nombre.charAt(0)}</div>
-          <div><div class="admin-card-title">${nombre}</div><div class="admin-card-sub">${rol}</div></div></div>
-        <div class="admin-card-right"><span class="badge ${ban ? 'badge-red' : 'badge-green'}">${estado}</span>
+      return `<div class="admin-list-card admin-user-card" data-user-id="${escAttr(uid)}" data-nombre="${escAttr(nombre)}" data-rol="${escAttr(rol)}" data-estado="${escAttr(estado)}" data-email="${escAttr(u.email || '')}" data-publicados="${escAttr(u.productos ?? u.publicados ?? 0)}" data-reportes="${escAttr(u.reportes ?? 0)}" onclick="currentAdminTarget=this; openAdminUserDetail(this.dataset.nombre,this.dataset.rol,this.dataset.estado,this.dataset.email,this.dataset.publicados,this.dataset.reportes)">
+        <div class="admin-card-left"><div class="tbl-ava" style="background:#4b5563;">${escAttr(nombre.charAt(0))}</div>
+          <div><div class="admin-card-title">${escAttr(nombre)}</div><div class="admin-card-sub">${escAttr(rol)}</div></div></div>
+        <div class="admin-card-right"><span class="badge ${ban ? 'badge-red' : 'badge-green'}">${escAttr(estado)}</span>
           <button class="btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card'); adminAction('${ban ? 'Activar' : 'Banear'}', null)">${ban ? 'Activar' : 'Banear'}</button>
           <button class="btn-ghost" style="padding:4px 8px; color:var(--danger);" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card'); adminAction('Eliminar', null)">Eliminar</button>
         </div></div>`;
@@ -2020,14 +2043,24 @@ async function cargarAdminProductos() {
       const pid = p.id ?? p.producto_id;
       const nombre = p.nombre || 'Producto';
       const vend = p.vendedor || p.vendedor_nombre || '—';
-      return `<div class="admin-list-card admin-prod-card" data-product-id="${pid}" onclick="currentAdminTarget=this; openAdminProductDetail('${nombre}','${vend}','${p.estado || 'Activo'}','${fmtCOP(p.precio)}','${p.reportes ?? 0}')">
+      return `<div class="admin-list-card admin-prod-card" data-product-id="${escAttr(pid)}" data-nombre="${escAttr(nombre)}" data-vendedor="${escAttr(vend)}" data-estado="${escAttr(p.estado || 'Activo')}" data-precio="${escAttr(fmtCOP(p.precio))}" data-reportes="${escAttr(p.reportes ?? 0)}" onclick="currentAdminTarget=this; openAdminProductDetail(this.dataset.nombre,this.dataset.vendedor,this.dataset.estado,this.dataset.precio,this.dataset.reportes)">
         <div class="admin-card-left"><div class="admin-prod-img-placeholder">📦</div>
-          <div><div class="admin-card-title">${nombre}</div><div class="admin-card-sub">${fmtCOP(p.precio)}</div></div></div>
-        <div class="admin-card-right"><div class="admin-card-sub">${vend}</div>
+          <div><div class="admin-card-title">${escAttr(nombre)}</div><div class="admin-card-sub">${escAttr(fmtCOP(p.precio))}</div></div></div>
+        <div class="admin-card-right"><div class="admin-card-sub">${escAttr(vend)}</div>
           <button class="btn-ghost" style="padding:4px 8px; color:var(--danger);" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card'); adminAction('Eliminar producto', null)">🗑️</button>
         </div></div>`;
     }).join('');
   } catch (e) {}
+}
+
+/* Cache de reportes admin: la tarjeta solo lleva el id numérico en su onclick
+   (los campos con texto libre —motivo, reportado, fecha, estado— nunca se
+   interpolan en el atributo, así que no pueden romperlo ni ejecutar código). */
+const ADMIN_REPORTES_CACHE = Object.create(null);
+
+function openAdminReportDetailById(rid) {
+  const r = ADMIN_REPORTES_CACHE[String(rid)] || {};
+  openAdminReportDetail(r.tipo || '', r.rep || '', r.by || '', r.motivo || '', r.fecha || '', r.estado || '');
 }
 
 async function cargarAdminReportes() {
@@ -2047,14 +2080,17 @@ async function cargarAdminReportes() {
       const fecha = r.fecha_reporte || r.fecha || '';
       const estado = r.estado || 'Pendiente';
       const res = /resuelto/i.test(estado);
-      return `<div class="admin-list-card admin-rep-card" data-report-id="${rid}" onclick="currentAdminTarget=this; openAdminReportDetail('${tipo}','${rep}','','${motivo}','${fecha}','${estado}')">
+      const ridNum = Number(rid);
+      const ridArg = Number.isFinite(ridNum) ? ridNum : 'null';
+      ADMIN_REPORTES_CACHE[String(rid)] = { tipo, rep, by: '', motivo, fecha, estado };
+      return `<div class="admin-list-card admin-rep-card" data-report-id="${escAttr(rid)}" onclick="currentAdminTarget=this; openAdminReportDetailById(${ridArg})">
         <div class="admin-card-left" style="flex:1; flex-direction:column; align-items:flex-start;">
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-            <span class="badge badge-red outline">${tipo}</span><div class="admin-card-title">${rep}</div></div>
-          <div class="admin-card-sub" style="max-width:100%;">${motivo}</div></div>
+            <span class="badge badge-red outline">${escAttr(tipo)}</span><div class="admin-card-title">${escAttr(rep)}</div></div>
+          <div class="admin-card-sub" style="max-width:100%;">${escAttr(motivo)}</div></div>
         <div class="admin-card-right" style="flex-direction:column; align-items:flex-end; justify-content:center; gap:6px;">
-          <div class="admin-card-sub" style="margin:0;">${fecha}</div>
-          <div style="display:flex; gap:6px; align-items:center;"><span class="badge ${res ? 'badge-green' : 'badge-red'}">${estado}</span>
+          <div class="admin-card-sub" style="margin:0;">${escAttr(fecha)}</div>
+          <div style="display:flex; gap:6px; align-items:center;"><span class="badge ${res ? 'badge-green' : 'badge-red'}">${escAttr(estado)}</span>
           <button class="btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card'); adminAction('${res ? 'Ver' : 'Resolver'}', null)">${res ? 'Ver' : 'Resolver'}</button>
           </div></div></div>`;
     }).join('');
@@ -2240,14 +2276,15 @@ function switchPerfilTab(tab) {
     const feedHtml = Object.keys(PRODUCTS).map(key => {
       const p = PRODUCTS[key];
       const fmtPrice = '$' + p.price.toLocaleString('es-CO');
+      // Fix residual post-review: 'Mi Feed' pinta datos de la API -> escapar (XSS).
       return `
-        <div class="prod-card" style="animation:fadeIn 0.3s ease;" onclick="openProductDetail('${key}')">
-          ${p.disc > 0 ? `<div class="prod-badge disc-badge">-${p.disc}%</div>` : ''}
-          <img src="${p.img}" alt="${p.name}" class="prod-img" style="object-fit:cover;" />
+        <div class="prod-card" style="animation:fadeIn 0.3s ease;" onclick="openProductDetail('${escAttr(key)}')">
+          ${p.disc > 0 ? `<div class="prod-badge disc-badge">-${Number(p.disc)}%</div>` : ''}
+          <img src="${escAttr(p.img)}" alt="${escAttr(p.name)}" class="prod-img" style="object-fit:cover;" />
           <div class="prod-info">
-            <div class="prod-name">${p.name}</div>
+            <div class="prod-name">${escAttr(p.name)}</div>
             <div class="prod-price">${fmtPrice}</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Por ${p.vendor}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Por ${escAttr(p.vendor)}</div>
           </div>
         </div>
       `;
@@ -2303,6 +2340,9 @@ async function submitVendorRating() {
     return;
   }
   toast(`⭐ ¡Gracias! Has calificado a ${currentVendorTarget} con ${currentRatingValue} estrellas`);
+  // pedido_id es UNIQUE en calificaciones_vendedores: se limpia el contexto para
+  // que un segundo envío (estrellas del perfil o reenvío) no reutilice el mismo pedido.
+  currentRatingContext = null;
   closeRatingModal();
   if (document.getElementById('rate-comment')) {
     document.getElementById('rate-comment').value = '';

@@ -101,8 +101,12 @@
 
 ## 6. Cierre de pendings 2026-09-28
 
-> Alcance: SOLO `docs/AVANCES/ESCRITORIO COMMERCITY/commercity-desktop/src/app.js`.
-> Sin cambios en `backend/` ni en `docs/AVANCES/MOVIL`. `index.html`, `api.js`, `styles.css` intactos.
+> Alcance REAL de este cierre: `docs/AVANCES/ESCRITORIO COMMERCITY/commercity-desktop/src/app.js`
+> (principal), **más** `src/index.html` (≈62 líneas: ids de formulario, handlers `onclick` y
+> `<script src='api.js'>` insertado antes de `app.js`) y `package.json` (+1 línea: `signAndEditExecutable`).
+> `src/api.js` y `src/styles.css` sí quedaron intactos en esta iteración (el cambio de `api.js`
+> es posterior, ver §7 "Correcciones post-review 2026-09-28").
+> Sin cambios en `backend/` ni en `docs/AVANCES/MOVIL`.
 > Verificación: `node --check src/app.js` OK; smoke Node con stubs DOM/fetch sobre `api.js`+`app.js`: **31/31 passed**
 > (precarga de ambos formularios, filas con `openChatPorId(id)`, historial API vs burbujas de
 > fallback, select de categorías, pintado de perfil público, badge 3→visible / 0→oculto, `escHtml`).
@@ -139,4 +143,48 @@
 > - Evidencia: `docs/informes/EVIDENCIA_E2E_CAPA_RED_2026-09-28.md`.
 - `api.vendedores` sigue sin UI dedicada (no estaba en el alcance de este cierre).
 - Fix incluido: `openChat` re-entrante ya no lanza `TypeError` al reasignar `chat-prod-*` (los ids desaparecían tras el primer `innerHTML`) y ahora tolera chats sin tarjeta de producto.
+- **`package.json` → `build.win`:** se agregó `"signAndEditExecutable": false` (+1 línea en esta iteración).
+  Con esta bandera `electron-builder` **no firma ni reescribe el ejecutable** al empaquetar el target NSIS:
+  se omite la firma de código y la reescritura del `.exe` (no hay certificado de firma en este entorno y
+  el retoque del binario rompía la empaquetación). Efecto práctico: el instalador/ejecutable queda **sin
+  firma digital**, por lo que Windows puede mostrar el aviso de SmartScreen ("Aplicación desconocida") al
+  instalarlo o ejecutarlo. Si más adelante se dispone de certificado, eliminar la bandera para restaurar
+  el comportamiento por defecto de electron-builder.
 - Helper nuevo `escHtml()` para pintar datos de la API (nombres, previews, mensajes, URLs) sin inyección de HTML.
+  **Matización (post-review):** en esta iteración el helper solo se aplicó en **3 puntos** — conversaciones
+  (filas/burbujas de `page-mensajes`), categorías del filtro del catálogo y perfil público del vendedor —;
+  catálogo, pedidos, ventas de tienda, panel admin y seguidores se seguían pintando en crudo. Ese resto
+  se cerró en §7 "Correcciones post-review 2026-09-28".
+
+---
+
+## 7. Correcciones post-review 2026-09-28
+
+> Fuente: `docs/AVANCES/PRUEBAS/REVIEW_findings.md` — tablas de los ejes **(a)** contrato con backend,
+> **(b)** seguridad XSS y **(c)** regresiones/handlers.
+> Alcance: SOLO `docs/AVANCES/ESCRITORIO COMMERCITY/commercity-desktop` → `src/app.js`, `src/api.js`
+> y este informe. **Sin cambios** en `backend/` ni en `docs/AVANCES/MOVIL COMMERCITY/commercity-mobile`.
+> Verificación: `node --check src/app.js` y `node --check src/api.js` → **OK** (ambos).
+
+| # | Sev. | Hallazgo del review | Corrección aplicada | Punto de entrada |
+|---|---|---|---|---|
+| 1 | ALTO (b) | `cargarAdminTablas()` pintaba `${u.nombre\|\|u.email}`, `${u.rol}`, `${p.nombre}` y `${p.vendedor}` crudos en las tablas del admin (XSS almacenado en sesión de administrador). | `escHtml()` en cada interpolación, incluido el atributo `class="role-badge role-…"` (ruptura de atributo). | `cargarAdminTablas()` |
+| 2 | ALTO (b) | `renderProductsHome()` pintaba `${p.img}` (src), `${p.nombre}` y `${p.vendedor}` crudos; con `PRODUCTS` 100% data de API cualquier vendedor podía inyectar `<img src=x onerror=…>`. | `escHtml()` en nombre/vendedor + helper nuevo `imgSrcSafe()` que limita el `src` a orígenes conocidos (`http(s)`, `data:image/*` o ruta relativa resuelta contra `API_URL`); cualquier otro valor → `src=""`. | `imgSrcSafe()` (junto a `absImg`), `renderProductsHome()` |
+| 3 | ALTO (a) | `renderPedidos()` usaba `id = referencia_pedido` (**por pedido**): dos líneas del mismo pedido compartían id y `updatePedidoEstado()`/`openDetallePedido()` resolvían siempre la primera fila. Además leía `dir: v.direccion_envio` y `productKey: String(v.producto_id)`, campos que `GET /api/tienda/ventas` **no devuelve**. | Clave única por línea: `'PED-' + pedido_id + '-' + dp.id`; `updatePedidoEstado()` y `openDetallePedido()` buscan por esa clave. `dir`/`productKey` **eliminados** del mapeo API (el endpoint no los expone): la columna Dirección muestra `—` (las semillas locales conservan sus valores). | `renderPedidos()`, `updatePedidoEstado()`, `openDetallePedido()` |
+| 4 | ALTO (a) | El `<select>` de estado ofrecía Pendiente/En camino/Entregado sin restricción; el backend exige exactamente `nivel+1` (`ESTADO_NIVEL`) → 409 "Transición inválida". | Solo se habilita la opción `nivel(actual)+1` (Pendiente→En camino, En camino→Entregado); el resto va `disabled`, y el estado actual queda `selected`. Estados fuera del catálogo (p.ej. `Cancelado`) muestran una única opción deshabilitada. `updatePedidoEstado()` valida la transición antes de llamar al servidor. | `NIVEL_ESTADO_PEDIDO`, `renderPedidos()`, `updatePedidoEstado()` |
+| 5 | MEDIO (b) | XSS batch: ventas de tienda (`nombre_producto`/`nombre_comprador`/`fecha_pedido`), `cargarMisProductos()` (`nombre` + `src`), `openSeguidores()` (`nombre` + `src`), `renderAdminReportesTable()` (`reportado`/`fecha`), `renderPedidos()` (`cliente`/`dir`/`producto`) y el eco local de `sendMsg()` pintaban datos sin escapar. | `escHtml()` en todos los puntos anteriores; los `src` pasan por `imgSrcSafe()` + `escHtml()`. | `renderTiendaStats()`, `cargarMisProductos()`, `openSeguidores()`, `renderAdminReportesTable()`, `renderPedidos()`, `sendMsg()` |
+| 6 | LEVE (a/c) | `adminAccionReporte()` dependía de `actual._usuarioId/_productoId`, que nunca se asignaban (solo `_apiId`) → Banear/Eliminar caían siempre al fallback "Acción registrada localmente". Además `guardarCuentaBancaria` no validaba `tipo_cuenta` contra el placeholder ("Seleccionar tipo") → 400 `z.enum(["ahorros","corriente"])`. | Al construir `REPORTES['api-<id>']` desde `api.adminReportes()` se poblan `_usuarioId`/`_productoId` con el `reportadoId` que devuelve `mapearReporte` (según `tipo`). Validación de `tipo_cuenta ∈ {ahorros, corriente}` antes de enviar en **ambos** formularios (tienda y admin). | `cargarAdminTablas()`, `guardarCuentaBancaria()`, `guardarCuentaAdmin()` |
+| 7 | ALTO (a) | `api.seguir()` enviaba `{usuario_id}` pero `seguidores.controllers.js` (zod) valida `{seguido_id}` → `POST /api/seguidores` respondía **400 siempre**. | Body corregido a `{ seguido_id }` (mismo fix que el repo móvil). El retry del caller en `toggleFollowSeller()` se conserva como redundancia. | `src/api.js:73`, `toggleFollowSeller()` |
+| 8 | — | Fidelidad de este informe (eje d): alcance declarado incompleto, afirmación de `escHtml()` exagerada y `signAndEditExecutable` sin documentar. | §6 "Cierre de pendings" ahora declara el alcance real (`src/app.js` + `src/index.html` + `package.json`), la afirmación de `escHtml()` queda matizada (solo 3 puntos en esa iteración) y la bandera `build.win.signAndEditExecutable: false` se documenta en Notas. | este documento |
+
+**Notas sobre el alcance de estas correcciones**
+
+- Extras incluidos por ser el mismo vector/función: escapado en `openDetallePedido()` (mismos campos que
+  `renderPedidos()`) y guard de transición en `updatePedidoEstado()` (refuerzo del punto 4).
+- **No se tocó** (fuera del alcance indicado): el hallazgo **CRITICO** del review
+  (XSS almacenado en el panel admin móvil, `commercity-mobile/www/app.js:2050,2054`) y el resto de
+  findings de los repos móvil/backend/harness (`docs/AVANCES/PRUEBAS/harness_capa_red.mjs:398`,
+  `INFORME_RAMA_MOVIL_2026-09-27.md:105`).
+- `GET /api/tienda/ventas` **no expone** `direccion_envio` ni `producto_id` (`tienda.controllers.js`,
+  SELECT de `getHistorialVentas`): para rellenar la columna Dirección con dato real haría falta exponer
+  ese campo desde el backend (queda como deuda abierta, no se inventan datos).

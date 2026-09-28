@@ -45,3 +45,32 @@ Nuevas llamadas `api.*` cableadas desde UI hoy: cancelar compra, avanzar estado 
 - **Modelo de agentes**: la instrucción fue `opencode/muse-spark-1.3-contributor-free` (+`xhigh` vía `opencode.jsonc`). Ese modelo fue aceptado por el CLI pero **no respondió** (hang de 240s en prueba trivial "Responde unicamente: OK"); el TUI de los agentes hizo **fallback a MiMo V2.6 Flash** (visible en la barra de estado de los paneles) y todo el trabajo se completó con él. La preferencia muse-spark queda pendiente de un pase de review cuando el endpoint responda.
 - Residuos efímeros en la BD compartida (clase runner, sin riesgo): cuentas `harness.*`/`harness2.*` (una dada de baja), pedidos pagados de prueba, calificaciones, reportes, productos `ZzHARNESS` (quedan **Agotados**), cuentas bancarias cifradas efímeras.
 - Backend dejado corriendo en el pane Herdr `w4:pG` (`npm start`); detenerlo con Ctrl+C en ese pane si ya no se necesita.
+
+---
+
+## Validacion complementaria (2026-09-28 tarde) - cierre total
+
+### 1. RF4 (recuperacion/reset) - el ultimo hueco: 12/12 OK
+- `docs/AVANCES/PRUEBAS/rf4_recover_reset.mjs` sobre los `api.js` REALES de ambos clientes (backend en modo simulacion de correo: el link se imprime en la consola del servidor):
+  - register efimero -> `recover` (link real) -> `resetPassword` con token -> `login` con pass nueva -> reuso del token -> **400 (un solo uso)**; ademas email inexistente -> mensaje uniforme (anti-enumeracion) y token invalido -> 400 "El enlace es invalido o ya fue utilizado".
+  - **0 FAIL** en movil y escritorio. Cierra la "cobertura delegada al runner: recover/reset-password".
+
+### 2. Gate final de backend: **328/328** (22 archivos)
+
+### 3. Pase de review de los pendings + correcciones aplicadas
+- **Review independiente** (agente Herdr `reviewer`, ambos repos en solo lectura, contratos verificados contra `backend/src/server/controllers/*.js`): **VEREDICTO: HALLAZGOS CRITICOS - 34 hallazgos (1 critico, 6 altos, 13 medios, 10 leves, 4 info)**. Detalle completo: `docs/AVANCES/PRUEBAS/REVIEW_findings.md` (copia local).
+- **Correcciones aplicadas** (agentes `movil-fix2` + `escritorio-fix2` + 2 residuales del coordinador):
+  - **CRITICO**: XSS almacenado en panel admin movil (`motivo`/`rep`/`fecha`/`estado` crudos en `innerHTML` + `onclick`) -> `escAttr` + `onclick` solo con id numerico.
+  - **ALTOS**: `api.seguir` -> `{seguido_id}` en AMBLES clientes (antes `POST /api/seguidores` daba 400 siempre en movil); pasarela movil ahora lee `data.totales` (antes mostraba $0 mientras cobraba el real); stats de tienda movil desde `data.tarjetas`; escritorio `renderPedidos` con clave unica por linea + `dir/productKey` reales; select de estado solo transicion +1 nivel (evita 409); XSS admin/catalogo en ambos.
+  - **MEDIO/LEVE**: batch `escAttr`/`escHtml` en pintados (carrito, seguidores, ventas, mis productos, echo de chat), `currentRatingContext=null` tras calificar, `tipo_cuenta` vs placeholder, `toggleNotifs` con `await`, `adminAccionReporte` con `_usuarioId/_productoId`.
+  - **Residuales del coordinador**: tarjeta "Mi Feed" movil y `renderNotifPanel` escritorio -> escapados.
+  - **Informes de rama corregidos**: afirmaciones infieles de `escAttr`/`escHtml` y alcance real de escritorio (tocaba `index.html` + `package.json`) -> secciones "Correcciones post-review 2026-09-28".
+- **Verificacion**: `node --check` OK en los 4 JS; harness de capa red **re-ejecutado: 102/102** (`api.seguir` ahora en verde; reintento raw acepta 409 duplicado); EVIDENCIA regenerada con la nota del fix.
+- **Residuales documentados (MEDIO/LEVE, no bloqueantes)**: fallback offline del carrito movil eliminado (cambio de comportamiento documentado), `GET /api/tienda/ventas` no expone `direccion_envio` (requiere cambio de backend para esa columna), deuda tecnica de definiciones duplicadas preexistentes. Todo en `REVIEW_findings.md`.
+
+### 4. Modelo de agentes (actualizacion)
+- `opencode/muse-spark-1.3-contributor-free` **sigue sin responder** (5 sondeos acumulados: 90/150/240/120/120 s, siempre silencio). El review y las correcciones corrieron con el **modelo por defecto de opencode (MiMo-V2.6-Flash)**. El pase "review con muse-spark" queda **bloqueado por el endpoint, no por el codigo**.
+- El backend se reinicio hoy en el pane `w4:pK` (el `w4:pG` original cerro con los paneles); detenerlo con Ctrl+C ahi.
+
+### 5. Snapshot `apps/` re-sincronizado
+- Tras las correcciones: `apps/movil/www/{app.js,api.js,index.html}` y `apps/escritorio/src/{app.js,api.js}` actualizados en el mismo commit que esta validacion.

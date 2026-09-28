@@ -102,7 +102,10 @@
 - Estados normalizados con `claveEstado()`/`claseBadge()` (`pendiente|camino|entregado|cancelado`) y avatares deterministas por nombre (`colorAvatar`).
 - `cargarPedidos()` usaba campos inexistentes (`v.comprador`, `v.producto`, `v.total`); ahora lee los reales de `api.ventas` (`nombre_comprador`, `nombre_producto`, `valor_subtotal`, `fecha_pedido`).
 - `cargarMensajes()` preserva la tarjeta de producto del chat, repinta solo `.msg-wrap` y marca como leídos los entrantes.
-- Escapado de HTML (`escAttr`) en todo lo que pinta datos del servidor (nombres, previews, notificaciones, burbujas).
+- **`escAttr` en todo lo que pinta datos del servidor (nombres, previews, notificaciones, burbujas)** → *afirmación CORREGIDA el 2026-09-28: era falsa.*
+  - **Sí estaba escapado en esta rama (2026-09-27):** tablas de *Pedidos* (`cargarPedidos`, `app.js` ~356-359) y *Historial* (~431-433), fila de notificaciones (~513-515), nombre/preview de conversaciones (~1396-1402) y burbujas de chat salientes (~1478). También el texto del mensaje entrante (`cargarMensajes`, ~477).
+  - **Quedaba SIN escapar (detectado por `REVIEW_findings.md`, eje b):** `productCardHTML()` (nombre y atributos `src`/`alt`, 78-82), `renderCart()` (nombre, categoría y `src`, 1071-1078), `renderFollowersList()` (nombre y rol/tipo, 1811-1819), el `href` de archivo adjunto del chat (477) y **todo el panel admin**: `cargarAdminUsuarios()`/`cargarAdminProductos()`/`cargarAdminReportes()` (1999-2058), incluidos los argumentos entre comillas simples de sus `onclick`.
+  - **Corregido el 2026-09-28** → ver la sección *Correcciones post-review 2026-09-28* al final de este informe.
 
 ### Llamadas API nuevas desde la UI
 | Endpoint | Disparador nuevo |
@@ -125,3 +128,41 @@
 1. E2E real con la API corriendo en el emulador (`10.0.2.2:3000`): los 69 endpoints del brief más los nuevos de la tabla anterior.
 2. Probar el rechazo 400 de `confirmarPago` (tarjeta/dirección) con datos reales.
 3. `openChat` desde las 3 tarjetas estáticas de `page-mensajes` sigue sin `userId` (fallback local deliberado): al reemplazarlas por `cargarConversaciones()` todas las filas reales sí llevan id.
+
+---
+
+## Correcciones post-review 2026-09-28
+
+> **Fuente:** `docs/AVANCES/PRUEBAS/REVIEW_findings.md` (tablas de los ejes **a** contrato, **b** seguridad, **c** regresiones).
+> **Alcance:** SOLO `docs/AVANCES/MOVIL COMMERCITY/commercity-mobile/www/` (`app.js`, `api.js`, `index.html`) + este informe.
+> **No se tocó** `backend/` ni `docs/AVANCES/ESCRITORIO COMMERCITY/…`.
+> **Verificación:** `node --check www/app.js` → OK; `node --check www/api.js` → OK.
+> Nota: la lista de trabajo marcó el hallazgo 5 como ALTO; en el review figura como MEDIO (se corrigió igual).
+> Las referencias de línea citadas son las del review (el `app.js` ya se movió tras estas correcciones).
+> Los hallazgos CRÍTICO de `cargarAdminReportes` y la afirmación de este informe (eje d) fueron los que
+> `INFORME_RAMA_ESCRITORIO_2026-09-27.md` §7 dejó expresamente pendientes para esta rama.
+
+### Corregidos
+
+| # | Sev. (REVIEW) | Hallazgo | Corrección aplicada |
+|---|---|---|---|
+| 1 | **CRÍTICO** | `cargarAdminReportes()` (app.js:2050,2054): `motivo`, `rep`, `fecha` y `estado` —texto libre de cualquier usuario— se interpolaban crudos en `innerHTML` **y** dentro del argumento del `onclick` → XSS almacenado en la sesión del admin | `escAttr()` en los 6 campos del HTML; el `onclick` ahora solo lleva el **id numérico** (`openAdminReportDetailById(${rid})`) y el resto se lee de `ADMIN_REPORTES_CACHE` en memoria. El `data-report-id` (usado por `adminAction`) también va con `escAttr` |
+| 2 | **ALTO** | `cargarAdminUsuarios()`/`cargarAdminProductos()` (1999-2028): `nombre`, `rol`, `email`, `vend`, `estado` crudos, también como argumentos entre comillas simples del `onclick` | `escAttr()` en todo el texto **y** en los `data-*` de la tarjeta; los argumentos del `onclick` se pasan ahora por `this.dataset.*` (patrón `data-*` + lectura, la alternativa que propone el propio review y la única realmente segura dentro de un atributo) |
+| 3 | **ALTO** | `api.seguir()` (api.js:72) enviaba `{usuario_id}`; el zod de `seguidores.controllers.js` exige `{seguido_id}` → **400 siempre** | Cuerpo cambiado a `{ seguido_id }` (firma `seguir(seguido_id)`) |
+| 4 | **ALTO** | `openPasarela()` (1177) leía `data.subtotal/iva/total`, pero `GET /api/pedidos/resumen` devuelve `data.totales.{subtotal,iva,total}` → subtotal/IVA/total pintados en 0 | `const t = (body.data \|\| {}).totales \|\| body.data \|\| {}` y se leen `t.subtotal`/`t.iva`/`t.total` con fallback a `subtotal + iva` y guarda `NaN → 0` |
+| 5 | **MEDIO** | `cargarTienda()` (306) leía `ventas_totales`/`dinero_recaudado` en la raíz de `data`; el backend expone `data.tarjetas.{unidades_vendidas,total_neto_vendedor,total_comision}` y `data.por_estado` → nunca se pintaban | Se lee `data.tarjetas` + `data.por_estado`. Las 2 tarjetas existentes pintan `unidades_vendidas` y `total_neto_vendedor`; se añadieron en `index.html` 3 tarjetas (`#tienda-comision`, `#tienda-entregados`, `#tienda-pendientes`, ids iguales a los del escritorio) para `total_comision` y el desglose `por_estado` |
+| 6 | **MEDIO/LEVE** | XSS por falta de escape: `productCardHTML()` (78-82), `renderCart()` (1071-1078), `renderFollowersList()` (1811-1819) y `href` de `archivo_url` (477) | `escAttr()` en texto y en atributos (`src`, `alt`, `href`). En `renderFollowersList` el `onclick` de *Seguir* solo recibe `uid` numérico validado con `Number.isFinite` |
+| 7 | **LEVE** | (a) `calificarVendedor` no limpiaba `currentRatingContext` tras el éxito (`pedido_id` es UNIQUE → error sin contexto en un 2.º intento); (b) `saveBankAccount` no validaba `tipo_cuenta` contra el placeholder; (c) `toggleNotifs` marcaba y repintaba en paralelo | (a) `currentRatingContext = null` tras el toast de éxito (2305). (b) valida `tipo_cuenta ∈ {ahorros, corriente}` y rechaza el placeholder (`Selecciona tipo`) antes de enviar. (c) `toggleNotifs` es `async` y **espera** `api.marcarTodasLeidas()` antes de `cargarNotificaciones()` |
+| 8 | **ALTO** | Este informe afirmaba (sección *Mejoras de render*) "`escAttr` en todo lo que pinta datos del servidor" | Afirmación corregida con el detalle de lo que sí estaba escapado y lo que no; añadida esta sección |
+
+### Quedan pendientes (hallazgos móviles del review NO corregidos en esta corrida)
+
+| Sev. | Hallazgo | Motivo |
+|---|---|---|
+| MEDIO | `app.js:123, 1025-1035` — el fallback offline del carrito quedó eliminado (`saveCart` no-op, `renderCart` fuerza carrito vacío sin API/sesión) | Requiere decisión de producto (restaurar caché local de solo lectura vs. documentar el cambio de comportamiento); fuera de la lista de correcciones pedida |
+| LEVE | `app.js:367` — `actualizarEstadoPedido()` no envía `detalle_id`: si el comprador canceló una línea, el backend responde 409 y el vendedor no puede avanzar ninguna | Cambio de contrato/UX (enviar `detalle_id` por fila y/o excluir `Cancelado`); fuera de la lista pedida |
+| INFO | `app.js:289-296, 441-444` — `resolverVendedorId()` resuelve el `vendedor_id` por **nombre**; con vendedores homónimos se envía un id ajeno (403/404) | Se arregla exponiendo `vendedor_id` en `GET /api/historial/compras` (toque de backend, fuera de alcance) |
+
+### Observación adicional (no estaba en el review)
+
+- `switchPerfilTab()` → tarjeta "Mi Feed" (`app.js` ~2265-2280) pinta `p.img` (src), `p.name` y `p.vendor` **sin escapar**, mismo patrón que `productCardHTML()` antes de la corrección 6. No pertenecía a la lista exacta de correcciones de esta corrida; queda anotado para la siguiente iteración.

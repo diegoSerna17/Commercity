@@ -38,6 +38,17 @@ function escHtml(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+// Limita el src de imágenes de la API a orígenes conocidos: http(s), data:image/*
+// o ruta relativa que absImg() resuelve contra API_URL. Otro valor (p.ej. data:text/html
+// o una cadena manipulada) devuelve '' en vez de inyectarla en el atributo.
+function imgSrcSafe(ref) {
+  const src = absImg(ref);
+  if (!src) return '';
+  if (/^https?:\/\//i.test(src)) return src;
+  if (/^data:image\//i.test(src)) return src;
+  if (src === API_URL || src.indexOf(API_URL + '/') === 0) return src;
+  return '';
+}
 function mapProductoAPI(p) {
   const precioNum = Number(p.precio) || 0;
   const descPct = Number(p.descuento_porcentaje ?? p.descuento ?? 0) || 0;
@@ -754,8 +765,8 @@ async function openSeguidores(tab) {
         const name = u.nombre_completo || u.nombre || u.email || 'Usuario';
         const av = u.foto_perfil ? absImg(u.foto_perfil) : '';
         return `<div class="seg-row">
-          <div class="seg-av">${av ? `<img src="${av}" alt=""/>` : name[0].toUpperCase()}</div>
-          <span class="seg-name">${name}</span>
+          <div class="seg-av">${av ? `<img src="${escHtml(imgSrcSafe(av))}" alt=""/>` : escHtml(name[0].toUpperCase())}</div>
+          <span class="seg-name">${escHtml(name)}</span>
         </div>`;
       }).join('') || '<div style="padding:24px;text-align:center;color:var(--text2);font-size:13px">Sin usuarios por aquí todavía</div>';
       modal.classList.add('show');
@@ -1106,7 +1117,7 @@ async function sendMsg() {
   const container = document.getElementById('chat-messages');
   const div = document.createElement('div');
   div.className = 'msg-bubble msg-out';
-  div.innerHTML = `<div class="msg-text">${txt}</div><div class="msg-time">Ahora</div>`;
+  div.innerHTML = `<div class="msg-text">${escHtml(txt)}</div><div class="msg-time">Ahora</div>`;
   container.appendChild(div);
   inp.value = '';
   container.scrollTop = container.scrollHeight;
@@ -1544,7 +1555,8 @@ async function toggleFollowSeller(sellerName) {
       } else {
         try { await api.seguir(uid); }
         catch (e) {
-          // El brief envía {usuario_id} pero el backend valida {seguido_id}.
+          // `api.seguir` ya envía {seguido_id}: este reintento queda como redudancia
+          // por si el body llegara mal formado (400 de validación zod).
           if (e && (e.code === 'VALIDATION_ERROR' || e.status === 400)) {
             await apiRequest('/api/seguidores', { method: 'POST', body: JSON.stringify({ seguido_id: uid }) });
           } else throw e;
@@ -1675,8 +1687,8 @@ async function cargarAdminTablas() {
         const inicial = inicialesDe(u.nombre || u.email);
         const activo = (u.estado || 'activo') === 'activo';
         return `<tr>
-          <td><div style="display:flex;align-items:center;gap:8px"><div class="seller-av">${inicial}</div>${u.nombre || u.email}</div></td>
-          <td><span class="role-badge role-${(u.rol || 'comprador').toLowerCase()}">${u.rol || 'Comprador'}</span></td>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="seller-av">${escHtml(inicial)}</div>${escHtml(u.nombre || u.email)}</div></td>
+          <td><span class="role-badge role-${escHtml((u.rol || 'comprador').toLowerCase())}">${escHtml(u.rol || 'Comprador')}</span></td>
           <td><span class="${activo ? 'status-active' : 'status-banned'}">${activo ? 'Activo' : 'Baneado'}</span></td>
           <td><div class="admin-btn-row">
             <button class="btn ${activo ? 'btn-ghost' : 'btn-orange'} btn-sm" style="padding:4px 10px;font-size:11px" onclick="adminCambiarEstadoUsuario('${u.id}','${activo ? 'baneado' : 'activo'}')">${activo ? 'Banear' : 'Activar'}</button>
@@ -1691,8 +1703,8 @@ async function cargarAdminTablas() {
     const prods = Array.isArray(d.productos) ? d.productos : (Array.isArray(d) ? d : []);
     if (prods.length) {
       tb.productos.innerHTML = prods.map(p => `<tr>
-        <td><div style="font-size:12px;font-weight:600">${p.nombre || '—'}</div><div style="font-size:11px;color:var(--text2)">${p.precio != null ? fmtCOP(Number(p.precio)) : ''}</div></td>
-        <td style="font-size:12px;color:var(--text2)">${p.vendedor || ''}</td>
+        <td><div style="font-size:12px;font-weight:600">${escHtml(p.nombre || '—')}</div><div style="font-size:11px;color:var(--text2)">${p.precio != null ? fmtCOP(Number(p.precio)) : ''}</div></td>
+        <td style="font-size:12px;color:var(--text2)">${escHtml(p.vendedor || '')}</td>
         <td><div style="display:flex;gap:6px">
           <button class="btn btn-sm" style="padding:4px 8px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)" onclick="adminEliminarProductoAccion('${p.id}')">🗑</button>
           ${p.eliminado ? `<button class="btn btn-orange btn-sm" style="padding:4px 8px;font-size:11px" onclick="adminRestaurarProductoAccion('${p.id}')">Restaurar</button>` : ''}
@@ -1710,6 +1722,10 @@ async function cargarAdminTablas() {
         const resuelto = /resuelt/i.test(r.estado_reporte || r.estado || '');
         REPORTES[key] = {
           _apiId: r.id,
+          // El backend expone `reportadoId` (producto_id | usuario_reportado_id según
+          // `tipo`); sin estos ids, adminAccionReporte() caía siempre al fallback local.
+          _usuarioId: esProd ? null : (r.reportadoId ?? null),
+          _productoId: esProd ? (r.reportadoId ?? null) : null,
           tipo: esProd ? 'Producto' : 'Usuario',
           tipoCls: esProd ? 'badge-blue' : 'badge-orange',
           reportado: r.reportado || r.producto || r.usuario || ('Reporte #' + r.id),
@@ -1863,8 +1879,8 @@ function renderAdminReportesTable() {
         return `
           <tr>
             <td><span class="badge ${r.tipoCls}" style="font-size:10px">${r.tipo}</span></td>
-            <td style="font-size:12px">${r.reportado}</td>
-            <td style="font-size:11px;color:var(--text2)">${r.fecha}</td>
+            <td style="font-size:12px">${escHtml(r.reportado)}</td>
+            <td style="font-size:11px;color:var(--text2)">${escHtml(r.fecha)}</td>
             <td><span class="badge ${r.estadoCls}" style="font-size:10px">${r.estado}</span></td>
             <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte('${key}')">${r.estado === 'Pendiente' ? 'Responder' : 'Ver'}</button></td>
           </tr>
@@ -2057,10 +2073,10 @@ function renderNotifPanel() {
   }
   list.innerHTML = notifications.map(n => `
     <div class="notif-item" style="${!n.read?'background:rgba(239,153,24,.05)':''}" onclick="clickNotif(${n.id})">
-      <div class="notif-icon">${n.tipo}</div>
+      <div class="notif-icon">${escHtml(n.tipo)}</div>
       <div style="flex:1;min-width:0">
-        <div class="notif-text">${n.desc}</div>
-        <div class="notif-time">${n.time}</div>
+        <div class="notif-text">${escHtml(n.desc)}</div>
+        <div class="notif-time">${escHtml(n.time)}</div>
       </div>
       <button onclick="event.stopPropagation();deleteNotif(${n.id})"
         style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 6px;border-radius:4px;transition:color .12s"
@@ -2328,9 +2344,9 @@ async function renderTiendaStats() {
         const est = v.estado_envio || v.estado || 'Pendiente';
         const cls = est === 'Entregado' ? 'badge-green' : (est === 'Cancelado' ? 'badge-red' : 'badge-orange');
         return `<tr>
-          <td style="font-weight:600">${v.nombre_producto || v.producto || '—'} ×${v.cantidad ?? 1}</td>
-          <td>${v.nombre_comprador || v.comprador || '—'}</td>
-          <td style="color:var(--text2);font-size:11px">${v.fecha_pedido || v.fecha || ''}</td>
+          <td style="font-weight:600">${escHtml(v.nombre_producto || v.producto || '—')} ×${v.cantidad ?? 1}</td>
+          <td>${escHtml(v.nombre_comprador || v.comprador || '—')}</td>
+          <td style="color:var(--text2);font-size:11px">${escHtml(v.fecha_pedido || v.fecha || '')}</td>
           <td>${fmtCOP(bruto)}</td>
           <td style="color:var(--red);font-size:11px">${fmtCOP(com)}</td>
           <td style="color:var(--green);font-weight:700">${fmtCOP(neto)}</td>
@@ -2353,6 +2369,11 @@ async function renderTiendaStats() {
   renderTiendaStatsLocal();
 }
 
+// Niveles de estado de envío (espejo de ESTADO_NIVEL en pedidos.controllers.js):
+// el backend solo admite avanzar EXACTAMENTE +1 nivel y devuelve 409 en cualquier
+// otra transición (p.ej. Pendiente→Entregado o re-seleccionar el estado actual).
+const NIVEL_ESTADO_PEDIDO = { 'Pendiente': 0, 'En camino': 1, 'Entregado': 2 };
+
 async function renderPedidos() {
   // Sincronizar pedidos del vendedor desde api.ventas (fallback: caché local).
   try {
@@ -2361,14 +2382,17 @@ async function renderPedidos() {
     const itemsV = Array.isArray(vd.items) ? vd.items : (Array.isArray(vd.ventas) ? vd.ventas : (Array.isArray(vd) ? vd : []));
     if (itemsV.length) {
       pedidosVendedor = itemsV.map(v => ({
-        id: v.referencia_pedido || ('PED-' + v.pedido_id),
+        // Clave única por LÍNEA de pedido: `referencia_pedido` es por pedido y dos
+        // líneas del mismo pedido compartirían id (updatePedidoEstado/openDetallePedido
+        // resolvían siempre la primera fila). El sufijo es `dp.id` (detalle).
+        id: 'PED-' + v.pedido_id + '-' + v.id,
         _pedidoId: v.pedido_id,
         _detalleId: v.id,
         cliente: v.nombre_comprador || v.comprador || '—',
-        dir: v.direccion_envio || '—',
+        // `GET /api/tienda/ventas` no expone direccion_envio ni producto_id: no se
+        // inventan valores (dir/productKey quedan solo en las semillas locales).
         fecha: (v.fecha_pedido || '').toString().slice(0, 10),
         producto: v.nombre_producto || v.producto || '—',
-        productKey: String(v.producto_id || ''),
         qty: Number(v.cantidad ?? 1),
         precio: Number(v.valor_unitario ?? v.valor_subtotal ?? 0),
         estado: v.estado_envio || v.estado || 'Pendiente',
@@ -2383,24 +2407,32 @@ async function renderPedidos() {
   const data = pedidoFiltroActual === 'Todo' ? pedidosVendedor : pedidosVendedor.filter(p => p.estado === pedidoFiltroActual);
   tbody.innerHTML = data.map(p => {
     const cls = p.estado==='Entregado'?'badge-green':p.estado==='En camino'?'badge-orange':'badge-red';
+    const cliente = String(p.cliente || '?');
+    const ini = cliente[0] + (cliente.split(' ')[1]?.[0] || '');
+    // Solo se ofrece la transición nivel(actual)+1; el resto va `disabled` (409 del backend).
+    const nivelActual = NIVEL_ESTADO_PEDIDO[p.estado];
+    const nivelSiguiente = nivelActual === undefined ? -1 : nivelActual + 1;
+    const opciones = nivelActual === undefined
+      ? `<option value="" selected disabled>${escHtml(p.estado || '—')}</option>`
+      : Object.keys(NIVEL_ESTADO_PEDIDO).map((e, i) =>
+          `<option value="${e}"${e === p.estado ? ' selected' : ''}${i === nivelSiguiente ? '' : ' disabled'}>${e}</option>`
+        ).join('');
     return `<tr>
-      <td><div class="seller-cell"><div class="seller-av">${p.cliente[0]}${p.cliente.split(' ')[1]?.[0]||''}</div>${p.cliente}</div></td>
-      <td style="font-size:11px;color:var(--text2);max-width:130px">${p.dir}</td>
-      <td style="font-size:11px;color:var(--text2)">${p.fecha}</td>
-      <td style="font-size:12px">${p.producto}</td>
+      <td><div class="seller-cell"><div class="seller-av">${escHtml(ini)}</div>${escHtml(cliente)}</div></td>
+      <td style="font-size:11px;color:var(--text2);max-width:130px">${escHtml(p.dir || '—')}</td>
+      <td style="font-size:11px;color:var(--text2)">${escHtml(p.fecha)}</td>
+      <td style="font-size:12px">${escHtml(p.producto)}</td>
       <td style="text-align:center">${p.qty}</td>
-      <td><span class="badge ${cls}">${p.estado}</span></td>
+      <td><span class="badge ${cls}">${escHtml(p.estado)}</span></td>
       <td style="font-size:12px;color:var(--text2)">${fmtCOP(p.precio)}</td>
       <td style="font-weight:600">${fmtCOP(p.precio*p.qty)}</td>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
-          <select onchange="updatePedidoEstado('${p.id}',this.value)"
+          <select onchange="updatePedidoEstado('${escHtml(p.id)}',this.value)"
             style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:11px;color:var(--text);font-family:var(--ui);cursor:pointer;outline:none">
-            <option value="Pendiente" ${p.estado==='Pendiente'?'selected':''}>Pendiente</option>
-            <option value="En camino" ${p.estado==='En camino'?'selected':''}>En camino</option>
-            <option value="Entregado" ${p.estado==='Entregado'?'selected':''}>Entregado</option>
+            ${opciones}
           </select>
-          <button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px" onclick="openDetallePedido('${p.id}')">Detalle</button>
+          <button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px" onclick="openDetallePedido('${escHtml(p.id)}')">Detalle</button>
         </div>
       </td>
     </tr>`;
@@ -2415,10 +2447,17 @@ function filtroPedido(estado, el) {
 }
 
 async function updatePedidoEstado(id, estado) {
+  // `id` es la clave única por línea ('PED-<pedido_id>-<detalle_id>'), por lo que
+  // dos líneas del mismo pedido ya no resuelven la primera fila por accidente.
   const p = pedidosVendedor.find(x => x.id === id);
   if (!p) return;
   // Estado real en el servidor (vendedor: "En camino" | "Entregado").
   if (p._pedidoId) {
+    const nivelActual = NIVEL_ESTADO_PEDIDO[p.estado];
+    if (nivelActual === undefined || NIVEL_ESTADO_PEDIDO[estado] !== nivelActual + 1) {
+      showToast('⚠️ Transición inválida: el servidor solo admite avanzar un nivel.');
+      return;
+    }
     try {
       await api.actualizarEstadoPedido(p._pedidoId, estado, p._detalleId);
     } catch (e) {
@@ -2440,6 +2479,7 @@ async function updatePedidoEstado(id, estado) {
 }
 
 function openDetallePedido(id) {
+  // `id` = clave única por línea ('PED-<pedido_id>-<detalle_id>').
   const p = pedidosVendedor.find(x => x.id === id);
   if (!p) return;
   
@@ -2447,17 +2487,18 @@ function openDetallePedido(id) {
   const panel = overlay.querySelector('.detalle-panel');
   const total = p.precio * p.qty;
   const cls = p.estado==='Entregado'?'badge-green':p.estado==='En camino'?'badge-orange':'badge-red';
+  const cliente = String(p.cliente || '?');
   
   panel.innerHTML = `
-    <div class="detalle-title">Detalle del pedido ${p.id} <span class="badge ${cls}" style="font-size:11px;margin-left:8px">${p.estado}</span></div>
-    <div class="detalle-date">Fecha: ${p.fecha}</div>
+    <div class="detalle-title">Detalle del pedido ${escHtml(p.id)} <span class="badge ${cls}" style="font-size:11px;margin-left:8px">${escHtml(p.estado)}</span></div>
+    <div class="detalle-date">Fecha: ${escHtml(p.fecha)}</div>
     <div class="btn-seller-row">
-      <div class="seller-av">${p.cliente[0]}</div>
-      <div><div style="font-size:13px;font-weight:600">${p.cliente}</div></div>
+      <div class="seller-av">${escHtml(cliente[0] || '?')}</div>
+      <div><div style="font-size:13px;font-weight:600">${escHtml(cliente)}</div></div>
     </div>
-    <div class="detalle-lbl">Comprador</div><div class="detalle-val">${p.cliente}</div>
-    <div class="detalle-lbl">Dirección de envío</div><div class="detalle-val">${p.dir}</div>
-    <div class="detalle-lbl">Producto solicitado</div><div class="detalle-val">${p.producto}<br><span style="color:var(--text2)">Cantidad: ${p.qty} unidades</span></div>
+    <div class="detalle-lbl">Comprador</div><div class="detalle-val">${escHtml(cliente)}</div>
+    <div class="detalle-lbl">Dirección de envío</div><div class="detalle-val">${escHtml(p.dir || '—')}</div>
+    <div class="detalle-lbl">Producto solicitado</div><div class="detalle-val">${escHtml(p.producto)}<br><span style="color:var(--text2)">Cantidad: ${p.qty} unidades</span></div>
     <div class="detalle-total">
       <span class="detalle-total-lbl">Precio total del pedido</span>
       <span class="detalle-total-val">${fmtCOP(total)}</span>
@@ -2539,9 +2580,9 @@ async function cargarMisProductos() {
       const descPct = Number(p.descuento_porcentaje ?? 0) || 0;
       const final = descPct > 0 ? Math.round(precioNum * (1 - descPct / 100)) : precioNum;
       return `<div class="feed-card">
-        ${img ? `<img src="${img}" alt=""/>` : ''}
+        ${img ? `<img src="${escHtml(imgSrcSafe(img))}" alt=""/>` : ''}
         <div class="feed-edit-btn" onclick="handleEditProduct('${p.id}')">✏</div>
-        <div class="feed-card-body"><div class="feed-card-name">${p.nombre || 'Producto'}</div>
+        <div class="feed-card-body"><div class="feed-card-name">${escHtml(p.nombre || 'Producto')}</div>
         ${descPct > 0 ? `<div class="feed-card-old">${fmtCOP(precioNum)}</div>` : ''}
         <div class="feed-card-price">${fmtCOP(final)}</div></div>
       </div>`;
@@ -2614,6 +2655,11 @@ async function guardarCuentaBancaria() {
   if (!datos.titular_nombre || !datos.banco || !datos.numero_cuenta) {
     showToast('⚠️ Completa titular, banco y número de cuenta.'); return;
   }
+  // El placeholder del select ("Seleccionar tipo") no es un valor válido:
+  // el backend responde 400 por z.enum(["ahorros","corriente"]).
+  if (!/^(ahorros|corriente)$/.test(datos.tipo_cuenta || '')) {
+    showToast('⚠️ Selecciona el tipo de cuenta (Ahorros o Corriente).'); return;
+  }
   try {
     await api.guardarCuentaBancaria(datos);
     showToast('✅ Cuenta bancaria guardada de forma segura.');
@@ -2627,6 +2673,10 @@ async function guardarCuentaAdmin() {
   const datos = leerCuentaBancaria('admin-bank');
   if (!datos.titular_nombre || !datos.banco || !datos.numero_cuenta) {
     showToast('⚠️ Completa titular, banco y número de cuenta.'); return;
+  }
+  // Mismo control que guardarCuentaBancaria: el placeholder no pasa el z.enum del backend.
+  if (!/^(ahorros|corriente)$/.test(datos.tipo_cuenta || '')) {
+    showToast('⚠️ Selecciona el tipo de cuenta (Ahorros o Corriente).'); return;
   }
   try {
     await api.adminGuardarCuentaBancaria(datos);
@@ -2677,13 +2727,13 @@ function renderProductsHome(customList = null) {
     return `
       <div class="prod-card" onclick="openProd('${p.key}')" style="${isAgotado ? 'opacity: 0.75;' : ''}">
         <div class="prod-img">
-          <img src="${p.img}" alt=""/>
+          <img src="${escHtml(imgSrcSafe(p.img))}" alt=""/>
           ${discountHtml}
           ${agotadoLabel}
         </div>
         <div class="prod-body">
-          <div class="prod-name">${p.nombre}</div>
-          <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Vendedor: ${p.vendedor || 'CommerCity Store'}</div>
+          <div class="prod-name">${escHtml(p.nombre)}</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Vendedor: ${escHtml(p.vendedor || 'CommerCity Store')}</div>
           ${oldPriceHtml}
           <div class="prod-price">${p.precio}</div>
         </div>
