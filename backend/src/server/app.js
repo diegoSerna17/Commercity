@@ -28,12 +28,16 @@ app.disable("x-powered-by");
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(express.json({ limit: "10mb" }));
 // CORS: ademas del frontend web se permiten los origenes estandar de la
-// WebView de Capacitor (app movil Ionic), que envian su propio Origin.
+// WebView de Capacitor (app movil Ionic), que envian su propio Origin,
+// y los de Electron en modo loadFile (Origin "null" / "file://").
+// Nunca usar comodin "*".
 const CORS_ORIGINS = [
   process.env.FRONTEND_URL || "http://localhost:5173",
   "https://localhost",      // Capacitor Android (androidScheme https por defecto)
   "http://localhost",       // Capacitor Android con esquema http / dev
   "capacitor://localhost",  // Capacitor iOS
+  "null",                   // Electron loadFile envia Origin: null
+  "file://",                // Electron file:// (variante literal)
 ];
 app.use(cors({ origin: CORS_ORIGINS }));
 

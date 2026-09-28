@@ -55,6 +55,20 @@ describe("CORS (origenes permitidos: frontend web + WebView Capacitor)", () => {
     expect(res.headers["access-control-allow-origin"]).toBe("capacitor://localhost");
   });
 
+  it("permite Electron loadFile (Origin: null -> 204 con ACAO null)", async () => {
+    const res = await preflight("null");
+
+    expect(res.status).toBe(204);
+    expect(res.headers["access-control-allow-origin"]).toBe("null");
+  });
+
+  it("permite Electron file:// (Origin: file://)", async () => {
+    const res = await preflight("file://");
+
+    expect(res.status).toBe(204);
+    expect(res.headers["access-control-allow-origin"]).toBe("file://");
+  });
+
   it("no refleja un origen desconocido (https://malicioso.com)", async () => {
     const res = await preflight("https://malicioso.com");
 
