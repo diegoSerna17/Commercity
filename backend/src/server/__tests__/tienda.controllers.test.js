@@ -255,6 +255,11 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
     // El vendedor_id sale del token, no del query
     const llamadaVentas = pool.query.mock.calls.find(([sql]) => sql.includes("FROM detalle_pedidos dp"));
     expect(llamadaVentas[1][0]).toBe(3);
+    // Residual REVIEW 2026-09-28: la columna Direccion del escritorio exige
+    // p.direccion_envio en el SELECT de items de ventas.
+    const sqlItemsVentas = pool.query.mock.calls.find(([sql]) => sql.includes("AS nombre_comprador"));
+    expect(sqlItemsVentas).toBeTruthy();
+    expect(sqlItemsVentas[0]).toContain("p.direccion_envio");
   });
 
   it("GET /api/tienda/ventas aplica filtros por fecha y busqueda", async () => {

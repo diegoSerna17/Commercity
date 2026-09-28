@@ -120,7 +120,26 @@ async function renderMisProductos() {
 
 let cart = [];        // espejo local [{ key, qty, producto_id }]
 let cartServer = [];  // líneas crudas del servidor
-function saveCart() { /* sin-op: el servidor es la fuente de verdad del carrito */ }
+// Cache local de SOLO LECTURA del carrito (fallback offline, residual REVIEW
+// 2026-09-28). La fuente de verdad sigue siendo el servidor: saveCart() solo se
+// invoca tras una carga exitosa de la API y este cache JAMAS se envia al backend.
+function saveCart() {
+  try {
+    localStorage.setItem('commercity_cart', JSON.stringify({ v: 2, cart, cartServer }));
+  } catch (e) { /* sin storage: seguir sin cache */ }
+}
+function loadCartFallback() {
+  cart = [];
+  cartServer = [];
+  try {
+    const raw = localStorage.getItem('commercity_cart');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (!d || d.v !== 2 || !Array.isArray(d.cart)) return;
+    cart = d.cart;
+    cartServer = Array.isArray(d.cartServer) ? d.cartServer : [];
+  } catch (e) { /* cache corrupto: ignorar */ }
+}
 let pdQty = 1;
 let pdKey = null;
 
@@ -1041,14 +1060,12 @@ async function renderCart() {
   if (!container) return;
   const emptyHTML = '<div style="text-align:center;padding:48px;color:var(--text-muted);font-size:15px;">🛒 Tu carrito está vacío</div>';
   const cid = getCompradorId();
-  if (!cid || !apiReady()) {
-    cart = []; cartServer = [];
-    container.innerHTML = emptyHTML;
-    setCartSummary(0, 0);
-    return;
+  const offline = !cid || !apiReady();
+  if (offline) {
+    loadCartFallback(); // residual REVIEW: cache local de solo lectura
   }
 
-  try {
+  if (!offline) try {
     const body = await api.listarCarrito(cid);
     const raw = body.data;
     const items = Array.isArray(raw) ? raw : (raw && (raw.items || raw.lineas || raw.data)) || [];
@@ -1058,9 +1075,10 @@ async function renderCart() {
       qty: Number(it.cantidad) || 1,
       producto_id: it.producto_id ?? it.id
     }));
+    saveCart(); // cache local tras carga exitosa (solo lectura, no viaja al backend)
   } catch (err) {
     toast('⚠️ ' + apiErrorMessage(err));
-    return;
+    loadCartFallback(); // fallo de API: cae al cache local (solo lectura)
   }
 
   if (cart.length === 0) {

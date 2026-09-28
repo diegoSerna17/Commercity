@@ -188,3 +188,7 @@
 - `GET /api/tienda/ventas` **no expone** `direccion_envio` ni `producto_id` (`tienda.controllers.js`,
   SELECT de `getHistorialVentas`): para rellenar la columna Dirección con dato real haría falta exponer
   ese campo desde el backend (queda como deuda abierta, no se inventan datos).
+
+### Residuales del review cerrados (2026-09-28 tarde)
+- **`direccion_envio` en ventas (backend)**: `GET /api/tienda/ventas` ahora expone `p.direccion_envio` (SELECT + test unitario + verificacion en vivo: pedido 104 con `Calle QA Residual 12345`). La columna Direccion de `renderPedidos` queda poblada en caliente.
+- **Duplicados preexistentes eliminados (6)**: `cerrarPago`, `formatCardNumber`, `descargarComprobante`, `volverAlInicio`, `cambiarFotoPerfil`, `toggleNotif` (eliminada la 1a definicion muerta; gana la ultima por hoisting). Verificado: 0 duplicados top-level + `node --check` OK.

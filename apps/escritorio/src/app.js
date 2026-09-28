@@ -430,16 +430,7 @@ function abrirPago() {
   document.getElementById('pago-overlay').classList.add('show');
 }
 
-function cerrarPago(e) {
-  if (!e || e.target === document.getElementById('pago-overlay')) {
-    document.getElementById('pago-overlay').classList.remove('show');
-  }
-}
 
-function formatCardNumber(inp) {
-  let v = inp.value.replace(/\D/g,'').slice(0,16);
-  inp.value = v.match(/.{1,4}/g)?.join('-') || v;
-}
 
 function formatExpiry(inp) {
   let v = inp.value.replace(/\D/g,'').slice(0,4);
@@ -481,19 +472,7 @@ function confirmarPago() {
   renderCart();
 }
 
-function descargarComprobante() {
-  const txt = "CommerCity - Comprobante de pago\nFecha: " + new Date().toLocaleDateString('es-CO') + "\nEstado: APROBADO\n\n¡Gracias por tu compra!";
-  const blob = new Blob([txt], {type:'text/plain'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'comprobante-commercity.txt';
-  a.click();
-}
 
-function volverAlInicio() {
-  document.getElementById('pago-overlay').classList.remove('show');
-  navigate('home');
-}
 
 
 
@@ -584,25 +563,6 @@ async function doLogin() {
   }
 }
 
-function cambiarFotoPerfil(event, tipo) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const src = e.target.result;
-    // Actualizar imagen en perfil comprador y vendedor
-    ['comprador','vendedor'].forEach(t => {
-      const img = document.getElementById('prof-img-' + t);
-      const ini = document.getElementById('prof-initial-' + t);
-      if (img) { img.src = src; img.style.display = 'block'; }
-      if (ini) ini.style.display = 'none';
-    });
-    // Actualizar avatar sidebar y topbar
-    const sbAv = document.getElementById('sb-user-initial');
-    if (sbAv && currentUser) sbAv.textContent = currentUser.name[0].toUpperCase();
-  };
-  reader.readAsDataURL(file);
-}
 
 async function doLogout() {
   try { await api.logout(); } catch (e) { /* sesion local se limpia igual */ }
@@ -894,9 +854,6 @@ function togglePass(id) {
   el.type = el.type === 'password' ? 'text' : 'password';
 }
 
-function toggleNotif() {
-  document.getElementById('notif-panel').classList.toggle('show');
-}
 
 function closeProd(e)      { if (e.target === document.getElementById('prod-overlay')) closeProdDirect(); }
 function closeProdDirect() { document.getElementById('prod-overlay').classList.remove('show'); }

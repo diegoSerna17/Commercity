@@ -166,3 +166,6 @@
 ### Observación adicional (no estaba en el review)
 
 - `switchPerfilTab()` → tarjeta "Mi Feed" (`app.js` ~2265-2280) pinta `p.img` (src), `p.name` y `p.vendor` **sin escapar**, mismo patrón que `productCardHTML()` antes de la corrección 6. No pertenecía a la lista exacta de correcciones de esta corrida; queda anotado para la siguiente iteración.
+
+### Residual del review cerrado (2026-09-28 tarde)
+- **Fallback offline del carrito restaurado** (hallazgo MEDIO del review): `saveCart()` ahora persiste `commercity_cart` (solo lectura, unicamente tras carga exitosa de la API) y `renderCart()` usa `loadCartFallback()` cuando no hay sesion/API o la llamada falla, en vez de forzar carrito vacio. El servidor sigue siendo la fuente de verdad; el cache jamas viaja al backend.

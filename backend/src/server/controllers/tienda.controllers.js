@@ -216,7 +216,7 @@ export const getHistorialVentas = async (req, res, next) => {
          dp.cantidad, dp.precio_unitario_historico AS valor_unitario,
          dp.subtotal AS valor_subtotal, dp.monto_vendedor, dp.monto_comision,
          uc.nombre_completo AS nombre_comprador, uc.email AS email_comprador,
-         dp.estado_envio, p.fecha_pedido
+         dp.estado_envio, p.fecha_pedido, p.direccion_envio
        ` + fromJoin + `
        ORDER BY p.fecha_pedido DESC, dp.id DESC
        LIMIT ${porPagina} OFFSET ${offset}`,
