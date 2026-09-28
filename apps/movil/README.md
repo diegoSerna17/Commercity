@@ -18,6 +18,21 @@
 
 ---
 
+## 📥 Obtener el código (rama PREVIEW)
+
+La app se distribuye para pruebas del equipo en la rama **`PREVIEW`** del repo oficial:
+
+```bash
+git clone -b PREVIEW https://github.com/diegoSerna17/Commercity.git
+cd Commercity/apps/movil
+npm install
+npx cap sync android
+```
+
+Para compilar la APK se requiere Android Studio/SDK. La configuración del proyecto (`.env` con `DB_NAME=commercity_v2`, importar `schema_commercity.sql` + `seed_commercity.sql`) está en el `README.md` de la raíz.
+
+---
+
 ## 📖 Descripción General
 
 **CommerCity** es un marketplace local completo cuyo objetivo es **conectar de manera directa a compradores y vendedores de la ciudad**, democratizando el comercio electrónico local mediante una plataforma **segura, rápida y de fácil uso** desde el celular.

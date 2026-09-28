@@ -109,10 +109,52 @@ COMMER CITY/
 │   │   └── INFORME_FINAL_SENA_2026-09-25.md
 │   ├── CHANGELOG.md        # Bitácora de cambios (fecha real, evidencia y estado)
 │   └── AVANCES/            # Fuentes locales de las apps + PRUEBAS (gitignorado)
+├── schema_commercity.sql   # Esquema oficial (crea la BD commercity_v2)
+├── seed_commercity.sql     # Datos de prueba (usuarios, productos, pedidos)
+├── VERSION                 # Versión SemVer del proyecto
 └── .gitignore
 ```
 
-## Requisitos previos
+## Rama PREVIEW del repo oficial (pruebas del equipo)
+
+El código para que todo el equipo pruebe el proyecto se publica en la rama **`PREVIEW`** del repositorio oficial: `https://github.com/diegoSerna17/Commercity`.
+
+**Descargar PREVIEW (clon nuevo):**
+
+```bash
+git clone -b PREVIEW https://github.com/diegoSerna17/Commercity.git
+cd Commercity
+```
+
+**Actualizar PREVIEW (clon existente):**
+
+```bash
+git fetch commercycity
+git checkout PREVIEW
+git pull commercycity PREVIEW
+```
+
+Notas:
+
+- `PREVIEW` contiene el código consolidado (backend, frontend, apps, esquema y seed SQL, README) **sin** documentación interna ni artefactos de análisis: se excluyen `docs/`, `graphify-out/`, `Scripts.txt` y `TEST.MD`. Por eso las referencias de este README a `docs/` aplican solo al repositorio ECOMMERCE.
+- Las ramas `main` y `master` del repositorio oficial **no se tocan**: las organizan los líderes al finalizar el proyecto.
+- La rama no incluye secretos: solo va `backend/.env.example`; cada quien crea su propio `.env`.
+
+## Instalación y ejecución
+
+```bash
+# 1. Clonar el repositorio oficial en la rama PREVIEW
+git clone -b PREVIEW https://github.com/diegoSerna17/Commercity.git
+cd Commercity
+
+# 2. Instalar dependencias del backend
+cd backend
+npm install
+
+# 3. Instalar dependencias del frontend
+cd ../frontend
+npm install
+```
 
 ## Configuración
 
@@ -132,7 +174,7 @@ Copy-Item backend\.env.example backend\.env
 | `DB_PORT`           | Puerto de MySQL (por defecto 3306).                                                                                                                                   |
 | `DB_USER`           | Usuario de MySQL.                                                                                                                                                     |
 | `DB_PASSWORD`       | Contraseña de MySQL.                                                                                                                                                  |
-| `DB_NAME`           | Nombre de la base de datos (por defecto `commercity`).                                                                                                                |
+| `DB_NAME`           | Nombre de la base de datos (usa `commercity_v2`, el que crean los scripts SQL del proyecto).                                                                         |
 | `JWT_SECRET`        | **Obligatoria.** El servidor no arranca sin ella. Genera una clave aleatoria, por ejemplo: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
 | `CRYPTO_SECRET_KEY` | Clave para cifrar datos sensibles (cuenta bancaria). Si se omite, se usa `JWT_SECRET` como respaldo.                                                                  |
 | `FRONTEND_URL`      | Origen único permitido por CORS y enlaces del correo. Por defecto `http://localhost:5173`.                                                                            |
@@ -144,25 +186,18 @@ Copy-Item backend\.env.example backend\.env
 
 En el frontend, la URL de la API se toma de `VITE_API_URL` (archivo `.env` en la raíz de `frontend/`); por defecto apunta a `http://localhost:3000`.
 
-## Instalación y ejecución
-
-```bash
-# 1. Clonar el repositorio
-git clone <URL-DEL-REPOSITORIO>
-cd "COMMER CITY"
-
-# 2. Instalar dependencias del backend
-cd backend
-npm install
-
-# 3. Instalar dependencias del frontend
-cd ../frontend
-npm install
-```
+## Ejecución
 
 ### Base de datos
 
-El esquema de base de datos corresponde al diseño oficial del proyecto (documento Commercity 2.0). Crea la base de datos MySQL y configura las variables `DB_*` en `backend/.env`. Entre las tablas principales se encuentran: `usuarios`, `productos`, `pedidos`, `detalle_pedidos`, `pagos_simulados`, `carrito_items` y `tokens_invalidados`.
+El esquema de base de datos corresponde al diseño oficial del proyecto (documento Commercity 2.0). Crea la base de datos importando los scripts de la raíz y configura las variables `DB_*` en `backend/.env`:
+
+```powershell
+mysql -u root -p < schema_commercity.sql   # crea commercity_v2 con todas las tablas
+mysql -u root -p commercity_v2 < seed_commercity.sql   # datos de prueba (usuarios, productos, pedidos)
+```
+
+Entre las tablas principales se encuentran: `usuarios`, `productos`, `pedidos`, `detalle_pedidos`, `pagos_simulados`, `carrito_items` y `tokens_invalidados`.
 
 ### Backend
 
