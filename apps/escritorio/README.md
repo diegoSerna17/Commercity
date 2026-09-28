@@ -4,6 +4,19 @@ VOCETO 2 COMMERCITY SENA ADSO35 PROPUESTA MEJORADA AL ORIGINAL
 
 Este proyecto representa una nueva propuesta mejorada de CommerCity, basada en la versión original, pero con una arquitectura más limpia, mejor estructura de empaquetado y soporte completo para instalación en Windows mediante Electron Builder.
 
+## 📥 Obtener el código (rama PREVIEW)
+
+La app se distribuye para pruebas del equipo en la rama **`PREVIEW`** del repo oficial:
+
+```bash
+git clone -b PREVIEW https://github.com/diegoSerna17/Commercity.git
+cd Commercity/apps/escritorio
+npm install
+npm run build   # genera dist/CommerCity Setup 2.0.0.exe
+```
+
+La configuración del proyecto (`.env` con `DB_NAME=commercity_v2`, importar `schema_commercity.sql` + `seed_commercity.sql`) está en el `README.md` de la raíz.
+
 ## 🧭 ¿Qué es esta versión?
 
 Esta versión de CommerCity no es solo una copia del proyecto original, sino una evolución del concepto inicial, pensada para:

@@ -9,6 +9,23 @@ Copia trackeable (aprobada por Daniel 2026-09-28) de las dos aplicaciones client
 
 En ambas apps, `index.html` carga `api.js` **antes** de `app.js`; todos los handlers mock (auth, catálogo, carrito, pago, perfil, vendedor, admin, social, chat, notificaciones) migraron a llamadas reales con JWT (`commercity_token`). Credenciales hardcodeadas eliminadas (`admin@gmail.com/admin123`, `admin/admin123`, `juan_giraldo/1234`, `rem_pass` en claro).
 
+## Descargar el código (rama PREVIEW del repo oficial)
+
+El código de estas apps se publica para pruebas del equipo en la rama **`PREVIEW`** de `https://github.com/diegoSerna17/Commercity`:
+
+```bash
+# Clon nuevo
+git clone -b PREVIEW https://github.com/diegoSerna17/Commercity.git
+cd Commercity
+
+# Actualizar un clon existente
+git fetch commercycity
+git checkout PREVIEW
+git pull commercycity PREVIEW
+```
+
+Antes de compilar, sigue la configuración general del proyecto en el `README.md` de la raíz (`.env` con `DB_NAME=commercity_v2` e importar `schema_commercity.sql` + `seed_commercity.sql`).
+
 ## E2E (2026-09-28, backend vivo `localhost:3000`, BD `commercity_v2`)
 
 - **Runner 69 endpoints: 129/129 OK** — `docs/AVANCES/PRUEBAS/ejecutar_pruebas.mjs`

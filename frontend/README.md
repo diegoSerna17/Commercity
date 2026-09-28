@@ -1,5 +1,16 @@
 # React + Vite
 
+Este frontend es parte de CommerCity. El código se distribuye para pruebas del equipo en la rama **`PREVIEW`** del repo oficial:
+
+```bash
+git clone -b PREVIEW https://github.com/diegoSerna17/Commercity.git
+cd Commercity/frontend
+npm install
+npm run dev      # http://localhost:5173
+```
+
+La URL de la API se configura con `VITE_API_URL` (`.env` en `frontend/`, por defecto `http://localhost:3000`). Configuración completa del proyecto en el `README.md` de la raíz.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
