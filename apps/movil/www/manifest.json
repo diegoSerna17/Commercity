@@ -1,0 +1,22 @@
+{
+  "name": "CommerCity 2.0",
+  "short_name": "CommerCity",
+  "description": "Donde tus deseos se hacen realidad. Explora y encuentra lo que te define.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d0e1a",
+  "theme_color": "#0d0e1a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./hero.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./hero.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

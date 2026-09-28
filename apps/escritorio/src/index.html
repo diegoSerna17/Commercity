@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CommerCity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- TITLEBAR -->
+<div id="titlebar">
+  <div class="tb-brand">CommerCity</div>
+  <div class="tb-controls">
+    <button class="tb-btn tb-min" onclick="ipcRenderer.send('minimize-window')"></button>
+    <button class="tb-btn tb-max" onclick="ipcRenderer.send('maximize-window')"></button>
+    <button class="tb-btn tb-close" onclick="ipcRenderer.send('close-window')"></button>
+  </div>
+</div>
+
+<div id="app">
+
+<!-- ═══════════════════════════════════════
+     LOGIN
+═══════════════════════════════════════ -->
+<div class="page active" id="page-login">
+  <div class="auth-split">
+    <div class="auth-left">
+      <div class="auth-brand">
+        <div class="auth-logo">CommerCity</div>
+        <p class="auth-tag">Tu tienda, tu ciudad. Tu estilo, comienza aquí.</p>
+        <div class="auth-stats">
+          <div><div class="auth-stat-val">12K+</div><div class="auth-stat-lbl">Vendedores</div></div>
+          <div><div class="auth-stat-val">84K+</div><div class="auth-stat-lbl">Productos</div></div>
+          <div><div class="auth-stat-val">230K+</div><div class="auth-stat-lbl">Compradores</div></div>
+        </div>
+      </div>
+      <div class="auth-city">
+        <svg viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax slice">
+          <rect x="10" y="90" width="44" height="110" rx="2" fill="rgba(245,166,35,.09)"/>
+          <rect x="64" y="48" width="64" height="152" rx="2" fill="rgba(59,130,246,.08)"/>
+          <rect x="138" y="102" width="38" height="98" rx="1" fill="rgba(245,166,35,.07)"/>
+          <rect x="186" y="28" width="86" height="172" rx="2" fill="rgba(245,166,35,.12)"/>
+          <rect x="196" y="18" width="10" height="10" fill="rgba(245,166,35,.16)"/>
+          <rect x="282" y="68" width="54" height="132" rx="2" fill="rgba(59,130,246,.07)"/>
+          <rect x="346" y="88" width="42" height="112" rx="1" fill="rgba(245,166,35,.08)"/>
+          <rect x="398" y="36" width="74" height="164" rx="2" fill="rgba(59,130,246,.1)"/>
+          <rect x="482" y="72" width="48" height="128" rx="2" fill="rgba(245,166,35,.07)"/>
+          <rect x="540" y="52" width="64" height="148" rx="2" fill="rgba(245,166,35,.11)"/>
+          <rect x="0" y="196" width="640" height="4" fill="rgba(245,166,35,.2)"/>
+        </svg>
+      </div>
+    </div>
+    <div class="auth-right">
+      <div class="auth-form">
+        <h2 class="auth-title">Iniciar sesión</h2>
+        <p class="auth-sub">Bienvenido de vuelta a tu marketplace</p>
+        <div class="field">
+          <div class="field-inner has-icon">
+            <span class="fi-icon">👤</span>
+            <input type="text" id="login-user" placeholder="Nombre de usuario"/>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-inner has-icon">
+            <span class="fi-icon">🔒</span>
+            <input type="password" id="login-pass" placeholder="••••••••"/>
+            <button class="eye-btn" onclick="togglePass('login-pass')">👁</button>
+          </div>
+        </div>
+        <p id="login-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:12px;">Usuario o contraseña incorrectos.</p>
+        <div class="row-between">
+          <span></span>
+          <a class="link" onclick="navigate('recuperar')">¿Olvidaste tu contraseña?</a>
+        </div>
+        <button class="btn btn-orange btn-full btn-lg" onclick="doLogin()" style="margin-bottom:12px;">Entrar →</button>
+        <div class="divider"><span>o</span></div>
+        <button class="btn btn-ghost btn-full" onclick="navigate('registro')">Crear cuenta nueva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     REGISTRO
+═══════════════════════════════════════ -->
+<div class="page" id="page-registro">
+  <div class="auth-center" style="justify-content:flex-start;padding-top:0">
+    <div style="width:100%;border-bottom:1px solid var(--border);padding:14px 24px;display:flex;justify-content:center;position:sticky;top:0;background:var(--bg);z-index:10;">
+      <span style="font-family:var(--font);font-size:14px;font-weight:700;color:var(--text2)">Registro</span>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;width:100%">
+      <div class="auth-card">
+        <h2 class="auth-card-title">Crear cuenta en CommerCity</h2>
+        <div class="field">
+          <div class="field-inner has-icon">
+            <span class="fi-icon">👤</span>
+            <input type="text" id="reg-user" placeholder="Nombre de usuario"/>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-inner has-icon">
+            <span class="fi-icon">✉</span>
+            <input type="email" id="reg-email" placeholder="Correo electrónico"/>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-inner has-icon">
+            <span class="fi-icon">🔒</span>
+            <input type="password" id="reg-pass" placeholder="Contraseña"/>
+            <button class="eye-btn" onclick="togglePass('reg-pass')">👁</button>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:20px">
+          <label class="checkbox-row"><input type="checkbox" id="reg-vendedor"/> <a class="link" onclick="navigate('terminos')">Quiero vender en CommerCity</a></label>
+        </div>
+        <p id="reg-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px">Ese usuario ya existe. Elige otro nombre.</p>
+        <button class="btn btn-orange btn-full btn-lg" onclick="doRegistro()">Registrarse</button>
+        <p class="auth-footer">¿Ya tienes cuenta? <a class="link" onclick="doLogout()">Iniciar sesión</a></p>
+      </div>
+    </div>
+    <div class="auth-footer-bar">
+      <span>©copyright Commercity 2026</span>
+      <a class="link" onclick="navigate('terminos')">términos y condiciones</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TÉRMINOS Y CONDICIONES
+═══════════════════════════════════════ -->
+<div class="page" id="page-terminos">
+  <div class="terms-page" style="width:100%;min-height:100%">
+    <div class="terms-header">
+      <button class="btn btn-ghost btn-sm terms-back" onclick="navigate('registro')">← Volver</button>
+      <h2>Terminos y Condiciones</h2>
+    </div>
+    <div class="terms-body">
+      <div class="terms-intro">
+        <p>Hola 👋 Antes de empezar, queremos agradecerte por formar parte de CommerCity, una comunidad creada no solo para hacer transacciones sino tambien para conectar vidas y oportunidades. A continuacion te invitamos a leer nuestro terminos y condiciones, al registrarse en CommerCity confirmas que los has leido y aceptado</p>
+        <p style="margin-top:10px">¡Gracias por confiar en nosotros y bienvenido a CommerCity! 🚀</p>
+      </div>
+      <div class="terms-item">
+        <div class="terms-item-title">1 Tu cuenta es tuya, cuidala.</div>
+        <div class="terms-item-body">Usa datos reales. Tu contraseña es solo tuya. Si notas algo raro, cambia tu contraseña de inmediato.</div>
+      </div>
+      <div class="terms-item">
+        <div class="terms-item-title">2 ¿Vendes? Genial pero con responsabilidad.</div>
+        <div class="terms-item-body">Solo publica productos que realmente tengas, con fotos e informacion veridica. Nada falso ni engañoso. Si lo detectamos lo retiramos.</div>
+      </div>
+      <div class="terms-item">
+        <div class="terms-item-title">3 El chat es par conectar, No para molestar.</div>
+        <div class="terms-item-body">Usalo con respeto. Sin spam, acoso ni mensajes fuera de lugar. Aqui todos merecen una buena experiencia.</div>
+      </div>
+      <div class="terms-item">
+        <div class="terms-item-title">4 La comision clara desde el inicio.</div>
+        <div class="terms-item-body">CommerCity comisiona el 10% de las ventas. Es lo que nos permite mantener la plataforma para todos. Al publicar productos como vendedor ya estas aceptando este termino y condicion.</div>
+      </div>
+      <div class="terms-item">
+        <div class="terms-item-title">1 Tu cuenta es tuya, cuidala.</div>
+        <div class="terms-item-body">Usa datos reales. Tu contraseña es solo tuya. Si notas algo raro, cambia tu contraseña de inmediato.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     RECUPERAR CONTRASEÑA
+═══════════════════════════════════════ -->
+<!-- RF3 — RECUPERAR CONTRASEÑA -->
+<div class="page" id="page-recuperar">
+  <div class="auth-center">
+    <div class="auth-card" style="max-width:440px">
+      <h2 class="auth-card-title">Recuperar contraseña</h2>
+      <p style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:20px;line-height:1.6">
+        Ingresa tu nombre de usuario para verificar tu cuenta.
+      </p>
+      <div id="rec-form">
+        <div class="field">
+          <label>Nombre de usuario</label>
+          <div class="field-inner has-icon">
+            <span class="fi-icon">👤</span>
+            <input id="rec-user" type="text" placeholder="tu_usuario"/>
+          </div>
+        </div>
+        <p id="rec-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px">Usuario no encontrado. Verifica el nombre.</p>
+        <button class="btn btn-orange btn-full btn-lg" onclick="doRecuperar()" style="margin-bottom:14px">Verificar usuario</button>
+        <a class="link" style="display:block;text-align:center" onclick="navigate('login')">← Volver al inicio de sesión</a>
+      </div>
+      <div id="rec-ok" style="display:none;text-align:center">
+        <div style="font-size:44px;margin-bottom:12px">✅</div>
+        <h3 style="font-family:var(--font);font-size:17px;font-weight:700;margin-bottom:8px;color:var(--green)">Usuario encontrado</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6">Ahora puedes crear una nueva contraseña.</p>
+        <button class="btn btn-orange btn-full btn-lg" onclick="navigate('restablecer')" style="margin-bottom:10px">Restablecer contraseña →</button>
+        <a class="link" style="display:block;text-align:center" onclick="navigate('login')">Cancelar</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RF4 — RESTABLECER CONTRASEÑA -->
+<div class="page" id="page-restablecer">
+  <div class="auth-center">
+    <div class="auth-card" style="max-width:440px">
+      <h2 class="auth-card-title">Nueva contraseña</h2>
+      <p style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:20px">Crea una contraseña segura para tu cuenta.</p>
+      <div class="field">
+        <label>Nueva contraseña</label>
+        <div class="field-inner has-icon">
+          <span class="fi-icon">🔒</span>
+          <input type="password" id="reset-p1" placeholder="Mínimo 6 caracteres"/>
+          <button class="eye-btn" onclick="togglePass('reset-p1')">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Confirmar contraseña</label>
+        <div class="field-inner has-icon">
+          <span class="fi-icon">🔒</span>
+          <input type="password" id="reset-p2" placeholder="Repite tu contraseña"/>
+          <button class="eye-btn" onclick="togglePass('reset-p2')">👁</button>
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="display:flex;gap:6px;margin-bottom:4px">
+          <div id="str-1" style="flex:1;height:4px;border-radius:2px;background:var(--bg4)"></div>
+          <div id="str-2" style="flex:1;height:4px;border-radius:2px;background:var(--bg4)"></div>
+          <div id="str-3" style="flex:1;height:4px;border-radius:2px;background:var(--bg4)"></div>
+        </div>
+        <div id="str-label" style="font-size:11px;color:var(--text3)">Ingresa una contraseña</div>
+      </div>
+      <p id="reset-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px"></p>
+      <button class="btn btn-orange btn-full btn-lg" onclick="doRestablecer()">Restablecer contraseña</button>
+    </div>
+  </div>
+</div>
+
+>
+
+<!-- ═══════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════ -->
+<div id="sidebar">
+  <div class="sb-logo" style="font-family:'Plus Jakarta Sans',sans-serif;font-size:20px;font-weight:800;letter-spacing:-1px;color:#ef9918;padding:20px 18px 16px">CommerCity</div>
+  <nav class="sb-nav">
+
+    <!-- SECCIÓN PRINCIPAL (comprador + vendedor) -->
+    <div id="sb-sec-principal">
+      <div class="sb-section">Principal</div>
+      <div class="sb-item active" id="nav-home" onclick="navigate('home')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L8 1.5 14 6v8H10V9H6v5H2V6z"/></svg>
+        Inicio
+      </div>
+      <div class="sb-item" id="nav-carrito" onclick="navigate('carrito')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1h2l2 7.5h6.5l1.5-5H4.5"/><circle cx="7" cy="13" r="1"/><circle cx="12" cy="13" r="1"/></svg>
+        Carrito
+      </div>
+    </div>
+
+    <!-- SECCIÓN CUENTA (comprador + vendedor) -->
+    <div id="sb-sec-cuenta">
+      <div class="sb-section">Cuenta</div>
+      <div class="sb-item" id="nav-perfil" onclick="navigate('perfil')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5.5" r="3"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5"/></svg>
+        Perfil
+      </div>
+      <!-- Solo vendedor -->
+      <div class="sb-item" id="nav-tienda" onclick="navigate('tienda')" style="display:none">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="6" width="13" height="8.5" rx="1"/><path d="M4.5 6V4.5a3.5 3.5 0 017 0V6"/></svg>
+        Tienda
+      </div>
+      <div class="sb-item" id="nav-pedidos" onclick="navigate('pedidos')" style="display:none">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 8h6M5 5h6M5 11h3"/></svg>
+        Pedidos
+      </div>
+      <!-- Comprador + vendedor -->
+      <div class="sb-item" id="nav-historial" onclick="navigate('historial')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2.5 1.5"/></svg>
+        Historial Compras
+      </div>
+      <div class="sb-item" id="nav-ajustes" onclick="navigate('ajustes')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.5 3.5l.85.85M11.65 11.65l.85.85M3.5 12.5l.85-.85M11.65 4.35l.85-.85"/></svg>
+        Ajustes
+      </div>
+    </div>
+
+    <!-- SECCIÓN ADMIN (solo admin) -->
+    <div id="sb-sec-admin" style="display:none">
+      <div class="sb-section">Administración</div>
+      <div class="sb-item" id="nav-admin" onclick="navigate('admin')" style="display:none">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/></svg>
+        Panel de Control
+      </div>
+    </div>
+
+  </nav>
+  <div class="sb-bottom">
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-user-initial">J</div>
+      <div><div class="sb-uname" id="sb-user-name">Juan_Giraldo</div><div class="sb-urole" id="sb-user-role">Comprador</div></div>
+    </div>
+    <button class="sb-logout" onclick="doLogout()">Cerrar Sesion</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     HOME
+═══════════════════════════════════════ -->
+<div class="page" id="page-home">
+  <div class="main">
+    <div class="cat-bar">
+      <div class="cat-select" style="position:relative">
+        <select id="cat-filter" onchange="filtrarPorCategoria(this.value)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+          <option value="Todos">Todas las categorías</option>
+          <option value="Calzado">Calzado</option>
+          <option value="Tecnología">Tecnología</option>
+          <option value="Accesorios">Accesorios</option>
+          <option value="Hogar">Hogar</option>
+        </select>
+        <span id="cat-selected-text">Categoría</span>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3,5 7,9 11,5"/></svg>
+      </div>
+      <div class="topbar-right">
+        <div class="tb-search">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/></svg>
+          <input id="search-input" oninput="filtrarProductos()" placeholder="Buscar productos..."/>
+        </div>
+        <div class="tb-icon-btn" onclick="toggleNotif()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2a5 5 0 015 5v2.5l1.5 2H1.5L3 9.5V7a5 5 0 015-5z"/><path d="M6.5 13a1.5 1.5 0 003 0"/></svg>
+          <span class="notif-dot"></span>
+        </div>
+        <div class="tb-avatar" onclick="navigate('perfil')">J</div>
+        <!-- RF95-100 NOTIF PANEL DINÁMICO -->
+        <div class="notif-panel" id="notif-panel">
+          <div class="notif-head">
+            <span>NOTIFICACIONES</span>
+            <button class="notif-clear" onclick="clearAllNotifs()">Limpiar todo</button>
+          </div>
+          <div id="notif-list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="hero">
+        <div class="hero-bg" style="background-image:url('https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85');background-size:cover;background-position:center;opacity:.5"></div>
+        <div class="hero-overlay" style="background:linear-gradient(to right,rgba(6,14,32,0.92) 0%,rgba(6,14,32,0.45) 55%,rgba(6,14,32,0.1) 100%)"></div>
+        <div class="hero-text">
+          <h2 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:56px;font-weight:800;letter-spacing:-3px;line-height:1.0;color:#edf3ff">Transforma tu estilo.<br>Eleva tu vida.</h2>
+          <p style="font-size:16px;color:rgba(255,255,255,0.75);margin-top:12px;line-height:1.6;max-width:480px">CommerCity — Donde tus deseos se hacen realidad. Explora y encuentra lo que te define.</p>
+        </div>
+      </div>
+      <div class="section-title" style="font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;letter-spacing:-0.5px;color:#fff">Explora Novedades</div>
+      <div class="prod-grid" id="home-prod-grid" style="grid-template-columns:repeat(4,1fr)"></div>
+      <div class="load-more" style="font-family:'Inter',sans-serif;color:#6f768e;font-size:14px">Cargando más piezas...</div>
+    </div>
+  </div>
+</div>
+
+<!-- FICHA PRODUCTO OVERLAY -->
+<div class="overlay" id="prod-overlay" onclick="closeProd(event)">
+  <div class="prod-detail" id="prod-detail-card">
+    <div class="pd-top">
+      <span>Commercity</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="closeProdDirect()">← Volver</button>
+        <button class="btn btn-ghost btn-sm" onclick="openReportarProducto()" title="Reportar">⋯ Reportar</button>
+      </div>
+    </div>
+    <div class="pd-body">
+      <div class="pd-img"><img id="pd-img-src" src="" alt=""/></div>
+      <div class="pd-info">
+        <div class="pd-label">NOMBRE</div><div class="pd-val" id="pd-nombre">—</div>
+        <div class="pd-label">CATEGORÍA</div><div class="pd-val" id="pd-cat">—</div>
+        <div class="pd-label">ESTADO</div><div><span class="pd-status">Disponible</span></div>
+        <div class="pd-label">PRECIO</div>
+        <div><span class="pd-price-big" id="pd-precio">—</span><span class="pd-price-old" id="pd-old">—</span></div>
+        <div class="pd-stock-row">
+          <div><div class="pd-label">STOCK</div><div class="pd-val" id="pd-stock">—</div></div>
+          <div><div class="pd-label">DESCUENTO</div><div class="pd-val" style="color:var(--orange)" id="pd-desc-pct">—</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="pd-desc"><label>DESCRIPCION DEL PRODUCTO</label><span id="pd-desc-txt">—</span></div>
+    <div class="pd-seller">
+      <div class="pd-seller-av">J</div>
+      <span style="font-size:13px;font-weight:600">Juan_Giraldo</span>
+    </div>
+    <div class="pd-actions">
+      <div class="qty-ctrl">
+        <button onclick="changeQty(-1)">−</button>
+        <span id="pd-qty">1</span>
+        <button onclick="changeQty(1)">+</button>
+      </div>
+      <button class="btn btn-orange" style="flex:1" onclick="addToCartAndClose()">Agregar al carrito</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PERFIL COMPRADOR
+═══════════════════════════════════════ -->
+<div class="page" id="page-perfil">
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Perfil</span>
+      <div class="topbar-right">
+        <div class="tb-icon-btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2a5 5 0 015 5v2.5l1.5 2H1.5L3 9.5V7a5 5 0 015-5z"/><path d="M6.5 13a1.5 1.5 0 003 0"/></svg></div>
+        <div class="tb-avatar">J</div>
+      </div>
+    </div>
+    <div class="main-scroll">
+      <div class="profile-header">
+        <div class="prof-av" id="prof-av-comprador" style="position:relative;overflow:visible">
+          <div style="width:80px;height:80px;border-radius:50%;overflow:hidden;position:relative">
+            <img id="prof-img-comprador" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none"/>
+            <div id="prof-initial-comprador" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--font);font-weight:800;font-size:30px;color:#000;background:var(--orange)">J</div>
+          </div>
+          <span class="prof-online"></span>
+          <label style="position:absolute;bottom:2px;right:2px;width:26px;height:26px;border-radius:50%;background:var(--bg2);border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px" title="Cambiar foto">
+            📷<input type="file" accept="image/*" style="display:none" onchange="cambiarFotoPerfil(event,'comprador')"/>
+          </label>
+        </div>
+        <div style="flex:1">
+          <div class="prof-name">juan_giraldo</div>
+          <div class="prof-stats">
+            <div style="cursor:pointer" onclick="openSeguidores('seguidores')"><div class="prof-stat-val">15.8k</div><div class="prof-stat-lbl">SEGUIDORES</div></div>
+            <div style="cursor:pointer" onclick="openSeguidores('siguiendo')"><div class="prof-stat-val">842</div><div class="prof-stat-lbl">SIGUIENDO</div></div>
+          </div>
+          <div class="prof-bio">
+            <span id="prof-bio-display" class="prof-bio-txt">Me gusta encontrar productos de buena calidad y apoyar tiendas con excelente atención. Siempre busco compras con buenas recomendaciones.</span>
+            <button onclick="toggleBioEdit('comprador')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;margin-left:6px" title="Editar">✏</button>
+            <div id="bio-edit-comprador" style="display:none;margin-top:8px">
+              <textarea id="bio-input-comprador" style="width:100%;background:var(--bg3);border:1px solid var(--orange);border-radius:8px;padding:8px;color:var(--text);font-size:12px;font-family:var(--ui);resize:none;outline:none;height:64px"></textarea>
+              <div style="display:flex;gap:6px;margin-top:6px">
+                <button class="btn btn-orange btn-sm" onclick="guardarBio('comprador')">Guardar</button>
+                <button class="btn btn-ghost btn-sm" onclick="toggleBioEdit('comprador')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="prof-btns">
+          <button class="btn btn-orange btn-sm" onclick="openMensajes()">✉ Mensajes</button>
+        </div>
+      </div>
+      <div class="feed-tabs">
+        <div class="feed-tab active">⊞ MiFeed</div>
+      </div>
+      <div class="feed-grid" style="grid-template-columns:repeat(3,1fr);padding:20px 24px">
+        <div class="feed-card">
+          <img src="https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80" alt=""/>
+          <div style="position:absolute;top:8px;left:8px;background:#0077ff;color:#fff;font-size:10px;font-weight:600;padding:4px 10px;border-radius:9999px">-10%</div>
+          <div class="feed-card-body"><div class="feed-card-name">Bolso Boutique</div><div class="feed-card-old">$138.880</div><div class="feed-card-price">$125.000</div></div>
+        </div>
+        <div class="feed-card">
+          <img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&q=80" alt=""/>
+          <div class="feed-card-body"><div class="feed-card-name">Cuadro Decorativo Minimalista</div><div class="feed-card-price">$29.000</div></div>
+        </div>
+        <div class="feed-card">
+          <img src="https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=400&q=80" alt=""/>
+          <div style="position:absolute;top:8px;left:8px;background:#0077ff;color:#fff;font-size:10px;font-weight:600;padding:4px 10px;border-radius:9999px">-25%</div>
+          <div class="feed-card-body"><div class="feed-card-name">Cuadro Decorativo</div><div class="feed-card-old">$6.000</div><div class="feed-card-price">$25.000</div></div>
+        </div>
+        <div class="feed-card">
+          <img src="https://images.unsplash.com/photo-1578898886225-c7c894047899?w=400&q=80" alt=""/>
+          <div style="position:absolute;top:8px;left:8px;background:#0077ff;color:#fff;font-size:10px;font-weight:600;padding:4px 10px;border-radius:9999px">-20%</div>
+          <div class="feed-card-body"><div class="feed-card-name">Bascula de Oro</div><div class="feed-card-old">$4.000</div><div class="feed-card-price">$40.000</div></div>
+        </div>
+        <div class="feed-card">
+          <img src="https://images.unsplash.com/photo-1578898886225-c7c894047899?w=400&q=80" alt=""/>
+          <div style="position:absolute;top:8px;left:8px;background:#0077ff;color:#fff;font-size:10px;font-weight:600;padding:4px 10px;border-radius:9999px">-20%</div>
+          <div class="feed-card-body"><div class="feed-card-name">Bascula de Oro</div><div class="feed-card-old">$4.000</div><div class="feed-card-price">$40.000</div></div>
+        </div>
+        <div class="feed-card">
+          <img src="https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=400&q=80" alt=""/>
+          <div style="position:absolute;top:8px;left:8px;background:#0077ff;color:#fff;font-size:10px;font-weight:600;padding:4px 10px;border-radius:9999px">-25%</div>
+          <div class="feed-card-body"><div class="feed-card-name">Cuadro Decorativo</div><div class="feed-card-old">$6.000</div><div class="feed-card-price">$25.000</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PERFIL VENDEDOR (misma página, con tabs extra + botón agregar)
+═══════════════════════════════════════ -->
+<div class="page" id="page-perfil-vendedor">
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Perfil</span>
+      <div class="topbar-right">
+        <div class="tb-icon-btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2a5 5 0 015 5v2.5l1.5 2H1.5L3 9.5V7a5 5 0 015-5z"/><path d="M6.5 13a1.5 1.5 0 003 0"/></svg></div>
+        <div class="tb-avatar">J</div>
+      </div>
+    </div>
+    <div class="main-scroll">
+    <div class="profile-header">
+      <div class="prof-av">J<span class="prof-online"></span></div>
+      <div style="flex:1">
+        <div class="prof-name">juan_giraldo</div>
+        <div class="prof-stars">★★★★★</div>
+        <div class="prof-stats">
+          <div style="cursor:pointer" onclick="openSeguidores('seguidores')"><div class="prof-stat-val">15.8k</div><div class="prof-stat-lbl">SEGUIDORES</div></div>
+          <div style="cursor:pointer" onclick="openSeguidores('siguiendo')"><div class="prof-stat-val">842</div><div class="prof-stat-lbl">SIGUIENDO</div></div>
+        </div>
+        <div class="prof-bio">
+            <span id="prof-bio-vendedor" class="prof-bio-txt">Me gusta encontrar productos de buena calidad y apoyar tiendas con excelente atención. Siempre busco compras con buenas recomendaciones.</span>
+            <button onclick="toggleBioEdit('vendedor')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;margin-left:6px" title="Editar">✏</button>
+            <div id="bio-edit-vendedor" style="display:none;margin-top:8px">
+              <textarea id="bio-input-vendedor" style="width:100%;background:var(--bg3);border:1px solid var(--orange);border-radius:8px;padding:8px;color:var(--text);font-size:12px;font-family:var(--ui);resize:none;outline:none;height:64px"></textarea>
+              <div style="display:flex;gap:6px;margin-top:6px">
+                <button class="btn btn-orange btn-sm" onclick="guardarBio('vendedor')">Guardar</button>
+                <button class="btn btn-ghost btn-sm" onclick="toggleBioEdit('vendedor')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+      </div>
+      <div class="prof-btns">
+        <button class="btn btn-orange btn-sm" onclick="openMensajes()">✉ Mensajes</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-producto').classList.add('show')">+ Agregar Producto</button>
+      </div>
+    </div>
+    <div class="feed-tabs">
+      <div class="feed-tab active">⊞ MiFeed</div>
+      <div class="feed-tab">🛍 Mis Productos</div>
+    </div>
+    <div class="feed-grid" id="vendedor-grid" style="padding:20px 24px">
+      <div class="feed-card">
+        <img src="https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80" alt=""/>
+        <div class="feed-edit-btn">✏</div>
+        <div class="feed-card-body"><div class="feed-card-name">Bolso Boutique</div><div class="feed-card-old">$150.000</div><div class="feed-card-price">$125.085</div></div>
+      </div>
+      <div class="feed-card">
+        <img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&q=80" alt=""/>
+        <div class="feed-edit-btn">✏</div>
+        <div style="position:absolute;top:8px;left:8px;background:var(--bg4);padding:4px 8px;border-radius:4px;font-size:10px;font-weight:700;color:var(--text2)">SAFE WORK</div>
+        <div class="feed-card-body"><div class="feed-card-name">Cuadro Decorativo Minimalista</div><div class="feed-card-price">$29.000</div></div>
+      </div>
+      <div class="feed-card">
+        <img src="https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=400&q=80" alt=""/>
+        <div class="feed-edit-btn">✏</div>
+        <div class="feed-card-body"><div class="feed-card-name">Cuadro Decorativo</div><div class="feed-card-price">$25.090</div></div>
+      </div>
+      <div class="feed-card">
+        <img src="https://images.unsplash.com/photo-1578898886225-c7c894047899?w=400&q=80" alt=""/>
+        <div class="feed-edit-btn">✏</div>
+        <div style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.7);padding:3px 7px;border-radius:4px;font-size:9px;font-weight:700;color:var(--orange)">-20%</div>
+        <div class="feed-card-body"><div class="feed-card-name">Bascula de Oro</div><div class="feed-card-old">$45.000</div><div class="feed-card-price">$40.000</div></div>
+      </div>
+      <div class="feed-card">
+        <img src="https://images.unsplash.com/photo-1578898886225-c7c894047899?w=400&q=80" alt=""/>
+        <div class="feed-edit-btn">✏</div>
+        <div class="feed-card-body"><div class="feed-card-name">Bascula de Oro</div><div class="feed-card-old">$45.000</div><div class="feed-card-price">$40.669</div></div>
+      </div>
+      <div class="feed-card">
+        <img src="https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=400&q=80" alt=""/>
+        <div class="feed-edit-btn">✏</div>
+        <div style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.7);padding:3px 7px;border-radius:4px;font-size:9px;font-weight:700;color:var(--orange)">-28%</div>
+        <div class="feed-card-body"><div class="feed-card-name">Cuadro Decorativo</div><div class="feed-card-old">$35.000</div><div class="feed-card-price">$25.300</div></div>
+      </div>
+    </div>
+    </div><!-- /main-scroll -->
+  </div>
+</div>
+
+<!-- MODAL AGREGAR PRODUCTO -->
+<div class="modal-overlay" id="modal-producto">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">Agregar Producto</div>
+    <div class="field-row">
+      <div class="field"><label>Nombre del producto</label><input id="prod-nombre" type="text" placeholder=""/></div>
+      <div class="field"><label>Imagen</label><div class="upload-box" onclick="document.getElementById('prod-imagen').click()">+ Cargar imagen<input id="prod-imagen" type="file" accept="image/*" style="display:none"/></div></div>
+    </div>
+    <div class="field"><label>Descripcion completa</label><textarea id="prod-descripcion" placeholder=""></textarea></div>
+    <div class="field-row3">
+      <div class="field"><label>Precio $</label><input id="prod-precio" type="number" placeholder=""/></div>
+      <div class="field"><label>Stock</label><input id="prod-stock" type="number" placeholder=""/></div>
+      <div class="field"><label>Estado</label><select id="prod-estado"><option>Disponible</option><option>Sin stock</option></select></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Descuento %</label><input id="prod-descuento" type="number" placeholder=""/></div>
+      <div class="field"><label>Categoría</label><input id="prod-categoria" type="text" placeholder="Ej: Ropa"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('modal-producto').classList.remove('show')">Cancelar</button>
+      <button class="btn btn-orange" style="flex:1" onclick="handleAddProduct()">Agregar Producto</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TIENDA
+═══════════════════════════════════════ -->
+<div class="page" id="page-tienda">
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Tienda</span>
+      <div class="topbar-right">
+        <div class="tb-icon-btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2a5 5 0 015 5v2.5l1.5 2H1.5L3 9.5V7a5 5 0 015-5z"/></svg></div>
+        <div class="tb-avatar">J</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="store-welcome">
+        <h3>Bienvenido de nuevo, Juan 👋</h3>
+        <p>Revisa como va tu tienda, visualizar estadísticas sobre tu tienda y gestiona tu cuenta bancaria.</p>
+      </div>
+      <div class="section-head">Estadísticas de tu tienda</div>
+      <p class="section-sub">Mira como va progresando tu negocio.</p>
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-icon">📦</div>
+          <div><div class="stat-lbl">Unidades vendidas</div><div class="stat-val" id="tienda-ventas">—</div></div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon orange">💰</div>
+          <div><div class="stat-lbl">Ingresos netos (90%)</div><div class="stat-val" id="tienda-ingresos">—</div></div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon">🏦</div>
+          <div><div class="stat-lbl">Comisión CommerCity (10%)</div><div class="stat-val" id="tienda-comision">—</div></div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon">✅</div>
+          <div><div class="stat-lbl">Pedidos entregados</div><div class="stat-val" id="tienda-entregados">—</div></div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon orange">⏳</div>
+          <div><div class="stat-lbl">Pedidos pendientes</div><div class="stat-val" id="tienda-pendientes">—</div></div>
+        </div>
+      </div>
+      <div class="section-head">Registro de cuenta bancaria</div>
+      <p class="section-sub">Registra tu cuenta bancaria para recibir los pagos de tus ventas.</p>
+      <div class="card bank-form">
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field"><label>Nombre del titular</label><input id="bank-titular" value="Ej: Daniel Olivera Palacios" type="text"/></div>
+          <div class="field"><label>Banco</label><select id="bank-banco"><option>Seleccionar un banco</option><option>Bancolombia</option><option>Davivienda</option><option>Nequi</option></select></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Tipo de cuenta</label><select id="bank-tipo"><option>Seleccionar tipo</option><option>Ahorros</option><option>Corriente</option></select></div>
+          <div class="field"><label>Número de cuenta</label><input id="bank-numero" value="Ej: 1234567890" type="text"/></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn btn-orange" onclick="guardarCuentaBancaria()">Guardar cuenta bancaria</button>
+        </div>
+      </div>
+
+      <!-- Historial de Ventas e Ingresos (RF127, RF128, RF130) -->
+      <div class="section-head" style="margin-top: 32px;">Historial de Ventas e Ingresos</div>
+      <p class="section-sub">Revisa el detalle de cada transacción y tus ingresos netos correspondientes al 90%.</p>
+      <div class="card" style="padding:0;overflow:hidden;overflow-x:auto;margin-bottom: 24px;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Comprador</th>
+              <th>Fecha</th>
+              <th>Monto Bruto</th>
+              <th>Comisión (10%)</th>
+              <th>Ingreso Neto (90%)</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tienda-ventas-tbody">
+            <!-- Se renderiza dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     CARRITO
+═══════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════
+     CARRITO
+═══════════════════════════════════════ -->
+<div class="page" id="page-carrito">
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Carrito</span>
+      <div class="topbar-right">
+        <div class="tb-icon-btn" onclick="toggleNotif()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2a5 5 0 015 5v2.5l1.5 2H1.5L3 9.5V7a5 5 0 015-5z"/><path d="M6.5 13a1.5 1.5 0 003 0"/></svg>
+          <span class="notif-dot"></span>
+        </div>
+        <div class="tb-avatar" onclick="navigate('perfil')">J</div>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- Título -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
+        <span style="font-size:22px">🛒</span>
+        <h2 style="font-family:var(--font);font-size:22px;font-weight:800;color:var(--orange);letter-spacing:-0.5px">Carrito de Compras</h2>
+      </div>
+
+      <!-- Items dinámicos -->
+      <div id="cart-items-container"></div>
+
+      <!-- Carrito vacío -->
+      <div id="cart-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text2)">
+        <div style="font-size:48px;margin-bottom:12px">🛒</div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:6px">Tu carrito está vacío</div>
+        <div style="font-size:13px;margin-bottom:20px">Agrega productos desde el inicio</div>
+        <button class="btn btn-orange" onclick="navigate('home')">Explorar productos</button>
+      </div>
+
+      <!-- Resumen -->
+      <div id="cart-summary-section">
+        <div class="cart-summary">
+          <div class="summary-row">
+            <span style="font-family:var(--font);font-weight:700;color:var(--text2)">Total de artículos</span>
+            <span id="sum-subtotal" style="font-family:var(--font);font-weight:700;color:var(--text2)">$0</span>
+          </div>
+          <div class="summary-row">
+            <span style="font-family:var(--font);font-weight:700;color:var(--text2)">Descuentos aplicados</span>
+            <span id="sum-descuento" class="summary-discount" style="font-family:var(--font);font-weight:700">– $0</span>
+          </div>
+          <div class="summary-row">
+            <span style="font-family:var(--font);font-weight:700;color:var(--text2)">IVA (19%)</span>
+            <span id="sum-iva" style="font-family:var(--font);font-weight:700;color:var(--text2)">$0</span>
+          </div>
+          <div class="summary-row total">
+            <span style="font-family:var(--font);font-size:18px;font-weight:800">Total</span>
+            <span id="sum-total" style="font-family:var(--font);font-size:18px;font-weight:800;color:var(--orange)">$0</span>
+          </div>
+        </div>
+        <button class="btn btn-orange btn-full btn-lg" style="margin-top:16px;border-radius:24px;font-size:18px" onclick="abrirPago()">Comprar</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PASARELA DE PAGO (overlay tipo Figma)
+═══════════════════════════════════════ -->
+<div class="pago-overlay" id="pago-overlay" onclick="cerrarPago(event)">
+  <div class="pago-card" id="pago-card" onclick="event.stopPropagation()" style="border-radius:24px;width:480px;padding:32px">
+
+    <!-- Estado: Formulario -->
+    <div id="pago-form-state">
+      <h2 style="font-family:var(--font);font-size:22px;font-weight:800;color:var(--orange);margin-bottom:20px">Pasarela de Pago</h2>
+
+      <!-- Total a pagar -->
+      <div style="background:var(--bg3);border-radius:12px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+        <span style="font-family:var(--font);font-size:15px;font-weight:600;color:var(--text)">Total a pagar</span>
+        <span id="pago-total-display" style="font-family:var(--font);font-size:16px;font-weight:800;color:var(--orange)">$0</span>
+      </div>
+
+      <!-- Datos tarjeta -->
+      <div style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">Datos de la Tarjeta</div>
+
+      <div class="field">
+        <label>Número de la tarjeta</label>
+        <input id="pago-numero" type="text" placeholder="0000-0000-0000-0000" maxlength="19"
+          oninput="formatCardNumber(this)"/>
+      </div>
+
+      <div class="field">
+        <label>Nombre del titular</label>
+        <input id="pago-nombre" type="text" placeholder="Como aparece en la tarjeta"/>
+      </div>
+      <p id="pago-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px">Completa todos los campos correctamente.</p>
+
+      <button class="btn btn-orange btn-full btn-lg" id="pago-btn" onclick="confirmarPago()" style="border-radius:24px;font-size:18px;margin-bottom:10px">
+        Pagar <span id="pago-btn-total"></span>
+      </button>
+      <button class="btn btn-ghost btn-full" onclick="cerrarPago()" style="border-radius:20px">Cancelar y volver al carrito</button>
+    </div>
+
+    <!-- Estado: Confirmado -->
+    <div id="pago-ok-state" style="display:none;text-align:center;padding:20px 0">
+      <div style="font-size:52px;margin-bottom:16px">✅</div>
+      <h2 style="font-family:var(--font);font-size:22px;font-weight:800;color:var(--green);margin-bottom:8px">¡Pago exitoso!</h2>
+      <p style="font-size:14px;color:var(--text2);margin-bottom:6px">Total pagado: <span id="pago-ok-total" style="color:var(--orange);font-weight:700"></span></p>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:12px">Recibirás un correo de confirmación</p>
+      
+      <!-- Calificar vendedor (RF84) -->
+      <div id="pago-rating-section" style="margin-bottom: 24px; background: var(--bg3); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+        <p style="font-size: 13px; color: var(--text2); margin-bottom: 8px;">Califica al vendedor:</p>
+        <div class="stars-rating" style="display: flex; justify-content: center; gap: 8px; font-size: 24px; cursor: pointer; color: var(--text3);">
+          <span onclick="rateSeller(1)">☆</span>
+          <span onclick="rateSeller(2)">☆</span>
+          <span onclick="rateSeller(3)">☆</span>
+          <span onclick="rateSeller(4)">☆</span>
+          <span onclick="rateSeller(5)">☆</span>
+        </div>
+        <p id="rating-confirm-msg" style="display:none; color:var(--orange); font-size:12px; margin-top:8px; font-weight:600;"></p>
+      </div>
+
+      <button class="btn btn-orange btn-full" style="border-radius:20px;margin-bottom:10px" onclick="descargarComprobante()">⬇ Descargar Comprobante</button>
+      <button class="btn btn-ghost btn-full" style="border-radius:20px" onclick="volverAlInicio()">Volver al inicio</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     HISTORIAL DE COMPRAS
+═══════════════════════════════════════ -->
+<div class="page" id="page-historial">
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Historial Compras</span>
+      <div class="topbar-right">
+        <div class="tb-icon-btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2a5 5 0 015 5v2.5l1.5 2H1.5L3 9.5V7a5 5 0 015-5z"/></svg></div>
+        <div class="tb-avatar">J</div>
+      </div>
+    </div>
+    <div class="content">
+      <h2 style="font-family:var(--font);font-size:18px;font-weight:700;margin-bottom:4px">Historial Compras</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:18px">Visualiza y has seguimiento de tus compras en el historial.</p>
+      <div class="filter-tabs">
+        <div class="ftab hist-ftab active" onclick="filtroHistorial('Todo',this)">Todo</div>
+        <div class="ftab hist-ftab" onclick="filtroHistorial('Pendiente',this)">Pendiente</div>
+        <div class="ftab hist-ftab" onclick="filtroHistorial('En Camino',this)">En camino</div>
+        <div class="ftab hist-ftab" onclick="filtroHistorial('Entregado',this)">Entregado</div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>Vendedor</th><th>Producto</th><th>Dirección</th><th>Fecha</th><th>Estado</th><th>Cant.</th><th>Precio unit.</th><th>IVA 19%</th><th>Total</th><th>Acciones</th></tr></thead>
+          <tbody id="historial-tbody"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Detalle compra overlay -->
+<div class="modal-overlay" id="hist-detalle-overlay" onclick="if(event.target===this)this.classList.remove('show')" style="z-index:450">
+  <div class="modal" style="max-width:460px" onclick="event.stopPropagation()">
+    <div class="modal-title">Detalle del Pedido</div>
+    <div id="hist-detalle-body"></div>
+    <div id="hist-detalle-actions" style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-ghost btn-full" onclick="document.getElementById('hist-detalle-overlay').classList.remove('show')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PEDIDOS (vista vendedor)
+═══════════════════════════════════════ -->
+<div class="page" id="page-pedidos">
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Pedidos</span>
+      <div class="topbar-right">
+        <div class="tb-icon-btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2a5 5 0 015 5v2.5l1.5 2H1.5L3 9.5V7a5 5 0 015-5z"/></svg></div>
+        <div class="tb-avatar">J</div>
+      </div>
+    </div>
+    <div class="content">
+      <h2 style="font-family:var(--font);font-size:18px;font-weight:700;margin-bottom:4px">Pedidos</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:18px">Gestiona y actualiza el estado de tus pedidos.</p>
+      <div class="filter-tabs">
+        <div class="ftab pedidos-ftab active" onclick="filtroPedido('Todo', this)">Todo</div>
+        <div class="ftab pedidos-ftab" onclick="filtroPedido('Pendiente', this)">Pendiente</div>
+        <div class="ftab pedidos-ftab" onclick="filtroPedido('En camino', this)">En camino</div>
+        <div class="ftab pedidos-ftab" onclick="filtroPedido('Entregado', this)">Entregado</div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>Comprador</th><th>Dirección</th><th>Fecha</th><th>Producto</th><th>Cant.</th><th>Estado</th><th>P. Unitario</th><th>Total</th><th>Acción</th></tr></thead>
+          <tbody id="pedidos-tbody">
+            <!-- Se renderiza dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETALLE PEDIDO PANEL -->
+<div class="detalle-overlay" id="detalle-overlay" onclick="closeDetalle(event)">
+  <div class="detalle-panel" onclick="event.stopPropagation()">
+    <div class="detalle-title">Detalle del pedido <span class="badge badge-orange" style="font-size:11px">En Camino</span></div>
+    <div class="detalle-date">Fecha: 23 octubre, 2026</div>
+    <div class="btn-seller-row">
+      <div class="seller-av">ES</div>
+      <div><div style="font-size:13px;font-weight:600">Elena Sanz</div></div>
+    </div>
+    <div class="detalle-lbl">Comprador</div><div class="detalle-val">Elena Sanz</div>
+    <div class="detalle-lbl">Dirección de envío</div><div class="detalle-val">Carrera 7 # 12-34, Apartamento 201<br>Medellín, Antioquia</div>
+    <div class="detalle-lbl">Producto solicitado</div><div class="detalle-val">TV LG 45 pulgadas<br><span style="color:var(--text2)">Cantidad: 2 unidades</span></div>
+    <div class="detalle-total">
+      <span class="detalle-total-lbl">Precio total del pedido</span>
+      <span class="detalle-total-val">$1.900.000</span>
+    </div>
+    <button class="btn btn-ghost btn-full" onclick="closeDetalle()">Cerrar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     AJUSTES
+═══════════════════════════════════════ -->
+<div class="page" id="page-ajustes">
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Ajustes</span>
+      <div class="topbar-right">
+        <div class="tb-icon-btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2a5 5 0 015 5v2.5l1.5 2H1.5L3 9.5V7a5 5 0 015-5z"/></svg></div>
+        <div class="tb-avatar">J</div>
+      </div>
+    </div>
+    <div class="main-scroll">
+      <h2 style="font-family:var(--font);font-size:20px;font-weight:700;margin-bottom:4px">Ajustes</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:24px">Administra tu información personal y preferencias sobre la cuenta.</p>
+
+      <div class="ajuste-section">
+        <div class="ajuste-title">Información personal</div>
+        <div class="ajuste-sub">Actualiza tu usuario y correo electrónico.</div>
+        <div class="card">
+          <div class="field"><label>Usuario</label><input value="Juan_Giraldo" type="text"/></div>
+          <div class="field" style="margin-bottom:16px"><label>Correo electrónico</label><input value="Juan_commercity@gmail.com" type="email"/></div>
+          <button class="btn btn-orange btn-sm" onclick="guardarPerfil()">Guardar Cambios</button>
+        </div>
+      </div>
+
+      <div class="ajuste-section">
+        <div class="ajuste-title">Dirección de entrega</div>
+        <div class="ajuste-sub">Agrega tu dirección para recibir tus pedidos</div>
+        <div class="card">
+          <div class="field"><label>Dirección</label><input id="ajustes-dir" value="calle 123 # 45 - 67" type="text"/></div>
+          <div class="field-row" style="margin-bottom:16px">
+            <div class="field" style="margin:0"><label>Ciudad</label><input value="cali" type="text"/></div>
+            <div class="field" style="margin:0"><label>Departamento</label><input value="valle del cauca" type="text"/></div>
+          </div>
+          <button class="btn btn-orange btn-sm" onclick="guardarDireccion()">Cambiar Dirección</button>
+        </div>
+      </div>
+
+      <div class="convert-banner">
+        <div class="convert-text">
+          <h4>¿ Quieres vender en CommerCity ?</h4>
+          <p>Crea tu tienda y construye tu futuro en CommerCity. llega a mas compradores en esta comunidad.</p>
+        </div>
+        <button class="btn btn-orange btn-sm" onclick="convertirAVendedor()">Cambiar a vendedor</button>
+      </div>
+
+      <div class="delete-banner">
+        <div class="delete-text">
+          <h4>Elimina tu cuenta</h4>
+          <p>Una vez que elimines tu cuenta, todos tus datos serán borrados permanentemente, esta acción no se puede deshacer.</p>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="eliminarCuenta()">Eliminar Cuenta</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ ESTILOS MENSAJES + CHAT + ADMIN ═══════════ -->
+
+<!-- ═══════════ LISTA MENSAJES ═══════════ -->
+<div class="page" id="page-mensajes">
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Mensajes</span>
+      <div class="topbar-right">
+        <button class="btn btn-orange btn-sm" onclick="navigate('perfil')">Volver</button>
+      </div>
+    </div>
+    <div class="main-scroll" style="padding:16px 24px">
+      <div class="msg-row unread" onclick="openChat('Marco Valerio','M','https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=300&q=80','Bolso Boutique','$250.000 COP')">
+        <div class="msg-av"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80" alt=""/></div>
+        <div class="msg-info"><div class="msg-name">Marco Valerio</div><div class="msg-preview">¿Cuándo llega mi pedido de 2026?</div></div>
+        <div class="msg-meta"><span class="msg-time-lbl">10:24 AM</span><span class="msg-unread-dot">2</span></div>
+      </div>
+      <div class="msg-row" onclick="openChat('Sofia Alarcón','S','https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=300&q=80','Bolso Boutique','$250.000 COP')">
+        <div class="msg-av"><img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80" alt=""/></div>
+        <div class="msg-info"><div class="msg-name">Sofia Alarcón</div><div class="msg-preview">Gracias por la atención, excelente...</div></div>
+        <div class="msg-meta"><span class="msg-time-lbl">Ayer</span></div>
+      </div>
+      <div class="msg-row" onclick="openChat('Soporte Commercity','C','https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=300&q=80','Soporte','')">
+        <div class="msg-av" style="background:var(--orange-bg);display:flex;align-items:center;justify-content:center;font-family:var(--font);font-weight:800;font-size:15px;color:var(--orange)">C</div>
+        <div class="msg-info"><div class="msg-name">Soporte Commercity</div><div class="msg-preview">Su ticket #8849 ha sido resuelto</div></div>
+        <div class="msg-meta"><span class="msg-time-lbl">Lun</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ CHAT ═══════════ -->
+<div class="page" id="page-chat">
+  <div class="main">
+    <div class="chat-topbar">
+      <div class="chat-uav" id="chat-user-av">D</div>
+      <span class="chat-uname" id="chat-user-name">Dario Gomez</span>
+      <div class="chat-actions">
+        <button class="btn btn-orange btn-sm" onclick="navigate('mensajes')">Volver</button>
+        <button class="btn btn-ghost btn-sm">Ver Perfil</button>
+        <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.25)">Reportar</button>
+      </div>
+    </div>
+    <div class="chat-body" id="chat-messages">
+      <div class="prod-card-msg">
+        <img id="chat-prod-img" src="https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=300&q=80" alt=""/>
+        <div class="prod-card-msg-body">
+          <div class="prod-card-msg-name" id="chat-prod-name">Bolso Boutique</div>
+          <div class="prod-card-msg-price" id="chat-prod-price">$250.000 COP</div>
+          <button class="btn btn-orange btn-full btn-sm">Ver Producto</button>
+        </div>
+      </div>
+      <div class="msg-bubble msg-in"><div class="msg-text">Hola, ¿todavía está disponible el teclado?</div><div class="msg-time">12:03 AM</div></div>
+      <div class="msg-bubble msg-out"><div class="msg-text">Si, aún tenemos stock disponible.</div><div class="msg-time">12:31 AM</div></div>
+      <div class="msg-bubble msg-in"><div class="msg-text">¿Tiene garantía?</div><div class="msg-time">12:03 AM</div></div>
+      <div class="msg-bubble msg-out"><div class="msg-text">Si, garantía de 6 meses.</div><div class="msg-time">12:23 AM</div></div>
+    </div>
+    <div class="chat-footer">
+      <div class="chat-footer-icon" onclick="document.getElementById('chat-archivo').click()" title="Adjuntar archivo">📎</div>
+      <input id="chat-archivo" type="file" accept="image/*" style="display:none"/>
+      <div class="chat-footer-icon">🖼</div>
+      <input class="chat-inp" id="chat-input" placeholder="Escribe un mensaje..."/>
+      <button class="chat-send" onclick="sendMsg()">▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PANEL ADMINISTRADOR ═══════════ -->
+<div class="page" id="page-admin">
+  <div class="admin-shell">
+
+    <!-- TOPBAR ADMIN -->
+    <div class="admin-topbar">
+      <span class="admin-brand">CommerCity</span>
+      <button class="admin-gear-btn" onclick="navigate('admin-ajustes')" title="Ajustes">⚙</button>
+    </div>
+
+    <!-- CONTENIDO -->
+    <div class="admin-body">
+      <h2 class="admin-page-title">Panel De Control</h2>
+
+      <!-- STATS -->
+      <div class="admin-stat-grid" style="grid-template-columns:repeat(auto-fit, minmax(200px, 1fr))">
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon" style="background:var(--orange-bg)">🏠</div>
+          <div><div class="admin-stat-lbl">Total Vendedores</div><div class="admin-stat-val" id="admin-stat-vendedores">1,248</div></div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon" style="background:var(--blue-bg)">👥</div>
+          <div><div class="admin-stat-lbl">Total Compradores</div><div class="admin-stat-val" id="admin-stat-compradores">8,902</div></div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon" style="background:var(--green-bg)">💰</div>
+          <div><div class="admin-stat-lbl">Comisiones Totales (%10)</div><div class="admin-stat-val" id="admin-stat-comisiones" style="font-size:17px">$45,280.50</div></div>
+          <span class="admin-stat-badge">Comisión %10</span>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon" style="background:rgba(239,153,24,.15)">🏛️</div>
+          <div><div class="admin-stat-lbl">Recaudo IVA (19%)</div><div class="admin-stat-val" id="admin-stat-iva" style="font-size:17px">$86,033.00</div></div>
+          <span class="admin-stat-badge" style="background:rgba(239,153,24,.2);color:var(--orange)">IVA Colombia %19</span>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon" style="background:var(--red-bg)">🔄</div>
+          <div><div class="admin-stat-lbl">Devoluciones (Reembolsos)</div><div class="admin-stat-val" id="admin-stat-devoluciones" style="font-size:17px;color:var(--red)">$0</div></div>
+          <span class="admin-stat-badge" style="background:var(--red-bg);color:var(--red)">Cancelaciones</span>
+        </div>
+      </div>
+
+      <!-- USUARIOS + PRODUCTOS -->
+      <div class="admin-two-col">
+        <!-- GESTIÓN USUARIOS -->
+        <div class="card" style="padding:16px">
+          <div class="admin-section-title">
+            Gestion de Usuarios
+            <div class="admin-search">
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4.5"/><line x1="9.5" y1="9.5" x2="13" y2="13"/></svg>
+              <input placeholder="Buscar usuario..." onkeydown="if(event.key==='Enter')adminBuscar(this.value)"/>
+            </div>
+          </div>
+          <table class="admin-table">
+            <thead><tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="seller-av">CM</div>Carlos Martinez</div></td>
+                <td><span class="role-badge role-vendedor">Vendedor</span></td>
+                <td><span class="status-active">Activo</span></td>
+                <td><div class="admin-btn-row"><button class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:11px">Banear</button><button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)">Eliminar</button></div></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="seller-av">LF</div>Lucia Fernandez</div></td>
+                <td><span class="role-badge role-comprador">Comprador</span></td>
+                <td><span class="status-banned">Baneado</span></td>
+                <td><div class="admin-btn-row"><button class="btn btn-orange btn-sm" style="padding:4px 10px;font-size:11px">Activar</button><button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)">Eliminar</button></div></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="seller-av">CR</div>Cristiano Ronaldo</div></td>
+                <td><span class="role-badge role-vendedor">Vendedor</span></td>
+                <td><span class="status-active">Activo</span></td>
+                <td><div class="admin-btn-row"><button class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:11px">Banear</button><button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)">Eliminar</button></div></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="seller-av">MG</div>Multigangas</div></td>
+                <td><span class="role-badge role-vendedor">Vendedor</span></td>
+                <td><span class="status-active">Activo</span></td>
+                <td><div class="admin-btn-row"><button class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:11px">Banear</button><button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)">Eliminar</button></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- GESTIÓN PRODUCTOS -->
+        <div class="card" style="padding:16px">
+          <div class="admin-section-title">
+            Gestion de Productos
+            <div class="admin-search">
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4.5"/><line x1="9.5" y1="9.5" x2="13" y2="13"/></svg>
+              <input placeholder="Buscar Producto..." onkeydown="if(event.key==='Enter')adminBuscar(this.value)"/>
+            </div>
+          </div>
+          <table class="admin-table">
+            <thead><tr><th>Producto</th><th>Vendedor</th><th>Acciones</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><div style="font-size:12px;font-weight:600">Teclado Gamer Pro</div><div style="font-size:11px;color:var(--text2)">$95.000</div></td>
+                <td style="font-size:12px;color:var(--text2)">Carlos Martínez</td>
+                <td><button class="btn btn-sm" style="padding:4px 8px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)">🗑</button></td>
+              </tr>
+              <tr>
+                <td><div style="font-size:12px;font-weight:600">Bicicleta Trecda</div><div style="font-size:11px;color:var(--text2)">$1.200.000</div></td>
+                <td style="font-size:12px;color:var(--text2)">Natural Sport</td>
+                <td><button class="btn btn-sm" style="padding:4px 8px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)">🗑</button></td>
+              </tr>
+              <tr>
+                <td><div style="font-size:12px;font-weight:600">Zapatillas converse</div><div style="font-size:11px;color:var(--text2)">$240.000</div></td>
+                <td style="font-size:12px;color:var(--text2)">Calzado Bucaramanga</td>
+                <td><button class="btn btn-sm" style="padding:4px 8px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)">🗑</button></td>
+              </tr>
+              <tr>
+                <td><div style="font-size:12px;font-weight:600">Buso Oversize</div><div style="font-size:11px;color:var(--text2)">La locura de los precios bajos</div></td>
+                <td style="font-size:12px;color:var(--text2)">—</td>
+                <td><button class="btn btn-sm" style="padding:4px 8px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)">🗑</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- GESTIÓN REPORTES -->
+      <div class="card" style="padding:16px;margin-bottom:24px">
+        <div class="admin-section-title">
+          Gestion de Reportes
+          <div class="admin-search">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4.5"/><line x1="9.5" y1="9.5" x2="13" y2="13"/></svg>
+            <input placeholder="Buscar Reporte..." onkeydown="if(event.key==='Enter')adminBuscar(this.value)"/>
+          </div>
+        </div>
+        <div class="filter-tabs" style="margin-bottom:14px">
+          <div class="ftab active" style="padding:4px 14px;font-size:11px">Todo</div>
+          <div class="ftab" style="padding:4px 14px;font-size:11px">Pendiente</div>
+          <div class="ftab" style="padding:4px 14px;font-size:11px">Resuelto</div>
+        </div>
+        <table class="admin-table">
+          <thead><tr><th>Tipo</th><th>Reportado</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-orange" style="font-size:10px">Usuario</span></td>
+              <td style="font-size:12px">Julian Guerrero</td>
+              <td style="font-size:11px;color:var(--text2)">24 Oct, 2026</td>
+              <td><span class="badge badge-orange" style="font-size:10px">Pendiente</span></td>
+              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte('mario-alberto')">Responder</button></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue" style="font-size:10px">Producto</span></td>
+              <td style="font-size:12px">Teclado Gamer Pro</td>
+              <td style="font-size:11px;color:var(--text2)">30 Oct, 2026</td>
+              <td><span class="badge badge-green" style="font-size:10px">Resuelto</span></td>
+              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte()">Ver</button></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue" style="font-size:10px">Producto</span></td>
+              <td style="font-size:12px">Camiseta Seleccion Colombia</td>
+              <td style="font-size:11px;color:var(--text2)">22 Oct, 2026</td>
+              <td><span class="badge badge-orange" style="font-size:10px">Pendiente</span></td>
+              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte()">Responder</button></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-orange" style="font-size:10px">Usuario</span></td>
+              <td style="font-size:12px">Mario Alberto</td>
+              <td style="font-size:11px;color:var(--text2)">20 Oct, 2026</td>
+              <td><span class="badge badge-orange" style="font-size:10px">Pendiente</span></td>
+              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte()">Responder</button></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue" style="font-size:10px">Producto</span></td>
+              <td style="font-size:12px">Zapatillas NIKE Fi</td>
+              <td style="font-size:11px;color:var(--text2)">19 Oct, 2026</td>
+              <td><span class="badge badge-green" style="font-size:10px">Resuelto</span></td>
+              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte('nike-fi')">Ver</button></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-orange" style="font-size:10px">Usuario</span></td>
+              <td style="font-size:12px">Dominick Toreto</td>
+              <td style="font-size:11px;color:var(--text2)">18 Oct, 2026</td>
+              <td><span class="badge badge-green" style="font-size:10px">Resuelto</span></td>
+              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte()">Ver</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- SECCIÓN GANANCIAS Y REGISTRO FISCAL (RF59, RF141) -->
+      <div class="card" style="padding:16px;margin-bottom:24px">
+        <div class="admin-section-title">
+          <span>Sección Ganancias y Recaudación Fiscal <span class="badge badge-green" style="font-size:10px;margin-left:6px">RF59 / RF141</span></span>
+          <span style="font-size:12px;color:var(--text2)">Base de Datos en Tiempo Real</span>
+        </div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Control de ingresos por comisiones del 10% y recaudación tributaria del IVA 19%. Toda cancelación de pedido pendiente descuenta automáticamente la comisión e IVA correspondientes.</p>
+        <div style="overflow-x:auto">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID Referencia</th>
+                <th>Concepto / Transacción</th>
+                <th>Fecha</th>
+                <th>Monto Bruto</th>
+                <th>IVA (19%)</th>
+                <th>Comisión Admin (10%)</th>
+                <th>Estado Contable</th>
+              </tr>
+            </thead>
+            <tbody id="admin-ganancias-tbody">
+              <!-- Se renderiza dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- DETALLE REPORTE OVERLAY -->
+<div class="reporte-overlay" id="reporte-overlay" onclick="closeReporte(event)">
+  <div class="reporte-panel" onclick="event.stopPropagation()">
+    <div class="rp-title">
+      Detalle del Reporte
+      <button class="btn btn-orange btn-sm" onclick="closeReporte()">Volver</button>
+    </div>
+    <div class="rp-lbl">TIPO</div>
+    <div style="margin-top:4px"><span id="rp-tipo" class="badge badge-orange">Usuario</span></div>
+    <div class="rp-lbl">REPORTADO</div>
+    <div class="rp-val" style="display:flex;align-items:center;gap:8px">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">👤</div>
+      <span id="rp-reportado">—</span>
+    </div>
+    <div class="rp-lbl">REPORTADO POR</div>
+    <div class="rp-val" style="display:flex;align-items:center;gap:8px">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">👤</div>
+      <span id="rp-rep-por">—</span>
+    </div>
+    <div class="rp-lbl">MOTIVO</div>
+    <div class="rp-val" id="rp-motivo" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.6">—</div>
+    <div class="rp-lbl">ESTADO</div>
+    <div style="margin-top:4px"><span id="rp-estado" class="badge">—</span></div>
+    <div class="rp-lbl">FECHA</div>
+    <div class="rp-val" id="rp-fecha">—</div>
+    <div class="rp-lbl">EVIDENCIA</div>
+    <div class="rp-evidence" id="rp-evidencias"></div>
+    <!-- Responder (cuando no hay respuesta aún) -->
+    <div id="rp-respuesta-box">
+      <div class="rp-lbl">RESPONDER</div>
+      <textarea class="rp-textarea" placeholder="Escribe tu respuesta aquí...."></textarea>
+      <button class="btn btn-orange btn-full" style="margin-top:10px" onclick="adminResponderReporte()">Enviar Respuesta</button>
+    </div>
+    <!-- Respuesta enviada (cuando ya hay respuesta) -->
+    <div id="rp-respuesta-enviada" style="display:none">
+      <div class="rp-lbl">RESPUESTA</div>
+      <div class="rp-val" id="rp-respuesta-txt" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.6;margin-bottom:8px"></div>
+      <button class="btn btn-ghost btn-sm" style="width:100%">Respuesta enviada ✓</button>
+    </div>
+    <!-- Acciones usuario -->
+    <div id="rp-acciones-usuario" style="display:none;margin-top:14px">
+      <div class="rp-lbl">ACCIONES SOBRE EL USUARIO</div>
+      <div class="rp-actions" style="margin-top:8px">
+        <button class="btn btn-orange" style="flex:1" onclick="adminAccionReporte('banear-usuario')">Banear</button>
+        <button class="btn btn-sm" style="flex:1;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.25);padding:10px" onclick="adminAccionReporte('eliminar-usuario')">Eliminar</button>
+      </div>
+      <p style="font-size:11px;color:var(--text3);margin-top:8px">Asegurate de haber revisado el reporte antes de proceder.</p>
+    </div>
+    <!-- Acciones producto -->
+    <div id="rp-acciones-producto" style="display:none;margin-top:14px">
+      <div class="rp-lbl">ACCIONES SOBRE EL PRODUCTO</div>
+      <div style="margin-top:8px">
+        <button class="btn btn-sm" style="width:100%;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.25);padding:10px" onclick="adminAccionReporte('eliminar-producto')">Eliminar 🗑</button>
+      </div>
+      <p style="font-size:11px;color:var(--text3);margin-top:8px">Asegurate de haber revisado el reporte antes de proceder.</p>
+    </div>
+  </div>
+</div>
+
+<!-- AJUSTES ADMIN -->
+<div class="page" id="page-admin-ajustes">
+  <div class="admin-shell">
+    <div class="admin-topbar">
+      <span class="admin-brand">CommerCity</span>
+      <button class="btn btn-orange btn-sm" onclick="navigate('admin')">Volver</button>
+    </div>
+    <div class="admin-body">
+      <h2 class="admin-page-title">Ajustes</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:24px">Administra los datos importantes de CommerCity.</p>
+
+      <div class="card" style="margin-bottom:24px">
+        <div class="section-head" style="margin-bottom:4px">Registro de cuenta bancaria</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Registra la cuenta bancaria de CommerCity.</p>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field"><label>Nombre del titular</label><input id="admin-bank-titular" type="text" placeholder="Ej. Daniel Olivera Palacios"/></div>
+          <div class="field"><label>Banco</label><select id="admin-bank-banco"><option>Selecciona un banco</option><option>Bancolombia</option><option>Davivienda</option><option>Nequi</option></select></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Tipo de cuenta</label><select id="admin-bank-tipo"><option>Selecciona tipo</option><option>Ahorros</option><option>Corriente</option></select></div>
+          <div class="field"><label>Número de cuenta</label><input id="admin-bank-numero" type="text" placeholder="Ej. 1234567890"/></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn btn-orange" onclick="guardarCuentaAdmin()">Guardar cuenta bancaria</button>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:24px">
+        <h3 style="font-family:var(--font);font-size:16px;font-weight:700;margin-bottom:4px">SALIR</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">En este lugar puedes salir del panel administrador.</p>
+        <button class="btn btn-ghost btn-sm" onclick="doLogout()">Salir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+
+<!-- MODAL SEGUIDORES / SIGUIENDO -->
+<div class="modal-overlay" id="seguidores-modal" onclick="closeSeguidores(event)" style="z-index:500">
+  <div class="modal" style="max-width:360px;padding:0;overflow:hidden;border-radius:16px" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
+      <span style="font-family:var(--font);font-size:14px;font-weight:700;color:var(--orange)">juan_giraldo</span>
+      <button onclick="closeSeguidores()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;line-height:1;padding:0 4px">✕</button>
+    </div>
+    <div style="display:flex;border-bottom:1px solid var(--border)">
+      <div id="tab-seguidores" class="feed-tab active" style="flex:1;text-align:center;border-radius:0" onclick="openSeguidores('seguidores')">Seguidores 15.8k</div>
+      <div id="tab-siguiendo"  class="feed-tab"        style="flex:1;text-align:center;border-radius:0" onclick="openSeguidores('siguiendo')">Siguiendo 842</div>
+    </div>
+    <div id="seguidores-list" style="padding:8px 0;max-height:340px;overflow-y:auto"></div>
+  </div>
+</div>
+
+
+<!-- MODAL REPORTAR PRODUCTO (RF82/83) -->
+<div class="modal-overlay" id="reportar-overlay" onclick="closeReportarProducto(event)" style="z-index:500">
+  <div class="modal" style="max-width:420px" onclick="event.stopPropagation()">
+    <div class="modal-title">Reportar Producto</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Ayúdanos a mantener la calidad de CommerCity.</p>
+    <div class="field">
+      <label>Motivo del reporte (Obligatorio)</label>
+      <textarea id="rep-motivo" style="width:100%;height:90px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--ui);padding:10px;outline:none;resize:none;font-size:13px" placeholder="Describe el problema con este producto..."></textarea>
+    </div>
+    <div class="field">
+      <label>Evidencia - Foto (Obligatorio)</label>
+      <div class="upload-box" onclick="this.querySelector('input').click()">📎 Adjuntar foto<input type="file" id="rep-evidencia" accept="image/*" style="display:none" onchange="handleEvidenciaUpload(event)"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeReportarProducto()">Cancelar</button>
+      <button class="btn btn-orange" style="flex:1" onclick="enviarReporte()">Enviar Reporte</button>
+    </div>
+  </div>
+</div>
+
+  <script src='api.js'></script>
+  <script src="app.js"></script>
+</body>
+</html>

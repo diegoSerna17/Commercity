@@ -1,0 +1,59 @@
+name: Build iOS IPA
+
+on:
+  # Se ejecutará automáticamente cuando subas código a la rama 'main' o 'master'
+  push:
+    branches:
+      - main
+      - master
+  # Permite ejecutar el flujo manualmente desde la pestaña "Actions" en GitHub
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-latest # Esto le dice a GitHub que use una Mac en la nube
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install NPM Dependencies
+        run: npm install
+
+      - name: Sync Capacitor for iOS
+        run: npx cap sync ios
+
+      - name: Build iOS App (Unsigned)
+        run: |
+          cd ios/App
+          # Compilamos la aplicación usando Xcode en la Mac de la nube
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            -archivePath $PWD/build/App.xcarchive \
+            archive
+
+      - name: Package to .ipa
+        run: |
+          cd ios/App/build
+          # Creamos la estructura necesaria para un archivo .ipa
+          mkdir -p Payload
+          mv App.xcarchive/Products/Applications/App.app Payload/
+          zip -r commercity-ios.ipa Payload
+
+      - name: Upload IPA to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: CommerCity-iOS-IPA
+          path: ios/App/build/commercity-ios.ipa

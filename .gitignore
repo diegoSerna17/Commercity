@@ -135,6 +135,8 @@ docs/informes/*
 !docs/informes/INFORME_RAMA_BACKEND_2026-09-27.md
 !docs/informes/INFORME_RAMA_MOVIL_2026-09-27.md
 !docs/informes/INFORME_RAMA_ESCRITORIO_2026-09-27.md
+!docs/informes/EVIDENCIA_E2E_CAPA_RED_2026-09-28.md
+!docs/informes/INFORME_ESTADO_INTEGRACION_2026-09-28.md
 scripts/
 TES.MD
 INFORME_CALIDAD*.pdf
@@ -187,3 +189,13 @@ graphify-out/.graphify_root
 # Archivos Windows del perfil:
 *.lnk
 *.url
+
+# ---------------------------------------------------------------------------
+# apps/: snapshot trackeable de las apps movil/escritorio (aprobado 2026-09-28).
+# Fuente funcional; NUNCA llaves de firma, SDKs locales ni artefactos de build.
+# Regenerables: android/app/src/main/assets/public -> npx cap sync android
+# ---------------------------------------------------------------------------
+**/*.keystore
+apps/movil/android/local.properties
+apps/movil/android/.gradle/
+apps/movil/android/app/src/main/assets/public/

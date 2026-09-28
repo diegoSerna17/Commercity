@@ -98,3 +98,45 @@
 4. `api.conversaciones` / `api.notifsNoLeidas` / `api.perfilPublico` / `api.vendedores` / `api.categorias` están en `api.js` sin UI dedicada (page-mensajes es estática; categorías del filtro son fijas).
 5. `openChat` con tarjetas estáticas de mensajes (sin id resoluble en directorio) opera en modo local.
 6. CORS Electron: depende de la rama backend (`"null"`/`"file://"` en `CORS_ORIGINS`).
+
+## 6. Cierre de pendings 2026-09-28
+
+> Alcance: SOLO `docs/AVANCES/ESCRITORIO COMMERCITY/commercity-desktop/src/app.js`.
+> Sin cambios en `backend/` ni en `docs/AVANCES/MOVIL`. `index.html`, `api.js`, `styles.css` intactos.
+> Verificación: `node --check src/app.js` OK; smoke Node con stubs DOM/fetch sobre `api.js`+`app.js`: **31/31 passed**
+> (precarga de ambos formularios, filas con `openChatPorId(id)`, historial API vs burbujas de
+> fallback, select de categorías, pintado de perfil público, badge 3→visible / 0→oculto, `escHtml`).
+
+### Pendings cerrados (sección 5)
+
+| # | Pending | Cómo quedó | Punto de entrada |
+|---|---|---|---|
+| 5.3 | `cuentaBancaria` / `adminCuentaBancaria` sin precarga | `precargarCuentaBancaria()` y `precargarCuentaAdmin()` leen `{registrado, datos}` al abrir la página y pintan `bank-*` / `admin-bank-*` (solo lectura; el guardado sigue en `guardarCuentaBancaria`/`guardarCuentaAdmin`). `tipo_cuenta` `ahorros\|corriente` → etiqueta del select; banco fuera de la lista fija se agrega como `<option>` para no perderlo. | `navigate('tienda')`, `navigate('admin-ajustes')` |
+| 5.4 (a) | `api.categorias` sin UI | `cargarCategoriasFiltro()` reconstruye `#cat-filter` desde `GET /api/categorias` (conserva `Todos` primero y respeta la selección actual); si la API no responde se mantienen las opciones fijas. | `DOMContentLoaded`, `doLogin` |
+| 5.4 (b) | `api.perfilPublico` sin UI | `pintarPerfilVendedor()` al abrir el detalle de producto pinta nombre real, foto (`avatar`) y biografía en el bloque `.pd-seller` del vendedor. | `openProd()` (si `p.vendedor_id`) |
+| 5.4 (c) | `api.notifsNoLeidas` sin UI | `actualizarBadgeNoLeidas()` es la fuente del badge `.notif-dot` (piso local para réplicas offline). Se refresca al iniciar sesión, al restaurar sesión, al navegar a `home` y al marcar/borrar notificaciones. | `doLogin`, `DOMContentLoaded`, `navigate('home')`, `toggleNotif`, `clickNotif`, `clearAllNotifs` |
+| 5.5 | `openChat` en modo local por ids no resolubles | `page-mensajes` ahora es dinámico: `cargarConversaciones()` pinta `api.conversaciones` (preview, hora, contador de no leídos) + `api.directorio` (contactos sin conversación) con `openChatPorId(id)` y registro `_usuariosChat`. `openChat(..., userId)` usa el id real sin resolver por nombre; las burbujas locales solo se pintan si no hay id/API. El HTML estático de `page-mensajes` queda como fallback cuando la API no responde. | `navigate('mensajes')` |
+
+### Nuevas llamadas `api.*` cableadas en esta iteración
+
+| Método | Endpoint | Uso |
+|---|---|---|
+| `api.cuentaBancaria()` | `GET /api/tienda/mi-cuenta-bancaria` | precarga `bank-*` al abrir Tienda |
+| `api.adminCuentaBancaria()` | `GET /api/admin/mi-cuenta-bancaria` | precarga `admin-bank-*` al abrir Ajustes-admin |
+| `api.conversaciones()` | `GET /api/chat/conversaciones` | filas reales de `page-mensajes` |
+| `api.directorio()` | `GET /api/usuarios/directorio` | contactos con id resoluble (+ caché `_directorioCache`) |
+| `api.mensajes(id)` (ya existente) | `GET /api/chat/mensajes/:usuarioId` | ahora recibe el `userId` real de la fila en vez de resolver por nombre |
+| `api.categorias()` | `GET /api/categorias` | filtro del catálogo |
+| `api.perfilPublico(id)` | `GET /api/usuarios/perfil-publico/:id` | bloque de vendedor en el detalle |
+| `api.notifsNoLeidas()` | `GET /api/notificaciones/no-leidas` | badge del icono de notificaciones |
+
+### Notas / quedan abiertos
+- Siguen abiertos los pendings **5.1** (E2E con backend en vivo), **5.2** (rechazos 400 de pago), **5.6** (CORS Electron): dependen de la rama backend, no de este archivo.
+
+> **Cierre E2E (2026-09-28):** los puntos 5.1, 5.2 y 5.6 quedaron **CERRADOS con evidencia en vivo** contra el backend en `http://localhost:3000` (BD real `commercity_v2`):
+> - Runner `docs/AVANCES/PRUEBAS/ejecutar_pruebas.mjs` = **129/129 OK** (69 endpoints).
+> - Harness de capa red `docs/AVANCES/PRUEBAS/harness_capa_red.mjs` = **102/102 OK** ejecutando el `src/api.js` real de este cliente (incluye B1: 400 direccion corta, 400 formato tarjeta, **402 PAGO_RECHAZADO Luhn**; `validacionTienda` RF130-139; RBAC 403 en admin). CORS Electron verificado con preflight `Origin: null` -> 204 + ACAO (commit 14d6056).
+> - Evidencia: `docs/informes/EVIDENCIA_E2E_CAPA_RED_2026-09-28.md`.
+- `api.vendedores` sigue sin UI dedicada (no estaba en el alcance de este cierre).
+- Fix incluido: `openChat` re-entrante ya no lanza `TypeError` al reasignar `chat-prod-*` (los ids desaparecían tras el primer `innerHTML`) y ahora tolera chats sin tarjeta de producto.
+- Helper nuevo `escHtml()` para pintar datos de la API (nombres, previews, mensajes, URLs) sin inyección de HTML.

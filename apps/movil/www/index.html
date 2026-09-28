@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+  <title>CommerCity</title>
+  <meta name="description" content="CommerCity - Tu marketplace local. Compra y vende en tu ciudad." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  
+  <div id="loading-screen">
+    <div class="intro-flash-burst"></div>
+    <audio id="intro-audio" src="audio_arara.mpeg" preload="auto" playsinline></audio>
+    <button class="intro-skip-btn" onclick="skipIntro()">Saltar ➔</button>
+    <div class="arara-particles">
+      <div class="particle p1"></div><div class="particle p2"></div><div class="particle p3"></div>
+      <div class="particle p4"></div><div class="particle p5"></div>
+    </div>
+    <div class="cyber-loading">
+      <div class="cyber-ring"></div>
+      <div class="cyber-ring cyber-ring-inner"></div>
+      <div class="cyber-ring cyber-ring-outer"></div>
+      <div class="cyber-logo">⬡</div>
+    </div>
+    <div class="loading-content">
+      <div class="loading-brand">CommerCity</div>
+      <div class="loading-sub">TU MARKETPLACE LOCAL</div>
+      <div class="arara-equalizer" id="arara-eq">
+        <div class="eq-bar b1"></div><div class="eq-bar b2"></div><div class="eq-bar b3"></div>
+        <div class="eq-bar b4"></div><div class="eq-bar b5"></div><div class="eq-bar b6"></div>
+        <div class="eq-bar b7"></div><div class="eq-bar b8"></div>
+      </div>
+      <div class="loading-bar-wrap futuristic-bar">
+        <div class="loading-bar cyber-bar" id="intro-progress"></div>
+      </div>
+      <div class="loading-label" id="intro-label">Iniciando experiencia...</div>
+    </div>
+  </div>
+
+  
+  <div id="titlebar">
+    <div class="app-title">⬡ CommerCity</div>
+    <div class="win-controls">
+      <button class="win-btn btn-min" onclick="minimizeWindow()"></button>
+      <button class="win-btn btn-max" onclick="maximizeWindow()"></button>
+      <button class="win-btn btn-close" onclick="closeWindow()"></button>
+    </div>
+  </div>
+
+  
+  <div id="app">
+
+    
+
+    
+    <div class="page" id="page-login">
+      <div class="auth-split">
+        <div class="auth-left">
+          <div class="auth-left-inner">
+            <div class="auth-brand-logo"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px; vertical-align:middle; color:var(--orange);"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>CommerCity</div>
+            <p class="auth-brand-tag">Tu tienda, tu ciudad. Tu estilo, comienza aquí.</p>
+            <div class="auth-brand-stats">
+              <div class="auth-stat">
+                <div class="auth-stat-num">12K+</div>
+                <div class="auth-stat-label">VENDEDORES</div>
+              </div>
+              <div class="auth-stat">
+                <div class="auth-stat-num">84K+</div>
+                <div class="auth-stat-label">PRODUCTOS</div>
+              </div>
+              <div class="auth-stat">
+                <div class="auth-stat-num">230K+</div>
+                <div class="auth-stat-label">COMPRADORES</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="auth-right">
+          <div class="auth-card">
+            <h2 class="auth-card-title">Iniciar sesión</h2>
+            <p class="auth-card-sub">Bienvenido de vuelta a tu marketplace</p>
+            <div class="input-icon-group">
+              <span class="ii-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></span>
+              <input type="email" placeholder="tu@correo.com" id="login-email" />
+            </div>
+            <div class="input-icon-group">
+              <span class="ii-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+              <input type="password" placeholder="••••••••" id="login-password" />
+              <button class="ii-eye" onclick="togglePwd('login-password',this)" tabindex="-1">👁️</button>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+              <label class="check-label">
+                <input type="checkbox" id="login-remember" />
+                <span style="font-size:13px;">Recordar contraseña</span>
+              </label>
+              <a class="link" onclick="navigate('recuperar')" style="font-size:13px;">¿Olvidaste tu contraseña?</a>
+            </div>
+            <button class="btn-primary" onclick="handleLogin()">Entrar →</button>
+            <div class="divider"><span>o</span></div>
+            <button class="btn-ghost" onclick="navigate('registro')">Crear cuenta nueva</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="page" id="page-registro">
+      <div class="auth-center-bg">
+        <div class="auth-card auth-card-sm">
+          <h2 class="auth-card-title" style="font-size:20px;margin-bottom:20px;">Crear cuenta en CommerCity</h2>
+          <div class="input-icon-group">
+            <span class="ii-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+            <input type="text" placeholder="Nombre de usuario" id="reg-username" />
+          </div>
+          <div class="input-icon-group">
+            <span class="ii-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></span>
+            <input type="email" placeholder="Correo electrónico" id="reg-email" />
+          </div>
+          <div class="input-icon-group">
+            <span class="ii-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+            <input type="password" placeholder="Contraseña" id="reg-password" />
+            <button class="ii-eye" onclick="togglePwd('reg-password',this)" tabindex="-1">👁️</button>
+          </div>
+          <label class="check-label" style="margin-bottom:12px;">
+            <input type="checkbox" id="reg-seller" />
+            <span>Quiero <span style="color:var(--orange);font-weight:600;">vender</span> en CommerCity</span>
+          </label>
+          <label class="check-label" style="margin-bottom:20px;">
+            <input type="checkbox" id="reg-terms" required />
+            <span>Acepto los <a class="link" onclick="navigate('terminos')" style="text-decoration:underline;">Términos y Condiciones</a></span>
+          </label>
+          <button class="btn-primary" onclick="handleRegistro()">Registrarse</button>
+          <p style="text-align:center;font-size:13px;color:var(--text-muted);margin-top:16px;">
+            ¿Ya tienes cuenta? <a class="link" onclick="navigate('login')">Iniciar sesión</a>
+          </p>
+        </div>
+        <div class="auth-footer-bar">
+          <span>© 2026 CommerCity. Creado por THE BLACK CODE JSB.</span>
+          <a class="link" onclick="navigate('terminos')">términos y condiciones</a>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="page" id="page-recuperar">
+      <div class="auth-center-bg">
+        <div class="auth-card auth-card-sm">
+          <h2 class="auth-card-title">Recuperar contraseña</h2>
+          <p class="auth-card-sub">Ingresa tu correo electrónico y te enviaremos un enlace de un solo uso para restablecer tu contraseña. <span style="color:var(--orange);font-weight:600;display:block;margin-top:4px;">⏱️ El enlace expira a los 5 minutos de emitido.</span></p>
+          <div class="input-icon-group" style="margin-top:16px;">
+            <span class="ii-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></span>
+            <input type="email" placeholder="ejemplo@correo.com" id="rec-email" />
+          </div>
+          <button class="btn-primary" onclick="handleRecuperar()">Enviar enlace</button>
+          <div style="text-align:center;margin-top:16px;">
+            <a class="link" onclick="navigate('login')">← Volver al inicio de sesión</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="page" id="page-restablecer">
+      <div class="auth-center-bg">
+        <div class="auth-card auth-card-sm">
+          <h2 class="auth-card-title">Restablecer contraseña</h2>
+          <p class="auth-card-sub">Crea una nueva contraseña segura para tu cuenta.</p>
+          <div class="input-icon-group" style="margin-top:20px;">
+            <span class="ii-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+            <input type="password" placeholder="Ingresa tu nueva contraseña" id="new-pass" />
+            <button class="ii-eye" onclick="togglePwd('new-pass',this)" tabindex="-1">👁️</button>
+          </div>
+          <div class="input-icon-group">
+            <span class="ii-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+            <input type="password" placeholder="Confirma tu nueva contraseña" id="new-pass2" />
+            <button class="ii-eye" onclick="togglePwd('new-pass2',this)" tabindex="-1">👁️</button>
+          </div>
+          <button class="btn-primary" onclick="handleRestablecer()">Restablecer contraseña</button>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="page" id="page-terminos">
+      <div class="tc-page">
+        <div class="tc-topbar">
+          <button class="btn-back" onclick="navigate('registro')">← Volver</button>
+          <h1 class="tc-main-title">Terminos y Condiciones</h1>
+          <div style="width:80px;"></div>
+        </div>
+        <div class="tc-body">
+          <div class="tc-welcome">
+            <p>Hola 👋 Antes de empezar, queremos agradecerte por formar parte de CommerCity, una comunidad creada no solo para hacer transacciones, sino también para conectar vidas y oportunidades. A continuación te invitamos a leer nuestros términos y condiciones, al registrarse en CommerCity, confirmas que los has leído y aceptado.</p>
+            <p style="margin-top:8px;">¡Gracias por confiar en nosotros y bienvenido a CommerCity! 🚀</p>
+          </div>
+
+          <div class="tc-item">
+            <div class="tc-num">1</div>
+            <div>
+              <div class="tc-item-title">Tu cuenta es tuya, cuídala.</div>
+              <p class="tc-item-text">Usa datos reales. Tu contraseña es solo tuya. Si notas algo raro, cambia tu contraseña de inmediato.</p>
+            </div>
+          </div>
+          <div class="tc-item">
+            <div class="tc-num">2</div>
+            <div>
+              <div class="tc-item-title">¿Vendes? ¡Genial, pero con responsabilidad!</div>
+              <p class="tc-item-text">Solo publica productos que realmente tengas, con fotos e información verídica. Nada falso ni engañoso. Si lo detectamos, te retiramos.</p>
+            </div>
+          </div>
+          <div class="tc-item">
+            <div class="tc-num">3</div>
+            <div>
+              <div class="tc-item-title">El chat es para conectar. No para molestar.</div>
+              <p class="tc-item-text">Úsalo con respeto. Sin spam, acoso ni mensajes fuera de lugar. Aquí todos merecen una buena experiencia.</p>
+            </div>
+          </div>
+          <div class="tc-item">
+            <div class="tc-num">4</div>
+            <div>
+              <div class="tc-item-title">La comisión clara desde el inicio.</div>
+              <p class="tc-item-text">CommerCity comisiona el 10% de las ventas. Es lo que nos permite mantener la plataforma para todos. Al publicar productos como vendedor ya estás aceptando este término y condición.</p>
+            </div>
+          </div>
+          <div class="tc-item">
+            <div class="tc-num">5</div>
+            <div>
+              <div class="tc-item-title">Protección al comprador garantizada.</div>
+              <p class="tc-item-text">Si un producto no llega o no corresponde a lo descrito, tenemos un proceso de reclamación para protegerte.</p>
+            </div>
+          </div>
+          <div class="tc-item">
+            <div class="tc-num">6</div>
+            <div>
+              <div class="tc-item-title">Tus datos, tu privacidad.</div>
+              <p class="tc-item-text">Nunca vendemos tu información personal a terceros. Solo la usamos para mejorar tu experiencia dentro de CommerCity.</p>
+            </div>
+          </div>
+          <div class="tc-item">
+            <div class="tc-num">7</div>
+            <div>
+              <div class="tc-item-title">Ley y jurisdicción aplicable.</div>
+              <p class="tc-item-text">Estos términos se rigen bajo las leyes de la República de Colombia. Cualquier disputa será resuelta conforme a la legislación colombiana vigente.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <div id="sidebar" style="display:none;">
+      <div class="sidebar-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--orange);flex-shrink:0;"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+        CommerCity
+      </div>
+      <div class="nav-section-label">Principal</div>
+      <div class="nav-item" id="nav-home" onclick="navigate('home')"><span class="nav-icon">🏠</span> Inicio</div>
+      <div class="nav-item" id="nav-carrito" onclick="navigate('carrito')">
+        <span class="nav-icon" style="position:relative">🛒<span class="cart-dot" id="nav-cart-dot" style="display:none;right:-2px;top:0;"></span></span> Carrito
+        <span class="cart-badge-pill" id="sidebar-cart-badge" style="display:none;">0</span>
+      </div>
+      <div class="nav-section-label">Cuenta</div>
+      <div class="nav-item" id="nav-perfil" onclick="navigate('perfil')"><span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span> Perfil</div>
+      <div class="nav-item seller-only" id="nav-tienda" onclick="navigate('tienda')"><span class="nav-icon">🏪</span> Tienda</div>
+      <div class="nav-item seller-only" id="nav-pedidos" onclick="navigate('pedidos')"><span class="nav-icon">📦</span> Pedidos</div>
+      <div class="nav-item" id="nav-historial" onclick="navigate('historial')"><span class="nav-icon">📋</span> Historial Compras</div>
+      <div class="nav-item" id="nav-ajustes" onclick="navigate('ajustes')"><span class="nav-icon">⚙️</span> Ajustes</div>
+      <div class="nav-item admin-only" id="nav-admin" onclick="navigate('admin')"><span class="nav-icon">🛡️</span> Panel de Administracion</div>
+      <div class="sidebar-bottom">
+        <div class="sidebar-user" onclick="navigate('perfil')">
+          <div class="sidebar-avatar">J</div>
+          <div class="sidebar-username">Juan_Giraldo</div>
+        </div>
+        <button class="btn-cerrar" onclick="handleLogout()">Cerrar Sesión</button>
+      </div>
+    </div>
+
+    
+
+    
+    <div class="page" id="page-home">
+      <div class="main-content">
+        
+        <div class="app-topbar-header">
+          <div class="page-brand-logo">CommerCity</div>
+        </div>
+        <div class="app-topbar">
+          <div class="tb-left">
+            <div class="cat-wrap">
+              <button class="cat-btn" onclick="toggleCatMenu(event)">Categorías ▾</button>
+              <div class="cat-dropdown" id="cat-dropdown">
+                <div class="cat-item">⌚ Relojes</div>
+                <div class="cat-item">👟 Calzado</div>
+                <div class="cat-item">👜 Bolsos</div>
+                <div class="cat-item">💻 Tecnología</div>
+                <div class="cat-item">🌿 Hogar</div>
+                <div class="cat-item">💄 Belleza</div>
+              </div>
+            </div>
+          </div>
+          <div class="tb-center">
+            <div class="tb-search">
+              <span>🔍</span>
+              <input type="text" placeholder="Buscar productos..." />
+            </div>
+          </div>
+          <div class="tb-right">
+            <button class="icon-btn icon-white" id="bell-btn" onclick="toggleNotifs(event)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></button>
+          </div>
+        </div>
+
+        
+        <div class="hero-banner">
+          <img src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800&q=80" alt="Hero" class="hero-img" />
+          <div class="hero-overlay"></div>
+          <div class="hero-content">
+            <h1 class="hero-title">Transforma tu estilo.</h1>
+            <p class="hero-sub">Encuentra lo que te define.</p>
+          </div>
+        </div>
+
+        
+        <div class="section-hdr">
+          <h2 class="section-ttl">Explorar</h2>
+          <a class="link">Ver todos →</a>
+        </div>
+
+        <div class="prod-grid" id="home-prod-grid">
+          
+          <div class="prod-card" onclick="openProductDetail('watch')">
+            <img src="https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=400&q=80" alt="Reloj" class="prod-img" />
+            <div class="prod-info">
+              <div class="prod-name">Reloj Elitret Gold</div>
+              <div class="prod-price">$345.000</div>
+            </div>
+          </div>
+          
+          <div class="prod-card" onclick="openProductDetail('sneaker')">
+            <div class="prod-badge disc-badge">-20%</div>
+            <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80" alt="Zapatos" class="prod-img" />
+            <div class="prod-info">
+              <div class="prod-name">Zapatos Deportivos</div>
+              <div class="prod-price-old">$98.750</div>
+              <div class="prod-price">$79.000</div>
+            </div>
+          </div>
+          
+          <div class="prod-card" onclick="openProductDetail('earbuds')">
+            <div class="prod-badge disc-badge">-15%</div>
+            <img src="https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&q=80" alt="Audífonos" class="prod-img" />
+            <div class="prod-info">
+              <div class="prod-name">Auriculares Studio Pro</div>
+              <div class="prod-price-old">$456.000</div>
+              <div class="prod-price">$388.000</div>
+            </div>
+          </div>
+          
+          <div class="prod-card" onclick="openProductDetail('backpack')">
+            <img src="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80" alt="Mochila" class="prod-img" />
+            <div class="prod-info">
+              <div class="prod-name">Mochila City Stealth</div>
+              <div class="prod-price">$79.000</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="load-more-hint">Cargando más productos...</div>
+      </div>
+    </div>
+
+    
+    <div class="page" id="page-carrito">
+      <div class="main-content">
+        <div class="inner-topbar">
+          <div class="page-brand-logo">CommerCity</div>
+          <span class="inner-topbar-title">Carrito</span>
+          <div class="inner-topbar-icons">
+            <button class="icon-btn icon-white" onclick="toggleNotifs(event)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></button>
+            <button class="icon-btn icon-white" onclick="navigate('perfil')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></button>
+          </div>
+        </div>
+        <div class="page-section-title" style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
+          <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 3h3l2.5 12h11L21 6H6" />
+              <circle cx="9" cy="19" r="1.5" />
+              <circle cx="17" cy="19" r="1.5" />
+            </svg>
+          </div>
+          <h2 style="color:#F5A623; font-weight:800; margin:0; font-size:22px; letter-spacing:-0.5px;">Carrito de Compras</h2>
+        </div>
+        <div class="carrito-layout">
+          <div class="carrito-items-list" id="carrito-items"></div>
+          <div class="carrito-summary-box">
+            <div class="summary-row"><span>Total de artículos</span><span id="sum-total-items">$0</span></div>
+            <div class="summary-row discount-row"><span>Descuentos aplicados</span><span id="sum-discount">-$0</span></div>
+            <div class="summary-row total-row"><span>Total</span><span id="sum-total">$0</span></div>
+            <button class="btn-primary" style="margin-top:20px;" onclick="openPasarela()">Comprar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="page" id="page-perfil">
+      <div class="main-content">
+        <div class="inner-topbar">
+          <div class="page-brand-logo">CommerCity</div>
+          <span class="inner-topbar-title">Perfil</span>
+          <div class="inner-topbar-icons">
+            <button class="icon-btn icon-white" onclick="toggleNotifs(event)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></button>
+          </div>
+        </div>
+
+        <div class="perfil-hero">
+          <div class="perfil-ava" style="position:relative;"><span id="perfil-ava-text">J</span><img id="perfil-ava-img" src="" style="display:none; width:100%; height:100%; border-radius:50%; object-fit:cover;" /><label for="perfil-upload" style="position:absolute; bottom:-5px; right:-5px; background:var(--orange); color:#fff; border-radius:50%; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; width:32px; height:32px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></label><input type="file" id="perfil-upload" accept="image/*" style="display:none;" onchange="changeProfilePic(this)" /></div>
+          <div class="perfil-meta">
+            <div class="perfil-name">juan_giraldo</div>
+            <div class="perfil-desc-container" style="font-size:13px;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+              <span class="perfil-desc" id="perfil-desc">Hola,Soy nuevo</span>
+              <button onclick="navigate('ajustes')" title="Editar descripción" style="background:none;border:none;padding:0;cursor:pointer;color:#F5A623;display:flex;align-items:center;justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+              </button>
+            </div>
+            <div class="perfil-stars" id="perfil-stars">
+              <span class="star" onclick="rateProfile(1)">★</span>
+              <span class="star" onclick="rateProfile(2)">★</span>
+              <span class="star" onclick="rateProfile(3)">★</span>
+              <span class="star" onclick="rateProfile(4)">★</span>
+              <span class="star" onclick="rateProfile(5)">★</span>
+            </div>
+            <div class="perfil-counts">
+              <div class="perfil-count" onclick="openFollowersModal('seguidores')" style="cursor:pointer;">
+                <span class="perfil-count-n">15.8k</span>
+                <span class="perfil-count-l">SEGUIDORES</span>
+              </div>
+              <div class="perfil-count" onclick="openFollowersModal('siguiendo')" style="cursor:pointer;">
+                <span class="perfil-count-n">842</span>
+                <span class="perfil-count-l">SIGUIENDO</span>
+              </div>
+            </div>
+          </div>
+          <div class="perfil-btns">
+            <button class="btn-orange-outline" onclick="navigate('mensajes')">💬 Mensajes</button>
+            <button class="btn-orange seller-only" id="btn-add-product" onclick="openAddProductModal()">+ Agregar Producto</button>
+          </div>
+        </div>
+
+        <div class="filter-tabs" style="margin-bottom:16px;">
+          <button class="ftab active" id="tab-mis-prod" onclick="switchPerfilTab('mis-prod')">Mis Productos</button>
+          <button class="ftab" id="tab-mi-feed" onclick="switchPerfilTab('mi-feed')">Mi Feed 📱</button>
+        </div>
+
+        <div class="prod-grid" id="perfil-prod-grid">
+          
+          <div class="prod-card" onclick="openProductDetail('backpack')">
+            <div class="prod-badge disc-badge">-10%</div>
+            <button class="prod-edit-btn seller-only" onclick="event.stopPropagation(); openEditProductModal('backpack')" title="Editar producto">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+            </button>
+            <img src="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80" alt="Bolso Boutique" class="prod-img" />
+            <div class="prod-info">
+              <div class="prod-name">Bolso Boutique</div>
+              <div class="prod-price-old">$138.889</div>
+              <div class="prod-price">$125.000</div>
+            </div>
+          </div>
+          
+          <div class="prod-card" onclick="openProductDetail('watch')">
+            <button class="prod-edit-btn seller-only" onclick="event.stopPropagation(); openEditProductModal('watch')" title="Editar producto">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+            </button>
+            <img src="https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=400&q=80" alt="Reloj" class="prod-img" />
+            <div class="prod-info">
+              <div class="prod-name">Reloj Elitret Gold</div>
+              <div class="prod-price">$345.000</div>
+            </div>
+          </div>
+          
+          <div class="prod-card" onclick="openProductDetail('sneaker')">
+            <div class="prod-badge disc-badge">-20%</div>
+            <button class="prod-edit-btn seller-only" onclick="event.stopPropagation(); openEditProductModal('sneaker')" title="Editar producto">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+            </button>
+            <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80" alt="Zapatos" class="prod-img" />
+            <div class="prod-info">
+              <div class="prod-name">Zapatos Deportivos</div>
+              <div class="prod-price-old">$98.750</div>
+              <div class="prod-price">$79.000</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="page" id="page-tienda">
+      <div class="main-content">
+        <div class="inner-topbar">
+          <div class="page-brand-logo">CommerCity</div>
+          <span class="inner-topbar-title">Tienda</span>
+          <div class="inner-topbar-icons">
+            <button class="icon-btn icon-white" onclick="toggleNotifs(event)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></button>
+            <button class="icon-btn icon-white" onclick="navigate('ajustes')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></button>
+          </div>
+        </div>
+
+        <div class="tienda-welcome-card">
+          <h2 style="font-family:var(--font);font-size:18px;font-weight:700;margin-bottom:4px;">Bienvenido de nuevo, Juan 👋</h2>
+          <p style="font-size:13px;color:var(--text-muted);">Revisa cómo va tu tienda, visualiza estadísticas sobre tu tienda y gestiona tu cuenta bancaria.</p>
+        </div>
+
+        <div class="tienda-stats-title">Estadísticas de tu tienda</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Mira cómo vas progresando tu negocio</p>
+
+        <div class="tienda-stats-row">
+          <div class="tienda-stat">
+            <div class="tienda-stat-ico">🛍️</div>
+            <div>
+              <div class="tienda-stat-lbl">VENTAS TOTALES</div>
+              <div class="tienda-stat-val">20</div>
+            </div>
+          </div>
+          <div class="tienda-stat">
+            <div class="tienda-stat-ico">💰</div>
+            <div>
+              <div class="tienda-stat-lbl">DINERO RECAUDADO</div>
+              <div class="tienda-stat-val">$380.000</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bank-card">
+          <h3 style="font-family:var(--font);font-size:15px;font-weight:700;margin-bottom:4px;">Registro de cuenta bancaria</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Registra tu cuenta bancaria para recibir los pagos de tus ventas.</p>
+          <div class="two-col-row">
+            <div class="input-group">
+              <label>Nombre del titular</label>
+              <input type="text" placeholder="Ej: Daniel Silveira Palacios" id="bank-name" />
+            </div>
+            <div class="input-group">
+              <label>Banco</label>
+              <select id="bank-select" class="select-input">
+                <option value="">Selecciona un banco</option>
+                <option>Bancolombia</option><option>Davivienda</option><option>BBVA</option>
+                <option>Banco de Bogotá</option><option>Nequi</option><option>Daviplata</option>
+              </select>
+            </div>
+          </div>
+          <div class="two-col-row">
+            <div class="input-group">
+              <label>Tipo de cuenta</label>
+              <select id="bank-type" class="select-input">
+                <option value="">Selecciona tipo</option>
+                <option>Ahorros</option><option>Corriente</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Número de cuenta</label>
+              <input type="text" placeholder="Ej: 123456789" id="bank-number" />
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <button class="btn-primary" style="width:auto;padding:12px 24px;" onclick="saveBankAccount()">Guardar cuenta bancaria</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="page" id="page-pedidos">
+      <div class="main-content">
+        <div class="inner-topbar">
+          <div></div>
+          <span class="inner-topbar-title">Pedidos</span>
+          <div class="inner-topbar-icons">
+            <button class="icon-btn icon-white" onclick="toggleNotifs(event)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></button>
+            <button class="icon-btn" onclick="navigate('ajustes')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></button>
+          </div>
+        </div>
+        <h2 class="page-h2">Pedidos</h2>
+        <p class="page-sub">Gestiona y actualiza el estado de tus pedidos</p>
+        <div class="filter-tabs" id="pedidos-tabs">
+          <button class="ftab active" onclick="filterTab(this,'pedidos-tbody','todo')">Todo</button>
+          <button class="ftab" onclick="filterTab(this,'pedidos-tbody','pendiente')">Pendiente</button>
+          <button class="ftab" onclick="filterTab(this,'pedidos-tbody','camino')">En camino</button>
+          <button class="ftab" onclick="filterTab(this,'pedidos-tbody','entregado')">Entregado</button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr><th>CLIENTE</th><th>PRODUCTO</th><th>FECHA</th><th>ESTADO</th><th>ACCIÓN</th><th>MONTO</th></tr></thead>
+            <tbody id="pedidos-tbody">
+              <!-- Filas mock eliminadas: las pinta cargarPedidos() con api.ventas -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="page" id="page-historial">
+      <div class="main-content">
+        <div class="inner-topbar">
+          <div style="flex: 1;"></div>
+          <span class="inner-topbar-title">Historial Compras</span>
+          <div class="inner-topbar-icons" style="flex: 1; justify-content: flex-end;">
+            <button class="icon-btn icon-white" style="width:34px;height:34px;" onclick="toggleNotifs(event)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></button>
+            <button class="icon-btn" style="width:34px;height:34px;" onclick="navigate('ajustes')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></button>
+          </div>
+        </div>
+        <h2 class="page-h2">Historial Compras</h2>
+        <p class="page-sub">Visualiza y haz seguimiento de tus compras en el historial</p>
+        <div class="filter-tabs">
+          <button class="ftab active" onclick="filterHTab(this,'todo')">Todos</button>
+          <button class="ftab" onclick="filterHTab(this,'pendiente')">Pendiente</button>
+          <button class="ftab" onclick="filterHTab(this,'camino')">En camino</button>
+          <button class="ftab" onclick="filterHTab(this,'entregado')">Entregado</button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr><th>VENDEDOR</th><th>PRODUCTO</th><th>FECHA</th><th>ESTADO</th><th>CANTIDAD</th><th>MONTO</th><th>ACCIÓN</th></tr></thead>
+            <tbody id="historial-tbody">
+              <!-- Filas mock eliminadas: las pinta cargarHistorial() con api.historialCompras -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="page" id="page-ajustes">
+      <div class="main-content">
+        <div class="inner-topbar">
+          <div style="flex: 1;"></div>
+          <span class="inner-topbar-title">Ajustes</span>
+          <div class="inner-topbar-icons" style="flex: 1; justify-content: flex-end;">
+            <button class="icon-btn icon-white" style="width:34px;height:34px;" onclick="toggleNotifs(event)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></button>
+            <button class="icon-btn" style="width:34px;height:34px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></button>
+          </div>
+        </div>
+        <h2 class="page-h2">Ajustes</h2>
+        <p class="page-sub">Administra tu información personal y preferencias sobre la cuenta.</p>
+
+        <div class="aj-section">
+          <h3 class="aj-section-ttl">Información personal</h3>
+          <p class="aj-section-sub">Actualiza tu usuario, correo electrónico y descripción</p>
+          <div class="input-group"><label>Usuario</label><input type="text" value="juan_Giraldo" id="aj-user" /></div>
+          <div class="input-group"><label>Correo electrónico</label><input type="email" value="Juan_commercity@gmail.com" id="aj-email" /></div>
+          <div class="input-group"><label>Descripción del perfil</label><textarea id="aj-desc" class="textarea-input" style="min-height:60px;">Hola,Soy nuevo</textarea></div>
+          <button class="btn-orange" style="width:auto;padding:10px 20px;" onclick="savePersonalInfo()">Guardar Cambios</button>
+        </div>
+
+        <div class="aj-section">
+          <h3 class="aj-section-ttl">Dirección de entrega</h3>
+          <p class="aj-section-sub">Agrega tu dirección para recibir tus pedidos</p>
+          <div class="input-group"><label>Dirección</label><input type="text" placeholder="Calle Cr8 # 40 - 17" id="aj-addr" /></div>
+          <div class="two-col-row">
+            <div class="input-group"><label>Ciudad</label><input type="text" placeholder="Cali" id="aj-city" /></div>
+            <div class="input-group"><label>Departamento</label><input type="text" placeholder="Valle del Cauca" id="aj-dept" /></div>
+          </div>
+          <button class="btn-orange" style="width:auto;padding:10px 20px;" onclick="saveAddress()">Cambiar dirección</button>
+        </div>
+
+        <div class="aj-vendor-banner buyer-only" id="aj-vendor-banner">
+          <div>
+            <h3 style="font-weight:700;margin-bottom:4px;font-size:15px;">¿Quieres vender en CommerCity?</h3>
+            <p style="font-size:13px;color:var(--text-muted);">Crea tu tienda y construye tu futuro en CommerCity, llega a más compradores en esta comunidad.</p>
+          </div>
+          <button class="btn-orange" style="width:auto;padding:10px 16px;white-space:nowrap;flex-shrink:0;" onclick="becomeSeller()">Cambiar a vendedor</button>
+        </div>
+
+        <div class="aj-danger-section">
+          <h3 style="color:var(--danger);font-weight:700;margin-bottom:4px;">Elimina tu cuenta</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Una vez elimines tu cuenta, todos tus datos serán borrados permanentemente. Esta acción no se puede deshacer.</p>
+          <button class="btn-danger" onclick="confirmDelete()">Eliminar Cuenta</button>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="page" id="page-mensajes">
+      <div class="main-content">
+        <div class="mensajes-header">
+          <div style="flex: 1;"></div>
+          <span class="inner-topbar-title" style="color:var(--orange);">Mensajes</span>
+          <div style="flex: 1; display: flex; gap: 8px; justify-content: flex-end;">
+            <button class="icon-btn icon-white" style="width:34px;height:34px;border:none;background:transparent;" onclick="toggleNotifs(event)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></button>
+            <button class="btn-orange" style="width:auto;padding:6px 14px;font-size:12px;margin:0;">+ Nuevo</button>
+          </div>
+        </div>
+        
+        <div class="msgs-search-bar">
+          <span class="msgs-search-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input type="text" class="msgs-search-input" placeholder="Buscar conversación..." />
+        </div>
+        <div class="chat-list">
+          <div class="chat-li unread" onclick="openChat('Marco Valero','M','#7c3aed')">
+            <div class="chat-li-ava" style="background:linear-gradient(135deg,#7c3aed,#a855f7);">M</div>
+            <div class="chat-li-body">
+              <div class="chat-li-name">Marco Valero</div>
+              <div class="chat-li-preview">¿Cuándo llega mi pedido de 2026?</div>
+            </div>
+            <div class="chat-li-meta">
+              <div class="chat-li-time">10:42</div>
+              <div class="unread-dot"></div>
+            </div>
+          </div>
+          <div class="chat-li" onclick="openChat('Sofia Alarcón','S','#be185d')">
+            <div class="chat-li-ava" style="background:linear-gradient(135deg,#be185d,#ec4899);">S</div>
+            <div class="chat-li-body">
+              <div class="chat-li-name">Sofia Alarcón</div>
+              <div class="chat-li-preview">Disculpe buenas tardes, perdona...</div>
+            </div>
+            <div class="chat-li-meta"><div class="chat-li-time">Ayer</div></div>
+          </div>
+          <div class="chat-li" onclick="openChat('Soporte CommerCity','⬡','#F5A623')">
+            <div class="chat-li-ava" style="background:linear-gradient(135deg,var(--orange),#ffd666);">⬡</div>
+            <div class="chat-li-body">
+              <div class="chat-li-name">Soporte CommerCity</div>
+              <div class="chat-li-preview">¡EXCELENTE MILLÓN! ¡Rompiste récord!</div>
+            </div>
+            <div class="chat-li-meta"><div class="chat-li-time">Lun</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="page" id="page-chat">
+      <div class="chat-page-wrap">
+        <div class="chat-topbar">
+          
+          <button class="chat-back-btn" onclick="navigate('mensajes')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          
+          <div class="chat-topbar-center">
+            <div class="chat-li-ava" id="chat-ava" style="background:linear-gradient(135deg,#be185d,#ec4899);width:32px;height:32px;font-size:12px;flex-shrink:0;">D</div>
+            <span class="chat-partner-name" id="chat-name">Dario Gómez</span>
+          </div>
+          
+          <div class="chat-topbar-actions" style="display:flex; gap:8px; align-items:center;">
+            <button class="chat-pill-btn chat-pill-perfil" title="Ver Perfil">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              <span>Perfil</span>
+            </button>
+            <button class="chat-pill-btn chat-pill-reportar" title="Reportar" onclick="openReportModal()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+              <span>Reportar</span>
+            </button>
+            <button class="icon-btn icon-white" style="width:34px;height:34px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);" onclick="toggleNotifs(event)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></button>
+          </div>
+        </div>
+        <div class="chat-body" id="chat-body">
+          <div class="chat-prod-card">
+            <img src="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80" alt="Bolso" class="chat-prod-img" />
+            <div class="chat-prod-info">
+              <div class="chat-prod-name">Bolso Boutique</div>
+              <div class="chat-prod-price">$319.000 COP</div>
+              <button class="btn-orange" style="width:100%;padding:8px;font-size:13px;margin-top:8px;">Ver Producto</button>
+            </div>
+          </div>
+          <div class="msg-wrap incoming">
+            <div class="msg-bubble">Hola, ¿todavía está disponible el tenso?</div>
+            <div class="msg-time">10:41</div>
+          </div>
+          <div class="msg-wrap outgoing">
+            <div class="msg-bubble">Sí, aún tenemos. ¿Disponible la entrega?</div>
+            <div class="msg-time">10:42</div>
+          </div>
+          <div class="msg-wrap incoming">
+            <div class="msg-bubble">¿Tiene garantía?</div>
+            <div class="msg-time">10:43</div>
+          </div>
+          <div class="msg-wrap outgoing">
+            <div class="msg-bubble">Sí, garantía de 6 meses.</div>
+            <div class="msg-time">10:44</div>
+          </div>
+        </div>
+        <div class="chat-bottom-bar">
+          <div class="chat-input-wrapper">
+            <button class="chat-ico-btn">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+            </button>
+            <button class="chat-ico-btn">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </button>
+            <input type="text" class="chat-txt-input" placeholder="Escribe un mensaje..." id="chat-msg-input" onkeydown="if(event.key==='Enter')sendChatMessage()" />
+          </div>
+          <button class="chat-send-btn-new" onclick="sendChatMessage()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform:translate(-1px, 1px)"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    
+    <nav class="bottom-nav hidden" id="bottom-nav">
+      <a class="bnav-item" id="bnav-home" onclick="navigate('home')">
+        <span class="bnav-ico">🏠</span><span class="bnav-lbl">Inicio</span>
+      </a>
+      <a class="bnav-item" id="bnav-carrito" onclick="navigate('carrito')">
+        <span class="bnav-ico" style="position:relative">🛒<span class="cart-dot" id="bnav-cart-dot" style="display:none;"></span></span><span class="bnav-lbl">Carrito</span>
+      </a>
+      <a class="bnav-item" id="bnav-perfil" onclick="navigate('perfil')">
+        <span class="bnav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span><span class="bnav-lbl">Perfil</span>
+      </a>
+      <a class="bnav-item" id="bnav-menu" onclick="toggleMoreMenu()">
+        <span class="bnav-ico">☰</span><span class="bnav-lbl">Menú</span>
+      </a>
+    </nav>
+
+  </div>
+
+  
+
+  
+  <div class="more-overlay" id="more-overlay" onclick="closeMoreMenu()"></div>
+  <div class="more-drawer" id="more-drawer">
+    <div class="more-handle"></div>
+
+    <a class="more-item seller-only" onclick="closeMoreMenu();navigate('tienda')"><span class="icon">🏪</span><span>Mi Tienda</span></a>
+    <a class="more-item seller-only" onclick="closeMoreMenu();navigate('pedidos')"><span class="icon">📦</span><span>Pedidos</span></a>
+    <a class="more-item" onclick="closeMoreMenu();navigate('historial')"><span class="icon">📋</span><span>Historial Compras</span></a>
+    <a class="more-item" onclick="closeMoreMenu();navigate('ajustes')"><span class="icon">⚙️</span><span>Configuración</span></a>
+    <div class="more-divider"></div>
+    <a class="more-item admin-only" onclick="closeMoreMenu();navigate('admin')"><span class="icon">🛡️</span><span>Panel de Administración</span></a>
+    <a class="more-item more-logout" onclick="closeMoreMenu();handleLogout()"><span class="icon">🚪</span><span>Cerrar Sesión</span></a>
+  </div>
+
+  
+  <div class="modal-overlay" id="pd-modal" onclick="closePdOnOverlay(event)">
+    <div class="pd-box-new">
+      <div class="pd-header-new">
+        <span class="pd-brand-new">Commercity</span>
+        <div class="pd-header-actions">
+          <button class="btn-ghost" style="padding:4px 10px; font-size:11px; border:1px solid rgba(255,255,255,0.2); border-radius:16px; margin-right:8px;" onclick="openReportModal()">Reportar</button>
+          <button class="btn-back-sm-new" onclick="closePd()">← Volver</button>
+        </div>
+      </div>
+      <div class="pd-main-row">
+        <div class="pd-img-wrap-new">
+          <img src="" id="pd-img" alt="" class="pd-img-new" />
+        </div>
+        <div class="pd-details-right">
+          <div class="pd-lbl-new">NOMBRE</div><div class="pd-val-new" id="pd-name">—</div>
+          <div class="pd-lbl-new">CATEGORIA</div><div class="pd-val-new" id="pd-cat">—</div>
+          <div class="pd-lbl-new">ESTADO</div><div><span class="badge badge-green-new" id="pd-status">Disponible</span></div>
+          <div class="pd-lbl-new">PRECIO</div>
+          <div class="pd-price-wrap">
+            <div class="pd-price-old-new" id="pd-price-old">—</div>
+            <div class="pd-price-new" id="pd-price">—</div>
+          </div>
+          <div class="pd-stats-row">
+            <div class="pd-stat-box">
+              <div class="pd-lbl-new">STOCK</div>
+              <div class="pd-stat-val"><span id="pd-stock">—</span> <span style="font-size:11px;font-weight:400">unidades</span></div>
+            </div>
+            <div class="pd-stat-box">
+              <div class="pd-lbl-new">DESCUENTO</div>
+              <div class="pd-stat-val pd-discount-new" id="pd-disc">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="pd-desc-section">
+        <div class="pd-lbl-new">DESCRIPCION DEL PRODUCTO</div>
+        <div class="pd-desc-box" id="pd-desc">—</div>
+      </div>
+      
+      <div class="pd-footer-new">
+        <div class="pd-vendor-col">
+          <div class="pd-lbl-new">VENDEDOR</div>
+          <div class="pd-vendor-new"><div class="pd-vendor-ava-new" id="pd-vendor-ava">J</div><span id="pd-vendor">—</span></div>
+        </div>
+        <div class="pd-buy-col">
+          <div class="pd-qty-wrap">
+            <span class="pd-lbl-new" style="margin-right:8px">CANTIDAD</span>
+            <div class="qty-ctrl-new">
+              <button class="qty-btn-new" onclick="changeQty(-1)">−</button>
+              <span class="qty-num-new" id="pd-qty">1</span>
+              <button class="qty-btn-new" onclick="changeQty(1)">+</button>
+            </div>
+          </div>
+          <button class="btn-orange-new" onclick="addToCart()">Agregar al carrito</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="report-modal" onclick="closeReportOnOverlay(event)">
+    <div class="modal-box" style="padding:20px; max-width:400px; width:90%; background:#1E1E1E; border:1px solid rgba(255,255,255,0.1); border-radius:12px;">
+      <div style="margin-bottom: 16px;">
+        <label style="font-size: 11px; font-weight: 600; color: #fff; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">MOTIVO</label>
+        <textarea id="report-reason" placeholder="Describe el motivo del reporte..." style="width: 100%; min-height: 80px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; color: #fff; font-family: inherit; font-size: 13px; resize: none;"></textarea>
+      </div>
+      <div style="margin-bottom: 24px;">
+        <label style="font-size: 11px; font-weight: 600; color: #fff; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">EVIDENCIA</label>
+        <div style="width: 100%; height: 80px; background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.2); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
+          <span style="font-size: 16px; margin-bottom: 4px; color: var(--orange);">📤</span>
+          <span style="font-size: 12px; color: #aaa;">Haz click para subir tus archivos aquí</span>
+          <input type="file" id="report-evidence" accept="image/*" style="margin-top:8px;font-size:12px;color:#aaa;" />
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn-ghost" style="padding: 8px 16px; font-size: 13px; background: transparent; color: #fff; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); font-weight: 600;" onclick="closeReportModal()">Cancelar</button>
+        <button class="btn-primary" style="padding: 8px 16px; font-size: 13px; background: var(--orange); color: #000; border-radius: 20px; border: none; font-weight: 600;" onclick="submitReportModal()">Enviar reporte</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CALIFICAR VENDEDOR (RF84, RF103) -->
+  <div class="modal-overlay" id="rating-modal" onclick="if(event.target===this) closeRatingModal()">
+    <div class="modal-box" style="padding:24px; max-width:420px; width:92%; background:#161620; border:1px solid var(--border); border-radius:16px; text-align:center;">
+      <h3 style="font-family:var(--font); font-size:18px; font-weight:700; margin-bottom:6px; color:#fff;">Calificar Vendedor</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">¿Cómo fue tu experiencia de compra con <span id="rate-vendor-name" style="color:var(--orange); font-weight:600;">Alex Rivera</span>?</p>
+      
+      <div class="star-rating-select" id="star-rating-select" style="font-size:32px; color:var(--orange); cursor:pointer; margin-bottom:20px; display:flex; justify-content:center; gap:8px;">
+        <span onclick="setVendorRating(1)">★</span>
+        <span onclick="setVendorRating(2)">★</span>
+        <span onclick="setVendorRating(3)">★</span>
+        <span onclick="setVendorRating(4)">★</span>
+        <span onclick="setVendorRating(5)">★</span>
+      </div>
+
+      <div style="margin-bottom:20px; text-align:left;">
+        <label style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:6px; display:block;">COMENTARIO O RESEÑA</label>
+        <textarea id="rate-comment" placeholder="Escribe tu opinión sobre el vendedor..." class="textarea-input" style="min-height:70px;"></textarea>
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <button class="btn-ghost" style="flex:1;" onclick="closeRatingModal()">Cancelar</button>
+        <button class="btn-primary" style="flex:1;" onclick="submitVendorRating()">Enviar Calificación</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="add-prod-modal" onclick="closeAddProdOnOverlay(event)">
+    <div class="modal-box">
+      <h3 class="modal-title">Agregar Producto</h3>
+      <form onsubmit="handleAddProduct(event)">
+        <div class="two-col-row">
+          <div class="input-group" style="flex:2;">
+            <label>Nombre del producto</label>
+            <input type="text" placeholder="Ej: Zapatos Rojos" required id="np-name" />
+          </div>
+          <div class="input-group" style="flex:1;">
+            <label>Imagen</label>
+            <label class="btn-ghost" style="padding:11px;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+              <span id="img-upload-text">+ Cargar Imagen</span>
+              <input type="file" accept="image/*" style="display:none;" id="np-image" onchange="previewUpload(this)" />
+            </label><img id="np-image-preview" src="" style="display:none; width:100%; max-height:100px; object-fit:cover; border-radius:8px; margin-top:8px;" /></div></div><div class="input-group"><label>Descripción completa</label>
+          <textarea id="np-desc" placeholder="Describe el producto..." class="textarea-input"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div class="input-group" style="flex:1;min-width:100px;"><label>Precio $</label><input type="number" placeholder="150000" required id="np-price" /></div>
+          <div class="input-group" style="flex:1;min-width:80px;"><label>Stock</label><input type="number" placeholder="10" required id="np-stock" /></div>
+          <div class="input-group" style="flex:1;min-width:100px;">
+            <label>Estado</label>
+            <select id="np-status" class="select-input"><option>Disponible</option><option>Agotado</option><option>Pausado</option></select>
+          </div>
+        </div>
+        <div class="two-col-row">
+          <div class="input-group"><label>Descuento %</label><input type="number" placeholder="Ej: 10" id="np-disc" /></div>
+          <div class="input-group"><label>Categoría</label><input type="text" placeholder="Ej: Ropa" id="np-cat" /></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" onclick="closeAddProd()">Cancelar</button>
+          <button type="submit" class="btn-primary">Agregar Producto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="od-modal" onclick="closeOdOnOverlay(event)">
+    <div class="modal-box od-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <h3 class="modal-title" style="margin:0;">Detalle del pedido</h3>
+        <span class="badge badge-orange" id="od-status">En Camino</span>
+      </div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;" id="od-date">Fecha: —</p>
+      <div class="od-row"><div class="od-lbl">Comprador</div>
+        <div class="od-buyer"><div class="tbl-ava" id="od-ava" style="background:#0891b2;">E</div><span id="od-buyer">—</span></div>
+      </div>
+      <div class="od-row"><div class="od-lbl">Vendedor</div><div class="od-val" id="od-vendedor">—</div></div>
+      <div class="od-row"><div class="od-lbl">Dirección de envío</div><div class="od-val" id="od-addr">—</div></div>
+      <div class="od-row"><div class="od-lbl">Producto solicitado</div><div class="od-val" id="od-prod">—</div><div class="od-val-sub" id="od-qty">—</div></div>
+      <div class="od-total-row"><span>Precio total del pedido</span><span id="od-total">—</span></div>
+      <button class="btn-ghost" style="margin-top:16px;" onclick="closeOd()">Cerrar</button>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="pasarela-modal" onclick="closePasOnOverlay(event)">
+    <div class="modal-box pas-box">
+      <h3 class="modal-title" id="pas-title">Pasarela de Pago</h3>
+      <div class="pas-total-row" id="pas-subtotal-row">
+        <span>SubTotal</span>
+        <span class="pas-amount" id="pas-subtotal">$0</span>
+      </div>
+      <div class="pas-total-row" id="pas-iva-row">
+        <span>IVA Incluido (%19)</span>
+        <span class="pas-amount" id="pas-iva">$0</span>
+      </div>
+      <div class="pas-total-row" id="pas-total-row" style="display:none;">
+        <span id="pas-lbl">Total a pagar</span>
+        <span class="pas-amount" id="pas-amount">$0</span>
+      </div>
+      <div class="pas-section-lbl">DATOS DE LA TARJETA</div>
+      <div class="input-group">
+        <label>Número de la tarjeta</label>
+        <input type="text" placeholder="186-0000-75-94" id="card-num" maxlength="19" oninput="fmtCard(this)" />
+      </div>
+      <div class="input-group">
+        <label>Nombre del Titular</label>
+        <input type="text" placeholder="Diego Fernando Ortiz" id="card-holder" />
+      </div>
+      <div id="pas-pay-area">
+        <button class="btn-primary" onclick="processPago()" id="pay-btn">Pagar <span id="pay-btn-amt">$677.000</span></button>
+        <button class="btn-ghost" style="margin-top:8px;" onclick="closePas()">Cancelar y volver al carrito</button>
+      </div>
+      <div id="pas-done-area" style="display:none;">
+        <button class="btn-primary" onclick="downloadReceipt()">Descargar Comprobante</button>
+        <button class="btn-ghost" style="margin-top:8px;" onclick="closePas()">volver al carrito</button>
+      </div>
+    </div>
+  </div>
+
+    
+    <div class="page" id="page-admin">
+      <div class="main-content" style="padding-bottom: 40px;">
+        <div class="inner-topbar admin-topbar">
+          <div class="page-brand-logo" style="margin-right: 15px;">CommerCity</div>
+          <span class="inner-topbar-title" style="color:var(--orange);">Panel de Control</span>
+          <div style="flex: 1; display: flex; justify-content: flex-end;">
+            <button class="icon-btn" style="width:34px;height:34px; background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.2);" onclick="navigate('ajustes-admin')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <div class="admin-tabs-container">
+          <button class="admin-tab-btn active" id="admin-tab-dashboard" onclick="switchAdminTab('dashboard')">Dashboard</button>
+          <button class="admin-tab-btn" id="admin-tab-usuarios" onclick="switchAdminTab('usuarios')">Usuarios</button>
+          <button class="admin-tab-btn" id="admin-tab-productos" onclick="switchAdminTab('productos')">Productos</button>
+          <button class="admin-tab-btn" id="admin-tab-reportes" onclick="switchAdminTab('reportes')">Reportes</button>
+        </div>
+
+        
+        <div class="admin-section active" id="admin-sec-dashboard">
+          <div class="admin-grid-metrics">
+            <div class="admin-metric-card">
+              <div class="admin-metric-icon" style="color:#f59e0b; background:rgba(245,158,11,0.2);">👥</div>
+              <div class="admin-metric-label">TOTAL COMPRADORES</div>
+              <div class="admin-metric-value">8,902</div>
+            </div>
+            <div class="admin-metric-card">
+              <div class="admin-metric-icon" style="color:#f59e0b; background:rgba(245,158,11,0.2);">🏪</div>
+              <div class="admin-metric-label">TOTAL VENDEDORES</div>
+              <div class="admin-metric-value">1,248</div>
+            </div>
+            <div class="admin-metric-card">
+              <div class="admin-metric-icon" style="color:#f59e0b; background:rgba(245,158,11,0.2);">📦</div>
+              <div class="admin-metric-label">PRODUCTOS PUBLICADOS</div>
+              <div class="admin-metric-value">15,670</div>
+            </div>
+            <div class="admin-metric-card" style="border: 1px solid var(--orange);">
+              <div style="display:flex; justify-content:space-between;">
+                <div class="admin-metric-icon" style="color:var(--orange); background:rgba(245,166,35,0.2);">💰</div>
+                <div class="badge badge-orange">Comisión 10%</div>
+              </div>
+              <div class="admin-metric-label" style="margin-top:12px;">COMISIONES TOTALES</div>
+              <div class="admin-metric-value">$45,280.50</div>
+            </div>
+          </div>
+        </div>
+
+        
+        <div class="admin-section" id="admin-sec-usuarios">
+          <div class="admin-section-header">
+            <h3>Gestión de Usuarios</h3>
+            <div class="tb-search admin-search">
+              <span>🔍</span>
+              <input type="text" placeholder="Buscar usuarios" id="admin-search-users" onkeyup="filterAdminList('admin-search-users', '.admin-user-card')" />
+            </div>
+          </div>
+          <div class="admin-list">
+            
+            <div class="admin-list-card admin-user-card" onclick="currentAdminTarget=this; openAdminUserDetail('Carlos Martinez', 'Vendedor', 'Activo', 'carlos@mail.com', '12', '0')">
+              <div class="admin-card-left">
+                <div class="tbl-ava" style="background:#4b5563;">C</div>
+                <div>
+                  <div class="admin-card-title">Carlos Martinez</div>
+                  <div class="admin-card-sub">Vendedor</div>
+                </div>
+              </div>
+              <div class="admin-card-right">
+                <span class="badge badge-green">Activo</span>
+                <button class="btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Banear', null)">Banear</button>
+                <button class="btn-ghost" style="padding:4px 8px; color:var(--danger);" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Eliminar', null)">Eliminar</button>
+              </div>
+            </div>
+            
+            <div class="admin-list-card admin-user-card" onclick="currentAdminTarget=this; openAdminUserDetail('Lucia Fernandez', 'Comprador', 'Baneado', 'lucia@mail.com', '0', '3')">
+              <div class="admin-card-left">
+                <div class="tbl-ava" style="background:#4b5563;">L</div>
+                <div>
+                  <div class="admin-card-title">Lucia Fernandez</div>
+                  <div class="admin-card-sub">Comprador</div>
+                </div>
+              </div>
+              <div class="admin-card-right">
+                <span class="badge badge-red">Baneado</span>
+                <button class="btn-ghost" style="padding:4px 8px; color:var(--orange);" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Activar', null)">Activar</button>
+                <button class="btn-ghost" style="padding:4px 8px; color:var(--danger);" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Eliminar', null)">Eliminar</button>
+              </div>
+            </div>
+            
+            <div class="admin-list-card admin-user-card" onclick="currentAdminTarget=this; openAdminUserDetail('Cristiano Ronaldo', 'Vendedor', 'Activo', 'cr7@mail.com', '5', '0')">
+              <div class="admin-card-left">
+                <div class="tbl-ava" style="background:#4b5563;">C</div>
+                <div>
+                  <div class="admin-card-title">Cristiano Ronaldo</div>
+                  <div class="admin-card-sub">Vendedor</div>
+                </div>
+              </div>
+              <div class="admin-card-right">
+                <span class="badge badge-green">Activo</span>
+                <button class="btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Banear', null)">Banear</button>
+                <button class="btn-ghost" style="padding:4px 8px; color:var(--danger);" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Eliminar', null)">Eliminar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        
+        <div class="admin-section" id="admin-sec-productos">
+          <div class="admin-section-header">
+            <h3>Gestión de Productos</h3>
+            <div class="tb-search admin-search">
+              <span>🔍</span>
+              <input type="text" placeholder="Buscar Productos" id="admin-search-prods" onkeyup="filterAdminList('admin-search-prods', '.admin-prod-card')" />
+            </div>
+          </div>
+          <div class="admin-list">
+            <div class="admin-list-card admin-prod-card" onclick="currentAdminTarget=this; openAdminProductDetail('Teclado Gamer Pro', 'Carlos Martinez', 'Activo', '$55.000', '0')">
+              <div class="admin-card-left">
+                <div class="admin-prod-img-placeholder">⌨️</div>
+                <div>
+                  <div class="admin-card-title">Teclado Gamer Pro</div>
+                  <div class="admin-card-sub">$55.000</div>
+                </div>
+              </div>
+              <div class="admin-card-right">
+                <div class="admin-card-sub">Carlos Martinez</div>
+                <button class="btn-ghost" style="padding:4px 8px; color:var(--danger);" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Eliminar producto', null)">🗑️</button>
+              </div>
+            </div>
+            <div class="admin-list-card admin-prod-card" onclick="currentAdminTarget=this; openAdminProductDetail('Balon Trixnda', 'Natural Sport', 'Activo', '$150.000', '1')">
+              <div class="admin-card-left">
+                <div class="admin-prod-img-placeholder">⚽</div>
+                <div>
+                  <div class="admin-card-title">Balon Trixnda</div>
+                  <div class="admin-card-sub">$150.000</div>
+                </div>
+              </div>
+              <div class="admin-card-right">
+                <div class="admin-card-sub">Natural Sport</div>
+                <button class="btn-ghost" style="padding:4px 8px; color:var(--danger);" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Eliminar producto', null)">🗑️</button>
+              </div>
+            </div>
+            <div class="admin-list-card admin-prod-card" onclick="currentAdminTarget=this; openAdminProductDetail('Zapatillas converse', 'Calzado Bucaramanga', 'Activo', '$250.000', '0')">
+              <div class="admin-card-left">
+                <div class="admin-prod-img-placeholder">👟</div>
+                <div>
+                  <div class="admin-card-title">Zapatillas converse</div>
+                  <div class="admin-card-sub">$250.000</div>
+                </div>
+              </div>
+              <div class="admin-card-right">
+                <div class="admin-card-sub">Calzado Bucaramanga</div>
+                <button class="btn-ghost" style="padding:4px 8px; color:var(--danger);" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Eliminar producto', null)">🗑️</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        
+        <div class="admin-section" id="admin-sec-reportes">
+          <div class="admin-section-header">
+            <h3>Gestión de Reportes</h3>
+            <div class="tb-search admin-search">
+              <span>🔍</span>
+              <input type="text" placeholder="Buscar Reportes" id="admin-search-reps" onkeyup="filterAdminList('admin-search-reps', '.admin-rep-card')" />
+            </div>
+          </div>
+          <div class="filter-tabs" style="margin-bottom:16px;">
+            <button class="ftab active">Todo</button>
+            <button class="ftab">Pendiente</button>
+            <button class="ftab">Resuelto</button>
+          </div>
+<div class="admin-list">
+            <div class="admin-list-card admin-rep-card" onclick="currentAdminTarget=this; openAdminReportDetail('Usuario', 'Julian Guerrero', 'Sistema', 'Comportamiento inusual', '24 Oct, 2026', 'Pendiente')">
+              <div class="admin-card-left" style="flex:1; flex-direction:column; align-items:flex-start;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                  <span class="badge badge-red outline">Usuario</span>
+                  <div class="admin-card-title">Julian Guerrero</div>
+                </div>
+                <div class="admin-card-sub" style="max-width:100%;">Comportamiento inusual</div>
+              </div>
+              <div class="admin-card-right" style="flex-direction:column; align-items:flex-end; justify-content:center; gap:6px;">
+                <div class="admin-card-sub" style="margin:0;">24 Oct, 2026</div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <span class="badge badge-red">Pendiente</span>
+                  <button class="btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Responder', null); openAdminReportDetail('Usuario', 'Julian Guerrero', 'Sistema', 'Comportamiento inusual', '24 Oct, 2026', 'Pendiente')">Responder</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="admin-list-card admin-rep-card" onclick="currentAdminTarget=this; openAdminReportDetail('Producto', 'Teclado Gamer Pro', 'Cliente', 'Producto defectuoso', '22 Oct, 2026', 'Resuelto')">
+              <div class="admin-card-left" style="flex:1; flex-direction:column; align-items:flex-start;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                  <span class="badge outline" style="color:#3b82f6;border-color:#3b82f6;">Producto</span>
+                  <div class="admin-card-title">Teclado Gamer Pro</div>
+                </div>
+                <div class="admin-card-sub" style="max-width:100%;">Producto defectuoso</div>
+              </div>
+              <div class="admin-card-right" style="flex-direction:column; align-items:flex-end; justify-content:center; gap:6px;">
+                <div class="admin-card-sub" style="margin:0;">22 Oct, 2026</div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <span class="badge badge-green">Resuelto</span>
+                  <button class="btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Ver', null); openAdminReportDetail('Producto', 'Teclado Gamer Pro', 'Cliente', 'Producto defectuoso', '22 Oct, 2026', 'Resuelto')">Ver</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="admin-list-card admin-rep-card" onclick="currentAdminTarget=this; openAdminReportDetail('Usuario', 'Mario Alberto - Vendedor', 'Alexa Perez - Comprador', 'El vendedor me trató de forma irrespetuosa y utilizó lenguaje ofensivo durante nuestra conversación.', '20 Oct, 2026', 'Pendiente')">
+              <div class="admin-card-left" style="flex:1; flex-direction:column; align-items:flex-start;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                  <span class="badge badge-red outline">Usuario</span>
+                  <div class="admin-card-title">Mario Alberto</div>
+                </div>
+                <div class="admin-card-sub" style="max-width:100%;">El vendedor me trató de forma irrespetuosa y utilizó lenguaje ofensivo...</div>
+              </div>
+              <div class="admin-card-right" style="flex-direction:column; align-items:flex-end; justify-content:center; gap:6px;">
+                <div class="admin-card-sub" style="margin:0;">20 Oct, 2026</div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <span class="badge badge-red">Pendiente</span>
+                  <button class="btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Responder', null); openAdminReportDetail('Usuario', 'Mario Alberto - Vendedor', 'Alexa Perez - Comprador', 'El vendedor me trató de forma irrespetuosa y utilizó lenguaje ofensivo durante nuestra conversación.', '20 Oct, 2026', 'Pendiente')">Responder</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="admin-user-modal" onclick="closeAdminUserOnOverlay(event)">
+    <div class="modal-box">
+      <h3 class="modal-title">Detalle de Usuario</h3>
+      <div class="od-row"><div class="od-lbl">Nombre</div><div class="od-val" id="admin-user-name">—</div></div>
+      <div class="od-row"><div class="od-lbl">Rol</div><div class="od-val" id="admin-user-role">—</div></div>
+      <div class="od-row"><div class="od-lbl">Correo</div><div class="od-val" id="admin-user-email">—</div></div>
+      <div class="od-row"><div class="od-lbl">Estado</div><div class="od-val"><span class="badge badge-orange" id="admin-user-status">—</span></div></div>
+      <div class="od-row"><div class="od-lbl">Productos publicados</div><div class="od-val" id="admin-user-published">—</div></div>
+      <div class="od-row"><div class="od-lbl">Reportes recibidos</div><div class="od-val" id="admin-user-reports">—</div></div>
+      <div class="modal-actions" style="margin-top:24px;">
+        <button class="btn-ghost" style="flex:1;" onclick="currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Banear', 'admin-user-modal')">Banear</button>
+        <button class="btn-primary" style="flex:1;background:var(--danger);" onclick="currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Eliminar', 'admin-user-modal')">Eliminar</button>
+        <button class="btn-ghost" style="flex:1;" onclick="closeAdminUser()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="admin-prod-modal" onclick="closeAdminProductOnOverlay(event)">
+    <div class="modal-box">
+      <h3 class="modal-title">Detalle de Producto</h3>
+      <div class="od-row"><div class="od-lbl">Nombre</div><div class="od-val" id="admin-prod-name">—</div></div>
+      <div class="od-row"><div class="od-lbl">Vendedor</div><div class="od-val" id="admin-prod-vendor">—</div></div>
+      <div class="od-row"><div class="od-lbl">Precio</div><div class="od-val" id="admin-prod-price">—</div></div>
+      <div class="od-row"><div class="od-lbl">Estado</div><div class="od-val"><span class="badge badge-orange" id="admin-prod-status">—</span></div></div>
+      <div class="od-row"><div class="od-lbl">Reportes recibidos</div><div class="od-val" id="admin-prod-reports">—</div></div>
+      <div class="modal-actions" style="margin-top:24px;">
+        <button class="btn-ghost" style="flex:1;" onclick="currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Suspender Producto', 'admin-prod-modal')">Suspender</button>
+        <button class="btn-primary" style="flex:1;background:var(--danger);" onclick="currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Eliminar Producto', 'admin-prod-modal')">Eliminar</button>
+        <button class="btn-ghost" style="flex:1;" onclick="closeAdminProduct()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="admin-rep-modal" onclick="closeAdminReportOnOverlay(event)">
+    <div class="modal-box">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="icon-btn" style="width:34px;height:34px;flex-shrink:0;" onclick="closeAdminReport()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <h3 class="modal-title" style="margin:0;">Detalle del Reporte</h3>
+      </div>
+      
+      <div class="od-row" style="margin-top:16px;"><div class="od-lbl">TIPO</div><div class="od-val"><span class="badge badge-red outline" id="admin-rep-type">—</span></div></div>
+      
+      <div class="od-row" style="flex-direction:column;align-items:flex-start;">
+        <div class="od-lbl" style="margin-bottom:8px;">REPORTADO</div>
+        <div class="admin-card-left">
+          <div class="tbl-ava" style="background:#4b5563;">M</div>
+          <div class="admin-card-title" id="admin-rep-reported">—</div>
+        </div>
+      </div>
+      
+      <div class="od-row" style="flex-direction:column;align-items:flex-start;">
+        <div class="od-lbl" style="margin-bottom:8px;">REPORTADO POR</div>
+        <div class="admin-card-left">
+          <div class="tbl-ava" style="background:#4b5563;">A</div>
+          <div class="admin-card-title" id="admin-rep-by">—</div>
+        </div>
+      </div>
+
+      <div class="od-row" style="flex-direction:column;align-items:flex-start;">
+        <div class="od-lbl" style="margin-bottom:4px;">MOTIVO</div>
+        <p style="font-size:13px;line-height:1.4;" id="admin-rep-reason">—</p>
+      </div>
+
+      <div class="od-row"><div class="od-lbl">ESTADO</div><div class="od-val"><span class="badge badge-red" id="admin-rep-status">—</span></div></div>
+      <div class="od-row"><div class="od-lbl">FECHA</div><div class="od-val" id="admin-rep-date" style="font-size:13px;">—</div></div>
+      
+      <div class="od-row" style="flex-direction:column;align-items:flex-start;">
+        <div class="od-lbl" style="margin-bottom:8px;">EVIDENCIA</div>
+        <div style="display:flex;gap:8px;">
+          <div class="admin-ev-img" style="background:#333;width:60px;height:40px;border-radius:4px;"></div>
+          <div class="admin-ev-img" style="background:#333;width:60px;height:40px;border-radius:4px;"></div>
+          <div class="admin-ev-img" style="background:#333;width:60px;height:40px;border-radius:4px;"></div>
+        </div>
+      </div>
+
+      <div class="input-group" style="margin-top:16px;">
+        <label>RESPONDER</label>
+        <div style="position:relative;">
+          <textarea placeholder="Escribe tu respuesta aquí..." class="textarea-input" style="min-height:60px;"></textarea>
+          <button class="btn-ghost" style="position:absolute;bottom:8px;right:8px;padding:4px 8px;font-size:11px;" onclick="toast('Respuesta enviada')">Enviar Respuesta</button>
+        </div>
+      </div>
+
+      <div class="od-row" style="flex-direction:column;align-items:center;margin-top:20px;border-top:1px solid rgba(255,255,255,0.05);padding-top:16px;">
+        <div class="od-lbl" style="margin-bottom:8px;">ACCIONES SOBRE EL USUARIO</div>
+        <div style="display:flex;gap:10px;width:100%;">
+          <button class="btn-ghost" style="flex:1;border:1px solid rgba(255,255,255,0.1);" onclick="currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Banear', 'admin-rep-modal')">Banear</button>
+          <button class="btn-ghost" style="flex:1;border:1px solid var(--danger);color:var(--danger);" onclick="currentAdminTarget=this.closest('.admin-list-card') || currentAdminTarget; adminAction('Eliminar', 'admin-rep-modal')">Eliminar</button>
+        </div>
+        <p style="font-size:11px;color:var(--danger);margin-top:8px;">Asegúrate de haber revisado el reporte antes de proceder.</p>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="edit-prod-modal" onclick="closeEditProdOnOverlay(event)">
+    <div class="modal-box">
+      <h3 class="modal-title">Editar Producto</h3>
+      <form onsubmit="handleEditProduct(event)">
+        <div class="two-col-row">
+          <div class="input-group" style="flex:2;">
+            <label>Nombre del producto</label>
+            <input type="text" placeholder="Ej: Zapatos Rojos" required id="ep-name" />
+          </div>
+          <div class="input-group" style="flex:1;">
+            <label>Imagen</label>
+            <label class="btn-ghost" style="padding:11px;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+              <span id="ep-img-upload-text">+ Cambiar Imagen</span>
+              <input type="file" accept="image/*" style="display:none;" id="ep-image" onchange="previewEditUpload(this)" />
+            </label>
+            <img id="ep-image-preview" src="" style="display:none; width:100%; max-height:100px; object-fit:cover; border-radius:8px; margin-top:8px;" />
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Descripción completa</label>
+          <textarea id="ep-desc" placeholder="Describe el producto..." class="textarea-input"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div class="input-group" style="flex:1;min-width:100px;"><label>Precio $</label><input type="number" placeholder="150000" required id="ep-price" /></div>
+          <div class="input-group" style="flex:1;min-width:80px;"><label>Stock</label><input type="number" placeholder="10" id="ep-stock" /></div>
+          <div class="input-group" style="flex:1;min-width:100px;">
+            <label>Estado</label>
+            <select id="ep-status" class="select-input"><option>Disponible</option><option>Agotado</option><option>Pausado</option></select>
+          </div>
+        </div>
+        <div class="two-col-row">
+          <div class="input-group"><label>Descuento %</label><input type="number" placeholder="Ej: 10" id="ep-disc" /></div>
+          <div class="input-group"><label>Categoría</label><input type="text" placeholder="Ej: Ropa" id="ep-cat" /></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" onclick="closeEditProd()">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="followers-modal" onclick="closeFollowersOnOverlay(event)">
+    <div class="modal-box followers-box">
+      <div class="followers-header">
+        <span class="followers-username" id="followers-username">juan_giraldo</span>
+        <button class="followers-close" onclick="closeFollowersModal()">✕</button>
+      </div>
+      <div class="followers-tabs">
+        <button class="ftab followers-tab active" id="tab-seguidores" onclick="switchFollowTab('seguidores')">Seguidores 15.8k</button>
+        <button class="ftab followers-tab" id="tab-siguiendo" onclick="switchFollowTab('siguiendo')">Siguiendo 842</button>
+      </div>
+      <div class="followers-list" id="followers-list"></div>
+    </div>
+  </div>
+
+    
+    <div class="page" id="page-ajustes-admin">
+      <div class="admin-settings-page">
+        
+        <div class="admin-settings-header">
+          <div class="admin-settings-brand">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--orange);flex-shrink:0;"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+            <span>CommerCity</span>
+          </div>
+          <button class="btn-back-sm" onclick="navigate('admin')" style="padding:8px 18px;font-size:13px;border-radius:20px;">Volver</button>
+        </div>
+
+        
+        <div class="admin-settings-body">
+          <h2 class="admin-settings-title">Ajustes</h2>
+          <p class="admin-settings-sub">Administra los datos importantes de CommerCity.</p>
+
+          
+          <div class="admin-settings-section">
+            <h3 class="aj-section-ttl">Registro de cuenta bancaria</h3>
+            <p class="aj-section-sub">Registra la cuenta bancaria de CommerCity</p>
+            <div class="two-col-row">
+              <div class="input-group">
+                <label>Nombre del titular</label>
+                <input type="text" placeholder="Ej: Daniel Silveira Palacios" id="admin-bank-name" />
+              </div>
+              <div class="input-group">
+                <label>Banco</label>
+                <select id="admin-bank-select" class="select-input">
+                  <option value="">Selecciona un banco</option>
+                  <option>Bancolombia</option><option>Davivienda</option><option>BBVA</option>
+                  <option>Banco de Bogotá</option><option>Nequi</option><option>Daviplata</option>
+                </select>
+              </div>
+            </div>
+            <div class="two-col-row">
+              <div class="input-group">
+                <label>Tipo de cuenta</label>
+                <select id="admin-bank-type" class="select-input">
+                  <option value="">Selecciona tipo</option>
+                  <option>Ahorros</option><option>Corriente</option>
+                </select>
+              </div>
+              <div class="input-group">
+                <label>Número de cuenta</label>
+                <input type="text" placeholder="Ej: 123456789" id="admin-bank-number" />
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <button class="btn-primary" style="width:auto;padding:12px 24px;" onclick="saveAdminBankAccount()">Guardar cuenta bancaria</button>
+            </div>
+          </div>
+
+          
+          <div class="admin-settings-exit">
+            <h3 style="font-family:var(--font);font-size:15px;font-weight:700;margin-bottom:6px;">SALIR</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">En este lugar puedes salir del panel administrador.</p>
+            <button class="btn-danger" onclick="handleLogout()" style="padding:12px 28px;">Salir</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+
+  
+        <div class="notifs-overlay" id="notifs-overlay" onclick="closeNotifs()"></div>
+<div class="notifs-panel" id="notifs-panel">
+          <div class="notifs-head">
+            <span class="notifs-ttl">NOTIFICACIONES</span>
+            <button class="notifs-clear-btn" onclick="clearNotifs(event)">Limpiar todo</button>
+          </div>
+          <div class="notif-row">
+            <div class="notif-ico" style="background:rgba(245,166,35,0.2);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg></div>
+            <div class="notif-txt">
+              <div class="notif-title">Nueva compra recibida</div>
+              <div class="notif-desc">¡Tu producto 'Reloj Casio' ha sido vendido</div>
+              <div class="notif-time">Hace 5 min</div>
+            </div>
+            <button class="notif-x" onclick="event.stopPropagation(); this.closest('.notif-row').remove()">✕</button>
+          </div>
+          <div class="notif-row">
+            <div class="notif-ico" style="background:rgba(59,130,246,0.2);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+            <div class="notif-txt">
+              <div class="notif-title">Nuevo mensaje de Juan</div>
+              <div class="notif-desc">Hola, ¿Tienes stock del producto?</div>
+              <div class="notif-time">Hace 2 horas</div>
+            </div>
+            <button class="notif-x" onclick="event.stopPropagation(); this.closest('.notif-row').remove()">✕</button>
+          </div>
+          <div class="notif-row">
+            <div class="notif-ico" style="background:rgba(34,197,94,0.2);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div>
+            <div class="notif-txt">
+              <div class="notif-title">Pedido enviado</div>
+              <div class="notif-desc">Tu pedido Audífonos Pro ya está en camino</div>
+              <div class="notif-time">1 día</div>
+            </div>
+            <button class="notif-x" onclick="event.stopPropagation(); this.closest('.notif-row').remove()">✕</button>
+          </div>
+          <div class="notif-row">
+            <div class="notif-ico" style="background:rgba(239,68,68,0.2);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
+            <div class="notif-txt">
+              <div class="notif-title">Reporte de seguridad</div>
+              <div class="notif-desc">Se detectó un inicio de sesión inusual</div>
+              <div class="notif-time">3 días</div>
+            </div>
+            <button class="notif-x" onclick="event.stopPropagation(); this.closest('.notif-row').remove()">✕</button>
+          </div>
+          <div class="notifs-footer-lnk">Ver todas las notificaciones</div>
+        </div>
+</body>
+</html>

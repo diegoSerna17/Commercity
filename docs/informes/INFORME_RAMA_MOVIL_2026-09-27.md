@@ -79,3 +79,49 @@
 4. `openChat` sin `userId` (tarjetas estáticas de mensajes) solo pinta local: pasar ids reales al renderizar conversaciones (`api.conversaciones` aún sin UI dedicada).
 5. `actualizarEstadoPedido` / `cancelarCompra` / `marcarLeido` / `marcarTodasLeidas` están en `api.js` pero sin botón que los invoque (sin UI origen).
 6. `openOrderDetail` sigue mostrando `ORDER_DATA` mock en el modal de pedido (detalle vendedor). Migrar a `api.ventas` cuando el modal tenga ids reales.
+
+---
+
+## Cierre de pendings 2026-09-28
+
+> Alcance: solo `docs/AVANCES/MOVIL COMMERCITY/commercity-mobile/www/` (`app.js`, `index.html`).
+> No se tocó `backend/` ni `docs/AVANCES/ESCRITORIO…`.
+> Verificación: `node --check www/app.js` y `node --check www/api.js` OK + smoke tests offline con `api` mockeada (32 aserciones: render de pedidos/historial/chat/notifs, ids reales y llamadas a los 6 endpoints nuevos).
+
+### Cerrados (los 4 pendings de la sección 4: 3, 4, 5 y 6)
+
+| # | Pending | Qué se hizo |
+|---|---|---|
+| 3 | `calificarVendedor` con `pedido_id` real | `cargarHistorial()` aplana `api.historialCompras` (pedidos → `items[]`) en `HISTORIAL_LINEAS`, guardando **`pedido_id`, `detalle_id` y `vendedor_id` por línea**. Nueva columna **ACCIÓN** con botón `Calificar` → `abrirCalificacion(i)` → `openRatingModal(vendedor, vendedor_id, pedido_id)` → `submitVendorRating()` envía `{pedido_id, vendedor_id, estrellas, comentario}` a `POST /api/calificaciones/vendedor`. Nota: el backend **no expone `vendedor_id` en el historial**, solo el nombre; se resuelve con `resolverVendedorId()`: `/api/vendedores` → `/api/usuarios/directorio` → `vendedor_id` del catálogo (`api.productos`). |
+| 6 | `openOrderDetail` con `ORDER_DATA` mock | `ORDER_DATA` **eliminado** y las 4 filas mock de `#pedidos-tbody`/`#historial-tbody` retiradas de `index.html`. `openOrderDetail(pedidoId, detalleId)` es `async` y fusiona dos fuentes reales: **línea del pedido desde `api.historialCompras`** (dirección de envío, producto, cantidad, total, fecha, estado, vendedor) y **`api.ventas`** (nombre/email del comprador, producto, monto, estado, fecha). Nueva fila "Vendedor" en `#od-modal`; si el pedido no existe → toast, sin datos inventados. |
+| 4 | Chat sin ids reales | `navigate('mensajes')` llama a **`cargarConversaciones()`**: pinta `api.conversaciones` (nombre, último mensaje, no leídos) + `api.directorio` (usuarios con los que aún no hay chat), todos con **id real**; cada fila usa `abrirChatLista(i)` → `openChat(name, ava, color, userId)` con `userId` real. La lista estática de `index.html` se conserva solo como **fallback offline** (`CHAT_FALLBACK_HTML`). `sendChatMessage()` ahora: con API+id envía `POST /api/chat` y repinta desde `api.mensajes`; la **burbuja local es solo fallback** (sin API o sin id) y si el envío falla se conserva el texto para reintentar. |
+| 5 | Endpoints sin UI | **`cancelarCompra`**: botón `Cancelar` por línea en estado *Pendiente* → `cancelarCompraLinea(i)` (confirm → `api.cancelarCompra(detalleId)` → recarga). **`actualizarEstadoPedido`**: en *Pedidos* del vendedor, botón `Enviar` (Pendiente→`'En camino'`) y `Entregado` (`'En camino'`→`'Entregado'`) → `api.actualizarEstadoPedido(pedidoId, estado)`, respetando la transición de un solo nivel del backend. **`marcarNotifLeida`**: al hacer clic en una fila del panel (antes ya existía; ahora además atenúa la fila y evita reenvíos). **`marcarTodasLeidas`**: al abrir el panel desde `toggleNotifs()` → `api.marcarTodasLeidas()`. Extra: **`api.marcarLeido`** al abrir un chat (mensajes entrantes con `leido = 0`). |
+
+### Mejoras de render asociadas
+- `filterHTab()` ya filtra de verdad (`data-estado` en las filas del historial); `filterTab()` sigue igual para pedidos.
+- Estados normalizados con `claveEstado()`/`claseBadge()` (`pendiente|camino|entregado|cancelado`) y avatares deterministas por nombre (`colorAvatar`).
+- `cargarPedidos()` usaba campos inexistentes (`v.comprador`, `v.producto`, `v.total`); ahora lee los reales de `api.ventas` (`nombre_comprador`, `nombre_producto`, `valor_subtotal`, `fecha_pedido`).
+- `cargarMensajes()` preserva la tarjeta de producto del chat, repinta solo `.msg-wrap` y marca como leídos los entrantes.
+- Escapado de HTML (`escAttr`) en todo lo que pinta datos del servidor (nombres, previews, notificaciones, burbujas).
+
+### Llamadas API nuevas desde la UI
+| Endpoint | Disparador nuevo |
+|---|---|
+| `POST /api/historial/compras/:detalle_id/cancelar` | botón Cancelar (historial, línea *Pendiente*) |
+| `PATCH /api/pedidos/:id/estado` | botones Enviar / Entregado (pedidos del vendedor) |
+| `PATCH /api/notificaciones/leidas` | abrir el panel de notificaciones |
+| `PATCH /api/notificaciones/:id/leida` | clic en una notificación |
+| `PATCH /api/chat/mensajes/:id/leido` | abrir una conversación (mensajes recibidos sin leer) |
+| `GET /api/vendedores` y `GET /api/usuarios/directorio` | resolver `vendedor_id` del historial y poblar `page-mensajes` |
+| `POST /api/calificaciones/vendedor` (contexto real) | botón Calificar → modal → Enviar |
+| `GET /api/chat/conversaciones` | `navigate('mensajes')` |
+
+### Siguen abiertos
+
+> **Cierre E2E (2026-09-28):** los puntos 1 y 2 de esta seccion quedaron **CERRADOS con evidencia en vivo** contra el backend en `http://localhost:3000` (BD real `commercity_v2`):
+> - Runner `docs/AVANCES/PRUEBAS/ejecutar_pruebas.mjs` = **129/129 OK** (69 endpoints).
+> - Harness de capa red `docs/AVANCES/PRUEBAS/harness_capa_red.mjs` = **102/102 OK** ejecutando el `www/api.js` real de este cliente (incluye B1: 400 direccion corta, 400 formato tarjeta, **402 PAGO_RECHAZADO Luhn**; `validacionTienda` RF130-139; RBAC 403). CORS Electron verificado con preflight `Origin: null` -> 204 + ACAO (commit 14d6056).
+> - Evidencia: `docs/informes/EVIDENCIA_E2E_CAPA_RED_2026-09-28.md`.
+1. E2E real con la API corriendo en el emulador (`10.0.2.2:3000`): los 69 endpoints del brief más los nuevos de la tabla anterior.
+2. Probar el rechazo 400 de `confirmarPago` (tarjeta/dirección) con datos reales.
+3. `openChat` desde las 3 tarjetas estáticas de `page-mensajes` sigue sin `userId` (fallback local deliberado): al reemplazarlas por `cargarConversaciones()` todas las filas reales sí llevan id.
