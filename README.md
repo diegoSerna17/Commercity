@@ -1,6 +1,6 @@
 # CommerCity
 
-**Estado:** Proyecto académico en etapa productiva | Backend: 296/296 pruebas OK | Frontend: 17/17 pruebas OK | Cobertura backend: 92.31% líneas
+**Estado:** Proyecto académico en etapa productiva | Backend: 328/328 pruebas OK (22 archivos) | Frontend: 17/17 pruebas OK | Móvil (Capacitor) y Escritorio (Electron): cableados a la API y verificados (capa de red 102/102, RF4 12/12) | Cobertura backend: 92.55% líneas
 
 CommerCity es una plataforma de comercio electrónico para mercados locales con roles de comprador, vendedor y administrador. Incluye catálogo de productos con imágenes, carrito de compras, pedidos, pasarela de pago simulada, tiendas de vendedores, chat, notificaciones, seguidores, calificaciones, reportes de contenido y panel de administración.
 
@@ -74,7 +74,7 @@ Petición entrante
 COMMER CITY/
 ├── backend/
 │   └── src/server/
-│       ├── __tests__/      # 19 archivos de pruebas (Vitest + supertest)
+│       ├── __tests__/      # 22 archivos de pruebas (Vitest + supertest)
 │       ├── config/         # db.js, multer.js, multer.chat.js
 │       ├── controllers/    # Controladores por módulo (incluye subcarpeta admin/)
 │       ├── middleware/     # auth, error, role, validate
@@ -96,10 +96,19 @@ COMMER CITY/
 │   ├── public/
 │   ├── .nvmrc              # Node 22.23.2
 │   └── package.json
-├── docs/                   # Local (no versionado): requerimientos, entregas y esquema BD
-├── informes/               # Documentación versionada del proyecto
-│   ├── CHANGELOG.md
-│   └── INVENTARIO_ENDPOINTS_API_2026-08-28.md
+├── apps/
+│   ├── movil/              # Snapshot versionado de la app Capacitor (www/ con api.js de los 69 endpoints)
+│   ├── escritorio/         # Snapshot versionado de la app Electron (src/ con api.js)
+│   └── README.md           # Builds (APK/EXE), exclusiones y notas de firma (keystore)
+├── docs/                   # Requerimientos, entregas, informes y evidencias
+│   ├── informes/           # Versionada por excepción (ver .gitignore): PLAN_*, INFORME_RAMA_*, EVIDENCIA_*
+│   │   ├── PLAN_INTEGRACION_API_MOVIL_ESCRITORIO_2026-09-27.md
+│   │   ├── INFORME_RAMA_{BACKEND,MOVIL,ESCRITORIO}_2026-09-27.md
+│   │   ├── EVIDENCIA_E2E_CAPA_RED_2026-09-28.md
+│   │   ├── INFORME_ESTADO_INTEGRACION_2026-09-28.md
+│   │   └── INFORME_FINAL_SENA_2026-09-25.md
+│   ├── CHANGELOG.md        # Bitácora de cambios (fecha real, evidencia y estado)
+│   └── AVANCES/            # Fuentes locales de las apps + PRUEBAS (gitignorado)
 └── .gitignore
 ```
 
@@ -131,7 +140,7 @@ Copy-Item backend\.env.example backend\.env
 | `RESEND_FROM`       | Remitente del correo. Por defecto `CommerCity <onboarding@resend.dev>`.                                                                                               |
 
 > \[!IMPORTANT]
-> El CORS del backend acepta un único origen: el valor de `FRONTEND_URL` (o `http://localhost:5173` por defecto). Si sirves el frontend en otro origen, actualiza `FRONTEND_URL`.
+> El CORS del backend usa una allow-list (`CORS_ORIGINS` en `backend/src/server/app.js`): `FRONTEND_URL` (web, por defecto `http://localhost:5173`) + los orígenes de la WebView de Capacitor (`https://localhost`, `http://localhost`, `capacitor://localhost`) + `null`/`file://` de Electron. Si sirves el frontend en otro origen, agrégalo a esa lista (nunca uses `*`).
 
 En el frontend, la URL de la API se toma de `VITE_API_URL` (archivo `.env` en la raíz de `frontend/`); por defecto apunta a `http://localhost:3000`.
 
@@ -199,17 +208,19 @@ Resultados actuales:
 
 | Suite                           | Comando                   | Resultado                                 |
 | ------------------------------- | ------------------------- | ----------------------------------------- |
-| Backend (Vitest + supertest)    | `cd backend && npm test`  | 296 pruebas en 19 archivos, todas pasando |
+| Backend (Vitest + supertest)    | `cd backend && npm test`  | 328 pruebas en 22 archivos, todas pasando |
 | Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 17 pruebas en 4 archivos, todas pasando   |
 
 Cobertura actual del backend (`npm run test:coverage`, proveedor v8):
 
 | Métrica    | Valor  | Umbral configurado |
 | ---------- | ------ | ------------------ |
-| Statements | 91.81% | 60%                |
-| Branches   | 81.46% | 60%                |
-| Functions  | 97.54% | 60%                |
-| Lines      | 92.31% | 60%                |
+| Statements | 92.01% | 60%                |
+| Branches   | 81.31% | 60%                |
+| Functions  | 98.21% | 60%                |
+| Lines      | 92.55% | 60%                |
+
+E2E con backend vivo (2026-09-28): runner de los 69 endpoints = **129/129** y capa de red de los `api.js` reales de móvil/escritorio = **102/102** (incluye RF4 recover/reset 12/12). Ver `docs/informes/EVIDENCIA_E2E_CAPA_RED_2026-09-28.md` y `docs/informes/INFORME_ESTADO_INTEGRACION_2026-09-28.md`.
 
 ## Documentación de la API
 

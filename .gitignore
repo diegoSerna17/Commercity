@@ -137,6 +137,8 @@ docs/informes/*
 !docs/informes/INFORME_RAMA_ESCRITORIO_2026-09-27.md
 !docs/informes/EVIDENCIA_E2E_CAPA_RED_2026-09-28.md
 !docs/informes/INFORME_ESTADO_INTEGRACION_2026-09-28.md
+!docs/informes/INFORME_FINAL_SENA_2026-09-25.md
+!docs/CHANGELOG.md
 scripts/
 TES.MD
 INFORME_CALIDAD*.pdf
