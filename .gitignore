@@ -126,7 +126,15 @@ DRIVE/
 Meneses/
 "LAST VERSION"/
 Audios/
-docs/
+docs/*
+# Excepción aprobada 2026-09-27 (Daniel): se versionan el plan de integración
+# API móvil/escritorio y los 3 informes de rama. El resto de docs/ sigue fuera.
+!docs/informes/
+docs/informes/*
+!docs/informes/PLAN_INTEGRACION_API_MOVIL_ESCRITORIO_2026-09-27.md
+!docs/informes/INFORME_RAMA_BACKEND_2026-09-27.md
+!docs/informes/INFORME_RAMA_MOVIL_2026-09-27.md
+!docs/informes/INFORME_RAMA_ESCRITORIO_2026-09-27.md
 scripts/
 TES.MD
 INFORME_CALIDAD*.pdf
