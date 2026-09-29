@@ -41,6 +41,16 @@ Abre **`http://127.0.0.1:8080/www/index.html`**.
 > \[!IMPORTANT]
 > `www/api.js` apunta por defecto a `http://10.0.2.2:3000` (loopback del emulador Android). En el navegador de PC o en un dispositivo físico hay que definir `window.COMMERCITY_API_URL` (por ejemplo `http://localhost:3000` o la IP-LAN del equipo) **antes** de cargar `api.js`.
 
+## 🔑 Usuarios de prueba
+
+Creados por `seed_commercity.sql`; la contraseña de todos es `123456`:
+
+| Rol           | Correo                          | Contraseña |
+| ------------- | ------------------------------- | ---------- |
+| Administrador | `carlos.munoz@commercity.com`   | `123456`   |
+| Vendedor      | `juan.giraldo@commercity.com`   | `123456`   |
+| Comprador     | `camila.torres@commercity.com`  | `123456`   |
+
 ## 📦 Compilar la APK
 
 Requiere Android Studio/SDK (no incluido en el repo):

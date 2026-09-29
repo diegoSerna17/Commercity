@@ -24,6 +24,16 @@ npm start        # abre la ventana nativa de CommerCity (Electron)
 
 `src/api.js` usa `http://localhost:3000` por defecto, así que la app toma la API automáticamente en local.
 
+## 🔑 Usuarios de prueba
+
+Creados por `seed_commercity.sql`; la contraseña de todos es `123456`:
+
+| Rol           | Correo                          | Contraseña |
+| ------------- | ------------------------------- | ---------- |
+| Administrador | `carlos.munoz@commercity.com`   | `123456`   |
+| Vendedor      | `juan.giraldo@commercity.com`   | `123456`   |
+| Comprador     | `camila.torres@commercity.com`  | `123456`   |
+
 ## 📦 Generar el instalador (.exe)
 
 ```bash

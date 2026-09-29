@@ -34,6 +34,18 @@ VITE_API_URL=http://localhost:3000
 
 Si no defines `.env`, el valor por defecto es `http://localhost:3000` (ver [src/constants/config.js](src/constants/config.js)).
 
+## Usuarios de prueba
+
+Creados por `seed_commercity.sql`; la contraseña de todos es `123456`:
+
+| Rol           | Correo                          | Contraseña |
+| ------------- | ------------------------------- | ---------- |
+| Administrador | `carlos.munoz@commercity.com`   | `123456`   |
+| Vendedor      | `juan.giraldo@commercity.com`   | `123456`   |
+| Comprador     | `camila.torres@commercity.com`  | `123456`   |
+
+El listado completo (20 usuarios) está en `seed_commercity.sql` y en el `README.md` de la raíz.
+
 ## Pruebas
 
 ```bash

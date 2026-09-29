@@ -43,6 +43,18 @@ npm start
 > \[!IMPORTANT]
 > El móvil define su API en `www/api.js` como `http://10.0.2.2:3000` (loopback del emulador Android). En el navegador de PC o en un dispositivo físico hay que definir `window.COMMERCITY_API_URL` (por ejemplo `http://localhost:3000` o la IP-LAN del equipo) antes de cargar `api.js`. El escritorio usa `http://localhost:3000` por defecto.
 
+## Usuarios de prueba
+
+Creados por `seed_commercity.sql`; la contraseña de todos es `123456`:
+
+| Rol           | Correo                          | Contraseña |
+| ------------- | ------------------------------- | ---------- |
+| Administrador | `carlos.munoz@commercity.com`   | `123456`   |
+| Vendedor      | `juan.giraldo@commercity.com`   | `123456`   |
+| Comprador     | `camila.torres@commercity.com`  | `123456`   |
+
+El listado completo (20 usuarios) está en `seed_commercity.sql` y en el `README.md` de la raíz.
+
 ## E2E (2026-09-28, backend vivo `localhost:3000`, BD `commercity_v2`)
 
 - **Runner 69 endpoints: 129/129 OK** — `docs/AVANCES/PRUEBAS/ejecutar_pruebas.mjs`
