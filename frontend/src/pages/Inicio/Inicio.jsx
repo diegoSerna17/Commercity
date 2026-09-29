@@ -9,6 +9,11 @@ import { listarProductos } from "../../services/productos.service.js";
 import { agregarProducto } from "../../services/carrito.service.js";
 import { getCurrentUser } from "../../api/client.js";
 import { API_BASE_URL } from "../../constants/config.js";
+import {
+  aplicarFallbackImagenProducto,
+  replaceInvalidProductImage,
+  resolverImagenRespaldoProducto,
+} from "../../utils/productImageFallback.js";
 
 import "swiper/css";
 import "swiper/css/pagination";
@@ -47,13 +52,10 @@ const heroSlides = [
 // JS Cantidad de productos que se piden por pagina a la API.
 const LIMITE_PRODUCTOS = 12;
 
-// JS Imagen de respaldo cuando el producto no tiene imagen publicada.
-const PRODUCTO_IMAGE_FALLBACK =
-  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&auto=format&fit=crop";
-
 // JS El backend devuelve rutas relativas (/uploads/...); se resuelven contra la API.
-function resolverImagen(imagen) {
-  if (!imagen) return PRODUCTO_IMAGE_FALLBACK;
+// Si el producto no trae imagen, se usa una foto real acorde a su categoria.
+function resolverImagen(imagen, categoria, id) {
+  if (!imagen) return resolverImagenRespaldoProducto(categoria, id);
   if (/^https?:\/\//i.test(imagen)) return imagen;
   return `${API_BASE_URL}${imagen}`;
 }
@@ -79,7 +81,7 @@ function mapearProducto(producto) {
     precioBase: Math.round(precio),
     descuento,
     stock: Number(producto.stock) || 0,
-    image: resolverImagen(producto.imagen),
+    image: resolverImagen(producto.imagen, producto.categoria, producto.id),
     imageAlt: producto.nombre,
     description: producto.descripcion,
     vendedorId: producto.vendedor_id,
@@ -448,7 +450,11 @@ const Hero = () => {
                     <img
                       src={product.image}
                       alt={product.imageAlt}
+                      data-categoria={product.category}
+                      data-product-id={product.id}
                       className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                      onError={aplicarFallbackImagenProducto}
+                      onLoad={replaceInvalidProductImage}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 

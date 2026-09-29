@@ -5,6 +5,7 @@ import AgregarProducto from "../../components/perfil/AgregarProducto";
 import SeguidoresModal from "../../components/perfil/SeguidoresModal";
 import { getCurrentUser } from "../../api/client.js";
 import { API_BASE_URL } from "../../constants/config.js";
+import { resolverImagenRespaldoProducto } from "../../utils/productImageFallback.js";
 import {
   actualizarProducto,
   crearProducto,
@@ -16,10 +17,6 @@ import {
 } from "../../services/seguidores.service.js";
 
 const BIO_MAX_LENGTH = 180;
-
-// JS Imagen de respaldo cuando el producto no tiene imagen publicada.
-const PRODUCTO_IMAGE_FALLBACK = (id) =>
-  `https://picsum.photos/seed/cc${id}/400/400`;
 
 // JS Avatar de respaldo cuando el usuario no tiene foto de perfil.
 const AVATAR_FALLBACK = "https://picsum.photos/seed/avatar1/400/400";
@@ -50,13 +47,15 @@ function resolverUrlArchivo(ruta) {
 }
 
 /**
- * Imagen del producto: usa la del backend o una de respaldo estable por id.
+ * Imagen del producto: usa la del backend o una foto real de respaldo acorde
+ * a la categoria del producto (estable por id).
  * @param {string|null|undefined} imagenUrl
  * @param {number|string} id
+ * @param {string|undefined} categoria
  * @returns {string}
  */
-function resolverImagenProducto(imagenUrl, id) {
-  return resolverUrlArchivo(imagenUrl) ?? PRODUCTO_IMAGE_FALLBACK(id);
+function resolverImagenProducto(imagenUrl, id, categoria) {
+  return resolverUrlArchivo(imagenUrl) ?? resolverImagenRespaldoProducto(categoria, id);
 }
 
 /**
@@ -95,7 +94,7 @@ function mapearProducto(producto) {
     originalPrice: descuento > 0 ? formatearPrecio(precio) : null,
     price: formatearPrecio(descuento > 0 ? precioConDescuento : precio),
     discount: descuento > 0 ? `-${Math.round(descuento)}%` : null,
-    image: resolverImagenProducto(producto.imagen_url, producto.id),
+    image: resolverImagenProducto(producto.imagen_url, producto.id, producto.categoria_nombre),
     bgColor: "#f1f1f4",
     raw: producto,
   };

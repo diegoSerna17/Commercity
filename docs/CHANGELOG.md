@@ -4,6 +4,16 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-09-28 - FEAT: fotografias reales de productos por categoria (BD + frontend)
+
+- **Autor**: Daniel Palacios (lider) con CommandCode
+- **Archivos**: backend/src/server/db/012_normalizar_imagenes_productos.sql; frontend/src/data/fotosProductoPorCategoria.js (nuevo); frontend/src/utils/productImageFallback.js; frontend/src/pages/Inicio/Inicio.jsx; frontend/src/components/inicio/FichaProducto.jsx; frontend/src/pages/Perfil/PerfilVendedor.jsx
+- **Descripcion**: El catalogo mostraba solo la bolsa de respaldo porque 250 productos apuntaban a IDs inexistentes de Unsplash (sin `?query`) que responden 404 text/html (el navegador las bloquea con ERR_BLOCKED_BY_ORB) reutilizando solo 10 URLs distintas, mas 2 de example.com. Solucion en dos capas complementarias: (A) migracion 012 que sustituye las imagenes rotas por una fotografia real acorde a la CATEGORIA del producto (fuente: el conjunto de imagenes ya asignadas a los productos del seed del repositorio, verificadas por HTTP), elegida determinista por `id MOD n`; ademas limpia (soft-delete `eliminado_por_admin=1`, reversible) los productos de prueba del runner (`ZzVDIR`, `ZzHARNESS`, `Producto E2E/Prueba*`). (B) fallback de frontend por categoria: fuente unica `fotosProductoPorCategoria.js` usada por `productImageFallback.js`, que reemplaza en 2 etapas (foto real de la categoria -> imagen local) y unifica los 3 fallbacks que convivian (bolsa SVG, picsum por id en PerfilVendedor y el servicio muerto via.placeholder.com).
+- **Motivo**: dejar el catalogo con fotografias reales que carguen de verdad y retirar los productos de prueba de la vista publica.
+- **Requerimientos**: RF65/RF66 (vista de detalle), RF72 (productos en el panel principal); RNF de contenido/imagenes del catalogo
+- **Evidencia**: BD real commercity_v2 verificada tras aplicar 012: unsplash_rotas 250->0, example_com 2->0, eliminados 23->35, respaldo productos_imagenes_bkp_20260928 con 346 filas; GET /api/productos -> 309 disponibles, primera pagina con fotos reales por categoria y sin `Zz*`; 71 URLs de la fuente validadas 200 image/*; frontend lint OK y build OK (tests unitarios con fallo preexistente ajeno: React.act no es funcion en React 19 + @testing-library/react)
+- **Estado**: Completado
+
 ## 2026-09-28 - FIX: correcciones post-review (criticos/altos) y cierre de residuales
 
 - **Autor**: Daniel Palacios (lider) con agentes opencode (movil-fix2, escritorio-fix2)

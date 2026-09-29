@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" fill="none">
+  <defs>
+    <linearGradient id="background" x1="70" y1="48" x2="820" y2="860" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#282833"/>
+      <stop offset="1" stop-color="#15151d"/>
+    </linearGradient>
+    <linearGradient id="bag" x1="300" y1="310" x2="600" y2="660" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffad28"/>
+      <stop offset="1" stop-color="#ed7410"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#background)" d="M0 0h900v900H0z"/>
+  <circle cx="450" cy="450" r="250" fill="#fff" fill-opacity=".035"/>
+  <path d="M323 376h254l-19 275H342l-19-275Z" fill="url(#bag)"/>
+  <path d="M382 389v-63a68 68 0 0 1 136 0v63" stroke="#ffd28a" stroke-linecap="round" stroke-width="22"/>
+  <path d="M407 491h86" stroke="#fff" stroke-linecap="round" stroke-width="18" stroke-opacity=".9"/>
+  <path d="M407 536h55" stroke="#fff" stroke-linecap="round" stroke-width="14" stroke-opacity=".62"/>
+  <text x="450" y="724" fill="#c5c3d0" font-family="Arial,sans-serif" font-size="25" text-anchor="middle">Imagen no disponible</text>
+</svg>
