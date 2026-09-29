@@ -1,27 +1,46 @@
-# React + Vite
+# CommerCity — Frontend (React + Vite)
 
-Este frontend es parte de CommerCity. El código se distribuye para pruebas del equipo en la rama **`PREVIEW`** del repo oficial:
+SPA en **React 19** + **Vite 8** + **Tailwind CSS 4**. Consume la API REST del backend (Express, puerto 3000) con JWT Bearer.
+
+## Obtener el código (rama PREVIEW)
 
 ```bash
 git clone -b PREVIEW https://github.com/diegoSerna17/Commercity.git
 cd Commercity/frontend
-npm install
-npm run dev      # http://localhost:5173
+npm ci            # instala según package-lock.json (o npm install)
 ```
 
-La URL de la API se configura con `VITE_API_URL` (`.env` en `frontend/`, por defecto `http://localhost:3000`). Configuración completa del proyecto en el `README.md` de la raíz.
+Requiere **Node.js 22.22.2+** (hay `.nvmrc` con la versión recomendada).
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Ejecución
 
-Currently, two official plugins are available:
+```bash
+npm run dev      # servidor de desarrollo -> http://localhost:5173
+npm run build    # build de producción (carpeta dist/)
+npm run preview  # sirve el build de producción
+npm run lint     # ESLint
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+> \[!IMPORTANT]
+> El backend debe estar corriendo en `http://localhost:3000` antes de usar la app. Sigue la configuración general en el `README.md` de la raíz.
 
-## React Compiler
+## URL de la API
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+La URL del backend se toma de `VITE_API_URL` (archivo `.env` en la raíz de `frontend/`):
 
-## Expanding the ESLint configuration
+```bash
+VITE_API_URL=http://localhost:3000
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Si no defines `.env`, el valor por defecto es `http://localhost:3000` (ver [src/constants/config.js](src/constants/config.js)).
+
+## Pruebas
+
+```bash
+npm test              # suite completa (Vitest + jsdom + Testing Library)
+npm run test:watch    # modo observador
+npm run test:coverage # cobertura
+```
+
+> \[!IMPORTANT]
+> Las pruebas se ejecutan **siempre desde `frontend/`**. Lanzadas desde la raíz del repositorio fallan.

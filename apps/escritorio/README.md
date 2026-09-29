@@ -11,11 +11,26 @@ La app se distribuye para pruebas del equipo en la rama **`PREVIEW`** del repo o
 ```bash
 git clone -b PREVIEW https://github.com/diegoSerna17/Commercity.git
 cd Commercity/apps/escritorio
-npm install
-npm run build   # genera dist/CommerCity Setup 2.0.0.exe
+npm ci
 ```
 
-La configuración del proyecto (`.env` con `DB_NAME=commercity_v2`, importar `schema_commercity.sql` + `seed_commercity.sql`) está en el `README.md` de la raíz.
+## ▶️ Probar la app
+
+Con el **backend corriendo en `http://localhost:3000`** (ver `README.md` de la raíz):
+
+```bash
+npm start        # abre la ventana nativa de CommerCity (Electron)
+```
+
+`src/api.js` usa `http://localhost:3000` por defecto, así que la app toma la API automáticamente en local.
+
+## 📦 Generar el instalador (.exe)
+
+```bash
+npm run build    # electron-builder (NSIS) -> dist/CommerCity Setup 2.0.0.exe
+```
+
+Para release público hay que habilitar firma real (`build.win.signAndEditExecutable` está en `false` para evitar el privilegio de symlinks en Windows).
 
 ## 🧭 ¿Qué es esta versión?
 

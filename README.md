@@ -129,10 +129,12 @@ cd Commercity
 **Actualizar PREVIEW (clon existente):**
 
 ```bash
-git fetch commercycity
 git checkout PREVIEW
-git pull commercycity PREVIEW
+git pull origin PREVIEW
 ```
+
+> \[!NOTE]
+> Si en lugar de clonar el repo oficial añadiste ese remoto manualmente a un clon de ECOMMERCE, el nombre del remoto es el que le hayas puesto (en este proyecto, `commercycity`): usa `git fetch commercycity` y `git pull commercycity PREVIEW`.
 
 Notas:
 
@@ -142,18 +144,31 @@ Notas:
 
 ## Instalación y ejecución
 
+**Requisitos:** Node.js 22+ (el frontend exige `>=22.22.2`), npm y acceso a una base de datos MySQL 8 (el servidor compartido del equipo o una local).
+
+Los pasos 4 y 5 son opcionales: solo se necesitan si vas a probar la app móvil o la de escritorio.
+
 ```bash
 # 1. Clonar el repositorio oficial en la rama PREVIEW
 git clone -b PREVIEW https://github.com/diegoSerna17/Commercity.git
 cd Commercity
 
-# 2. Instalar dependencias del backend
+# 2. Backend
 cd backend
-npm install
+npm ci                        # instala segun package-lock.json (o npm install)
+Copy-Item .env.example .env   # completa los valores (ver Configuracion)
 
-# 3. Instalar dependencias del frontend
+# 3. Frontend
 cd ../frontend
-npm install
+npm ci                        # o npm install
+
+# 4. App movil (opcional, para probar en el navegador)
+cd ../apps/movil
+npm ci
+
+# 5. App escritorio (opcional)
+cd ../apps/escritorio
+npm ci
 ```
 
 ## Configuración
@@ -161,8 +176,10 @@ npm install
 El backend se configura por variables de entorno. Copia la plantilla y completa los valores:
 
 ```powershell
-Copy-Item backend\.env.example backend\.env
+Copy-Item backend\.env.example backend\.env     # desde la raiz del repositorio
 ```
+
+Los datos de conexion a la base de datos (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME=commercity_v2`) los entrega el lider del equipo. Si prefieres una base local, importa `schema_commercity.sql` y `seed_commercity.sql` (ver Base de datos mas abajo) y usa `DB_HOST=localhost`.
 
 > \[!NOTE]
 > Nunca versiones el archivo `.env`: contiene credenciales locales y ya está excluido por `.gitignore`.
@@ -190,10 +207,13 @@ En el frontend, la URL de la API se toma de `VITE_API_URL` (archivo `.env` en la
 
 ### Base de datos
 
-El esquema de base de datos corresponde al diseño oficial del proyecto (documento Commercity 2.0). Crea la base de datos importando los scripts de la raíz y configura las variables `DB_*` en `backend/.env`:
+El esquema corresponde al diseño oficial del proyecto (documento Commercity 2.0). Tienes dos opciones:
+
+- **Base compartida del equipo:** solo configura las variables `DB_*` en `backend/.env` con los datos que entrega el lider. No importes nada.
+- **Base local:** crea la base importando los scripts de la raíz y usa `DB_HOST=localhost` en `backend/.env`:
 
 ```powershell
-mysql -u root -p < schema_commercity.sql   # crea commercity_v2 con todas las tablas
+mysql -u root -p < schema_commercity.sql               # crea commercity_v2 con todas las tablas
 mysql -u root -p commercity_v2 < seed_commercity.sql   # datos de prueba (usuarios, productos, pedidos)
 ```
 
@@ -217,6 +237,27 @@ npm run dev      # Servidor de desarrollo de Vite (http://localhost:5173)
 npm run build    # Build de producción
 npm run preview  # Servir el build de producción
 ```
+
+### App móvil (para probar en el navegador)
+
+```bash
+cd apps/movil
+npm start        # live-server en http://127.0.0.1:8080
+```
+
+Abre **`http://127.0.0.1:8080/www/index.html`** (la raíz `/` muestra el listado de archivos porque la app vive en `www/`).
+
+> \[!IMPORTANT]
+> `apps/movil/www/api.js` apunta por defecto a `http://10.0.2.2:3000` (loopback del emulador Android). En el navegador de PC o en un dispositivo físico hay que definir `window.COMMERCITY_API_URL` antes de cargar `api.js` (por ejemplo `http://localhost:3000` en PC o la IP-LAN del equipo en un celular). La app de escritorio ya usa `http://localhost:3000`.
+
+### App escritorio (Electron)
+
+```bash
+cd apps/escritorio
+npm start        # abre la ventana nativa de CommerCity (API en http://localhost:3000)
+```
+
+Requiere el backend corriendo. Para generar el instalador: `npm run build` (ver `apps/README.md`).
 
 ## Pruebas
 

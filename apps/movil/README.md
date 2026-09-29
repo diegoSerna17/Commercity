@@ -25,11 +25,30 @@ La app se distribuye para pruebas del equipo en la rama **`PREVIEW`** del repo o
 ```bash
 git clone -b PREVIEW https://github.com/diegoSerna17/Commercity.git
 cd Commercity/apps/movil
-npm install
-npx cap sync android
+npm ci
 ```
 
-Para compilar la APK se requiere Android Studio/SDK. La configuración del proyecto (`.env` con `DB_NAME=commercity_v2`, importar `schema_commercity.sql` + `seed_commercity.sql`) está en el `README.md` de la raíz.
+## ▶️ Probar la app
+
+Con el **backend corriendo en `http://localhost:3000`** (ver `README.md` de la raíz):
+
+```bash
+npm start          # live-server -> http://127.0.0.1:8080
+```
+
+Abre **`http://127.0.0.1:8080/www/index.html`**.
+
+> \[!IMPORTANT]
+> `www/api.js` apunta por defecto a `http://10.0.2.2:3000` (loopback del emulador Android). En el navegador de PC o en un dispositivo físico hay que definir `window.COMMERCITY_API_URL` (por ejemplo `http://localhost:3000` o la IP-LAN del equipo) **antes** de cargar `api.js`.
+
+## 📦 Compilar la APK
+
+Requiere Android Studio/SDK (no incluido en el repo):
+
+```bash
+npx cap sync android        # regenera android/app/src/main/assets/public desde www/
+npx cap open android        # Android Studio -> Build > Build Bundle(s)/APK(s) > Build APK(s)
+```
 
 ---
 
