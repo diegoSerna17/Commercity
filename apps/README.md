@@ -19,12 +19,29 @@ git clone -b PREVIEW https://github.com/diegoSerna17/Commercity.git
 cd Commercity
 
 # Actualizar un clon existente
-git fetch commercycity
 git checkout PREVIEW
-git pull commercycity PREVIEW
+git pull origin PREVIEW
 ```
 
-Antes de compilar, sigue la configuración general del proyecto en el `README.md` de la raíz (`.env` con `DB_NAME=commercity_v2` e importar `schema_commercity.sql` + `seed_commercity.sql`).
+## Ejecutar las apps en local
+
+Ambas apps necesitan el **backend corriendo en `http://localhost:3000`**. Sigue la configuración del proyecto en el `README.md` de la raíz (crear `backend/.env` con `JWT_SECRET` y los datos `DB_*`).
+
+```bash
+# App móvil -> live-server en http://127.0.0.1:8080
+cd apps/movil
+npm ci
+npm start
+# abrir http://127.0.0.1:8080/www/index.html
+
+# App escritorio -> ventana nativa de Electron
+cd apps/escritorio
+npm ci
+npm start
+```
+
+> \[!IMPORTANT]
+> El móvil define su API en `www/api.js` como `http://10.0.2.2:3000` (loopback del emulador Android). En el navegador de PC o en un dispositivo físico hay que definir `window.COMMERCITY_API_URL` (por ejemplo `http://localhost:3000` o la IP-LAN del equipo) antes de cargar `api.js`. El escritorio usa `http://localhost:3000` por defecto.
 
 ## E2E (2026-09-28, backend vivo `localhost:3000`, BD `commercity_v2`)
 

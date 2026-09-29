@@ -5,9 +5,11 @@ import { ArrowLeft, Flag, Minus, Plus, Star, X } from "lucide-react";
 import { getCurrentUser } from "../../api/client.js";
 import { calificarVendedor } from "../../services/calificaciones.service.js";
 import { listarHistorialCompras } from "../../services/historial.service.js";
-
-const PRODUCT_IMAGE_SRC =
-  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&auto=format&fit=crop";
+import {
+  aplicarFallbackImagenProducto,
+  replaceInvalidProductImage,
+  resolverImagenRespaldoProducto,
+} from "../../utils/productImageFallback.js";
 
 function formatearPrecio(numero) {
   return `$${Math.round(numero).toLocaleString("es-CO")}`;
@@ -56,7 +58,7 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
   const precioFinal = tieneDescuento
     ? precioBase - (precioBase * descuento) / 100
     : product?.price ?? precioBase;
-  const imagenUrl = product?.image || PRODUCT_IMAGE_SRC;
+  const imagenUrl = product?.image || resolverImagenRespaldoProducto(product?.category, product?.id);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -196,12 +198,20 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
                 src={imagenUrl}
                 alt=""
                 aria-hidden="true"
+                data-categoria={product.category}
+                data-product-id={product.id}
                 className="absolute -inset-4 h-[calc(100%+32px)] w-[calc(100%+32px)] scale-110 object-cover opacity-70 blur-lg"
+                onError={aplicarFallbackImagenProducto}
+                onLoad={replaceInvalidProductImage}
               />
               <img
                 src={imagenUrl}
                 alt={product.imageAlt || product.name}
+                data-categoria={product.category}
+                data-product-id={product.id}
                 className="absolute inset-0 h-full w-full object-contain"
+                onError={aplicarFallbackImagenProducto}
+                onLoad={replaceInvalidProductImage}
               />
             </button>
 
@@ -413,7 +423,11 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
           <img
             src={imagenUrl}
             alt={product.imageAlt || product.name}
+            data-categoria={product.category}
+            data-product-id={product.id}
             className="max-h-[90vh] max-w-full select-none object-contain"
+            onError={aplicarFallbackImagenProducto}
+            onLoad={replaceInvalidProductImage}
           />
         </div>
       )}

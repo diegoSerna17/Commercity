@@ -1,39 +1,199 @@
 -- 012_normalizar_imagenes_productos.sql
--- Proposito: dejar el catalogo con imagenes que carguen de verdad.
--- Contexto (diagnostico 2026-09-13 sobre commercity_v2):
+-- Proposito: dejar el catalogo con fotografias reales que carguen de verdad.
+-- Contexto (verificado 2026-09-28 contra commercity_v2):
 --   * 82 productos con URL de Unsplash valida (responden 200 image/jpeg).
---   * 250 productos con URL de Unsplash SIN parametros cuyos IDs no existen
---     (responden 404 text/html; el navegador las bloquea con ERR_BLOCKED_BY_ORB).
---   * 2 productos con URL de ejemplo (https://example.com/...) y 1 con un PNG
---     de 1x1 px en /uploads.
--- Solucion: los que no funcionan se sustituyen por una imagen real y unica del
--- servicio publico picsum.photos usando el id del producto como semilla
--- (determinista, sin API key, verificado: GET 200 image/jpeg).
+--   * 250 productos con URL de Unsplash SIN parametros de query cuyos IDs no
+--     existen (responden 404 text/html; el navegador las bloquea con
+--     ERR_BLOCKED_BY_ORB). Se reutilizaban solo 10 URLs distintas.
+--   * 2 productos con URL de ejemplo (https://example.com/...).
+-- Las rutas /uploads/ NO se modifican: pueden apuntar a imagenes reales del
+-- vendedor. El frontend detecta y reemplaza imagenes de prueba de 1x1 px.
+--
+-- Solucion: las imagenes rotas se sustituyen por una fotografia real acorde a
+-- la CATEGORIA del producto (no una bolsa generica), tomada del conjunto de
+-- imagenes ya asignadas a los productos del seed del repositorio y verificadas
+-- por HTTP. La eleccion es determinista por id del producto (id MOD n).
+--
 -- Aplicar: como usuario con permisos de escritura sobre la base de datos.
 
 -- 1) Respaldo para rollback (solo id + imagen_url; no modifica datos).
-CREATE TABLE IF NOT EXISTS productos_imagenes_bkp_20260913 AS
+CREATE TABLE IF NOT EXISTS productos_imagenes_bkp_20260928 AS
 SELECT id, imagen_url FROM productos;
 
--- 2) Normalizar las imagenes rotas o basura.
+-- 2) Normalizar las imagenes rotas o basura, por categoria (foto real).
+--    (id MOD n) + 1 -> ELT es 1-indexado.
+
+-- Computación (5 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 5) + 1, 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Computación'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Electrodomésticos (5 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 5) + 1, 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1558317374-067fb5f30001?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Electrodomésticos'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Celulares (5 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 5) + 1, 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Celulares'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Calzado (6 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 6) + 1, 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1520639888713-7851133b1ed0?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1539185441755-769473a23570?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1614252369475-531eba835eb1?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Calzado'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Deportes (5 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 5) + 1, 'https://images.unsplash.com/photo-1614632537190-23e4146777db?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1638536532686-d610adfc8e5c?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1592432678016-e910b452f9a2?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1517438322307-e67111335449?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Deportes'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Moda (5 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 5) + 1, 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Moda'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Hogar (4 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 4) + 1, 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1583845112203-29329902332e?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Hogar'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Tecnología (5 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 5) + 1, 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1615526675159-e248c3021d3f?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Tecnología'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Belleza (5 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 5) + 1, 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Belleza'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Mascotas (2 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 2) + 1, 'https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1541783245831-57d6fb0926d3?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Mascotas'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Juguetes (4 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 4) + 1, 'https://images.unsplash.com/photo-1561144257-e32e8efc6c4f?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1594787318286-3d835c1d207f?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Juguetes'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Libros y Papelería (5 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 5) + 1, 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Libros y Papelería'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Salud y Bienestar (4 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 4) + 1, 'https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Salud y Bienestar'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Ferretería (4 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 4) + 1, 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Ferretería'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Audio (3 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 3) + 1, 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Audio'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- Videojuegos (4 fotos)
+UPDATE productos p
+JOIN categorias c ON c.id = p.categoria_id
+SET p.imagen_url = ELT((p.id MOD 4) + 1, 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1592840496694-26d035b52b48?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=300&h=300&fit=crop', 'https://images.unsplash.com/photo-1598550476439-6847785fcea6?w=300&h=300&fit=crop')
+WHERE c.nombre = 'Videojuegos'
+  AND (p.imagen_url IS NULL OR TRIM(p.imagen_url) = ''
+       OR p.imagen_url LIKE 'https://example.com/%'
+       OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
+
+-- 3) Cualquier producto restante sin imagen (categoria sin fotos) -> picsum unico.
 UPDATE productos
 SET imagen_url = CONCAT('https://picsum.photos/seed/commercity-', id, '/900/900')
 WHERE imagen_url IS NULL
    OR TRIM(imagen_url) = ''
    OR imagen_url LIKE 'https://example.com/%'
-   OR imagen_url LIKE '%/uploads/%'
    OR (imagen_url LIKE 'https://images.unsplash.com/%' AND imagen_url NOT LIKE '%?%');
 
--- 3) Verificacion: deben quedar 0 filas con imagen invalida.
+-- 4) Limpieza (soft-delete reversible): productos generados por tests/runner.
+UPDATE productos
+SET eliminado_por_admin = 1
+WHERE eliminado_por_admin = 0
+  AND (nombre LIKE 'Zz%'
+       OR nombre LIKE 'Producto E2E%'
+       OR nombre LIKE 'Producto Prueba%'
+       OR nombre LIKE 'Producto de prueba%');
+
+-- 5) Verificacion: deben quedar 0 filas con imagen invalida.
 SELECT
   SUM(CASE WHEN imagen_url IS NULL OR TRIM(imagen_url) = '' THEN 1 ELSE 0 END) AS sin_imagen,
   SUM(CASE WHEN imagen_url LIKE 'https://example.com/%' THEN 1 ELSE 0 END) AS example_com,
-  SUM(CASE WHEN imagen_url LIKE '%/uploads/%' THEN 1 ELSE 0 END) AS uploads_local,
   SUM(CASE WHEN imagen_url LIKE 'https://images.unsplash.com/%' AND imagen_url NOT LIKE '%?%' THEN 1 ELSE 0 END) AS unsplash_rotas,
-  SUM(CASE WHEN imagen_url LIKE 'https://picsum.photos/%' THEN 1 ELSE 0 END) AS picsum_nuevas
+  SUM(CASE WHEN eliminado_por_admin = 1 THEN 1 ELSE 0 END) AS eliminados
 FROM productos;
 
 -- ROLLBACK (si se requiere revertir):
---   UPDATE productos p JOIN productos_imagenes_bkp_20260913 b ON b.id = p.id
+--   UPDATE productos p JOIN productos_imagenes_bkp_20260928 b ON b.id = p.id
 --     SET p.imagen_url = b.imagen_url;
---   DROP TABLE productos_imagenes_bkp_20260913;
+--   UPDATE productos SET eliminado_por_admin = 0 WHERE nombre LIKE 'Zz%';
+--   DROP TABLE productos_imagenes_bkp_20260928;
