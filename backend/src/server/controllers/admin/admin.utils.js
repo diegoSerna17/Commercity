@@ -2,7 +2,8 @@
  * Utilidades del modulo admin (integradas desde AVANCES/SPRING 1/JUAN CABRERA).
  */
 
-export const validarId = (id) => Number.isInteger(Number(id)) && Number(id) > 0;
+// A4: validarId vive en utils/ids.js (capa comun); se re-exporta por compat.
+export { validarId } from "../../utils/ids.js";
 
 export const capitalizar = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 

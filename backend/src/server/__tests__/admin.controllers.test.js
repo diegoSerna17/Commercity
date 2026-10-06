@@ -417,6 +417,31 @@ describe("Reportes admin (RF60-RF66 + fix 4.2)", () => {
     expect(res.body.data[0].estado).toBe("pendiente");
   });
 
+  it("A2: excluye archivados por defecto e incluye con ?incluir_archivados=1", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      if (sql.includes("FROM reportes r")) return [[], undefined];
+      return [[], undefined];
+    });
+
+    const defecto = await request(app)
+      .get("/api/admin/reportes")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(defecto.status).toBe(200);
+    const qDefecto = pool.query.mock.calls.find(([sql]) => sql.includes("FROM reportes r"));
+    expect(qDefecto[0]).toContain("r.archivado = 0");
+
+    pool.query.mockClear();
+    const incluidos = await request(app)
+      .get("/api/admin/reportes?incluir_archivados=1")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(incluidos.status).toBe(200);
+    const qIncluidos = pool.query.mock.calls.find(([sql]) => sql.includes("FROM reportes r"));
+    expect(qIncluidos[0]).not.toContain("r.archivado = 0");
+  });
+
   it("fix 4.2: archiva el reporte (UPDATE archivado=1, nunca DELETE)", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];

@@ -9,8 +9,15 @@ export const getReportes = async (req, res, next) => {
     if (estado && !["pendiente", "resuelto"].includes(estado))
       return errorResponse(res, "Filtro de estado inválido (pendiente|resuelto)", 400);
 
+    // A2 (P2): borrado logico. Por defecto se excluyen archivados (mig 011);
+    // ?incluir_archivados=1 los incluye (moderacion).
+    const incluirArchivados = ["1", "true", "si", "sí"].includes(String(req.query.incluir_archivados || "").toLowerCase());
+
     const condiciones = [];
     const params = [];
+    if (!incluirArchivados) {
+      condiciones.push("r.archivado = 0");
+    }
     if (estado) {
       condiciones.push("r.estado_reporte = ?");
       params.push(estado === "resuelto" ? "Resuelto" : "Pendiente");

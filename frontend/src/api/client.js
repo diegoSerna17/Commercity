@@ -19,12 +19,16 @@ export const setCurrentUser = (user) => localStorage.setItem(USER_KEY, JSON.stri
 /**
  * Cliente HTTP base contra la API del backend.
  * Agrega el header Authorization con el token cuando existe.
+ * F6 (P2): valida el contrato { success, data } y maneja 401 globalmente
+ * (limpia sesion y redirige a /login). Incluye credenciales para la cookie
+ * httpOnly (F4) manteniendo compatibilidad con el token en localStorage.
  */
 export async function request(path, { method = "GET", body, headers, isForm = false } = {}) {
   const token = getToken();
 
   const config = {
     method,
+    credentials: "include",
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
@@ -53,7 +57,26 @@ export async function request(path, { method = "GET", body, headers, isForm = fa
   }
 
   if (!res.ok) {
+    // F6: 401 global. Limpia sesion y redirige a /login (solo navegador).
+    if (res.status === 401) {
+      try {
+        clearToken();
+        localStorage.removeItem(USER_KEY);
+      } catch { /* almacenamiento no disponible */ }
+      if (typeof window !== "undefined" && window.location && !String(window.location.pathname).includes("/login")) {
+        window.location.assign("/login");
+      }
+    }
     const message = data?.error?.message || data?.message || `Error ${res.status}`;
+    const error = new Error(message);
+    error.status = res.status;
+    error.data = data;
+    throw error;
+  }
+
+  // F6: valida el contrato { success, data } del backend.
+  if (data && typeof data === "object" && "success" in data && data.success !== true) {
+    const message = data?.error?.message || data?.message || "Respuesta inesperada del servidor";
     const error = new Error(message);
     error.status = res.status;
     error.data = data;

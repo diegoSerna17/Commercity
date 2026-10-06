@@ -2,19 +2,10 @@
  * Cliente HTTP del modulo Catalogo/Producto (backend central).
  * Convencion del proyecto: contrato { success, data } / { success, error }.
  * Integrado desde Carlos Perea (2026-08-09) y adaptado a la URL base central.
+ * F6 (P2 auditoria 2026-10-05): usa el cliente central (JWT + 401 global)
+ * en vez del fetch duplicado sin autenticacion.
  */
-const API_BASE = import.meta.env?.VITE_API_URL || "http://localhost:3000";
-
-async function manejarRespuesta(response) {
-  const datos = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    const mensaje = datos?.error?.message || "Ocurrio un error al comunicarse con el servidor";
-    throw new Error(mensaje);
-  }
-
-  return datos;
-}
+import { request } from "../api/client.js";
 
 /**
  * Lista los productos activos del panel principal (RF87-RF94).
@@ -28,8 +19,8 @@ export async function listarProductos({ vendedorId, categoriaId, limit, page } =
   if (limit) params.set("limit", limit);
   if (page) params.set("page", page);
 
-  const respuesta = await fetch(`${API_BASE}/api/productos?${params.toString()}`);
-  return manejarRespuesta(respuesta);
+  const qs = params.toString();
+  return request(`/api/productos${qs ? `?${qs}` : ""}`);
 }
 
 /**
@@ -38,8 +29,7 @@ export async function listarProductos({ vendedorId, categoriaId, limit, page } =
  * @returns {Promise<{ success: boolean, data: object }>}
  */
 export async function obtenerProducto(id) {
-  const respuesta = await fetch(`${API_BASE}/api/productos/${id}`);
-  return manejarRespuesta(respuesta);
+  return request(`/api/productos/${id}`);
 }
 
 /**
@@ -49,8 +39,7 @@ export async function obtenerProducto(id) {
  * @returns {Promise<{ success: boolean, data: { valido: boolean, stock_disponible: number, estado: string, mensaje: string } }>}
  */
 export async function validarStockProducto(id, cantidad) {
-  const respuesta = await fetch(
-    `${API_BASE}/api/productos/${id}/validar-stock?cantidad=${cantidad}`
+  return request(
+    `/api/productos/${id}/validar-stock${cantidad ? `?cantidad=${cantidad}` : ""}`
   );
-  return manejarRespuesta(respuesta);
 }
