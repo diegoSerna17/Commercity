@@ -1576,10 +1576,14 @@ async function saveBankAccount() {
     toast('⚠️ ' + apiErrorMessage(err));
     return;
   }
-  localStorage.setItem('commercity_bank_name', name);
-  localStorage.setItem('commercity_bank', bank);
-  localStorage.setItem('commercity_bank_type', type);
-  localStorage.setItem('commercity_bank_num', number);
+  // F5 (P1): jamas persistir datos bancarios en el cliente (ni backup).
+  // Se consultan de la API en cada sesion (cargarTienda los pre-rellena).
+  try {
+    localStorage.removeItem('commercity_bank_name');
+    localStorage.removeItem('commercity_bank');
+    localStorage.removeItem('commercity_bank_type');
+    localStorage.removeItem('commercity_bank_num');
+  } catch (e) {}
   toast('✅ Cuenta bancaria guardada exitosamente');
 }
 async function becomeSeller() {
@@ -1719,14 +1723,14 @@ function loadPersonalInfo() {
   if (city) { const e=document.getElementById('aj-city'); if(e) e.value = city; }
   if (dept) { const e=document.getElementById('aj-dept'); if(e) e.value = dept; }
 
-  const bName = localStorage.getItem('commercity_bank_name');
-  const bBank = localStorage.getItem('commercity_bank');
-  const bType = localStorage.getItem('commercity_bank_type');
-  const bNum  = localStorage.getItem('commercity_bank_num');
-  if (bName) { const e=document.getElementById('bank-name'); if(e) e.value = bName; }
-  if (bBank) { const e=document.getElementById('bank-select'); if(e) e.value = bBank; }
-  if (bType) { const e=document.getElementById('bank-type'); if(e) e.value = bType; }
-  if (bNum)  { const e=document.getElementById('bank-number'); if(e) e.value = bNum; }
+  // F5 (P1): los datos bancarios NO se leen de localStorage (jamas se guardan).
+  // El pre-relleno viene de la API (cargarTienda). Se limpian restos antiguos.
+  try {
+    localStorage.removeItem('commercity_bank_name');
+    localStorage.removeItem('commercity_bank');
+    localStorage.removeItem('commercity_bank_type');
+    localStorage.removeItem('commercity_bank_num');
+  } catch (e) {}
   refreshPerfilDesdeAPI();
 }
 loadPersonalInfo();
