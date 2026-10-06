@@ -42,6 +42,8 @@ CREATE TABLE usuarios (
     direccion_envio TEXT NULL, 
     activo TINYINT(1) DEFAULT 1, 
     token_recuperacion VARCHAR(100) NULL,
+    -- RF4 (mig 010): expira a los 5 minutos. Se guarda el SHA-256 (H3 P2).
+    token_recuperacion_expiracion DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -72,6 +74,8 @@ CREATE TABLE datos_bancarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT NOT NULL UNIQUE, 
     titular_nombre VARCHAR(100) NOT NULL,
+    -- B1: el codigo (tienda/admin) lee e inserta `banco`; existia en BD real.
+    banco VARCHAR(50) NOT NULL,
     tipo_cuenta VARCHAR(50) NOT NULL, 
     numero_cuenta VARCHAR(100) NOT NULL,
     es_commercity TINYINT(1) DEFAULT 0, 
@@ -132,6 +136,8 @@ CREATE TABLE carrito_items (
     producto_id INT NOT NULL,
     cantidad INT NOT NULL DEFAULT 1, 
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- M6 (mig 009): updated_at para limpiar carritos inactivos (RF109).
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_comprador_producto (comprador_id, producto_id),
     FOREIGN KEY (comprador_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE
@@ -142,19 +148,21 @@ CREATE TABLE pedidos (
     comprador_id INT NOT NULL,
     direccion_envio TEXT NOT NULL, 
     total_neto DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-    estado_pedido ENUM('Pendiente', 'En camino', 'Entregado') DEFAULT 'Pendiente', 
+    -- B2/RF119: sin estado_pedido a nivel pedido; el estado vive por linea
+    -- en detalle_pedidos.estado_envio.
     fecha_pedido TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (comprador_id) REFERENCES usuarios(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 -- RESTAURADO: Tabla específica para gestionar la simulación del pago
+-- M8 (mig 008): incluye 'Reembolsado' y DEFAULT 'Pendiente' (RF74/RF135).
 CREATE TABLE pagos_simulados (
     id INT AUTO_INCREMENT PRIMARY KEY,
     pedido_id INT NOT NULL UNIQUE,
     metodo_pago ENUM('tarjeta', 'transferencia', 'pse') NOT NULL,
     referencia_pago VARCHAR(100) NOT NULL UNIQUE,
     monto DECIMAL(12, 2) NOT NULL,
-    estado ENUM('Aprobado', 'Rechazado', 'Pendiente') DEFAULT 'Aprobado',
+    estado ENUM('Aprobado', 'Rechazado', 'Pendiente', 'Reembolsado') DEFAULT 'Pendiente',
     fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -171,6 +179,10 @@ CREATE TABLE detalle_pedidos (
     
     monto_vendedor DECIMAL(12, 2) AS (subtotal * 0.90) STORED, 
     monto_comision DECIMAL(12, 2) AS (subtotal * 0.10) STORED, 
+    -- B1/RF119: estado por linea (el pedido no tiene estado propio).
+    estado_envio ENUM('Pendiente', 'En camino', 'Entregado', 'Cancelado') NOT NULL DEFAULT 'Pendiente',
+    estado_pago_vendedor ENUM('Pendiente', 'Desembolsado') NOT NULL DEFAULT 'Pendiente',
+    fecha_desembolso DATETIME NULL,
     
     FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
     FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE RESTRICT,
@@ -227,18 +239,21 @@ CREATE TABLE mensajes_chat (
 ) ENGINE=InnoDB;
 
 -- RESTAURADO: Tabla notificaciones
+-- M1: tipo como VARCHAR(50) (el ENUM truncaba 'pedido enviado', etc.) y
+-- estado sin acentos (el codigo escribe 'no leido'/'leido').
 CREATE TABLE notificaciones (
     id INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT NOT NULL, 
-    tipo ENUM('compra', 'mensajes', 'reporte', 'pedido enviado') NOT NULL, 
+    tipo VARCHAR(50) NOT NULL, 
     descripcion TEXT NOT NULL, 
-    estado ENUM('leído', 'no leído') DEFAULT 'no leído', 
+    estado VARCHAR(20) DEFAULT 'no leido', 
     url_redireccion VARCHAR(255) NULL, 
     fecha_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- RESTAURADO: Tabla reportes
+-- B1: evidencia_url, estado_reporte y archivado (mig 011, borrado logico).
 CREATE TABLE reportes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     informante_id INT NOT NULL, 
@@ -246,6 +261,9 @@ CREATE TABLE reportes (
     producto_id INT NULL, 
     usuario_reportado_id INT NULL, 
     motivo TEXT NOT NULL, 
+    evidencia_url VARCHAR(255) NULL,
+    estado_reporte ENUM('Pendiente', 'Resuelto') NOT NULL DEFAULT 'Pendiente',
+    archivado TINYINT(1) NOT NULL DEFAULT 0,
     respuesta_admin TEXT NULL, 
     respondido_at DATETIME NULL,
     fecha_reporte TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -256,6 +274,14 @@ CREATE TABLE reportes (
         (tipo_reporte = 'Producto' AND producto_id IS NOT NULL AND usuario_reportado_id IS NULL) OR
         (tipo_reporte = 'Usuario' AND usuario_reportado_id IS NOT NULL AND producto_id IS NULL)
     )
+) ENGINE=InnoDB;
+
+-- RF2 / mig 010: lista negra de JWT revocados en logout.
+CREATE TABLE IF NOT EXISTS tokens_invalidados (
+    token_hash CHAR(64) PRIMARY KEY,
+    expira_en DATETIME NOT NULL,
+    creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_tokens_invalidados_expiracion (expira_en)
 ) ENGINE=InnoDB;
 
 -- ==========================================
