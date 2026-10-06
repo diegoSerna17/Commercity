@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { CRYPTO_EFFECTIVE_KEY } from "../utils/config.js";
+import { CRYPTO_EFFECTIVE_KEY, JWT_SECRET } from "../utils/config.js";
 
 /**
  * Utilidades de cifrado de datos sensibles (RNF11).
@@ -18,6 +18,34 @@ const TAG_LENGTH = 16;
 /** Deriva una clave de 32 bytes a partir del secreto de cifrado (SHA-256). */
 function derivarClave() {
   return crypto.createHash("sha256").update(CRYPTO_EFFECTIVE_KEY).digest();
+}
+
+/**
+ * Clave LEGADA usada antes del fix H5 (separacion por proposito):
+ * sha256(CRYPTO_SECRET_KEY || JWT_SECRET) en bruto. Solo se usa como
+ * fallback de LECTURA para no volver indescifrables los registros ya
+ * cifrados en BD (datos_bancarios) tras el cambio de derivacion.
+ */
+function derivarClaveLegada() {
+  const secretoLegado = process.env.CRYPTO_SECRET_KEY || JWT_SECRET;
+  return crypto.createHash("sha256").update(secretoLegado).digest();
+}
+
+/**
+ * Clave de la ventana intermedia (commit fac1b9a, antes del fix del lote):
+ * sha256(hex(sha256((CRYPTO_SECRET_KEY || JWT_SECRET)::"crypto"))).
+ * Solo difiere de la actual cuando NO hay CRYPTO_SECRET_KEY propio en el .env;
+ * en ese caso se reintenta para no perder registros de ese periodo.
+ */
+function derivarClaveIntermedia() {
+  const secreto = process.env.CRYPTO_SECRET_KEY || JWT_SECRET;
+  const base = crypto.createHash("sha256").update(`${secreto}::crypto`).digest("hex");
+  return crypto.createHash("sha256").update(base).digest();
+}
+
+/** Claves a intentar en decryptSensitive: actual, intermedia y legada. */
+function clavesPosibles() {
+  return [derivarClave(), derivarClaveIntermedia(), derivarClaveLegada()];
 }
 
 /**
@@ -48,23 +76,24 @@ export function encryptSensitive(plainText) {
  */
 export function decryptSensitive(cipherText) {
   if (!cipherText) return null;
-  try {
-    const [ivB64, tagB64, dataB64] = String(cipherText).split(":");
-    if (!ivB64 || !tagB64 || !dataB64) return null;
-    const decipher = crypto.createDecipheriv(
-      ALGORITMO,
-      derivarClave(),
-      Buffer.from(ivB64, "base64url")
-    );
-    decipher.setAuthTag(Buffer.from(tagB64, "base64url"));
-    const texto = Buffer.concat([
-      decipher.update(Buffer.from(dataB64, "base64url")),
-      decipher.final(),
-    ]);
-    return texto.toString("utf8");
-  } catch (e) {
-    return null;
+  const [ivB64, tagB64, dataB64] = String(cipherText).split(":");
+  if (!ivB64 || !tagB64 || !dataB64) return null;
+  const iv = Buffer.from(ivB64, "base64url");
+  const tag = Buffer.from(tagB64, "base64url");
+  const data = Buffer.from(dataB64, "base64url");
+  // Clave actual primero; si falla (datos cifrados con claves anteriores
+  // al fix H5), se reintenta con las claves historicas antes de rendirse.
+  for (const clave of clavesPosibles()) {
+    try {
+      const decipher = crypto.createDecipheriv(ALGORITMO, clave, iv);
+      decipher.setAuthTag(tag);
+      const texto = Buffer.concat([decipher.update(data), decipher.final()]);
+      return texto.toString("utf8");
+    } catch (e) {
+      // Clave incorrecta o dato corrupto: se prueba la siguiente clave.
+    }
   }
+  return null;
 }
 
 /**

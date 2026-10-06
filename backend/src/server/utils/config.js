@@ -35,11 +35,17 @@ function derivarClaveProposito(secreto, proposito) {
     return crypto.createHash("sha256").update(`${secreto}::${proposito}`).digest("hex");
 }
 
-export const CRYPTO_SECRET_KEY =
-    process.env.CRYPTO_SECRET_KEY || JWT_SECRET;
-
-/** Clave efectiva para firmar/validar JWT (dominio "jwt"). */
+/** Clave efectiva de firma JWT (dominio "jwt"). */
 export const JWT_SIGNING_KEY = derivarClaveProposito(JWT_SECRET, "jwt");
 
-/** Clave efectiva para cifrado AES de datos sensibles (dominio "crypto"). */
+/**
+ * Clave efectiva para cifrado AES de datos sensibles (dominio "crypto").
+ * H5 (auditoria 2026-10-05): por defecto el cifrado se deriva del dominio
+ * JWT (JWT_SIGNING_KEY), nunca de la clave bruta de firma. En produccion se
+ * recomienda definir CRYPTO_SECRET_KEY con un valor propio de 32 bytes.
+ */
+export const CRYPTO_SECRET_KEY =
+    process.env.CRYPTO_SECRET_KEY || JWT_SIGNING_KEY;
+
+/** Clave efectiva para cifrado AES (dominio "crypto" sobre CRYPTO_SECRET_KEY). */
 export const CRYPTO_EFFECTIVE_KEY = derivarClaveProposito(CRYPTO_SECRET_KEY, "crypto");
