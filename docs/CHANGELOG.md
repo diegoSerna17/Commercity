@@ -4,6 +4,16 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-06 - DOCS: incorporacion de docs/DRIVE completa a la rama PREVIEW (push a commercycity)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: docs/DRIVE/Documentacion (143), docs/DRIVE/Guia de Diseno (3), docs/DRIVE/Icons Commercity (157), docs/DRIVE/Imagenes Categorias (12); docs/CHANGELOG.md; READMEs apps/README.md, apps/escritorio/README.md, apps/movil/README.md, frontend/README.md (resolucion de conflictos de merge)
+- **Descripcion**: Se sincronizo main hacia PREVIEW (merge 6f4d4be; conflictos resueltos conservando la seccion "Usuarios de prueba" que main anadia a los 4 README) y se trackeo en PREVIEW el material completo de docs/DRIVE (315 archivos, ~31 MB) con git add -f por estar docs/* en .gitignore, EXCLUYENDO la carpeta "Base de Datos - Commercity 2.0/" (dumps SQL con hashes bcrypt y datos personales de usuarios de prueba) por tratarse de un repositorio publico. Luego se pusheo a commercycity/PREVIEW.
+- **Motivo**: solicitud del lider de que la rama PREVIEW tenga la documentacion del equipo completa y actualizada; PREVIEW se habia creado deliberadamente sin docs (commit f86420f) y .gitignore bloqueaba docs/*.
+- **Requerimientos**: N/A (material documental del proyecto)
+- **Evidencia**: commits 6f4d4be (merge) y 0fcb762 (docs); push 3c501de..0fcb762 a https://github.com/diegoSerna17/Commercity.git (PREVIEW); verificacion contra el remoto: locales=315 remotos=315 FALTAN_EN_REMOTO=0 SOBRAN_EN_REMOTO=0 (git ls-tree con core.quotepath=false); 0 archivos .sql/.mwb en el commit; git status --porcelain -- docs/DRIVE vacio. Hallazgo documentado (sin editar, decision del lider): los .drawio de Documentacion/Archivado (casos de uso RF16-RF29) y Documentacion/UML usan la numeracion RF anterior a la version 2026-08-20; se copiaron tal cual y el equipo debe alinearlos.
+- **Estado**: Completado
+
 ## 2026-10-06 - BD: decision sobre pedidos.estado_pedido (columna huerfana) tras auditoria D1 del esquema
 
 - **Autor**: Daniel Palacios
