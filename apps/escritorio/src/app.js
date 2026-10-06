@@ -1,4 +1,13 @@
-const { ipcRenderer } = require('electron');
+// F1-F3 (P0): sin require('electron') en el renderer (contextIsolation).
+// Los controles de ventana usan window.electron (preload + contextBridge).
+const ipcRenderer = {
+  send: (channel) => {
+    if (typeof window === "undefined" || !window.electron) return;
+    if (channel === "minimize-window") window.electron.minimize();
+    else if (channel === "maximize-window") window.electron.maximize();
+    else if (channel === "close-window") window.electron.close();
+  },
+};
 
 // ═══════════════════════════════════════════════
 //  CONSTANTES
@@ -243,10 +252,10 @@ function renderCart() {
 
   container.innerHTML = cartItems.map((item, idx) => `
     <div class="cart-item" id="cart-item-${idx}">
-      <div class="cart-img"><img src="${item.img}" alt=""/></div>
+      <div class="cart-img"><img src="${escHtml(imgSrcSafe(item.img))}" alt=""/></div>
       <div class="cart-info">
-        <div class="cart-name">${item.nombre}</div>
-        <div class="cart-cat">${item.cat}</div>
+        <div class="cart-name">${escHtml(item.nombre)}</div>
+        <div class="cart-cat">${escHtml(item.cat)}</div>
         <div class="cart-prices">
           ${item.precioOld ? `<div class="cart-old">${fmtCOP(item.precioOld)}</div>` : ''}
           <div class="cart-price">${fmtCOP(item.precio)}</div>
@@ -740,8 +749,8 @@ async function openSeguidores(tab) {
   const data = tab === 'siguiendo' ? SEGUIDOS : SEGUIDOS.slice(0, 4);
   list.innerHTML = data.map(u => `
     <div class="seg-row">
-      <div class="seg-av">${u.avatar ? `<img src="${u.avatar}" alt=""/>` : u.name[0]}</div>
-      <span class="seg-name">${u.name}${u.verified ? ' 🟡' : ''}</span>
+      <div class="seg-av">${u.avatar ? `<img src="${escHtml(imgSrcSafe(u.avatar))}" alt=""/>` : escHtml(String(u.name || '?')[0])}</div>
+      <span class="seg-name">${escHtml(u.name)}${u.verified ? ' 🟡' : ''}</span>
     </div>
   `).join('');
 
@@ -1262,25 +1271,32 @@ function renderHistorial() {
     const iva   = h.iva || Math.round(subtotal * IVA_RATE);
     const total = h.total || (subtotal + iva);
     const cls   = h.estado==='Entregado'?'badge-green':h.estado==='En Camino'?'badge-orange':'badge-red';
+    const hId = escHtml(h.id);
+    const hVendedor = escHtml(h.vendedor);
+    const hAv = escHtml(h.av);
+    const hProducto = escHtml(h.producto);
+    const hDir = escHtml(h.dir);
+    const hFecha = escHtml(h.fecha);
+    const hEstado = escHtml(h.estado);
     
     // RF35: Botón Cancelar solo visible cuando el estado es 'Pendiente'
     const cancelBtn = h.estado === 'Pendiente'
-      ? `<button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.3);padding:4px 8px;font-size:11px" onclick="cancelarPedidoComprador('${h.id}')" title="Cancelar pedido y recibir devolución">Cancelar</button>`
+      ? `<button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.3);padding:4px 8px;font-size:11px" onclick="cancelarPedidoComprador('${hId}')" title="Cancelar pedido y recibir devolución">Cancelar</button>`
       : '';
 
     return `<tr>
-      <td><div class="seller-cell"><div class="seller-av">${h.av}</div>${h.vendedor}</div></td>
-      <td style="font-size:13px;font-weight:600">${h.producto}</td>
-      <td style="font-size:11px;color:var(--text2);max-width:130px">${h.dir}</td>
-      <td style="font-size:11px;color:var(--text2)">${h.fecha}</td>
-      <td><span class="badge ${cls}">${h.estado}</span></td>
-      <td style="text-align:center">${h.qty}</td>
+      <td><div class="seller-cell"><div class="seller-av">${hAv}</div>${hVendedor}</div></td>
+      <td style="font-size:13px;font-weight:600">${hProducto}</td>
+      <td style="font-size:11px;color:var(--text2);max-width:130px">${hDir}</td>
+      <td style="font-size:11px;color:var(--text2)">${hFecha}</td>
+      <td><span class="badge ${cls}">${hEstado}</span></td>
+      <td style="text-align:center">${Number(h.qty) || 0}</td>
       <td style="font-size:12px;color:var(--text2)">${fmtCOP(h.precioUnit)}</td>
       <td style="font-size:12px;color:var(--orange)">${fmtCOP(iva)}</td>
       <td style="font-weight:700">${fmtCOP(total)}</td>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
-          <button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px" onclick="verDetalleHistorial('${h.id}')">Ver</button>
+          <button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px" onclick="verDetalleHistorial('${hId}')">Ver</button>
           ${cancelBtn}
         </div>
       </td>

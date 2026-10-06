@@ -7,7 +7,10 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280, height: 800, minWidth: 1024, minHeight: 700,
     frame: false, titleBarStyle: 'hidden',
-    webPreferences: { nodeIntegration: true, contextIsolation: false },
+    // F1-F3 (P0 auditoria 2026-10-05): cierra RCE en Electron.
+    // Sin acceso Node en el renderer y con contexto aislado; el
+    // renderer solo usa window.electron via preload + contextBridge.
+    webPreferences: { nodeIntegration: false, contextIsolation: true, preload: path.join(__dirname, 'preload.js') },
     backgroundColor: '#0e0e12',
   });
   mainWindow.loadFile('src/index.html');
