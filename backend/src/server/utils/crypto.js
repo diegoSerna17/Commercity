@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { CRYPTO_SECRET_KEY } from "../utils/config.js";
+import { CRYPTO_EFFECTIVE_KEY } from "../utils/config.js";
 
 /**
  * Utilidades de cifrado de datos sensibles (RNF11).
@@ -7,15 +7,17 @@ import { CRYPTO_SECRET_KEY } from "../utils/config.js";
  *   - Fix 3.2: la clave ya NO esta hardcodeada; viene de utils/config.js
  *     (CRYPTO_SECRET_KEY en .env, derivada de JWT_SECRET si no se define).
  *   - Se usa AES-256-GCM con IV aleatorio por cifrado (formato iv:tag:data).
+ *   - H5 (P2): se usa CRYPTO_EFFECTIVE_KEY (dominio "crypto"), nunca la clave
+ *     JWT en bruto, aunque ambas nazcan del mismo secreto.
  */
 
 const ALGORITMO = "aes-256-gcm";
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 
-/** Deriva una clave de 32 bytes a partir del secreto (SHA-256). */
+/** Deriva una clave de 32 bytes a partir del secreto de cifrado (SHA-256). */
 function derivarClave() {
-  return crypto.createHash("sha256").update(CRYPTO_SECRET_KEY).digest();
+  return crypto.createHash("sha256").update(CRYPTO_EFFECTIVE_KEY).digest();
 }
 
 /**

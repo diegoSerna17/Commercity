@@ -39,6 +39,19 @@ export const getUsuarios = (req, res) => {
     });
 };
 
+// F4 (P1): cookie httpOnly + SameSite para el JWT (mitiga robo via XSS).
+// Se mantiene el token en el body por compatibilidad con movil/escritorio,
+// pero la web debe preferir la cookie (credenciales include).
+function emitirCookieSesion(res, token) {
+    res.cookie("token", token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: "/",
+    });
+}
+
 // ============================ REGISTRO ============================
 export const register = async (req, res) => {
     const { email, password, nombre_completo } = req.body;
@@ -90,6 +103,7 @@ export const register = async (req, res) => {
                 { expiresIn: "7d" }
             );
 
+            emitirCookieSesion(res, token);
             return successResponse(res, "Usuario registrado correctamente", {
                 token,
                 user: {
@@ -130,8 +144,9 @@ export const login = async (req, res) => {
         }
 
         const usuario = usuarios[0];
+        // H5 anti-enumeracion: mensaje uniforme tambien para inactivos.
         if (!usuario.activo) {
-            return errorResponse(res, "Usuario inactivo", 401);
+            return errorResponse(res, "Credenciales inválidas", 401);
         }
 
         const passwordValido = await bcrypt.compare(password, usuario.password);
@@ -154,6 +169,7 @@ export const login = async (req, res) => {
             { expiresIn: "7d" }
         );
 
+        emitirCookieSesion(res, token);
         return successResponse(res, "Inicio de sesión exitoso", {
             token,
             user: {
@@ -174,7 +190,13 @@ export const login = async (req, res) => {
 // Fix 3.3: revoca el JWT en la lista negra tokens_invalidados (la ruta exige
 // token via authRequired). INSERT IGNORE hace idempotente un doble logout.
 export const logout = async (req, res) => {
-    const token = (req.headers.authorization || "").replace("Bearer ", "");
+    let token = (req.headers.authorization || "").replace("Bearer ", "");
+    if (!token && req.headers.cookie) {
+        const m = String(req.headers.cookie).match(/(?:^|;\s*)token=([^;]+)/);
+        if (m) {
+            try { token = decodeURIComponent(m[1]); } catch { token = m[1]; }
+        }
+    }
     if (token) {
         const hash = crypto.createHash("sha256").update(token).digest("hex");
         await pool.query(
@@ -182,6 +204,8 @@ export const logout = async (req, res) => {
             [hash]
         );
     }
+    // F4: limpia la cookie httpOnly en el logout.
+    res.clearCookie("token", { httpOnly: true, sameSite: "lax", path: "/" });
     return successResponse(res, "Sesión cerrada correctamente");
 };
 
@@ -294,13 +318,15 @@ export const solicitarRecuperacion = async (req, res) => {
 
         const usuario = usuarios[0];
 
-        // Token seguro (32 bytes hex = 64 caracteres)
+        // Token seguro (32 bytes hex = 64 caracteres). H3 (P2): solo se
+        // persiste el SHA-256 (nunca en claro); el valor real viaja por email.
         const token = crypto.randomBytes(32).toString("hex");
+        const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
         // RF4: expira a los 5 minutos
         await pool.query(
             "UPDATE usuarios SET token_recuperacion = ?, token_recuperacion_expiracion = DATE_ADD(NOW(), INTERVAL 5 MINUTE) WHERE id = ?",
-            [token, usuario.id]
+            [tokenHash, usuario.id]
         );
 
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
@@ -323,10 +349,14 @@ export const restablecerPassword = async (req, res) => {
     const { token, password } = req.body;
 
     try {
+        // H3: se compara el hash (el token en claro jamas se guardo).
+        const tokenHash = typeof token === "string"
+            ? crypto.createHash("sha256").update(token).digest("hex")
+            : "";
         // Token de un solo uso y no expirado (RF4: 5 minutos)
         const [usuarios] = await pool.query(
             "SELECT id, email FROM usuarios WHERE token_recuperacion = ? AND token_recuperacion_expiracion > NOW()",
-            [token]
+            [tokenHash]
         );
 
         if (usuarios.length === 0) {

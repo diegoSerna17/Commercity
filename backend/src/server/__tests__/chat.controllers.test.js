@@ -144,7 +144,7 @@ describe("Chat interno (RF101)", () => {
 
         const insert = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO mensajes_chat"));
         expect(insert[1][2]).toBe("imagen"); // tipo derivado del mimetype
-        expect(insert[1][4]).toMatch(/^\/uploads\/\d+\.jpg$/);
+        expect(insert[1][4]).toMatch(/^\/uploads\/[0-9a-f]{32}\.jpg$/);
     });
 
     it("POST /api/chat devuelve 500 si la BD falla", async () => {

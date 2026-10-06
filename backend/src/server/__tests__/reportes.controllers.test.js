@@ -184,7 +184,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
     expect(res.status).toBe(201);
     const insert = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO reportes"));
-    expect(insert[1][5]).toMatch(/^\/uploads\/\d+\.jpg$/);
+    expect(insert[1][5]).toMatch(/^\/uploads\/[0-9a-f]{32}\.jpg$/);
   });
 
   it("devuelve 500 si la BD falla al crear", async () => {

@@ -305,7 +305,7 @@ describe("POST /api/usuarios/login (RF2 - fix 3.1)", () => {
     expect(res.body.success).toBe(false);
   });
 
-  it("rechaza usuario inactivo (401)", async () => {
+  it("rechaza usuario inactivo con mensaje uniforme (401, anti-enumeracion H5)", async () => {
     pool.query.mockResolvedValue([[{ id: 7, email: "x@test.com", password: "hash", activo: 0 }], undefined]);
 
     const res = await request(app)
@@ -313,7 +313,7 @@ describe("POST /api/usuarios/login (RF2 - fix 3.1)", () => {
       .send({ email: "x@test.com", password: "SuperPass123" });
 
     expect(res.status).toBe(401);
-    expect(res.body.error.message).toContain("inactivo");
+    expect(res.body.error.message).toContain("Credenciales inválidas");
   });
 
   it("rechaza contraseña incorrecta (401)", async () => {
