@@ -6,9 +6,20 @@ CommerCity es una plataforma de comercio electrónico para mercados locales con 
 
 ## Contexto académico
 
-Proyecto productivo desarrollado en el marco del **SENA**, programa **Tecnólogo en Análisis y Desarrollo de Software (ADSO)**, como alternativa de **Proyecto Productivo** dentro de la **Formación Profesional Integral (FPI)** y la **etapa productiva**. La fuente única de requerimientos es el documento oficial del proyecto (`Commercity 2.0 (optimizado 6)`).
+Proyecto productivo desarrollado en el marco del **SENA**, programa **Tecnólogo en Análisis y Desarrollo de Software (ADSO)**, como alternativa de **Proyecto Productivo** dentro de la **Formación Profesional Integral (FPI)** y la **etapa productiva**. La fuente única de requerimientos es el documento oficial vigente (`docs/LAST VERSION/Commercity (optimizado)/Commercity (optimizado).docx.md`, versión final del 2026-08-20).
 
 ## Características principales
+
+- **Tres roles** con permisos diferenciados: comprador, vendedor y administrador (RBAC con JWT).
+- **Catálogo y búsqueda:** productos con imágenes, categorías, etiquetas, filtros y búsqueda global.
+- **Carrito y pedidos:** carrito persistente por usuario, creación de pedidos y pasarela de pago simulada.
+- **Tienda del vendedor:** publicación y gestión de productos, estadísticas de ventas, cuenta bancaria cifrada.
+- **Interacción social:** chat comprador-vendedor, seguidores, calificaciones de productos y vendedores, reportes de contenido.
+- **Notificaciones** internas y **correo transaccional** (Resend, con modo simulación si no hay API key).
+- **Panel de administración:** gestión de usuarios, productos, pedidos, reportes, estadísticas y búsqueda global.
+- **Seguridad:** contraseñas con bcrypt, JWT con lista negra de tokens, validación de entrada con Zod, helmet, CORS con allow-list y rate limiting en login/recuperación.
+- **Multicanal:** SPA web (React), app móvil (Capacitor) y app de escritorio (Electron) contra la misma API REST.
+- **IVA y comisiones:** el precio publicado ya incluye el IVA del 19%; el desglose (subtotal = precio / 1.19, IVA = subtotal × 0.19) se calcula en la pasarela y la comisión se reparte 90/10 sobre el subtotal (RF48, RF121, RF140).
 
 ## Arquitectura
 
@@ -300,6 +311,27 @@ E2E con backend vivo (2026-09-28): runner de los 69 endpoints = **129/129** y ca
 
 ## Documentación de la API
 
+La API es REST, escucha en `http://localhost:3000` y responde siempre con el contrato uniforme `{ success, data }` en caso de éxito o `{ success, error }` ante un fallo. Las rutas protegidas exigen la cabecera `Authorization: Bearer <token>`.
+
+Los 69 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`):
+
+| Prefijo                 | Módulo                                                            |
+| ----------------------- | ----------------------------------------------------------------- |
+| `/api/usuarios`         | Registro, login, perfil y recuperación de contraseña (RF1-RF13)   |
+| `/api` (productos)      | Catálogo, publicación y gestión de productos (RF81-RF90)          |
+| `/api/carrito`          | Carrito de compras por usuario (RF111-RF116)                      |
+| `/api/pedidos`          | Creación, pago y consulta de pedidos (RF117-RF124)                |
+| `/api/historial`        | Historial de compras del comprador (RF26-RF36)                    |
+| `/api/tienda`           | Mi Tienda del vendedor, ventas y estadísticas (RF125-RF139)       |
+| `/api/chat`             | Chat comprador-vendedor (RF105)                                   |
+| `/api/seguidores`       | Seguidores de tiendas (RF106)                                     |
+| `/api/calificaciones`   | Calificaciones de productos y vendedores (RF107)                  |
+| `/api/notificaciones`   | Notificaciones internas (RF99-RF104)                              |
+| `/api/reportes`         | Reportes de contenido (RF108-RF109)                               |
+| `/api/admin`            | Panel de administración (RF57-RF80)                               |
+
+Los nombres exactos, verbos y cuerpos de cada endpoint están en los archivos de rutas del backend.
+
 ## Roles del sistema
 
 | Rol               | Capacidades generales                                                                                                                                                                                                             |
@@ -308,6 +340,23 @@ E2E con backend vivo (2026-09-28): runner de los 69 endpoints = **129/129** y ca
 | **Vendedor**      | Publicar y gestionar sus productos con imágenes, administrar su tienda y sus estadísticas, consultar los pedidos de sus productos, responder chats y registrar su cuenta bancaria con datos cifrados.                             |
 | **Administrador** | Gestionar usuarios (incluido su estado activo), productos, pedidos, reportes de contenido, estadísticas globales y búsqueda global.                                                                                               |
 
+## Usuarios de prueba
+
+Los usuarios de prueba los crea el script `seed_commercity.sql`. **La contraseña de todos es `123456`** (el hash bcrypt está en el seed y coincide con la lógica de login del backend). Sirven para probar cada rol en la web, el móvil y el escritorio.
+
+| Rol           | Correo                            | Contraseña | Nombre                    |
+| ------------- | --------------------------------- | ---------- | ------------------------- |
+| Administrador | `carlos.munoz@commercity.com`     | `123456`   | Administrador Carlos Muñoz |
+| Vendedor      | `juan.giraldo@commercity.com`     | `123456`   | Vendedor Juan Giraldo     |
+| Vendedor      | `alex.rivera@commercity.com`      | `123456`   | Vendedor Alex Rivera      |
+| Comprador     | `camila.torres@commercity.com`    | `123456`   | Compradora Camila Torres  |
+| Comprador     | `sebastian.ruiz@commercity.com`   | `123456`   | Comprador Sebastian Ruiz  |
+
+El seed completo trae 20 usuarios (1 administrador con los tres roles, 10 vendedores y 9 compradores). Los demás correos siguen el patrón `<nombre>.<apellido>@commercity.com` y usan la misma contraseña; el listado exacto está en `seed_commercity.sql`.
+
+> \[!NOTE]
+> Los usuarios de prueba solo existen si se cargó `seed_commercity.sql` en la base de datos. Si usas la base compartida del equipo, ya vienen cargados. Estas credenciales son de datos de prueba del proyecto académico, no de un entorno productivo.
+
 # Uso académico y créditos
 
-Proyecto con fines exclusivamente educativos, desarrollado como proyecto productivo del **SENA** (programa ADSO) en el marco de la Formación Profesional Integral. Sin licencia comercial. Los requerimientos y entregas del equipo se conservan localmente en `docs/`; el registro de cambios del proyecto está en `informes/CHANGELOG.md`.
+Proyecto con fines exclusivamente educativos, desarrollado como proyecto productivo del **SENA** (programa ADSO) en el marco de la Formación Profesional Integral. Sin licencia comercial. Los requerimientos y entregas del equipo se conservan localmente en `docs/`; el registro de cambios del proyecto está en `docs/CHANGELOG.md`.
