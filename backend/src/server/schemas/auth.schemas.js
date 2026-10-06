@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 const email = z.string().email("Email inválido");
-const password = z.string().min(6, "La contraseña debe tener al menos 6 caracteres");
+// H5 (P2): minimo 8 + complejidad (letra y numero) en vez de 6 sin reglas.
+const password = z.string()
+  .min(8, "La contraseña debe tener al menos 8 caracteres")
+  .regex(/[A-Za-z]/, "La contraseña debe incluir al menos una letra")
+  .regex(/\d/, "La contraseña debe incluir al menos un número");
 
 export const registerSchema = z.object({
     email,

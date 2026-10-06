@@ -14,9 +14,9 @@
 <div id="titlebar">
   <div class="tb-brand">CommerCity</div>
   <div class="tb-controls">
-    <button class="tb-btn tb-min" onclick="ipcRenderer.send('minimize-window')"></button>
-    <button class="tb-btn tb-max" onclick="ipcRenderer.send('maximize-window')"></button>
-    <button class="tb-btn tb-close" onclick="ipcRenderer.send('close-window')"></button>
+    <button class="tb-btn tb-min" onclick="window.electron && window.electron.minimize()"></button>
+    <button class="tb-btn tb-max" onclick="window.electron && window.electron.maximize()"></button>
+    <button class="tb-btn tb-close" onclick="window.electron && window.electron.close()"></button>
   </div>
 </div>
 
@@ -210,7 +210,7 @@
         <label>Nueva contraseña</label>
         <div class="field-inner has-icon">
           <span class="fi-icon">🔒</span>
-          <input type="password" id="reset-p1" placeholder="Mínimo 6 caracteres"/>
+          <input type="password" id="reset-p1" placeholder="Mínimo 8 caracteres (letra y número)"/>
           <button class="eye-btn" onclick="togglePass('reset-p1')">👁</button>
         </div>
       </div>

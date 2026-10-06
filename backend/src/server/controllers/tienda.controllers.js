@@ -1,6 +1,7 @@
 import { z } from "zod";
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
+import { bancoSchema } from "../schemas/cuentaBancaria.schema.js";
 import {
   encryptSensitive,
   decryptSensitive,
@@ -18,17 +19,6 @@ import { round2 } from "../utils/finanzas.js";
 //   3.8: control de propiedad: vendedorId = req.userId (token).
 //   3.9: sin endpoints que expongan pedidos ajenos.
 // ============================================================================
-
-const bancoSchema = z
-  .object({
-    titular_nombre: z.string().trim().min(3).max(100)
-      .regex(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/, "El titular solo puede contener letras y espacios"),
-    banco: z.string().trim().min(3).max(50),
-    tipo_cuenta: z.enum(["ahorros", "corriente"]),
-    numero_cuenta: z.string().regex(/^\d+$/, "El número de cuenta solo puede contener dígitos")
-      .min(6).max(20),
-  })
-  .strict();
 
 const ESTADOS_VENTA = ["Pendiente", "En camino", "Entregado", "Cancelado"];
 

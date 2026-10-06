@@ -288,7 +288,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
     expect(res.status).toBe(200);
     const update = pool.query.mock.calls.find(([sql]) => sql.includes("UPDATE productos"));
-    expect(update[1][2]).toMatch(/^\/uploads\/\d+\.png$/); // imagen nueva
+    expect(update[1][2]).toMatch(/^\/uploads\/[0-9a-f]{32}\.png$/); // imagen nueva
   });
 
   it("devuelve 500 si la BD falla al editar", async () => {

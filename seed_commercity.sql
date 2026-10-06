@@ -346,33 +346,33 @@ INSERT INTO mensajes_chat (emisor_id, receptor_id, mensaje, leido) VALUES
 -- NOTIFICACIONES
 -- ------------------------------------------------------------
 INSERT INTO notificaciones (usuario_id, tipo, descripcion, estado, url_redireccion) VALUES
-(7, 'compra', 'Tu pedido #1 ha sido confirmado', 'leído', '/perfil/historial'),
-(7, 'pedido enviado', 'Tu pedido #1 está en camino', 'leído', '/perfil/historial'),
-(8, 'compra', 'Tu pedido #2 ha sido confirmado', 'leído', '/perfil/historial'),
-(9, 'compra', 'Tu pedido #3 ha sido confirmado', 'no leído', '/perfil/historial'),
-(10, 'compra', 'Tu pedido #4 ha sido confirmado', 'leído', '/perfil/historial'),
-(9, 'mensajes', 'Tienes un nuevo mensaje de Marco Rossi', 'no leído', '/chats'),
-(8, 'mensajes', 'Tienes un nuevo mensaje de Julian Thorne', 'no leído', '/chats'),
-(2, 'compra', '¡Vendiste 2 unidades de Zapatos Deportivos!', 'leído', '/vendedor/ventas'),
-(3, 'compra', '¡Vendiste 1 MacBook Air M2!', 'leído', '/vendedor/ventas'),
-(11, 'pedido enviado', 'Tu pedido #5 está pendiente de pago', 'no leído', '/perfil/historial');
+(7, 'compra', 'Tu pedido #1 ha sido confirmado', 'leido', '/perfil/historial'),
+(7, 'pedido enviado', 'Tu pedido #1 está en camino', 'leido', '/perfil/historial'),
+(8, 'compra', 'Tu pedido #2 ha sido confirmado', 'leido', '/perfil/historial'),
+(9, 'compra', 'Tu pedido #3 ha sido confirmado', 'no leido', '/perfil/historial'),
+(10, 'compra', 'Tu pedido #4 ha sido confirmado', 'leido', '/perfil/historial'),
+(9, 'mensajes', 'Tienes un nuevo mensaje de Marco Rossi', 'no leido', '/chats'),
+(8, 'mensajes', 'Tienes un nuevo mensaje de Julian Thorne', 'no leido', '/chats'),
+(2, 'compra', '¡Vendiste 2 unidades de Zapatos Deportivos!', 'leido', '/vendedor/ventas'),
+(3, 'compra', '¡Vendiste 1 MacBook Air M2!', 'leido', '/vendedor/ventas'),
+(11, 'pedido enviado', 'Tu pedido #5 está pendiente de pago', 'no leido', '/perfil/historial');
 
 -- ------------------------------------------------------------
 -- REPORTES (CHECK: Producto -> solo producto_id | Usuario -> solo usuario_reportado_id)
 -- ------------------------------------------------------------
-INSERT INTO reportes (informante_id, tipo_reporte, producto_id, usuario_reportado_id, motivo, respuesta_admin, respondido_at) VALUES
-(7, 'Producto', 21, NULL, 'El producto se muestra disponible pero no tiene stock', 'Gracias por el reporte, ya fue marcado como agotado', NOW()),
-(8, 'Producto', 8, NULL, 'La descripción no coincide con la imagen', NULL, NULL),
-(9, 'Usuario', NULL, 2, 'El vendedor no responde los mensajes', NULL, NULL),
-(10, 'Usuario', NULL, 4, 'Publica productos de otro vendedor', 'Se envió advertencia al vendedor', NOW()),
-(11, 'Producto', 6, NULL, 'El precio subió sin aviso', NULL, NULL),
-(12, 'Usuario', NULL, 5, 'Respuestas groseras en el chat', NULL, NULL),
-(8, 'Producto', 3, NULL, 'El producto llegó defectuoso', 'Se contactó al vendedor para reposición', NOW()),
-(10, 'Usuario', NULL, 6, 'Vendedor no cumple con los tiempos de envío', NULL, NULL),
-(12, 'Producto', 18, NULL, 'La lámpara llegó sin adaptador', NULL, NULL),
-(7, 'Usuario', NULL, 3, 'Envió un mensaje inapropiado', 'Advertencia aplicada al vendedor', NOW()),
-(9, 'Producto', 9, NULL, 'No especifica si incluye instalación', NULL, NULL),
-(11, 'Usuario', NULL, 2, 'Publica productos falsificados', NULL, NULL),
-(18, 'Producto', 10, NULL, 'La licuadora hace ruido excesivo', 'En revisión por calidad', NOW());
+INSERT INTO reportes (informante_id, tipo_reporte, producto_id, usuario_reportado_id, motivo, estado_reporte, respuesta_admin, respondido_at) VALUES
+(7, 'Producto', 21, NULL, 'El producto se muestra disponible pero no tiene stock', 'Resuelto', 'Gracias por el reporte, ya fue marcado como agotado', NOW()),
+(8, 'Producto', 8, NULL, 'La descripción no coincide con la imagen', 'Pendiente', NULL, NULL),
+(9, 'Usuario', NULL, 2, 'El vendedor no responde los mensajes', 'Pendiente', NULL, NULL),
+(10, 'Usuario', NULL, 4, 'Publica productos de otro vendedor', 'Resuelto', 'Se envió advertencia al vendedor', NOW()),
+(11, 'Producto', 6, NULL, 'El precio subió sin aviso', 'Pendiente', NULL, NULL),
+(12, 'Usuario', NULL, 5, 'Respuestas groseras en el chat', 'Pendiente', NULL, NULL),
+(8, 'Producto', 3, NULL, 'El producto llegó defectuoso', 'Resuelto', 'Se contactó al vendedor para reposición', NOW()),
+(10, 'Usuario', NULL, 6, 'Vendedor no cumple con los tiempos de envío', 'Pendiente', NULL, NULL),
+(12, 'Producto', 18, NULL, 'La lámpara llegó sin adaptador', 'Pendiente', NULL, NULL),
+(7, 'Usuario', NULL, 3, 'Envió un mensaje inapropiado', 'Resuelto', 'Advertencia aplicada al vendedor', NOW()),
+(9, 'Producto', 9, NULL, 'No especifica si incluye instalación', 'Pendiente', NULL, NULL),
+(11, 'Usuario', NULL, 2, 'Publica productos falsificados', 'Pendiente', NULL, NULL),
+(18, 'Producto', 10, NULL, 'La licuadora hace ruido excesivo', 'Resuelto', 'En revisión por calidad', NOW());
 
 -- Fin del seed

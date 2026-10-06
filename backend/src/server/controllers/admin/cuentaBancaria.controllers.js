@@ -1,6 +1,7 @@
 import { z } from "zod";
 import pool from "../../config/db.js";
 import { successResponse, errorResponse } from "../../utils/response.js";
+import { bancoSchema } from "../../schemas/cuentaBancaria.schema.js";
 import {
   encryptSensitive,
   decryptSensitive,
@@ -16,17 +17,6 @@ import {
 // (RNF11), reutilizando utils/crypto.js. Protegido por authRequired +
 // requireRoles(["administrador"]) a nivel de ruta.
 // ============================================================================
-
-const bancoSchema = z
-  .object({
-    titular_nombre: z.string().trim().min(3).max(100)
-      .regex(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/, "El titular solo puede contener letras y espacios"),
-    banco: z.string().trim().min(3).max(50),
-    tipo_cuenta: z.enum(["ahorros", "corriente"]),
-    numero_cuenta: z.string().regex(/^\d+$/, "El número de cuenta solo puede contener dígitos")
-      .min(6).max(20),
-  })
-  .strict();
 
 /** Busca la cuenta de Commercity (es_commercity = 1). */
 async function buscarCuentaCommercity() {

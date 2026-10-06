@@ -14,11 +14,11 @@ const resend = apiKey && apiKey !== "re_XXXX_pon_tu_api_key_aqui"
 export const enviarCorreoRecuperacion = async (email, resetUrl) => {
     const from = process.env.RESEND_FROM || "CommerCity <onboarding@resend.dev>";
 
-    console.log("\n Link de recuperación generado:");
-    console.log(`   Para: ${email}`);
-    console.log(`   Enlace: ${resetUrl}\n`);
+    // H3 (P2): jamas volcar el token/URL a logs (riesgo en agregadores).
+    // Solo se registra el evento, sin datos sensibles.
+    console.log(`[AUTH] Solicitud de recuperacion para: ${email}`);
 
-    // Sin API key configurada -> modo desarrollo: solo imprime el link en consola
+    // Sin API key configurada -> modo desarrollo: no se envia nada.
     if (!resend) {
         console.log("[DEV] Resend NO configurado — simulación de correo (no se envió nada).\n");
         return { id: "dev-mail-simulado" };

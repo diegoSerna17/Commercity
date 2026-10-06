@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
+import jwt from "jsonwebtoken";
 
 // Mock de mysql2/promise: createPool devuelve un pool simulado (sin BD real).
 vi.mock("mysql2/promise", () => {
-  // query envoltorio: responde de forma transparente la consulta que authRequired
-  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
-  // el resto a la query interna que configura cada test con mockImplementation.
+  // query envoltorio: responde de forma transparente las consultas que authRequired
+  // hace (lista negra + DEF-01 activo) y delega el resto a la query interna.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
+    if (typeof sql === "string" && sql.includes("tokens_invalidados")) {
+      return Promise.resolve([[], undefined]);
+    }
     if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
       return Promise.resolve([[{ activo: 1 }], undefined]);
     }
@@ -34,19 +37,31 @@ vi.mock("mysql2/promise", () => {
   };
 });
 
+process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto_test";
+
 const { __pool: pool, __conn: conn } = await import("mysql2/promise");
 const { default: app } = await import("../app.js");
 
+const tokenUser1 = jwt.sign({ id: 1, email: "comprador1@commercity.com" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+const tokenUser2 = jwt.sign({ id: 2, email: "comprador2@commercity.com" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+const auth1 = { Authorization: `Bearer ${tokenUser1}` };
+
 // Helpers de simulacion de BD
 function productoInexistente() {
-  pool.query.mockImplementation((sql) =>
-    sql.includes("SELECT stock") ? Promise.resolve([[], undefined]) : Promise.resolve([[], undefined])
-  );
+  pool.query.mockImplementation((sql) => {
+    if (typeof sql === "string" && (sql.includes("tokens_invalidados") || sql.includes("SELECT activo FROM usuarios"))) {
+      return sql.includes("tokens_invalidados") ? Promise.resolve([[], undefined]) : Promise.resolve([[{ activo: 1 }], undefined]);
+    }
+    if (sql.includes("SELECT stock")) return Promise.resolve([[], undefined]);
+    return Promise.resolve([[], undefined]);
+  });
 }
 
 // Configura el flujo completo de POST: stock, comprador activo y item existente en el carrito
 function setupAgregar({ stock, compradorActivo: activo, itemExistente }) {
   pool.query.mockImplementation((sql) => {
+    if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
+    if (sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) return Promise.resolve([[{ activo: 1 }], undefined]);
     if (sql.includes("SELECT stock")) return Promise.resolve([stock ? [{ stock }] : []]);
     if (sql.includes("SELECT 1 FROM usuarios")) return Promise.resolve([activo ? [{}] : []]);
     return Promise.resolve([[], undefined]);
@@ -58,17 +73,21 @@ function setupAgregar({ stock, compradorActivo: activo, itemExistente }) {
 }
 
 function soloStock(stock) {
-  pool.query.mockImplementation((sql) =>
-    sql.includes("SELECT stock") ? Promise.resolve([[{ stock }]]) : Promise.resolve([[], undefined])
-  );
+  pool.query.mockImplementation((sql) => {
+    if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
+    if (sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) return Promise.resolve([[{ activo: 1 }], undefined]);
+    if (sql.includes("SELECT stock")) return Promise.resolve([[{ stock }]]);
+    return Promise.resolve([[], undefined]);
+  });
 }
 
 function listarItemsMock(items) {
-  pool.query.mockImplementation((sql) =>
-    sql.includes("FROM carrito_items")
-      ? Promise.resolve([items, undefined])
-      : Promise.resolve([[], undefined])
-  );
+  pool.query.mockImplementation((sql) => {
+    if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
+    if (sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) return Promise.resolve([[{ activo: 1 }], undefined]);
+    if (sql.includes("FROM carrito_items")) return Promise.resolve([items, undefined]);
+    return Promise.resolve([[], undefined]);
+  });
 }
 
 function conexionSinItem() {
@@ -99,10 +118,18 @@ describe("POST /api/carrito (agregarProducto)", () => {
     conn.rollback.mockResolvedValue();
   });
 
-  it("valida que comprador_id, producto_id y cantidad sean enteros positivos -> 400", async () => {
+  it("rechaza sin token -> 401 (H1 P0)", async () => {
     const res = await request(app)
       .post("/api/carrito")
-      .send({ comprador_id: 1, producto_id: 1, cantidad: 0 });
+      .send({ producto_id: 1, cantidad: 1 });
+    expect(res.status).toBe(401);
+  });
+
+  it("valida que producto_id y cantidad sean enteros positivos -> 400", async () => {
+    const res = await request(app)
+      .post("/api/carrito")
+      .set(auth1)
+      .send({ producto_id: 1, cantidad: 0 });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
@@ -111,7 +138,8 @@ describe("POST /api/carrito (agregarProducto)", () => {
     productoInexistente();
     const res = await request(app)
       .post("/api/carrito")
-      .send({ comprador_id: 1, producto_id: 999, cantidad: 2 });
+      .set(auth1)
+      .send({ producto_id: 999, cantidad: 2 });
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("PRODUCT_NOT_FOUND");
   });
@@ -120,7 +148,8 @@ describe("POST /api/carrito (agregarProducto)", () => {
     setupAgregar({ stock: 10, compradorActivo: false, itemExistente: null });
     const res = await request(app)
       .post("/api/carrito")
-      .send({ comprador_id: 999, producto_id: 1, cantidad: 2 });
+      .set(auth1)
+      .send({ producto_id: 1, cantidad: 2 });
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("COMPRADOR_NOT_FOUND");
   });
@@ -129,7 +158,8 @@ describe("POST /api/carrito (agregarProducto)", () => {
     setupAgregar({ stock: 10, compradorActivo: true, itemExistente: 8 }); // 8 + 3 = 11 > 10
     const res = await request(app)
       .post("/api/carrito")
-      .send({ comprador_id: 1, producto_id: 1, cantidad: 3 });
+      .set(auth1)
+      .send({ producto_id: 1, cantidad: 3 });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INSUFFICIENT_STOCK");
   });
@@ -138,7 +168,8 @@ describe("POST /api/carrito (agregarProducto)", () => {
     setupAgregar({ stock: 10, compradorActivo: true, itemExistente: null });
     const res = await request(app)
       .post("/api/carrito")
-      .send({ comprador_id: 1, producto_id: 1, cantidad: 2 });
+      .set(auth1)
+      .send({ producto_id: 1, cantidad: 2 });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
   });
@@ -147,7 +178,8 @@ describe("POST /api/carrito (agregarProducto)", () => {
     setupAgregar({ stock: 10, compradorActivo: true, itemExistente: 2 }); // 2 + 2 = 4 <= 10
     const res = await request(app)
       .post("/api/carrito")
-      .send({ comprador_id: 1, producto_id: 1, cantidad: 2 });
+      .set(auth1)
+      .send({ producto_id: 1, cantidad: 2 });
     expect(res.status).toBe(201);
     expect(conn.query).toHaveBeenCalledWith(
       expect.stringContaining("ON DUPLICATE KEY UPDATE"),
@@ -155,21 +187,38 @@ describe("POST /api/carrito (agregarProducto)", () => {
     );
   });
 
-  it("maneja errores internos -> 500 SERVER_ERROR", async () => {
-    pool.query.mockRejectedValue(new Error("boom"));
+  it("ignora comprador_id del body y usa el del JWT (regresion IDOR H1)", async () => {
+    setupAgregar({ stock: 10, compradorActivo: true, itemExistente: null });
     const res = await request(app)
       .post("/api/carrito")
-      .send({ comprador_id: 1, producto_id: 1, cantidad: 2 });
+      .set(auth1)
+      .send({ comprador_id: 999, producto_id: 1, cantidad: 2 });
+    expect(res.status).toBe(201);
+    // El INSERT debe usar el id del JWT (1), nunca el 999 del body.
+    const insertCall = conn.query.mock.calls.find((c) => String(c[0]).includes("INSERT INTO carrito_items"));
+    expect(insertCall).toBeDefined();
+    expect(insertCall[1][0]).toBe(1);
+  });
+
+  it("maneja errores internos -> 500 SERVER_ERROR", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
+      if (sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) return Promise.resolve([[{ activo: 1 }], undefined]);
+      return Promise.reject(new Error("boom"));
+    });
+    const res = await request(app)
+      .post("/api/carrito")
+      .set(auth1)
+      .send({ producto_id: 1, cantidad: 2 });
     expect(res.status).toBe(500);
     expect(res.body.error.code).toBe("SERVER_ERROR");
   });
 });
 
 describe("GET /api/carrito (listarCarrito)", () => {
-  it("valida comprador_id -> 400", async () => {
-    const res = await request(app).get("/api/carrito?comprador_id=abc");
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  it("rechaza sin token -> 401 (H1 P0)", async () => {
+    const res = await request(app).get("/api/carrito?comprador_id=1");
+    expect(res.status).toBe(401);
   });
 
   it("lista el carrito agrupado por vendedor con resumen -> 200", async () => {
@@ -185,7 +234,7 @@ describe("GET /api/carrito (listarCarrito)", () => {
         vendedor_nombre: "Vendedor Prueba",
       },
     ]);
-    const res = await request(app).get("/api/carrito?comprador_id=1");
+    const res = await request(app).get("/api/carrito").set(auth1);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.vendedores).toHaveLength(1);
@@ -193,9 +242,18 @@ describe("GET /api/carrito (listarCarrito)", () => {
     expect(res.body.data.resumen.total).toBe(450000);
   });
 
+  it("ignora comprador_id de query y usa el del JWT (regresion IDOR H1)", async () => {
+    listarItemsMock([]);
+    const res = await request(app).get("/api/carrito?comprador_id=999").set(auth1);
+    expect(res.status).toBe(200);
+    const selectCall = pool.query.mock.calls.find((c) => typeof c[0] === "string" && c[0].includes("FROM carrito_items"));
+    expect(selectCall).toBeDefined();
+    expect(selectCall[1][0]).toBe(1);
+  });
+
   it("devuelve carrito vacio cuando no hay items -> 200", async () => {
     listarItemsMock([]);
-    const res = await request(app).get("/api/carrito?comprador_id=1");
+    const res = await request(app).get("/api/carrito").set(auth1);
     expect(res.status).toBe(200);
     expect(res.body.data.vendedores).toHaveLength(0);
     expect(res.body.data.resumen.total).toBe(0);
@@ -210,9 +268,17 @@ describe("PATCH /api/carrito/:productoId (modificarCantidad)", () => {
     conn.rollback.mockResolvedValue();
   });
 
+  it("rechaza sin token -> 401 (H1 P0)", async () => {
+    const res = await request(app)
+      .patch("/api/carrito/1")
+      .send({ cantidad: 2 });
+    expect(res.status).toBe(401);
+  });
+
   it("valida parametros -> 400", async () => {
     const res = await request(app)
-      .patch("/api/carrito/1?comprador_id=1")
+      .patch("/api/carrito/1")
+      .set(auth1)
       .send({ cantidad: -1 });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -221,7 +287,8 @@ describe("PATCH /api/carrito/:productoId (modificarCantidad)", () => {
   it("devuelve 404 si el producto no existe", async () => {
     productoInexistente();
     const res = await request(app)
-      .patch("/api/carrito/999?comprador_id=1")
+      .patch("/api/carrito/999")
+      .set(auth1)
       .send({ cantidad: 2 });
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("PRODUCT_NOT_FOUND");
@@ -230,7 +297,8 @@ describe("PATCH /api/carrito/:productoId (modificarCantidad)", () => {
   it("rechaza cantidad mayor al stock -> 400", async () => {
     soloStock(10);
     const res = await request(app)
-      .patch("/api/carrito/1?comprador_id=1")
+      .patch("/api/carrito/1")
+      .set(auth1)
       .send({ cantidad: 50 });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INSUFFICIENT_STOCK");
@@ -240,7 +308,8 @@ describe("PATCH /api/carrito/:productoId (modificarCantidad)", () => {
     soloStock(10);
     conexionSinItem();
     const res = await request(app)
-      .patch("/api/carrito/1?comprador_id=1")
+      .patch("/api/carrito/1")
+      .set(auth1)
       .send({ cantidad: 2 });
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("ITEM_NOT_FOUND");
@@ -250,31 +319,80 @@ describe("PATCH /api/carrito/:productoId (modificarCantidad)", () => {
     soloStock(10);
     conn.query.mockResolvedValue([[{ id: 1 }], undefined]); // item existe
     const res = await request(app)
-      .patch("/api/carrito/1?comprador_id=1")
+      .patch("/api/carrito/1")
+      .set(auth1)
       .send({ cantidad: 4 });
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("Cantidad actualizada");
   });
+
+  it("opera sobre el carrito del JWT aunque query traiga otro id (regresion IDOR H1)", async () => {
+    soloStock(10);
+    conn.query.mockResolvedValue([[{ id: 1 }], undefined]);
+    const res = await request(app)
+      .patch("/api/carrito/1?comprador_id=999")
+      .set(auth1)
+      .send({ cantidad: 4 });
+    expect(res.status).toBe(200);
+    const updateCall = conn.query.mock.calls.find((c) => String(c[0]).includes("UPDATE carrito_items SET cantidad"));
+    expect(updateCall).toBeDefined();
+    expect(updateCall[1][1]).toBe(1);
+  });
 });
 
 describe("DELETE /api/carrito/:productoId (eliminarProducto)", () => {
+  it("rechaza sin token -> 401 (H1 P0)", async () => {
+    const res = await request(app).delete("/api/carrito/1");
+    expect(res.status).toBe(401);
+  });
+
   it("valida parametros -> 400", async () => {
-    const res = await request(app).delete("/api/carrito/1?comprador_id=abc");
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
+      if (sql.includes("SELECT activo FROM usuarios")) return Promise.resolve([[{ activo: 1 }], undefined]);
+      return Promise.resolve([[], undefined]);
+    });
+    const res = await request(app).delete("/api/carrito/abc").set(auth1);
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("devuelve 404 si el item no esta en el carrito", async () => {
-    pool.query.mockResolvedValue([{ affectedRows: 0 }, undefined]);
-    const res = await request(app).delete("/api/carrito/1?comprador_id=1");
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
+      if (sql.includes("SELECT activo FROM usuarios")) return Promise.resolve([[{ activo: 1 }], undefined]);
+      return Promise.resolve([{ affectedRows: 0 }, undefined]);
+    });
+    const res = await request(app).delete("/api/carrito/1").set(auth1);
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("ITEM_NOT_FOUND");
   });
 
   it("elimina el producto del carrito -> 200", async () => {
-    pool.query.mockResolvedValue([{ affectedRows: 1 }, undefined]);
-    const res = await request(app).delete("/api/carrito/1?comprador_id=1");
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
+      if (sql.includes("SELECT activo FROM usuarios")) return Promise.resolve([[{ activo: 1 }], undefined]);
+      return Promise.resolve([{ affectedRows: 1 }, undefined]);
+    });
+    const res = await request(app).delete("/api/carrito/1").set(auth1);
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("Producto eliminado del carrito");
+  });
+
+  it("borra solo del carrito del JWT (regresion IDOR H1)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
+      if (sql.includes("SELECT activo FROM usuarios")) return Promise.resolve([[{ activo: 1 }], undefined]);
+      return Promise.resolve([{ affectedRows: 1 }, undefined]);
+    });
+    pool.query.mockClear();
+    const token2 = jwt.sign({ id: 2, email: "comprador2@commercity.com" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const res = await request(app)
+      .delete("/api/carrito/1?comprador_id=1")
+      .set({ Authorization: `Bearer ${token2}` });
+    expect(res.status).toBe(200);
+    const deletes = pool.query.mock.calls.filter((c) => typeof c[0] === "string" && c[0].includes("DELETE FROM carrito_items"));
+    expect(deletes.length).toBeGreaterThan(0);
+    expect(deletes[deletes.length - 1][1][0]).toBe(2);
   });
 });

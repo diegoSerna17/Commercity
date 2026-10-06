@@ -1,6 +1,6 @@
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-import { validarId } from "./admin/admin.utils.js";
+import { validarId } from "../utils/ids.js";
 
 const TIPOS_VALIDOS = ["Producto", "Usuario"];
 

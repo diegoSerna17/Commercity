@@ -15,6 +15,10 @@
 -- por HTTP. La eleccion es determinista por id del producto (id MOD n).
 --
 -- Aplicar: como usuario con permisos de escritura sobre la base de datos.
+-- B3 (P2): todo en UNA transaccion (antes sin transaccion: riesgo de schema
+-- parcial si fallaba a mitad).
+
+START TRANSACTION;
 
 -- 1) Respaldo para rollback (solo id + imagen_url; no modifica datos).
 CREATE TABLE IF NOT EXISTS productos_imagenes_bkp_20260928 AS
@@ -191,6 +195,8 @@ SELECT
   SUM(CASE WHEN imagen_url LIKE 'https://images.unsplash.com/%' AND imagen_url NOT LIKE '%?%' THEN 1 ELSE 0 END) AS unsplash_rotas,
   SUM(CASE WHEN eliminado_por_admin = 1 THEN 1 ELSE 0 END) AS eliminados
 FROM productos;
+
+COMMIT;
 
 -- ROLLBACK (si se requiere revertir):
 --   UPDATE productos p JOIN productos_imagenes_bkp_20260928 b ON b.id = p.id

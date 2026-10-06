@@ -54,7 +54,10 @@ async function compradorExiste(compradorId) {
 export async function agregarProducto(req, res) {
   const conexion = await pool.getConnection();
   try {
-    const { comprador_id: compradorId, producto_id: productoId, cantidad = 1 } = req.body;
+    // H1 (P0): el comprador se deriva del JWT (req.userId). Se ignora
+    // cualquier comprador_id enviado por el cliente para cerrar el IDOR.
+    const compradorId = Number(req.userId);
+    const { producto_id: productoId, cantidad = 1 } = req.body;
 
     if (
       !esEnteroPositivo(compradorId) ||
@@ -63,7 +66,7 @@ export async function agregarProducto(req, res) {
     ) {
       return res.status(400).json({
         success: false,
-        error: { code: "VALIDATION_ERROR", message: "comprador_id, producto_id y cantidad deben ser enteros positivos" },
+        error: { code: "VALIDATION_ERROR", message: "producto_id y cantidad deben ser enteros positivos" },
       });
     }
 
@@ -130,13 +133,14 @@ export async function agregarProducto(req, res) {
  */
 export async function eliminarProducto(req, res) {
   try {
-    const compradorId = Number(req.query.comprador_id);
+    // H1 (P0): comprador desde JWT, nunca de query.
+    const compradorId = Number(req.userId);
     const productoId = Number(req.params.productoId);
 
     if (!esEnteroPositivo(compradorId) || !esEnteroPositivo(productoId)) {
       return res.status(400).json({
         success: false,
-        error: { code: "VALIDATION_ERROR", message: "comprador_id y producto_id deben ser enteros positivos" },
+        error: { code: "VALIDATION_ERROR", message: "producto_id debe ser entero positivo" },
       });
     }
 
@@ -170,7 +174,8 @@ export async function eliminarProducto(req, res) {
 export async function modificarCantidad(req, res) {
   const conexion = await pool.getConnection();
   try {
-    const compradorId = Number(req.query.comprador_id);
+    // H1 (P0): comprador desde JWT, nunca de query.
+    const compradorId = Number(req.userId);
     const productoId = Number(req.params.productoId);
     const { cantidad } = req.body;
 
@@ -181,7 +186,7 @@ export async function modificarCantidad(req, res) {
     ) {
       return res.status(400).json({
         success: false,
-        error: { code: "VALIDATION_ERROR", message: "comprador_id, producto_id y cantidad deben ser enteros positivos" },
+        error: { code: "VALIDATION_ERROR", message: "producto_id y cantidad deben ser enteros positivos" },
       });
     }
 
@@ -242,12 +247,13 @@ export async function modificarCantidad(req, res) {
  */
 export async function listarCarrito(req, res) {
   try {
-    const compradorId = Number(req.query.comprador_id);
+    // H1 (P0): comprador desde JWT, nunca de query.
+    const compradorId = Number(req.userId);
 
     if (!esEnteroPositivo(compradorId)) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
-        error: { code: "VALIDATION_ERROR", message: "comprador_id debe ser entero positivo" },
+        error: { code: "UNAUTHORIZED", message: "Token no autorizado" },
       });
     }
 

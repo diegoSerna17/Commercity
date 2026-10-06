@@ -13,16 +13,25 @@ import { JWT_SECRET } from "../utils/config.js";
  *          que ya fueron revocados en logout (RF2).
  */
 export const authRequired = async (req, res, next) => {
+    // F4: acepta Bearer header (clientes actuales) o cookie httpOnly `token`
+    // (nuevo flujo web seguro). El header tiene prioridad.
     const authHeader = req.headers.authorization;
+    let token = null;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1];
+    } else if (req.headers.cookie) {
+        const m = String(req.headers.cookie).match(/(?:^|;\s*)token=([^;]+)/);
+        if (m) {
+            try { token = decodeURIComponent(m[1]); } catch { token = m[1]; }
+        }
+    }
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!token) {
         return res.status(401).json({
             success: false,
             error: { code: "UNAUTHORIZED", message: "Token no autorizado" }
         });
     }
-
-    const token = authHeader.split(" ")[1];
 
     try {
         // Primero verifica firma/expiracion (no toca BD con tokens invalidos).
