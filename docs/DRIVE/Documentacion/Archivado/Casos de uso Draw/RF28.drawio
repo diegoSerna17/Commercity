@@ -1,0 +1,31 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Página-1" id="PUt_gwR5oYabbqReVPgn">
+    <mxGraphModel dx="879" dy="383" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="viWhCwDn0R2hvUSC_uZE-3" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Visualizar estado de pedidos en el historial" vertex="1">
+          <mxGeometry height="60" width="170" x="320" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="viWhCwDn0R2hvUSC_uZE-5" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Obtener estado actual del producto" vertex="1">
+          <mxGeometry height="60" width="190" x="610" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="viWhCwDn0R2hvUSC_uZE-21" edge="1" parent="1" style="endArrow=open;endSize=16;endFill=0;html=1;rounded=0;" value="Include">
+          <mxGeometry relative="1" width="160" as="geometry">
+            <mxPoint x="490" y="349.5" as="sourcePoint" />
+            <mxPoint x="610" y="349.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="viWhCwDn0R2hvUSC_uZE-22" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" value="Comprador" vertex="1">
+          <mxGeometry height="70" width="50" x="240" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="viWhCwDn0R2hvUSC_uZE-23" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;exitX=1;exitY=0.286;exitDx=0;exitDy=0;exitPerimeter=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="288" y="199.99999999999997" as="sourcePoint" />
+            <mxPoint x="413.70411063881556" y="321.81814506570026" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,155 @@
+<mxfile host="app.diagrams.net" agent="Claude">
+  <diagram name="SEC-SOC-03 Calificar vendedor" id="secsoc03calif">
+    <mxGraphModel dx="1666" dy="930" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="775" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c17" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" value="Comprador" vertex="1">
+          <mxGeometry height="55" width="30" x="105" y="5" as="geometry" />
+        </mxCell>
+        <mxCell id="c18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontSize=12;fontStyle=1;" value="Frontend (PerfilVendedor.jsx)" vertex="1">
+          <mxGeometry height="40" width="180" x="330" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontSize=12;fontStyle=1;" value="API (calificaciones.controllers.js)" vertex="1">
+          <mxGeometry height="40" width="180" x="670" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontSize=12;fontStyle=1;" value="MySQL" vertex="1">
+          <mxGeometry height="40" width="180" x="970" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c21" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="60" as="sourcePoint" />
+            <mxPoint x="120" y="715" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c22" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="60" as="sourcePoint" />
+            <mxPoint x="420" y="715" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c23" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="60" as="sourcePoint" />
+            <mxPoint x="760" y="715" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c24" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="60" as="sourcePoint" />
+            <mxPoint x="1060" y="715" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c25" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="550" width="10" x="415" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="c26" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="480" width="10" x="755" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="c27" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="365" width="10" x="1055" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="c28" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [Vendedor eliminado o baneado]" vertex="1">
+          <mxGeometry height="61" width="1120" x="40" y="277" as="geometry" />
+        </mxCell>
+        <mxCell id="c29" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [El comprador no le ha comprado ningún producto a este vendedor]" vertex="1">
+          <mxGeometry height="61" width="1120" x="40" y="432" as="geometry" />
+        </mxCell>
+        <mxCell id="c1" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="1. Selecciona 1-5 estrellas en el Perfil del vendedor">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="110" as="sourcePoint" />
+            <mxPoint x="420" y="110" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c2" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="2. POST /api/calificaciones/vendedor { pedido_id, vendedor_id, estrellas }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="145" as="sourcePoint" />
+            <mxPoint x="760" y="145" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c4" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;curved=0;rounded=0;" value="3. authRequired(token) → req.userId (compradorId)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="180" />
+              <mxPoint x="810" y="195" />
+            </Array>
+            <mxPoint x="760" y="180" as="sourcePoint" />
+            <mxPoint x="760" y="195" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c5" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="4. SELECT id, activo FROM usuarios WHERE id = ? (vendedor_id)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="225" as="sourcePoint" />
+            <mxPoint x="1060" y="225" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c6" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="5. fila vendedor (o vacía / activo=0)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="260" as="sourcePoint" />
+            <mxPoint x="760" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c7" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="6. 404 Este vendedor ya no está disponible">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="295" as="sourcePoint" />
+            <mxPoint x="420" y="295" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c8" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="7. Oculta la opción de calificar (vendedor eliminado o baneado)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="330" as="sourcePoint" />
+            <mxPoint x="120" y="330" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c9" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="8. SELECT dp.id FROM detalle_pedidos dp JOIN pedidos p ON p.id=dp.pedido_id WHERE p.comprador_id=? AND dp.vendedor_id=? AND dp.estado_envio&lt;&gt;&#39;Cancelado&#39; LIMIT 1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="380" as="sourcePoint" />
+            <mxPoint x="1060" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c10" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="9. línea de compra (o vacía)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="415" as="sourcePoint" />
+            <mxPoint x="760" y="415" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c11" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="10. 400 Debes comprarle a este vendedor para poder calificarlo">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="450" as="sourcePoint" />
+            <mxPoint x="420" y="450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c12" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="11. Deshabilita las estrellas de calificación">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="485" as="sourcePoint" />
+            <mxPoint x="120" y="485" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c13" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="12. INSERT INTO calificaciones_vendedores (pedido_id, comprador_id, vendedor_id, estrellas)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="535" as="sourcePoint" />
+            <mxPoint x="1060" y="535" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c14" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="13. calificacionId">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="570" as="sourcePoint" />
+            <mxPoint x="760" y="570" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c15" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="14. 201 { id, vendedor_id, estrellas }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="605" as="sourcePoint" />
+            <mxPoint x="420" y="605" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c16" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="15. Actualiza el promedio de estrellas mostrado en el Perfil del vendedor">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="640" as="sourcePoint" />
+            <mxPoint x="120" y="640" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

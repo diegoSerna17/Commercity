@@ -1,0 +1,196 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="SEC-TIENDA-02 Mi tienda - Cuenta bancaria" id="tienda0002b">
+    <mxGraphModel dx="1666" dy="930" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1229" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="q2-1" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" value="Vendedor" vertex="1">
+          <mxGeometry height="55" width="30" x="105" y="5" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="Frontend&amp;#xa;(BankAccountForm.jsx)" vertex="1">
+          <mxGeometry height="40" width="260" x="290" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="API&amp;#xa;(tienda.controllers.js)" vertex="1">
+          <mxGeometry height="40" width="220" x="670" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="MySQL" vertex="1">
+          <mxGeometry height="40" width="140" x="1010" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-36" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="60" as="sourcePoint" />
+            <mxPoint x="120" y="875" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-37" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="60" as="sourcePoint" />
+            <mxPoint x="420" y="875" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-38" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="60" as="sourcePoint" />
+            <mxPoint x="780" y="875" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-39" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1080" y="60" as="sourcePoint" />
+            <mxPoint x="1080" y="875" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-18" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="alt  [formato valido]" vertex="1">
+          <mxGeometry height="410" width="1160" x="40" y="405" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="35" width="10" x="1075" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="35" width="10" x="1075" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="175" width="10" x="775" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="245" width="10" x="415" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="35" width="10" x="1075" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-23" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="35" width="10" x="1075" y="505" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-26" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="35" width="10" x="1075" y="575" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-28" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="35" width="10" x="1075" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-30" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="210" width="10" x="775" y="435" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-32" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="300" width="10" x="415" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-5" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="1. Entra a &quot;Mi tienda&quot; -&gt; Cuenta bancaria">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="100" as="sourcePoint" />
+            <mxPoint x="420" y="100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-6" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="2. GET /api/tienda/mi-cuenta-bancaria">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="135" as="sourcePoint" />
+            <mxPoint x="780" y="135" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-7" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="3. Valida JWT y rol vendedor">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="170" as="sourcePoint" />
+            <mxPoint x="1080" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-9" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="4. token vigente, rol vendedor">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1080" y="205" as="sourcePoint" />
+            <mxPoint x="780" y="205" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-10" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="5. SELECT datos_bancarios WHERE usuario_id=?">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="240" as="sourcePoint" />
+            <mxPoint x="1080" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-12" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="6. fila cifrada (o ninguna); se descifra AES-256-GCM">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1080" y="275" as="sourcePoint" />
+            <mxPoint x="780" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-13" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="7. 200 { registrado, datos }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="310" as="sourcePoint" />
+            <mxPoint x="420" y="310" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-15" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="8. Precarga el formulario (o lo muestra vacio)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="345" as="sourcePoint" />
+            <mxPoint x="120" y="345" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-17" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="9. Edita los datos y clic en &quot;Guardar cuenta bancaria&quot;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="380" as="sourcePoint" />
+            <mxPoint x="420" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-19" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="10. POST / PUT /api/tienda/mi-cuenta-bancaria">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="435" as="sourcePoint" />
+            <mxPoint x="780" y="435" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-20" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="11. BEGIN TRANSACTION">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="470" as="sourcePoint" />
+            <mxPoint x="1080" y="470" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-22" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="12. SELECT id FROM datos_bancarios WHERE usuario_id=?">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="505" as="sourcePoint" />
+            <mxPoint x="1080" y="505" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-24" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="13. registro existente (o ninguno)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1080" y="540" as="sourcePoint" />
+            <mxPoint x="780" y="540" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-25" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="14. INSERT / UPDATE datos_bancarios (cifrado AES-256-GCM)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="575" as="sourcePoint" />
+            <mxPoint x="1080" y="575" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-27" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="15. COMMIT">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="610" as="sourcePoint" />
+            <mxPoint x="1080" y="610" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-29" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="16. 201 / 200 { registrado:true, datos }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="645" as="sourcePoint" />
+            <mxPoint x="420" y="645" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-31" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="17. Muestra &quot;Cuenta guardada correctamente&quot;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="680" as="sourcePoint" />
+            <mxPoint x="120" y="680" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-33" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=6 4;html=1;strokeColor=#666666;strokeWidth=1;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="705" as="sourcePoint" />
+            <mxPoint x="1180" y="705" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q2-34" parent="1" style="text;html=1;fontSize=11;fontStyle=2;align=left;verticalAlign=top;" value="else  [formato invalido]" vertex="1">
+          <mxGeometry height="16" width="500" x="68" y="707" as="geometry" />
+        </mxCell>
+        <mxCell id="q2-35" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="18. Muestra &quot;Revisa los campos en rojo&quot;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="735" as="sourcePoint" />
+            <mxPoint x="120" y="735" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

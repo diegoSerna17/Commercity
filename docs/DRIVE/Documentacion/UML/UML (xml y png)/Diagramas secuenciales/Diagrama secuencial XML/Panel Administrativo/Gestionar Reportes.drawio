@@ -1,0 +1,310 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.0.6 Chrome/138.0.7204.100 Electron/37.2.3 Safari/537.36">
+  <diagram id="c12" name="Gestionar reportes">
+    <mxGraphModel dx="3332" dy="1860" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1160" pageHeight="1830" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="act1" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" value="Administrador" vertex="1">
+          <mxGeometry height="55" width="30" x="120" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="hdr2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="Frontend (AdminTablaReportes.jsx / AdminModalReporte.jsx)" vertex="1">
+          <mxGeometry height="40" width="190" x="300" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="hdr3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="API (reportes.controllers.js)" vertex="1">
+          <mxGeometry height="40" width="210" x="580" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="hdr4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="MySQL" vertex="1">
+          <mxGeometry height="40" width="160" x="880" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="life5" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="135" y="60" as="sourcePoint" />
+            <mxPoint x="135" y="1790" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="life6" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="395" y="60" as="sourcePoint" />
+            <mxPoint x="395" y="1790" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="life7" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="685" y="60" as="sourcePoint" />
+            <mxPoint x="685" y="1790" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="life8" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="960" y="60" as="sourcePoint" />
+            <mxPoint x="960" y="1790" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actb40" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="40" width="10" x="955" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="actb41" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="120" width="10" x="680" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="actb42" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="200" width="10" x="390" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="actb43" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="40" width="10" x="955" y="504" as="geometry" />
+        </mxCell>
+        <mxCell id="actb44" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="120" width="10" x="680" y="464" as="geometry" />
+        </mxCell>
+        <mxCell id="actb45" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="200" width="10" x="390" y="424" as="geometry" />
+        </mxCell>
+        <mxCell id="actb46" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="40" width="10" x="955" y="764" as="geometry" />
+        </mxCell>
+        <mxCell id="actb47" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="184" width="10" x="680" y="724" as="geometry" />
+        </mxCell>
+        <mxCell id="actb48" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="354" width="10" x="390" y="684" as="geometry" />
+        </mxCell>
+        <mxCell id="actb49" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="40" width="10" x="955" y="1222" as="geometry" />
+        </mxCell>
+        <mxCell id="actb50" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="120" width="10" x="680" y="1182" as="geometry" />
+        </mxCell>
+        <mxCell id="actb51" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="200" width="10" x="390" y="1142" as="geometry" />
+        </mxCell>
+        <mxCell id="actb52" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="40" width="10" x="955" y="1492" as="geometry" />
+        </mxCell>
+        <mxCell id="actb53" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="120" width="10" x="680" y="1452" as="geometry" />
+        </mxCell>
+        <mxCell id="actb54" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="200" width="10" x="390" y="1412" as="geometry" />
+        </mxCell>
+        <mxCell id="msg9" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="1: Accede a la sección Reportes">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="135" y="150" as="sourcePoint" />
+            <mxPoint x="395" y="150" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg10" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="2: GET /api/admin/reportes">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="395" y="190" as="sourcePoint" />
+            <mxPoint x="685" y="190" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg11" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="3: QUERY_REPORTES (JOIN productos, usuarios vendedor/reportado/informante)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="685" y="230" as="sourcePoint" />
+            <mxPoint x="960" y="230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg12" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="Filas de reportes">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="960" y="270" as="sourcePoint" />
+            <mxPoint x="685" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg13" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="Reportes mapeados (mapearReporte)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="685" y="310" as="sourcePoint" />
+            <mxPoint x="395" y="310" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg14" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="Muestra la lista de reportes">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="395" y="350" as="sourcePoint" />
+            <mxPoint x="135" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg15" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="4: Selecciona filtro (Pendiente|Resuelto) y/o escribe texto">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="135" y="424" as="sourcePoint" />
+            <mxPoint x="395" y="424" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg16" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="5: GET /api/admin/reportes?estado=&amp;q=">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="395" y="464" as="sourcePoint" />
+            <mxPoint x="685" y="464" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg17" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="6: WHERE r.estado_reporte=? AND/OR (producto|usuario|tipo LIKE ?)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="685" y="504" as="sourcePoint" />
+            <mxPoint x="960" y="504" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg18" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="Filas filtradas">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="960" y="544" as="sourcePoint" />
+            <mxPoint x="685" y="544" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg19" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="Resultados filtrados">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="685" y="584" as="sourcePoint" />
+            <mxPoint x="395" y="584" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg20" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="Muestra reportes filtrados">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="395" y="624" as="sourcePoint" />
+            <mxPoint x="135" y="624" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg21" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="7: Abre el detalle de un reporte">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="135" y="684" as="sourcePoint" />
+            <mxPoint x="395" y="684" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg22" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="8: GET /api/admin/reportes/:id">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="395" y="724" as="sourcePoint" />
+            <mxPoint x="685" y="724" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg23" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="9: QUERY_REPORTES WHERE r.id = ?">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="685" y="764" as="sourcePoint" />
+            <mxPoint x="960" y="764" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg24" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="Fila del reporte">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="960" y="804" as="sourcePoint" />
+            <mxPoint x="685" y="804" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg25" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="reportado = producto.nombre, precio, vendedor + reportante">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="685" y="908" as="sourcePoint" />
+            <mxPoint x="395" y="908" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg26" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="reportado = usuario.nombre_completo, email + reportante">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="685" y="978" as="sourcePoint" />
+            <mxPoint x="395" y="978" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg27" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="Muestra detalle, motivo, evidencia y respuesta">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="395" y="1038" as="sourcePoint" />
+            <mxPoint x="135" y="1038" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg28" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="10: Escribe y envía la respuesta (máx. 2000 caracteres)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="135" y="1142" as="sourcePoint" />
+            <mxPoint x="395" y="1142" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg29" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="11: PATCH /api/admin/reportes/:id/resolver {respuesta}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="395" y="1182" as="sourcePoint" />
+            <mxPoint x="685" y="1182" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg30" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="12: UPDATE reportes SET estado_reporte=&#39;Resuelto&#39;, respuesta_admin=?, respondido_at=NOW() WHERE id=? AND estado_reporte=&#39;Pendiente&#39;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="685" y="1222" as="sourcePoint" />
+            <mxPoint x="960" y="1222" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg31" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="affectedRows">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="960" y="1262" as="sourcePoint" />
+            <mxPoint x="685" y="1262" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg32" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="Confirma: reporte resuelto (404 si ya estaba resuelto)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="685" y="1302" as="sourcePoint" />
+            <mxPoint x="395" y="1302" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg33" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="Muestra confirmación">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="395" y="1342" as="sourcePoint" />
+            <mxPoint x="135" y="1342" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg34" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="13: Confirma archivar reporte">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="135" y="1412" as="sourcePoint" />
+            <mxPoint x="395" y="1412" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg35" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="14: DELETE /api/admin/reportes/:id">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="395" y="1452" as="sourcePoint" />
+            <mxPoint x="685" y="1452" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg36" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="15: UPDATE reportes SET archivado = 1 WHERE id = ? AND archivado = 0">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="685" y="1492" as="sourcePoint" />
+            <mxPoint x="960" y="1492" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg37" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="OK">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="960" y="1532" as="sourcePoint" />
+            <mxPoint x="685" y="1532" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg38" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="Confirma: reporte archivado">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="685" y="1572" as="sourcePoint" />
+            <mxPoint x="395" y="1572" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg39" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;verticalAlign=bottom;labelBackgroundColor=#FFFFFF;" value="Muestra confirmación">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="395" y="1612" as="sourcePoint" />
+            <mxPoint x="135" y="1612" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="frame55" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt   Filtra por estado y/o texto&amp;nbsp;" vertex="1">
+          <mxGeometry height="294" width="1040" x="60" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="frame56" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="alt   flujo de datos según tipo_reporte" vertex="1">
+          <mxGeometry height="194" width="1040" x="60" y="834" as="geometry" />
+        </mxCell>
+        <mxCell id="frame57" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="alt   Acción del administrador sobre el reporte" vertex="1">
+          <mxGeometry height="594" width="1040" x="60" y="1068" as="geometry" />
+        </mxCell>
+        <mxCell id="alt58" parent="1" style="text;html=1;fontSize=11;fontStyle=2;align=left;verticalAlign=top;" value="[tipo = Producto]" vertex="1">
+          <mxGeometry height="18" width="700" x="100" y="848" as="geometry" />
+        </mxCell>
+        <mxCell id="alt59" parent="1" style="text;html=1;fontSize=11;fontStyle=2;align=left;verticalAlign=top;" value="[tipo = Usuario]" vertex="1">
+          <mxGeometry height="18" width="700" x="100" y="918" as="geometry" />
+        </mxCell>
+        <mxCell id="alt60" parent="1" style="text;html=1;fontSize=11;fontStyle=2;align=left;verticalAlign=top;" value="[Responder y resolver]&amp;nbsp;" vertex="1">
+          <mxGeometry height="18" width="700" x="132" y="1082" as="geometry" />
+        </mxCell>
+        <mxCell id="alt61" parent="1" style="text;html=1;fontSize=11;fontStyle=2;align=left;verticalAlign=top;" value="[Archivar reporte]  RF64  (borrado lógico, nunca físico)" vertex="1">
+          <mxGeometry height="18" width="700" x="100" y="1352" as="geometry" />
+        </mxCell>
+        <mxCell id="div62" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=6 4;html=1;strokeColor=#666666;strokeWidth=1;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="928" as="sourcePoint" />
+            <mxPoint x="1100" y="928" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="div63" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=6 4;html=1;strokeColor=#666666;strokeWidth=1;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="1362" as="sourcePoint" />
+            <mxPoint x="1100" y="1362" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

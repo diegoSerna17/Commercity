@@ -1,0 +1,192 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="SEC-PED-03 Actualizar estado" id="ped0003">
+    <mxGraphModel dx="3440" dy="1860" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p3-1" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" value="Vendedor" vertex="1">
+          <mxGeometry height="55" width="30" x="105" y="5" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="Frontend&#xa;(Pedidos.jsx)" vertex="1">
+          <mxGeometry height="40" width="180" x="330" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="API&#xa;(pedidos.controllers.js)" vertex="1">
+          <mxGeometry height="40" width="180" x="670" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="MySQL" vertex="1">
+          <mxGeometry height="40" width="180" x="970" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-5" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="60" as="sourcePoint" />
+            <mxPoint x="120" y="960" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-6" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="60" as="sourcePoint" />
+            <mxPoint x="420" y="960" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-7" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="60" as="sourcePoint" />
+            <mxPoint x="760" y="960" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-8" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="60" as="sourcePoint" />
+            <mxPoint x="1060" y="960" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="820" width="10" x="415" y="115" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="750" width="10" x="755" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="570" width="10" x="1055" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-12" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="1. Selecciona nuevo estado en el dropdown (ej. &#39;En camino&#39;)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="100" as="sourcePoint" />
+            <mxPoint x="420" y="100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-13" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="2. PATCH /api/pedidos/:id/estado { estado: &#39;En camino&#39; } (Bearer token)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="135" as="sourcePoint" />
+            <mxPoint x="760" y="135" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-14" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;curved=0;rounded=0;fontSize=11;" value="3. authRequired + requireRoles([&#39;vendedor&#39;,&#39;administrador&#39;])">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="170" />
+              <mxPoint x="810" y="190" />
+            </Array>
+            <mxPoint x="760" y="170" as="sourcePoint" />
+            <mxPoint x="760" y="190" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-15" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;curved=0;rounded=0;fontSize=11;" value="4. validate(estadoSchema) con Zod">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="225" />
+              <mxPoint x="810" y="245" />
+            </Array>
+            <mxPoint x="760" y="225" as="sourcePoint" />
+            <mxPoint x="760" y="245" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-16" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="5. BEGIN TRANSACTION">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="280" as="sourcePoint" />
+            <mxPoint x="1060" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-17" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="6. SELECT detalle_pedidos WHERE pedido_id = ? AND vendedor_id = ? FOR UPDATE">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="315" as="sourcePoint" />
+            <mxPoint x="1060" y="315" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-18" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="7. envíos del vendedor en ese pedido">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="350" as="sourcePoint" />
+            <mxPoint x="760" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-19" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [Vendedor sin envíos en este pedido]" vertex="1">
+          <mxGeometry height="90" width="1100" x="40" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-20" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="8. 404 El vendedor no tiene envíos en este pedido (ROLLBACK)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="395" as="sourcePoint" />
+            <mxPoint x="420" y="395" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-21" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="9. Muestra error">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="430" as="sourcePoint" />
+            <mxPoint x="120" y="430" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-22" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [Envío ya cancelado]" vertex="1">
+          <mxGeometry height="90" width="1100" x="40" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-23" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="10. 409 Un envío cancelado no puede cambiar de estado (ROLLBACK)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="505" as="sourcePoint" />
+            <mxPoint x="420" y="505" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-24" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="11. Muestra error">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="540" as="sourcePoint" />
+            <mxPoint x="120" y="540" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-25" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [Transición de estado inválida] (ej. Pendiente → Entregado directo)" vertex="1">
+          <mxGeometry height="90" width="1100" x="40" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-26" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="12. 409 Transición inválida: estado_actual -&gt; estado (ROLLBACK)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="615" as="sourcePoint" />
+            <mxPoint x="420" y="615" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-27" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="13. Muestra error">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="650" as="sourcePoint" />
+            <mxPoint x="120" y="650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-28" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="14. UPDATE detalle_pedidos SET estado_envio = ? WHERE id IN (...)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="710" as="sourcePoint" />
+            <mxPoint x="1060" y="710" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-29" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="15. COMMIT">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="745" as="sourcePoint" />
+            <mxPoint x="1060" y="745" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-30" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="16. SELECT comprador_id FROM pedidos WHERE id = ?">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="780" as="sourcePoint" />
+            <mxPoint x="1060" y="780" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-31" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="17. comprador_id">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="815" as="sourcePoint" />
+            <mxPoint x="760" y="815" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-32" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="18. INSERT notificación al comprador: envío actualizado&amp;nbsp;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="850" as="sourcePoint" />
+            <mxPoint x="1060" y="850" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-33" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="19. 200 { pedido_id, estado_envio, envios_actualizados }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="885" as="sourcePoint" />
+            <mxPoint x="420" y="885" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p3-34" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="20. Actualiza el badge de estado en la tabla">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="920" as="sourcePoint" />
+            <mxPoint x="120" y="920" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,135 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="SEC-USR-07 Cambio de rol (comprador)" id="crv0003">
+    <mxGraphModel dx="1323" dy="715" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="crv3-1" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" value="Comprador" vertex="1">
+          <mxGeometry height="55" width="30" x="105" y="5" as="geometry" />
+        </mxCell>
+        <mxCell id="crv3-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="Frontend&#xa;(Ajustes.jsx)" vertex="1">
+          <mxGeometry height="40" width="180" x="330" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="crv3-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="API&#xa;(usuarios.controllers.js)" vertex="1">
+          <mxGeometry height="40" width="180" x="670" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="crv3-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="MySQL" vertex="1">
+          <mxGeometry height="40" width="180" x="970" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="crv3-5" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="60" as="sourcePoint" />
+            <mxPoint x="120" y="580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-6" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="60" as="sourcePoint" />
+            <mxPoint x="420" y="580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-7" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="60" as="sourcePoint" />
+            <mxPoint x="760" y="580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-8" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="60" as="sourcePoint" />
+            <mxPoint x="1060" y="580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="425" width="10" x="415" y="115" as="geometry" />
+        </mxCell>
+        <mxCell id="crv3-10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="355" width="10" x="755" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="crv3-11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="175" width="10" x="1055" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="crv3-12" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="1. Clic en &#39;Cambiar a vendedor&#39;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="100" as="sourcePoint" />
+            <mxPoint x="420" y="100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-13" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="2. PATCH /api/usuarios/me/rol { rol: &#39;vendedor&#39; } (Bearer token)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="135" as="sourcePoint" />
+            <mxPoint x="760" y="135" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-14" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;curved=0;rounded=0;fontSize=11;" value="3. authRequired: valida JWT, inyecta req.userId">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="170" />
+              <mxPoint x="810" y="190" />
+            </Array>
+            <mxPoint x="760" y="170" as="sourcePoint" />
+            <mxPoint x="760" y="190" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-15" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;curved=0;rounded=0;fontSize=11;" value="4. validate(cambiarRolSchema) con Zod">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="225" />
+              <mxPoint x="810" y="245" />
+            </Array>
+            <mxPoint x="760" y="225" as="sourcePoint" />
+            <mxPoint x="760" y="245" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-16" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="5. SELECT id FROM roles WHERE nombre = &#39;vendedor&#39;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="280" as="sourcePoint" />
+            <mxPoint x="1060" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-17" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="6. rolId">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="315" as="sourcePoint" />
+            <mxPoint x="760" y="315" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-18" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="7. BEGIN TRANSACTION">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="350" as="sourcePoint" />
+            <mxPoint x="1060" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-19" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="8. DELETE FROM usuario_roles WHERE usuario_id = ?">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="385" as="sourcePoint" />
+            <mxPoint x="1060" y="385" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-20" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="9. INSERT INTO usuario_roles (usuario_id, rol_id) VALUES (?, ?)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="420" as="sourcePoint" />
+            <mxPoint x="1060" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-21" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="10. COMMIT">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="455" as="sourcePoint" />
+            <mxPoint x="1060" y="455" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-22" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="11. 200 { roles: [&#39;vendedor&#39;] }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="490" as="sourcePoint" />
+            <mxPoint x="420" y="490" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="crv3-23" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="12. Muestra &#39;Rol actualizado correctamente&#39;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="525" as="sourcePoint" />
+            <mxPoint x="120" y="525" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
