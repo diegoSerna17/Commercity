@@ -4,7 +4,15 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-06 - BD: decision sobre pedidos.estado_pedido (columna huerfana) tras auditoria D1 del esquema
 
+- **Autor**: Daniel Palacios
+- **Archivos**: docs/CHANGELOG.md (solo documento; sin archivos de codigo ni migracion SQL)
+- **Descripcion**: Tras ejecutar la auditoria D1 (SHOW CREATE TABLE de detalle_pedidos, pedidos, reportes, datos_bancarios, usuarios, pagos_simulados, carrito_items + SHOW TABLES LIKE 'tokens_invalidados') contra la BD real commercity_v2, se dejo constancia de la decision sobre la columna pedidos.estado_pedido enum('Pendiente','En camino','Entregado','Cancelado') NOT NULL DEFAULT 'Pendiente': se MANTIENE EN LA BD SIN USO y SIN migracion. El codigo no la lee ni la escribe (solo aparece en comentarios que la niegan), el esquema canonico schema_commercity.sql la excluye (comentario B2/RF119) y el estado real del pedido vive por linea en detalle_pedidos.estado_envio. No se ejecuto ningun ALTER TABLE por ser una operacion destructiva que requiere decision formal del Director.
+- **Motivo**: divergencia detectada entre la BD real y el esquema canonico versionado; dejar la decision cerrada y documentada para que nadie use la columna por error y para no repetir la auditoria. La columna es inofensiva (DEFAULT 'Pendiente', el codigo nunca la toca), por lo que se descarto el DROP en caliente.
+- **Requerimientos**: RF117-RF124 (Pedidos y Pago), RF125-RF129 (estados por linea y avance/cancelacion del vendedor)
+- **Evidencia**: DDL real capturado 2026-10-06 con DB_ACTIVA=commercity_v2 (pedidos.estado_pedido presente; detalle_pedidos.subtotal/monto_vendedor/monto_comision decimal(12,2) normales = RF140 sin migracion confirmada; tokens_invalidados existe). schema_commercity.sql lineas 149-153 sin la columna. Grep de uso en codigo: solo comentarios negativos (pedidos.controllers.js:10, tienda.controllers.js:18). Script temporal de auditoria eliminado tras capturar la evidencia.
+- **Estado**: Completado
 
 ## 2026-10-06 - BD: invalidacion de 7 cuentas bancarias con cifrado irrecuperable
 
