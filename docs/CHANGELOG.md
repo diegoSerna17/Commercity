@@ -5,6 +5,37 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 ---
 
 
+
+## 2026-10-05 - SEGURIDAD: separacion de claves JWT/CRYPTO y fallback legado en decryptSensitive
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/utils/config.js, backend/src/server/utils/crypto.js, backend/src/server/__tests__/crypto.utils.test.js, backend/src/server/__tests__/config.utils.test.js
+- **Descripcion**: Se dejo de derivar CRYPTO_SECRET_KEY a partir de JWT_SECRET en claro; ahora CRYPTO_SECRET_KEY = process.env.CRYPTO_SECRET_KEY || JWT_SIGNING_KEY (claves separadas por proposito). Se agrego bucle de fallback de 3 generaciones de claves (actual, intermedia fac1b9a, legada pre-fac1b9a) en decryptSensitive, con 4 tests nuevos que cifran con clave legada y verifican el descifrado.
+- **Motivo**: hallazgo de la auditoria de seguridad: la clave JWT cruda se usaba como material AES-256-GCM y los textos cifrados con generaciones anteriores de clave no eran descifrables tras el cambio de derivacion.
+- **Requerimientos**: N/A (seguridad interna)
+- **Evidencia**: 340/340 tests OK (vitest run --coverage); suites afectadas crypto.utils 9/9 y config.utils OK; cobertura Lines 92.19% / Stmts 91.41% (umbral minimo 60%); crypto.js y config.js en 100% lines.
+- **Estado**: Completado
+
+## 2026-10-05 - REFACTOR: split de pedidos.actualizarEstado en helpers (hallazgo A4)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/controllers/pedidos.controllers.js, backend/src/server/__tests__/pedidos.controllers.test.js
+- **Descripcion**: Se dividio actualizarEstado (orquestador de 80+ lineas) en helpers con contrato uniforme {error:{status,message}} o datos: cancelarUnaLinea, cancelarTodasLasLineas, actualizarPagoTrasCancelacion, notificarCancelacion, avanzarEnviosVendedor y notificarCambioEstado. El orquestador conserva parse, transaccion, rollback/commit y la respuesta HTTP identica byte a byte.
+- **Motivo**: hallazgo A4 de la auditoria de calidad: funcion excesivamente larga y con ciclomatica alta, dificil de testear y mantener.
+- **Requerimientos**: RF117-RF124 (Pedidos y Pago)
+- **Evidencia**: 340/340 tests OK; suite pedidos.controllers 30/30 sin regresiones de comportamiento; cobertura de pedidos.controllers.js Lines 96.55% / Funcs 100%.
+- **Estado**: Completado
+
+## 2026-10-05 - DOCS: informe de auditoria completa de la rama PREVIEW
+
+- **Autor**: Daniel Palacios
+- **Archivos**: docs/informes/INFORME_AUDITORIA_PREVIEW_2026-10-05.md
+- **Descripcion**: Se versiono el informe de auditoria integral de la rama PREVIEW (skill full-project-auditor) con hallazgos priorizados y su commit asociado.
+- **Motivo**: evidencia de defensa ante el instructor y trazabilidad de la revision de calidad del proyecto.
+- **Requerimientos**: N/A
+- **Evidencia**: commit 98c45f2 (git add -f por estar el directorio de informes en .gitignore); 340/340 tests OK en la corrida de verificacion del lote.
+- **Estado**: Completado
+
 ## 2026-10-05 - DEPS: actualizacion de dependencias de backend y remediacion de vulnerabilidades npm
 
 - **Autor**: Daniel Palacios
