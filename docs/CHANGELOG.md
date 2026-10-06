@@ -4,6 +4,17 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+
+## 2026-10-05 - DEPS: actualizacion de dependencias de backend y remediacion de vulnerabilidades npm
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/package.json, backend/package-lock.json
+- **Descripcion**: Se actualizaron 9 dependencias within-semver (multer 2.4.0, mysql2 3.24.5, vitest 4.1.11, resend 6.32.0, zod 4.6.5, dotenv 17.4.2, express-rate-limit 8.7.0, supertest 7.3.1, nodemon 3.1.14), se aplico npm audit fix y se agrego un override de nodemon.chokidar a ^4.0.3 para eliminar la cadena nodemon>chokidar>braces (GHSA-vfj7-8cjw-p6xm, sin fix upstream).
+- **Motivo**: cerrar los hallazgos de seguridad de dependencias de las auditorias interna y externa (13 vulnerabilidades, 3 high en braces); el advisory CVE-2026-93687 afecta hasta braces 3.0.3 sin version parcheada, por lo que se corto la cadena con chokidar 4 en vez de parchear braces.
+- **Requerimientos**: N/A
+- **Evidencia**: npm audit 13 -> 0 vulnerabilidades; 328/328 tests passed con cobertura Lines 92.55% tras las actualizaciones; smoke test de nodemon 3.1.14 arrancando el servidor en localhost:3000.
+- **Estado**: Completado
+
 ## 2026-09-28 - FEAT: fotografias reales de productos por categoria (BD + frontend)
 
 - **Autor**: Daniel Palacios (lider) con CommandCode
