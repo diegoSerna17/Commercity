@@ -6,13 +6,23 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 
 
+## 2026-10-06 - BD: invalidacion de 7 cuentas bancarias con cifrado irrecuperable
+
+- **Autor**: Daniel Palacios
+- **Archivos**: (cambio directo en BD commercity_v2, tabla datos_bancarios; sin archivos de codigo)
+- **Descripcion**: Se invalidaron las filas id 3-9 de datos_bancarios (cuentas de prueba de vendedores) limpiando titular_nombre, numero_cuenta, banco y tipo_cuenta a cadena vacia y actualizando updated_at. Borrado logico: no se elimino ninguna fila ni su historial. Las columnas son NOT NULL, por lo que la invalidacion se hizo con cadena vacia (decryptSensitive('') devuelve null -> validarCuentaBancaria completa=false). Las filas id 2 y 10-17 permanecen intactas y descifrables.
+- **Motivo**: esas filas quedaron con campos que ninguna clave disponible descifra. Se descarto la recuperacion tras probar los 7 .env candidatos locales (ninguno descifra las filas 3-9) y confirmar que la clave de la ventana 08/08-05/09/2026 no existe en git ni en disco (rotacion de JWT_SECRET/CRYPTO_SECRET_KEY entre el 5 y el 28 de septiembre sin respaldo local). Con los campos invalidos, la UI exige el re-registro de la cuenta bancaria del vendedor (RF133).
+- **Requerimientos**: RF131-RF133 y RF138 (cuenta bancaria del vendedor gestionada sin exponerse), RNF9 (cifrado de datos)
+- **Evidencia**: UPDATE affectedRows=7 contra commercity_v2@149.130.178.228; SELECT posterior ids 3-9 con titular_nombre/banco/tipo_cuenta/numero_cuenta = '' y updated_at 2026-10-06; SELECT ids 2,10-17 sin cambios (updated_at 28-29/09/2026). Backup SELECT pre-UPDATE en la sesion: filas 3-6 en texto plano semilla (vendedores de prueba), 7-9 con formato AES-GCM actual.
+- **Estado**: Completado
+
 ## 2026-10-05 - SEGURIDAD: separacion de claves JWT/CRYPTO y fallback legado en decryptSensitive
 
 - **Autor**: Daniel Palacios
 - **Archivos**: backend/src/server/utils/config.js, backend/src/server/utils/crypto.js, backend/src/server/__tests__/crypto.utils.test.js, backend/src/server/__tests__/config.utils.test.js
 - **Descripcion**: Se dejo de derivar CRYPTO_SECRET_KEY a partir de JWT_SECRET en claro; ahora CRYPTO_SECRET_KEY = process.env.CRYPTO_SECRET_KEY || JWT_SIGNING_KEY (claves separadas por proposito). Se agrego bucle de fallback de 3 generaciones de claves (actual, intermedia fac1b9a, legada pre-fac1b9a) en decryptSensitive, con 4 tests nuevos que cifran con clave legada y verifican el descifrado.
 - **Motivo**: hallazgo de la auditoria de seguridad: la clave JWT cruda se usaba como material AES-256-GCM y los textos cifrados con generaciones anteriores de clave no eran descifrables tras el cambio de derivacion.
-- **Requerimientos**: N/A (seguridad interna)
+- **Requerimientos**: RNF9 (cifrado de datos), RF131-RF133 y RF138 (cuenta bancaria del vendedor gestionada sin exponerse)
 - **Evidencia**: 340/340 tests OK (vitest run --coverage); suites afectadas crypto.utils 9/9 y config.utils OK; cobertura Lines 92.19% / Stmts 91.41% (umbral minimo 60%); crypto.js y config.js en 100% lines.
 - **Estado**: Completado
 
@@ -22,7 +32,7 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 - **Archivos**: backend/src/server/controllers/pedidos.controllers.js, backend/src/server/__tests__/pedidos.controllers.test.js
 - **Descripcion**: Se dividio actualizarEstado (orquestador de 80+ lineas) en helpers con contrato uniforme {error:{status,message}} o datos: cancelarUnaLinea, cancelarTodasLasLineas, actualizarPagoTrasCancelacion, notificarCancelacion, avanzarEnviosVendedor y notificarCambioEstado. El orquestador conserva parse, transaccion, rollback/commit y la respuesta HTTP identica byte a byte.
 - **Motivo**: hallazgo A4 de la auditoria de calidad: funcion excesivamente larga y con ciclomatica alta, dificil de testear y mantener.
-- **Requerimientos**: RF117-RF124 (Pedidos y Pago)
+- **Requerimientos**: RF35 (cancelacion del comprador), RF125-RF128 (estados por linea y avance del vendedor), RF117-RF124 (Pedidos y Pago)
 - **Evidencia**: 340/340 tests OK; suite pedidos.controllers 30/30 sin regresiones de comportamiento; cobertura de pedidos.controllers.js Lines 96.55% / Funcs 100%.
 - **Estado**: Completado
 
