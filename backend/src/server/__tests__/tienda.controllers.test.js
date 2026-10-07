@@ -492,7 +492,9 @@ describe("Validacion de Mi Tienda (RF130-RF139)", () => {
     const data = res.body.data;
     expect(data.devoluciones.lineas_canceladas).toBe(1);
     expect(data.devoluciones.unidades_restituidas_stock).toBe(1);
-    expect(data.devoluciones.monto_reembolsado).toBe(50000);
+    // Reporte de devoluciones: importe CON IVA (50000 x 1.19 = 59500.00),
+    // igual que lo reembolsado al comprador (RF48/RF121/RF140).
+    expect(data.devoluciones.monto_reembolsado).toBe(59500);
     expect(data.devoluciones.monto_vendedor_descontado).toBe(45000);
     expect(data.devoluciones.pagos_marcados_reembolsados).toBe(0);
     expect(data.devoluciones.validado).toBe(false);
