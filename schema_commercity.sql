@@ -162,6 +162,10 @@ CREATE TABLE pagos_simulados (
     metodo_pago ENUM('tarjeta', 'transferencia', 'pse') NOT NULL,
     referencia_pago VARCHAR(100) NOT NULL UNIQUE,
     monto DECIMAL(12, 2) NOT NULL,
+    -- S1 (auditoria 2026-10-06): reembolso proporcional por monto (mig 013).
+    -- El estado parcial se DERIVA (0 < monto_reembolsado < monto); 'Reembolsado'
+    -- solo cuando monto_reembolsado >= monto.
+    monto_reembolsado DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     estado ENUM('Aprobado', 'Rechazado', 'Pendiente', 'Reembolsado') DEFAULT 'Pendiente',
     fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE
