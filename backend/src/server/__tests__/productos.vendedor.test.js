@@ -134,6 +134,165 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  // ── S3 (RF81-RF90): rangos de precio/stock/descuento en creacion y edicion ──
+  it("POST /api/productos con descuento invalido (>100) -> 400", async () => {
+    const res = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Mal descuento")
+      .field("descripcion", "Desc")
+      .field("precio", "1000")
+      .field("stock", "1")
+      .field("descuento", "150")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", Buffer.from("x"), "foto.jpg");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.message).toMatch(/descuento.*entre 0 y 100/i);
+  });
+
+  it("POST /api/productos con descuento no numerico -> 400", async () => {
+    const res = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Descuento raro")
+      .field("descripcion", "Desc")
+      .field("precio", "1000")
+      .field("stock", "1")
+      .field("descuento", "abc")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", Buffer.from("x"), "foto.jpg");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("POST /api/productos con descuento negativo -> 400", async () => {
+    const res = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Descuento negativo")
+      .field("descripcion", "Desc")
+      .field("precio", "1000")
+      .field("stock", "1")
+      .field("descuento", "-3")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", Buffer.from("x"), "foto.jpg");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("POST /api/productos con stock decimal -> 400", async () => {
+    const res = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Stock raro")
+      .field("descripcion", "Desc")
+      .field("precio", "1000")
+      .field("stock", "5.5")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", Buffer.from("x"), "foto.jpg");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("PUT /api/productos/:id con precio invalido en la edicion -> 400", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT id, categoria_id")) {
+        return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
+      }
+      if (sql.includes("UPDATE productos")) return [[], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .put("/api/productos/1")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Editado")
+      .field("precio", "0");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    // La validacion falla ANTES del UPDATE: nunca toca la BD
+    expect(pool.query.mock.calls.some(([sql]) => sql.includes("UPDATE productos"))).toBe(false);
+  });
+
+  it("PUT /api/productos/:id con stock negativo o decimal -> 400", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT id, categoria_id")) {
+        return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
+      }
+      if (sql.includes("UPDATE productos")) return [[], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .put("/api/productos/1")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("stock", "-2");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+
+    const resDecimal = await request(app)
+      .put("/api/productos/1")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("stock", "3.7");
+
+    expect(resDecimal.status).toBe(400);
+    expect(resDecimal.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("PUT /api/productos/:id con descuento fuera de rango -> 400", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT id, categoria_id")) {
+        return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
+      }
+      if (sql.includes("UPDATE productos")) return [[], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .put("/api/productos/1")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("descuento", "120");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.message).toMatch(/descuento.*entre 0 y 100/i);
+  });
+
+  it("PUT /api/productos/:id con rangos validos sigue funcionando (regresion campos opcionales)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT id, categoria_id")) {
+        return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
+      }
+      if (sql.includes("UPDATE productos")) return [[], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .put("/api/productos/1")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("precio", "25000")
+      .field("stock", "7")
+      .field("descuento", "50");
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
   it("PUT /api/productos/:id edita SOLO si el producto es del vendedor (200)", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];

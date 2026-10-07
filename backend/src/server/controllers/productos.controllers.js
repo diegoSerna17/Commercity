@@ -365,6 +365,37 @@ async function obtenerOCrearCategoria(nombreCategoria) {
 }
 
 /**
+ * S3 (RF81-RF90): valida los rangos de precio/stock/descuento de un producto.
+ * precio: numero finito > 0; stock: entero >= 0; descuento: numero entre 0 y
+ * 100 (models descuento_porcentaje DECIMAL(5,2)). Los campos son OPCIONALES
+ * (edicion parcial conserva el valor de BD); al crear, la presencia de
+ * precio/stock se exige aparte.
+ * @param {{ precio?: unknown, stock?: unknown, descuento?: unknown }} campos
+ * @returns {string|null} mensaje del primer error, o null si todo valida
+ */
+function validarRangosProducto({ precio, stock, descuento }) {
+  if (precio !== undefined) {
+    const precioNum = Number(precio);
+    if (!Number.isFinite(precioNum) || precioNum <= 0) {
+      return "Precio y stock deben ser numeros validos";
+    }
+  }
+  if (stock !== undefined) {
+    const stockNum = Number(stock);
+    if (!Number.isInteger(stockNum) || stockNum < 0) {
+      return "Precio y stock deben ser numeros validos";
+    }
+  }
+  if (descuento !== undefined) {
+    const descuentoNum = Number(descuento);
+    if (!Number.isFinite(descuentoNum) || descuentoNum < 0 || descuentoNum > 100) {
+      return "El descuento debe ser un numero entre 0 y 100";
+    }
+  }
+  return null;
+}
+
+/**
  * POST /api/productos (RF45/RF46/RF48) - crear producto del vendedor autenticado.
  * Multipart: campo "imagen" obligatorio. El estado lo calcula la BD (GENERADA).
  */
@@ -379,12 +410,18 @@ export const crearProductoVendedor = async (req, res) => {
       });
     }
 
-    const precioNum = Number(precio);
-    const stockNum = Number(stock);
-    if (!Number.isFinite(precioNum) || precioNum <= 0 || !Number.isInteger(stockNum) || stockNum < 0) {
+    // S3 (RF81-RF90): presencia y rangos de precio/stock/descuento.
+    if (precio === undefined || stock === undefined) {
       return res.status(400).json({
         success: false,
-        error: { code: "VALIDATION_ERROR", message: "Precio y stock deben ser numeros validos" },
+        error: { code: "VALIDATION_ERROR", message: "Faltan campos requeridos (precio, stock)" },
+      });
+    }
+    const errorRangos = validarRangosProducto({ precio, stock, descuento });
+    if (errorRangos) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: errorRangos },
       });
     }
 
@@ -408,9 +445,9 @@ export const crearProductoVendedor = async (req, res) => {
         String(nombre).trim(),
         String(descripcion).trim(),
         imagenUrl,
-        precioNum,
-        stockNum,
-        descuento ? Number(descuento) : 0,
+        Number(precio),
+        Number(stock),
+        descuento === undefined || descuento === "" || descuento === null ? 0 : Number(descuento),
       ]
     );
 
@@ -459,6 +496,16 @@ export const editarProductoVendedor = async (req, res) => {
 
     const producto = productoExistente[0];
     const { nombre, descripcion, precio, stock, descuento, categoria } = req.body;
+
+    // S3 (RF81-RF90): mismos rangos que la creacion, antes de tocar la BD.
+    // Los campos son opcionales: si no viene uno se conserva el valor actual.
+    const errorRangos = validarRangosProducto({ precio, stock, descuento });
+    if (errorRangos) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: errorRangos },
+      });
+    }
 
     let categoriaId = producto.categoria_id;
     if (categoria && String(categoria).trim() !== "") {
