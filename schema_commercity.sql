@@ -177,8 +177,12 @@ CREATE TABLE detalle_pedidos (
     descuento_aplicado DECIMAL(5, 2) DEFAULT 0.00,
     subtotal DECIMAL(12, 2) NOT NULL,
     
-    monto_vendedor DECIMAL(12, 2) AS (subtotal * 0.90) STORED, 
-    monto_comision DECIMAL(12, 2) AS (subtotal * 0.10) STORED, 
+    -- RF140 (CERRADO 20/08): los montos 90/10 los calcula el backend
+    -- (calcularLinea, utils/finanzas.js) al aprobar el pago; columnas normales,
+    -- SIN IVA, sin expresion GENERATED (la BD real ya opera con columnas normales;
+    -- precedente pedidos.estado_pedido: alineacion de archivo SIN migracion).
+    monto_vendedor DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    monto_comision DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     -- B1/RF119: estado por linea (el pedido no tiene estado propio).
     estado_envio ENUM('Pendiente', 'En camino', 'Entregado', 'Cancelado') NOT NULL DEFAULT 'Pendiente',
     estado_pago_vendedor ENUM('Pendiente', 'Desembolsado') NOT NULL DEFAULT 'Pendiente',

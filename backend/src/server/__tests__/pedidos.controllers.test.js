@@ -188,10 +188,14 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
       expect.stringContaining("INSERT INTO pedidos"),
       [7, "Calle 1 # 2-3", 2000000]
     );
-    // Fix 3.5: el INSERT de detalle NO incluye columnas GENERATED ni imagen_url
+    // RF140: el INSERT de detalle PERSISTE los montos 90/10 calculados por el
+    // backend (columnas normales, sin GENERATED) y jamas incluye imagen_url.
     const detalleCall = conn.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO detalle_pedidos"));
-    expect(detalleCall[0]).not.toContain("monto_vendedor");
+    expect(detalleCall[0]).toContain("monto_vendedor");
+    expect(detalleCall[0]).toContain("monto_comision");
     expect(detalleCall[0]).not.toContain("imagen_url");
+    // subtotal SIN IVA (2000000 = 1190000*2/1.19) y reparto 90/10 exacto
+    expect(detalleCall[1]).toEqual([5, 1, 3, 2, 1190000, 0, 2000000, 1800000, 200000]);
     // ACID: stock y pago en la misma transaccion, carrito consumido
     expect(conn.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE productos SET stock = stock - ?"), [2, 1]);
     expect(conn.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO pagos_simulados"), expect.anything());

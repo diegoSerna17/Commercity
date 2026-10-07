@@ -196,13 +196,16 @@ export const confirmarPago = async (req, res, next) => {
     );
     const pedidoId = resultadoPedido.insertId;
 
-    // Fix 3.5: sin columnas GENERATED STORED ni imagen_url en detalle_pedidos.
+    // Fix 3.5 + RF140 (CERRADO 20/08): sin imagen_url; los montos 90/10 los
+    // calcula el backend (calcularLinea) y se PERSISTEN en las columnas normales
+    // monto_vendedor / monto_comision (la BD real ya no usa GENERATED).
     for (const l of lineas) {
       await conn.query(
         `INSERT INTO detalle_pedidos
            (pedido_id, producto_id, vendedor_id, cantidad, precio_unitario_historico,
-            descuento_aplicado, subtotal, estado_envio, estado_pago_vendedor)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'Pendiente', 'Pendiente')`,
+            descuento_aplicado, subtotal, monto_vendedor, monto_comision,
+            estado_envio, estado_pago_vendedor)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', 'Pendiente')`,
         [
           pedidoId,
           l.producto_id,
@@ -211,6 +214,8 @@ export const confirmarPago = async (req, res, next) => {
           l.precioFinal,
           l.descuento_porcentaje,
           l.subtotal,
+          l.montoVendedor,
+          l.montoComision,
         ]
       );
     }
