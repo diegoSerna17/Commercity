@@ -148,12 +148,14 @@ export const upsertMiCuentaBancaria = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 // HISTORIAL DE VENTAS (RF119/RF120) - solo del vendedor autenticado
 // ─────────────────────────────────────────────────────────────
+// R2: la paginacion devuelve ENTEROS garantizados (trunc) con clamp; combinado
+// con placeholders LIMIT ? OFFSET ? elimina la clase de riesgo de interpolacion.
 function parsePaginacion(query) {
   const pagina = Number(query.pagina ?? query.page ?? 1);
   const porPagina = Number(query.por_pagina ?? query.limit ?? 10);
   return {
-    pagina: Math.max(1, Number.isFinite(pagina) ? pagina : 1),
-    porPagina: Math.min(100, Math.max(1, Number.isFinite(porPagina) ? porPagina : 10)),
+    pagina: Math.max(1, Number.isFinite(pagina) ? Math.trunc(pagina) : 1),
+    porPagina: Math.min(100, Math.max(1, Number.isFinite(porPagina) ? Math.trunc(porPagina) : 10)),
   };
 }
 
@@ -209,8 +211,8 @@ export const getHistorialVentas = async (req, res, next) => {
          dp.estado_envio, p.fecha_pedido, p.direccion_envio
        ` + fromJoin + `
        ORDER BY p.fecha_pedido DESC, dp.id DESC
-       LIMIT ${porPagina} OFFSET ${offset}`,
-      params
+       LIMIT ? OFFSET ?`,
+      [...params, porPagina, offset]
     );
 
     const [resumenRows] = await pool.query(
@@ -291,8 +293,8 @@ export const getHistorialIngresos = async (req, res, next) => {
          dp.subtotal AS valor_subtotal, dp.monto_vendedor, dp.monto_comision
        ` + fromJoin + `
        ORDER BY p.fecha_pedido DESC, dp.id DESC
-       LIMIT ${porPagina} OFFSET ${offset}`,
-      params
+       LIMIT ? OFFSET ?`,
+      [...params, porPagina, offset]
     );
 
     const [totalesRows] = await pool.query(

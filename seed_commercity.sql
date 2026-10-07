@@ -3,11 +3,16 @@
 -- Base de datos: commercity_v2 (schema_commercity.sql)
 --
 -- Uso:  mysql -u root -p --default-character-set=utf8mb4 < seed_commercity.sql
--- (no requiere ejecutar antes el schema: crea la BD si no existe)
+-- REQUISITOS: schema_commercity.sql ya aplicado en commercity_v2 y
+-- la migracion 013_reembolso_parcial_pagos.sql (pagos_simulados.monto_reembolsado).
 -- RE-EJECUTABLE: vacia todas las tablas y carga desde cero.
 --
--- NOTA: password de todos los usuarios semilla = "123456"
--- (hash bcryptjs, coincide con la logica de login del backend)
+-- *** ADVERTENCIA: EJECUTAR SOLO EN ENTORNO DE DESARROLLO. ***
+-- *** ESTE SCRIPT DESTRUYE TODOS LOS DATOS (TRUNCATE de 18 tablas). ***
+--
+-- NOTA DE SEGURIDAD: la password semilla de los usuarios la define el lider y
+-- se comunica FUERA del repositorio (nunca versionar credenciales). Cada
+-- usuario tiene su PROPIO hash bcrypt (rotacion/hash independiente por cuenta).
 -- ============================================================
 
 USE commercity_v2;
@@ -51,26 +56,26 @@ INSERT IGNORE INTO roles (id, nombre, descripcion) VALUES
 -- USUARIOS
 -- ------------------------------------------------------------
 INSERT INTO usuarios (id, email, password, nombre_completo, foto_perfil, descripcion_personal, direccion_envio, activo) VALUES
-(1, 'carlos.munoz@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Administrador Carlos Muñoz', NULL, 'Administrador general de CommerCity', 'Calle 10 # 5-20, Bogotá', 1),
-(2, 'juan.giraldo@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Vendedor Juan Giraldo', NULL, 'Vendedor de calzado deportivo y moda urbana', 'Carrera 43 # 12-45, Medellín', 1),
-(3, 'alex.rivera@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Vendedor Alex Rivera', NULL, 'Especialista en computadores y accesorios', 'Av. El Poblado # 8A-99, Medellín', 1),
-(4, 'elena.sanz@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Vendedora Elena Sanz', NULL, 'Tienda de electrodomésticos y hogar', 'Calle 72 # 10-34, Bogotá', 1),
-(5, 'julian.thorne@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Vendedor Julian Thorne', NULL, 'Celulares y tecnología de punta', 'Carrera 15 # 93-60, Bogotá', 1),
-(6, 'marco.rossi@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Vendedor Marco Rossi', NULL, 'Accesorios y periféricos gaming', 'Calle 53 # 45-112, Barranquilla', 1),
-(7, 'camila.torres@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Compradora Camila Torres', NULL, 'Compradora frecuente', 'Calle 5 # 20-10, Cali', 1),
-(8, 'sebastian.ruiz@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Comprador Sebastian Ruiz', NULL, NULL, 'Carrera 21 # 40-15, Cali', 1),
-(9, 'mariana.gomez@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Compradora Mariana Gomez', NULL, NULL, 'Calle 44 # 9-30, Barranquilla', 1),
-(10, 'felipe.restrepo@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Comprador Felipe Restrepo', NULL, NULL, 'Av. 30 # 22-18, Medellín', 1),
-(11, 'laura.jimenez@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Compradora Laura Jimenez', NULL, NULL, 'Calle 63 # 5-40, Bogotá', 1),
-(12, 'daniela.perez@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Compradora Daniela Perez', NULL, NULL, 'Carrera 80 # 30-11, Bogotá', 1),
-(13, 'andres.bedoya@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Vendedor Andres Bedoya', NULL, 'Vendedor de tecnología y accesorios', 'Calle 33 # 14-70, Medellín', 1),
-(14, 'paula.castano@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Vendedora Paula Castaño', NULL, 'Vendedora de moda y accesorios', 'Carrera 13 # 67-80, Bogotá', 1),
-(15, 'tomas.herrera@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Vendedor Tomas Herrera', NULL, 'Vendedor de juguetes y juegos de mesa', 'Calle 52 # 18-40, Bucaramanga', 1),
-(16, 'isabela.quintero@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Vendedora Isabela Quintero', NULL, 'Belleza y productos de cuidado personal', 'Av. Ciudad de Cali # 25-10, Cali', 1),
-(17, 'santiago.velez@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Vendedor Santiago Velez', NULL, 'Vendedor de mascotas y accesorios', 'Calle 29 # 31-20, Barranquilla', 1),
-(18, 'esteban.cardenas@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Comprador Esteban Cardenas', NULL, NULL, 'Carrera 70 # 45-12, Medellín', 1),
-(19, 'natalia.vargas@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Compradora Natalia Vargas', NULL, NULL, 'Calle 93 # 15-33, Bogotá', 1),
-(20, 'valeria.rios@commercity.com', '$2b$10$OsQDohxml0P/LF3FhJ7I1OuAnf98D.hbtT1vdcQHKGM8aMqS.FYei', 'Compradora Valeria Rios', NULL, NULL, 'Av. 6N # 22-40, Cali', 1);
+(1, 'carlos.munoz@commercity.com', '$2b$10$1hQbvo1lSmWoozlSAzp7Du5xBgBxOWY5bG/bnZz7Zzq4/Lj0jzguO', 'Administrador Carlos Muñoz', NULL, 'Administrador general de CommerCity', 'Calle 10 # 5-20, Bogotá', 1),
+(2, 'juan.giraldo@commercity.com', '$2b$10$f1CjepWhqpZ7rAOTasuurOxcoMn.UVNaroa6BxLb1b75PSPlmRkd.', 'Vendedor Juan Giraldo', NULL, 'Vendedor de calzado deportivo y moda urbana', 'Carrera 43 # 12-45, Medellín', 1),
+(3, 'alex.rivera@commercity.com', '$2b$10$RWr1wzAdh94p8fpqcHg4yec4OQ4scAGgxEY.O18ymFzFO.BAzy4GK', 'Vendedor Alex Rivera', NULL, 'Especialista en computadores y accesorios', 'Av. El Poblado # 8A-99, Medellín', 1),
+(4, 'elena.sanz@commercity.com', '$2b$10$FRnNmVJELbmphY7.E9t1BOgzK56/ovwLqIhH8s2QIkLB7k3FGyDwO', 'Vendedora Elena Sanz', NULL, 'Tienda de electrodomésticos y hogar', 'Calle 72 # 10-34, Bogotá', 1),
+(5, 'julian.thorne@commercity.com', '$2b$10$hR7LhYgOqvBNXXG9XZ868uDdz184J8K9OKqs64J6eRMF/KwGjDMdi', 'Vendedor Julian Thorne', NULL, 'Celulares y tecnología de punta', 'Carrera 15 # 93-60, Bogotá', 1),
+(6, 'marco.rossi@commercity.com', '$2b$10$A/zC0/d/Q6SAADuf4NbGTOkINqWyjv4mUQXKypEXhv9Lf4zFjNKi2', 'Vendedor Marco Rossi', NULL, 'Accesorios y periféricos gaming', 'Calle 53 # 45-112, Barranquilla', 1),
+(7, 'camila.torres@commercity.com', '$2b$10$FDmf.hcaOO.BaDfhHxPUeusUHAEJQP9kpyvssOuz.9wCr9e6YPK2S', 'Compradora Camila Torres', NULL, 'Compradora frecuente', 'Calle 5 # 20-10, Cali', 1),
+(8, 'sebastian.ruiz@commercity.com', '$2b$10$GabaDGtB8dqVRfMXo5Zu.OezauQVl1KLKq7kXUb/B6kv9/zWzjpf.', 'Comprador Sebastian Ruiz', NULL, NULL, 'Carrera 21 # 40-15, Cali', 1),
+(9, 'mariana.gomez@commercity.com', '$2b$10$CEmsmWBDmadzKbT20i6W6O4NieOrTs5.lOU8mn23n5BuYty.DJrbe', 'Compradora Mariana Gomez', NULL, NULL, 'Calle 44 # 9-30, Barranquilla', 1),
+(10, 'felipe.restrepo@commercity.com', '$2b$10$Nro.3b3GHIw9NxqYSLaH9u8NFg7Ppb/GOtz8PbTU3X6FHTg4Wscnm', 'Comprador Felipe Restrepo', NULL, NULL, 'Av. 30 # 22-18, Medellín', 1),
+(11, 'laura.jimenez@commercity.com', '$2b$10$JE3kJGzmsFZT35akp2QCtuyriifNokSjwpfIH1Ieok./t8liU6LBa', 'Compradora Laura Jimenez', NULL, NULL, 'Calle 63 # 5-40, Bogotá', 1),
+(12, 'daniela.perez@commercity.com', '$2b$10$WRRymemnPhmTqtpQAzu4zOaU9B5XLuIWSAdubI37huijM4T/eAEs2', 'Compradora Daniela Perez', NULL, NULL, 'Carrera 80 # 30-11, Bogotá', 1),
+(13, 'andres.bedoya@commercity.com', '$2b$10$ijTtX7MXHr8qZ0FCyMhXheM/7pYCo/OkrLZDr3WaHO5CxQzbKQYq6', 'Vendedor Andres Bedoya', NULL, 'Vendedor de tecnología y accesorios', 'Calle 33 # 14-70, Medellín', 1),
+(14, 'paula.castano@commercity.com', '$2b$10$pUD0GfC2ZT/evKFRv82A9O./dDU8lOUhOEoC40DgAV3ZYYgp8quXS', 'Vendedora Paula Castaño', NULL, 'Vendedora de moda y accesorios', 'Carrera 13 # 67-80, Bogotá', 1),
+(15, 'tomas.herrera@commercity.com', '$2b$10$MPQD0K.jXu2mrKR/V9GfBeHyVi67HpgJXCh88J8tmr0uF0ytzJ//a', 'Vendedor Tomas Herrera', NULL, 'Vendedor de juguetes y juegos de mesa', 'Calle 52 # 18-40, Bucaramanga', 1),
+(16, 'isabela.quintero@commercity.com', '$2b$10$lavF9gN2th1CYyhkpOP6WOKriaLypdrdnI8Ic6Og3/EVgj1J7K5y6', 'Vendedora Isabela Quintero', NULL, 'Belleza y productos de cuidado personal', 'Av. Ciudad de Cali # 25-10, Cali', 1),
+(17, 'santiago.velez@commercity.com', '$2b$10$1tHWYezM.0.fP0KPC//pz.IT8f04DqiTx/IHtXNjBm0t5YnvykZJu', 'Vendedor Santiago Velez', NULL, 'Vendedor de mascotas y accesorios', 'Calle 29 # 31-20, Barranquilla', 1),
+(18, 'esteban.cardenas@commercity.com', '$2b$10$VXzyUQMc9pf7c/DGQ6SVne4qICE/KklI6QvV5MVj.89rzphxiUFna', 'Comprador Esteban Cardenas', NULL, NULL, 'Carrera 70 # 45-12, Medellín', 1),
+(19, 'natalia.vargas@commercity.com', '$2b$10$67Vo0jRu7yab7F0KIBbWF.keb4rdXNLmG.KNW5xSK14.fo.YjxFCa', 'Compradora Natalia Vargas', NULL, NULL, 'Calle 93 # 15-33, Bogotá', 1),
+(20, 'valeria.rios@commercity.com', '$2b$10$9YmEm61Zqom9GSM5c6GEmuBcm1AHZz9DY5DlIyEQOIRDhKXk4ulZe', 'Compradora Valeria Rios', NULL, NULL, 'Av. 6N # 22-40, Cali', 1);
 
 -- ------------------------------------------------------------
 -- USUARIO - ROLES
@@ -272,42 +277,46 @@ INSERT INTO producto_etiquetas (producto_id, etiqueta_id) VALUES
 -- ------------------------------------------------------------
 
 INSERT INTO pedidos (id, comprador_id, direccion_envio, total_neto) VALUES
-(1, 7, 'Calle 5 # 20-10, Cali', 1299000.00),
-(2, 8, 'Carrera 21 # 40-15, Cali', 3190000.00),
-(3, 9, 'Calle 44 # 9-30, Barranquilla', 950000.00),
-(4, 10, 'Av. 30 # 22-18, Medellín', 2799000.00),
-(5, 11, 'Calle 63 # 5-40, Bogotá', 150100.00),
-(6, 12, 'Carrera 80 # 30-11, Bogotá', 153000.00),
-(7, 7, 'Calle 5 # 20-10, Cali', 2517500.00),
-(8, 9, 'Calle 44 # 9-30, Barranquilla', 490000.00);
+(1, 7, 'Calle 5 # 20-10, Cali', 1091596.64),
+(2, 8, 'Carrera 21 # 40-15, Cali', 2680672.27),
+(3, 9, 'Calle 44 # 9-30, Barranquilla', 798319.33),
+(4, 10, 'Av. 30 # 22-18, Medellín', 2352100.84),
+(5, 11, 'Calle 63 # 5-40, Bogotá', 126134.45),
+(6, 12, 'Carrera 80 # 30-11, Bogotá', 128571.43),
+(7, 7, 'Calle 5 # 20-10, Cali', 2115546.22),
+(8, 9, 'Calle 44 # 9-30, Barranquilla', 411764.70);
 
 -- ------------------------------------------------------------
--- DETALLE PEDIDOS (monto_vendedor y monto_comision son GENERADAS)
+-- DETALLE PEDIDOS
+-- S2/RF140: subtotal SIN IVA y montos 90/10 calculados por el backend,
+-- identico a lo que confirmarPago graba (precio_unitario_historico ya lleva
+-- el descuento aplicado; el IVA nunca se persiste).
 -- ------------------------------------------------------------
-INSERT INTO detalle_pedidos (pedido_id, producto_id, vendedor_id, cantidad, precio_unitario_historico, descuento_aplicado, subtotal) VALUES
-(1, 1, 3, 1, 1299000.00, 0.00, 1299000.00),
-(2, 3, 5, 1, 3000000.00, 0.00, 3000000.00),
-(2, 13, 6, 2, 95000.00, 0.00, 190000.00),
-(3, 2, 4, 1, 950000.00, 0.00, 950000.00),
-(4, 4, 6, 1, 2799000.00, 0.00, 2799000.00),
-(5, 5, 2, 2, 79000.00, 5.00, 150100.00),
-(6, 15, 2, 1, 180000.00, 15.00, 153000.00),
-(7, 11, 5, 1, 2650000.00, 5.00, 2517500.00),
-(8, 7, 3, 2, 85000.00, 0.00, 170000.00),
-(8, 12, 5, 1, 320000.00, 0.00, 320000.00);
+INSERT INTO detalle_pedidos (pedido_id, producto_id, vendedor_id, cantidad, precio_unitario_historico, descuento_aplicado, subtotal, monto_vendedor, monto_comision) VALUES
+(1, 1, 3, 1, 1299000.00, 0.00, 1091596.64, 982436.98, 109159.66),
+(2, 3, 5, 1, 3000000.00, 0.00, 2521008.40, 2268907.56, 252100.84),
+(2, 13, 6, 2, 95000.00, 0.00, 159663.87, 143697.48, 15966.39),
+(3, 2, 4, 1, 950000.00, 0.00, 798319.33, 718487.40, 79831.93),
+(4, 4, 6, 1, 2799000.00, 0.00, 2352100.84, 2116890.76, 235210.08),
+(5, 5, 2, 2, 75050.00, 5.00, 126134.45, 113521.01, 12613.45),
+(6, 15, 2, 1, 153000.00, 15.00, 128571.43, 115714.29, 12857.14),
+(7, 11, 5, 1, 2517500.00, 5.00, 2115546.22, 1903991.60, 211554.62),
+(8, 7, 3, 2, 85000.00, 0.00, 142857.14, 128571.43, 14285.71),
+(8, 12, 5, 1, 320000.00, 0.00, 268907.56, 242016.80, 26890.76);
 
 -- ------------------------------------------------------------
 -- PAGOS SIMULADOS (uno por pedido, referencia unica)
+-- monto = lo que pago el comprador (CON IVA); monto_reembolsado requiere mig 013.
 -- ------------------------------------------------------------
-INSERT INTO pagos_simulados (pedido_id, metodo_pago, referencia_pago, monto, estado) VALUES
-(1, 'tarjeta', 'PAG-CC-0001', 1299000.00, 'Aprobado'),
-(2, 'pse', 'PAG-CC-0002', 3190000.00, 'Aprobado'),
-(3, 'tarjeta', 'PAG-CC-0003', 950000.00, 'Aprobado'),
-(4, 'transferencia', 'PAG-CC-0004', 2799000.00, 'Aprobado'),
-(5, 'pse', 'PAG-CC-0005', 150100.00, 'Pendiente'),
-(6, 'tarjeta', 'PAG-CC-0006', 153000.00, 'Aprobado'),
-(7, 'transferencia', 'PAG-CC-0007', 2517500.00, 'Pendiente'),
-(8, 'tarjeta', 'PAG-CC-0008', 490000.00, 'Aprobado');
+INSERT INTO pagos_simulados (pedido_id, metodo_pago, referencia_pago, monto, monto_reembolsado, estado) VALUES
+(1, 'tarjeta', 'PAG-CC-0001', 1299000.00, 0.00, 'Aprobado'),
+(2, 'pse', 'PAG-CC-0002', 3190000.01, 0.00, 'Aprobado'),
+(3, 'tarjeta', 'PAG-CC-0003', 950000.00, 0.00, 'Aprobado'),
+(4, 'transferencia', 'PAG-CC-0004', 2799000.00, 0.00, 'Aprobado'),
+(5, 'pse', 'PAG-CC-0005', 150100.00, 0.00, 'Pendiente'),
+(6, 'tarjeta', 'PAG-CC-0006', 153000.00, 0.00, 'Aprobado'),
+(7, 'transferencia', 'PAG-CC-0007', 2517500.00, 0.00, 'Pendiente'),
+(8, 'tarjeta', 'PAG-CC-0008', 490000.00, 0.00, 'Aprobado');
 
 -- ------------------------------------------------------------
 -- CALIFICACIONES VENDEDORES (una por pedido entregado)

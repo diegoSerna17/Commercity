@@ -162,6 +162,10 @@ CREATE TABLE pagos_simulados (
     metodo_pago ENUM('tarjeta', 'transferencia', 'pse') NOT NULL,
     referencia_pago VARCHAR(100) NOT NULL UNIQUE,
     monto DECIMAL(12, 2) NOT NULL,
+    -- S1 (auditoria 2026-10-06): reembolso proporcional por monto (mig 013).
+    -- El estado parcial se DERIVA (0 < monto_reembolsado < monto); 'Reembolsado'
+    -- solo cuando monto_reembolsado >= monto.
+    monto_reembolsado DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     estado ENUM('Aprobado', 'Rechazado', 'Pendiente', 'Reembolsado') DEFAULT 'Pendiente',
     fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE
@@ -177,8 +181,12 @@ CREATE TABLE detalle_pedidos (
     descuento_aplicado DECIMAL(5, 2) DEFAULT 0.00,
     subtotal DECIMAL(12, 2) NOT NULL,
     
-    monto_vendedor DECIMAL(12, 2) AS (subtotal * 0.90) STORED, 
-    monto_comision DECIMAL(12, 2) AS (subtotal * 0.10) STORED, 
+    -- RF140 (CERRADO 20/08): los montos 90/10 los calcula el backend
+    -- (calcularLinea, utils/finanzas.js) al aprobar el pago; columnas normales,
+    -- SIN IVA, sin expresion GENERATED (la BD real ya opera con columnas normales;
+    -- precedente pedidos.estado_pedido: alineacion de archivo SIN migracion).
+    monto_vendedor DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    monto_comision DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     -- B1/RF119: estado por linea (el pedido no tiene estado propio).
     estado_envio ENUM('Pendiente', 'En camino', 'Entregado', 'Cancelado') NOT NULL DEFAULT 'Pendiente',
     estado_pago_vendedor ENUM('Pendiente', 'Desembolsado') NOT NULL DEFAULT 'Pendiente',
@@ -186,7 +194,9 @@ CREATE TABLE detalle_pedidos (
     
     FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
     FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE RESTRICT,
-    FOREIGN KEY (vendedor_id) REFERENCES usuarios(id) ON DELETE RESTRICT
+    FOREIGN KEY (vendedor_id) REFERENCES usuarios(id) ON DELETE RESTRICT,
+    -- R3 (mig 014): historial de ventas del vendedor filtra vendedor + estado.
+    INDEX idx_vendedor_estado (vendedor_id, estado_envio)
 ) ENGINE=InnoDB;
 
 -- ==========================================
@@ -235,7 +245,10 @@ CREATE TABLE mensajes_chat (
     enviado_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     leido TINYINT(1) DEFAULT 0,
     FOREIGN KEY (emisor_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    FOREIGN KEY (receptor_id) REFERENCES usuarios(id) ON DELETE CASCADE
+    FOREIGN KEY (receptor_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    -- R3 (mig 014): conversaciones y no leidos sargables por direccion (RF105).
+    INDEX idx_chat_emisor (emisor_id, receptor_id),
+    INDEX idx_chat_receptor (receptor_id, emisor_id)
 ) ENGINE=InnoDB;
 
 -- RESTAURADO: Tabla notificaciones

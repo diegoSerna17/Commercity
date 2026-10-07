@@ -262,6 +262,31 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
     expect(sqlItemsVentas[0]).toContain("p.direccion_envio");
   });
 
+  it("R2: la paginacion fuerza enteros y usa placeholders LIMIT ? OFFSET ?", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT COUNT(*)")) return [[{ total: 0 }], undefined];
+      if (sql.includes("SUM(dp.subtotal)")) return [[{ total_ventas: 0, total_bruto: 0, total_neto_vendedor: 0, total_comision_plataforma: 0 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/tienda/ventas?pagina=2.9&por_pagina=5.9")
+      .set("Authorization", `Bearer ${tokenVendedor}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.pagina_actual).toBe(2);
+    expect(res.body.data.registros_por_pagina).toBe(5);
+    // R2: LIMIT/OFFSET por placeholder, con enteros truncados:
+    // por_pagina = trunc(5.9) = 5 y offset = (trunc(2.9)-1)*5 = 5.
+    const sqlListado = pool.query.mock.calls.find(([sql]) => sql.includes("LIMIT ? OFFSET ?"));
+    expect(sqlListado).toBeTruthy();
+    expect(sqlListado[0]).not.toMatch(/LIMIT \d/);
+    expect(sqlListado[1]).toEqual([3, 5, 5]); // vendedor_id + LIMIT 5 + OFFSET 5
+  });
+
   it("GET /api/tienda/ventas aplica filtros por fecha y busqueda", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
