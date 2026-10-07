@@ -54,6 +54,9 @@ export const destinoPedidosVendedor = async (conn, vendedorId) => {
   }
 
   // RF74: reembolsar el pago si el pedido quedo sin lineas activas.
+  // B-R5: al reembolsar el total se registra monto_reembolsado = monto
+  // (mig 013: sin esto el estado derivado 0 < monto_reembolsado < monto
+  // contradiria el estado 'Reembolsado' escrito en la fila).
   for (const pedidoId of pedidosAfectados) {
     const [restantes] = await conn.query(
       "SELECT COUNT(*) AS total FROM detalle_pedidos WHERE pedido_id = ? AND estado_envio <> 'Cancelado'",
@@ -61,7 +64,7 @@ export const destinoPedidosVendedor = async (conn, vendedorId) => {
     );
     if (Number(restantes[0]?.total || 0) === 0) {
       await conn.query(
-        "UPDATE pagos_simulados SET estado = 'Reembolsado' WHERE pedido_id = ?",
+        "UPDATE pagos_simulados SET estado = 'Reembolsado', monto_reembolsado = monto WHERE pedido_id = ?",
         [pedidoId]
       );
     }

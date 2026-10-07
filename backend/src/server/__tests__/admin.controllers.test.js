@@ -264,6 +264,12 @@ describe("PATCH /api/admin/usuarios/:id/estado (RF73/RF74 - baneo)", () => {
       expect.stringContaining("UPDATE pagos_simulados SET estado = 'Reembolsado'"),
       [4]
     );
+    // B-R5 (mig 013): el reembolso total acumula el importe completo para que
+    // el estado derivado (monto_reembolsado >= monto) coincida con 'Reembolsado'
+    expect(conn.query).toHaveBeenCalledWith(
+      expect.stringContaining("monto_reembolsado = monto WHERE pedido_id = ?"),
+      [4]
+    );
     expect(conn.query).toHaveBeenCalledWith(
       expect.stringContaining("UPDATE productos SET stock = stock + ?"),
       [2, 3]
