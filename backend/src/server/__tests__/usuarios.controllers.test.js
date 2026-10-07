@@ -48,6 +48,9 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto_test";
 
 const { __pool: pool } = await import("mysql2/promise");
 const { default: app } = await import("../app.js");
+// Controller importado directamente para provocar el catch de adminGetDatos
+// (lineas 391-394), que por ruta HTTP no es realizable.
+const { adminGetDatos } = await import("../controllers/usuarios.controllers.js");
 
 // Token compartido para las rutas protegidas del modulo de autenticacion.
 const token = jwt.sign(
@@ -536,6 +539,52 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
     expect(res.body.error.code).toBe("NOT_FOUND");
     expect(pool.getConnection).not.toHaveBeenCalled();
   });
+
+  it("devuelve 500 si falla la conexion al pool al cambiar de rol (catch cambiarRol 296-297)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 2 }], undefined];
+      if (sql.includes("FROM roles r")) return [[{ nombre: "comprador" }], undefined];
+      return [[], undefined];
+    });
+    // getConnection rechaza: cae en el catch externo de cambiarRol.
+    pool.getConnection.mockRejectedValue(new Error("sin conexion al pool"));
+
+    const res = await request(app)
+      .patch("/api/usuarios/me/rol")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ rol: "vendedor" });
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Error interno del servidor" },
+    });
+    expect(conn.commit).not.toHaveBeenCalled();
+  });
+
+  it("devuelve 500 con rollback si la transaccion falla al cambiar de rol (catch cambiarRol 296-297)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 2 }], undefined];
+      if (sql.includes("FROM roles r")) return [[{ nombre: "comprador" }], undefined];
+      return [[], undefined];
+    });
+    // La query DENTRO de la transaccion falla: rollback + rethrow al catch externo.
+    conn.query.mockRejectedValue(new Error("duplicate key"));
+
+    const res = await request(app)
+      .patch("/api/usuarios/me/rol")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ rol: "vendedor" });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe("INTERNAL_ERROR");
+    expect(res.body.error.message).toBe("Error interno del servidor");
+    expect(conn.rollback).toHaveBeenCalled();
+    expect(conn.commit).not.toHaveBeenCalled();
+    expect(conn.release).toHaveBeenCalled();
+  });
 });
 
 describe("POST /api/usuarios/recover (RF4 - anti-enumeracion)", () => {
@@ -699,6 +748,40 @@ describe("GET /api/usuarios/admin (RBAC - requireRoles)", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.email).toBe("test@test.com");
     expect(res.body.data.roles).toContain("administrador");
+  });
+
+  it("adminGetDatos devuelve 500 si la serializacion de la respuesta falla (catch 391-394)", async () => {
+    // El try de adminGetDatos solo envuelve successResponse; por ruta HTTP no
+    // es realizable, asi que se invoca el controller directamente con un res
+    // cuyo json lanza en la 1a llamada (success) y responde en la 2a (500).
+    let cuerpoError = null;
+    const res = {
+      statusCode: null,
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json: vi
+        .fn()
+        .mockImplementationOnce(() => {
+          throw new Error("json roto");
+        })
+        .mockImplementationOnce((body) => {
+          cuerpoError = body;
+          return body;
+        }),
+    };
+
+    await adminGetDatos(
+      { userEmail: "admin@test.com", userRoles: ["administrador"] },
+      res
+    );
+
+    expect(res.statusCode).toBe(500);
+    expect(cuerpoError).toEqual({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Error interno del servidor" },
+    });
   });
 });
 

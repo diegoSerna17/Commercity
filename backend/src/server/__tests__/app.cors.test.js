@@ -46,3 +46,34 @@ describe("CORS por origen (web / escritorio / movil)", () => {
     expect(res.headers["access-control-allow-origin"]).toBe("capacitor://localhost");
   });
 });
+
+// H2 (P0): /uploads ya no es totalmente publico. Ejercita las lineas 63-64 de
+// app.js: GET de imagen (jpg/jpeg/png/webp/gif) pasa sin JWT al static; cualquier
+// otro caso (otra extension u otro verbo) cae en authRequired. Sin token no se
+// toca la BD (authRequired responde 401 antes de consultar), por lo que no hace
+// falta mockear mysql2 aqui.
+describe("Middleware /uploads (lineas 63-64 de app.js)", () => {
+  it("GET de imagen sin token pasa al static: 404 del catch-all, no 401", async () => {
+    const res = await request(app).get("/uploads/producto-no-existe-cobertura.jpg");
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("GET de imagen con extension en mayusculas tambien pasa sin token", async () => {
+    const res = await request(app).get("/uploads/PRODUCTO-NO-EXISTE.PNG");
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("GET de archivo que no es imagen (pdf) sin token exige JWT (401)", async () => {
+    const res = await request(app).get("/uploads/evidencia-chat.pdf");
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("UNAUTHORIZED");
+  });
+
+  it("POST a /uploads sin token exige JWT aunque la ruta termine en imagen (401)", async () => {
+    const res = await request(app).post("/uploads/foto-subida.png");
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("UNAUTHORIZED");
+  });
+});

@@ -786,3 +786,194 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
     expect(conn3.rollback).toHaveBeenCalled();
   });
 });
+
+// Ramas restantes de src/server/controllers/admin/reportes.controllers.js
+// (cobertura previa 80%): filtros q/estado, catch -> next(err) de los cuatro
+// controllers, limite de respuesta y IDs invalidos.
+describe("Reportes admin: filtros, errores e IDs (cobertura restante)", () => {
+  const authOk = (sql) => {
+    if (sql.includes("tokens_invalidados")) return [[], undefined];
+    if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+    if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+    return [[], undefined];
+  };
+
+  it("filtro q: aplica escapeLike y condicion LIKE parametrizada", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("FROM reportes r")) return [[], undefined];
+      return authOk(sql);
+    });
+
+    // % y _ deben escaparse para que no se interpreten como comodines de LIKE
+    const res = await request(app)
+      .get("/api/admin/reportes?q=50%25_oferta")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.status).toBe(200);
+    let consulta = pool.query.mock.calls.find(([sql]) => sql.includes("FROM reportes r"));
+    expect(consulta[0]).toContain("LIKE ?");
+    expect(consulta[1]).toEqual(["%50\\%\\_oferta%", "%50\\%\\_oferta%", "%50\\%\\_oferta%"]);
+
+    // q combinado con estado: el parametro de estado va primero en la lista
+    pool.query.mockClear();
+    const combo = await request(app)
+      .get("/api/admin/reportes?q=tv&estado=resuelto")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(combo.status).toBe(200);
+    consulta = pool.query.mock.calls.find(([sql]) => sql.includes("FROM reportes r"));
+    expect(consulta[0]).toContain("r.estado_reporte = ?");
+    expect(consulta[1]).toEqual(["Resuelto", "%tv%", "%tv%", "%tv%"]);
+  });
+
+  it("filtro estado=pendiente aplica el parametro Pendiente", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("FROM reportes r")) return [[], undefined];
+      return authOk(sql);
+    });
+
+    const res = await request(app)
+      .get("/api/admin/reportes?estado=pendiente")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.status).toBe(200);
+    const consulta = pool.query.mock.calls.find(([sql]) => sql.includes("FROM reportes r"));
+    expect(consulta[0]).toContain("r.estado_reporte = ?");
+    expect(consulta[1]).toEqual(["Pendiente"]);
+  });
+
+  it("getReportes: 500 si la BD falla (catch -> next)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("FROM reportes r")) throw new Error("BD caida");
+      return authOk(sql);
+    });
+
+    const res = await request(app)
+      .get("/api/admin/reportes")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.status).toBe(500);
+  });
+
+  it("getReporte: 500 si la BD falla (catch -> next)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("WHERE r.id = ?")) throw new Error("BD caida");
+      return authOk(sql);
+    });
+
+    const res = await request(app)
+      .get("/api/admin/reportes/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.status).toBe(500);
+  });
+
+  it("eliminarReporte: 500 si la BD falla (catch -> next)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("UPDATE reportes SET archivado = 1")) throw new Error("BD caida");
+      return authOk(sql);
+    });
+
+    const res = await request(app)
+      .delete("/api/admin/reportes/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.status).toBe(500);
+  });
+
+  it("resolverReporte: 500 si la BD falla (catch -> next)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("SET estado_reporte = 'Resuelto'")) throw new Error("BD caida");
+      return authOk(sql);
+    });
+
+    const res = await request(app)
+      .patch("/api/admin/reportes/1/resolver")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ respuesta: "Revisado." });
+    expect(res.status).toBe(500);
+  });
+
+  it("rechaza respuesta de mas de 2000 caracteres (400)", async () => {
+    const res = await request(app)
+      .patch("/api/admin/reportes/1/resolver")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ respuesta: "x".repeat(2001) });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toContain("demasiado larga");
+    // No llega a tocar la BD: la validacion es previa al UPDATE
+    const consulta = pool.query.mock.calls.find(([sql]) => sql.includes("SET estado_reporte = 'Resuelto'"));
+    expect(consulta).toBeUndefined();
+  });
+
+  it("rechaza respuesta no string (numero) como obligatoria faltante (400)", async () => {
+    const res = await request(app)
+      .patch("/api/admin/reportes/1/resolver")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ respuesta: 12345 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toContain("obligatoria");
+  });
+
+  it("getReporte: devuelve 200 con el reporte mapeado", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("WHERE r.id = ?")) {
+        return [
+          [
+            { id: 1, tipo_reporte: "Producto", motivo: "falso", evidencia_url: "a.jpg,b.jpg", estado_reporte: "Resuelto", respuesta_admin: "ok", fecha_reporte: "2026-08-08", producto_id: 3, usuario_reportado_id: null, producto_nombre: "TV", producto_precio: "1000000", producto_vendedor: "A", usuario_reportado_nombre: null, usuario_reportado_email: null, informante_nombre: "Juan", informante_email: "juan@test.com" },
+          ],
+          undefined,
+        ];
+      }
+      return authOk(sql);
+    });
+
+    const res = await request(app)
+      .get("/api/admin/reportes/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.id).toBe(1);
+    expect(res.body.data.tipo).toBe("producto");
+    expect(res.body.data.reportado).toBe("TV");
+    expect(res.body.data.estado).toBe("resuelto");
+    expect(res.body.data.evidencias).toBe(2);
+    expect(res.body.data.respuesta).toBe("ok");
+  });
+
+  it("resolverReporte: respuesta solo en espacios se considera vacia (400)", async () => {
+    const res = await request(app)
+      .patch("/api/admin/reportes/1/resolver")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ respuesta: "     " });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toContain("obligatoria");
+    const consulta = pool.query.mock.calls.find(([sql]) => sql.includes("SET estado_reporte = 'Resuelto'"));
+    expect(consulta).toBeUndefined();
+  });
+
+  it("ID no numerico -> 400 en GET, DELETE y PATCH de reportes", async () => {
+    // Nota: request(app) de supertest devuelve un contenedor SOLO con verbos;
+    // .set() existe en el Test que retorna cada verbo, por eso el .set() va
+    // despues de .get()/.delete()/.patch() y no antes.
+    const get = await request(app)
+      .get("/api/admin/reportes/abc")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(get.status).toBe(400);
+
+    const del = await request(app)
+      .delete("/api/admin/reportes/abc")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(del.status).toBe(400);
+
+    const patch = await request(app)
+      .patch("/api/admin/reportes/abc/resolver")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ respuesta: "ok" });
+    expect(patch.status).toBe(400);
+
+    // Ninguno llego a ejecutar la consulta del modulo
+    const consultaReportes = pool.query.mock.calls.find(([sql]) =>
+      sql.includes("FROM reportes r") || sql.includes("UPDATE reportes")
+    );
+    expect(consultaReportes).toBeUndefined();
+  });
+});
