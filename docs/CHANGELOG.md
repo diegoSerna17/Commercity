@@ -4,6 +4,26 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-07 - FIX: reporte de devoluciones acumula monto_reembolsado CON IVA
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/controllers/tienda.controllers.js; backend/src/server/__tests__/tienda.controllers.test.js
+- **Descripcion**: El reduce de devoluciones del reporte de tienda dejo de sumar el subtotal 90/10 y ahora acumula el importe CON IVA de cada linea reembolsada usando la utilidad compartida importeReembolsoLinea (round2(subtotal * 1.19)), coherente con lo que realmente se le devuelve al comprador en compras/pedidos. El test del reporte ajusto la expectacion de 50000 a 59500 (50000 x 1.19).
+- **Motivo**: el reporte devoluciones.monto_reembolsado sumaba subtotales SIN IVA mientras el reembolso al comprador devuelve CON IVA, diferencia documentada como deuda P2 en la entrada del lote P0+P1 del 2026-10-06; el lider determino ajustarla.
+- **Requerimientos**: RF48/RF121/RF140 (precio publicado con IVA incluido, desglose solo en pasarela, montos 90/10 sobre subtotal)
+- **Evidencia**: commit 8963956 sobre PREVIEW; suites afectadas ejecutadas dentro de la corrida completa posterior (404/404 tests, cobertura Lines 95.37%).
+- **Estado**: Completado
+
+## 2026-10-07 - TESTS: cobertura de auth.middleware, cambiarRol, reportes.controllers.js (admin), config/db.js y verificacion de app.js 63-64
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/__tests__/auth.middleware.test.js (NUEVO); backend/src/server/__tests__/usuarios.controllers.test.js; backend/src/server/__tests__/admin.controllers.test.js; backend/src/server/__tests__/config.db.test.js; backend/src/server/__tests__/app.cors.test.js
+- **Descripcion**: Se cerraron los huecos de cobertura pedidos. (1) auth.middleware: 7 tests nuevos (sin token 401, header Bearer 200, token por COOKIE 200, cookie con percent-encoding invalido 403, usuario desactivado 401 con code USER_DISABLED, usuario inexistente 401, token expirado 401). (2) cambiarRol: 3 tests de las ramas de error (getConnection rechaza 500, fallo de conn.query 500 con rollback/release, res.json lanza en adminGetDatos 500). (3) reportes.controllers.js: +2 tests (getReporte 200 mapeado y resolverReporte con solo espacios 400 sin UPDATE) y fix del helper "ID no numerico" que encadenaba .set() antes del verbo HTTP; el archivo quedo en 100%. (4) config/db.js: fix del helper importarDb (createPool.mockClear() antes de importar db.js porque el factory del mock se cachea entre vi.resetModules()); 9 casos, 100%. (5) app.js lineas 63-64 (middleware /uploads): ya cubiertas por el describe existente en app.cors.test.js; sin cambios.
+- **Motivo**: cerrar los huecos de cobertura marcados por el lider (auth.middleware cookie/USER_DISABLED/token expirado, cambiarRol lineas 296-297/392-394, admin/reportes 80%, config/db 62.5%, app.js 63-64).
+- **Requerimientos**: RF1-RF10 (autenticacion y RBAC), RF60-RF66 (reportes admin), N/A (config/db.js e infraestructura)
+- **Evidencia**: 404/404 tests passed en corrida completa (node node_modules\vitest\vitest.mjs run, exit 0, 24 archivos); 77/77 en las suites afectadas. Cobertura --coverage: All files Lines 95.37%, Statements 94.91%, Branch 86.3%, Funcs 100% (no baja de la referencia previa 93.53% Lines, umbral minimo 60%); reportes.controllers.js 100%, config/db.js 100%, app.js 100% Lines / 94.44% Branch. Commit bf51b2a sobre PREVIEW.
+- **Estado**: Completado
+
 ## 2026-10-06 - FIX: lote P0+P1 de pendientes de auditoria (reembolso proporcional, RF140, chat B2, seed, productos, N+1, LIMIT e indices, DB_NAME)
 
 - **Autor**: Daniel Palacios (lider) + IA (implementacion del plan .trae/documents/plan-correccion-pendientes-auditoria-2026-10-06.md)
