@@ -194,7 +194,9 @@ CREATE TABLE detalle_pedidos (
     
     FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
     FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE RESTRICT,
-    FOREIGN KEY (vendedor_id) REFERENCES usuarios(id) ON DELETE RESTRICT
+    FOREIGN KEY (vendedor_id) REFERENCES usuarios(id) ON DELETE RESTRICT,
+    -- R3 (mig 014): historial de ventas del vendedor filtra vendedor + estado.
+    INDEX idx_vendedor_estado (vendedor_id, estado_envio)
 ) ENGINE=InnoDB;
 
 -- ==========================================
@@ -243,7 +245,10 @@ CREATE TABLE mensajes_chat (
     enviado_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     leido TINYINT(1) DEFAULT 0,
     FOREIGN KEY (emisor_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    FOREIGN KEY (receptor_id) REFERENCES usuarios(id) ON DELETE CASCADE
+    FOREIGN KEY (receptor_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    -- R3 (mig 014): conversaciones y no leidos sargables por direccion (RF105).
+    INDEX idx_chat_emisor (emisor_id, receptor_id),
+    INDEX idx_chat_receptor (receptor_id, emisor_id)
 ) ENGINE=InnoDB;
 
 -- RESTAURADO: Tabla notificaciones
