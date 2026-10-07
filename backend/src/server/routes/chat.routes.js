@@ -19,10 +19,13 @@ const router = Router();
 //   3. Importar y montar:
 //        import chatRouter from "./routes/chat.routes.js";
 //        app.use("/api/chat", chatRouter);
-//   La tabla mensajes_chat ya existe en base.sql (no requiere migracion).
+//   La tabla mensajes_chat (6 columnas) esta definida en schema_commercity.sql
+//   (hallazgo B2 auditoria 2026-10-06: sin tipo_mensaje/archivo_url; los
+//   adjuntos se rechazan con 400 en enviarMensaje).
 // ============================================================================
 
-// Enviar mensaje (texto o archivo via multipart "archivo").
+// Enviar mensaje de TEXTO (los multipart se parsean para dar un error claro;
+// sin los adjuntos no hay persistencia posible, ver enviarMensaje).
 router.post("/", authRequired, uploadChat.single("archivo"), enviarMensaje);
 
 // Listado de conversaciones del usuario autenticado.

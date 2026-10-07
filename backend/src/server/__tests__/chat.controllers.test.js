@@ -118,14 +118,15 @@ describe("Chat interno (RF101)", () => {
         expect(res.body.data.id).toBe(900);
 
         const insert = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO mensajes_chat"));
-        expect(insert[1][0]).toBe(8);      // emisor_id = id del JWT
-        expect(insert[1][1]).toBe(2);      // receptor_id
-        expect(insert[1][2]).toBe("texto");// tipo_mensaje
-        expect(insert[1][3]).toBe("Hola Carlos");
-        expect(insert[1][4]).toBeNull();   // archivo_url
+        expect(insert[0]).toContain("(emisor_id, receptor_id, mensaje)");
+        expect(insert[0]).not.toContain("tipo_mensaje");
+        expect(insert[0]).not.toContain("archivo_url");
+        expect(insert[1]).toEqual([8, 2, "Hola Carlos"]);
     });
 
-    it("POST /api/chat con archivo (multipart) guarda archivo_url (201)", async () => {
+    it("POST /api/chat con archivo (multipart) se rechaza con 400 (B2 rama A)", async () => {
+        // Sin la columna archivo_url en la BD real (schema de 6 columnas) no hay
+        // donde persistir el adjunto: rechazo explicito, nunca datos perdidos.
         pool.query.mockImplementation((sql) => {
             if (sql.includes("tokens_invalidados")) return [[], undefined];
             if (sql.includes("SELECT id, activo FROM usuarios")) return [[{ id: 2, activo: 1 }], undefined];
@@ -140,11 +141,11 @@ describe("Chat interno (RF101)", () => {
             .field("mensaje", "Mira esta foto")
             .attach("archivo", Buffer.from("imagen-fake"), "foto.jpg");
 
-        expect(res.status).toBe(201);
-
-        const insert = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO mensajes_chat"));
-        expect(insert[1][2]).toBe("imagen"); // tipo derivado del mimetype
-        expect(insert[1][4]).toMatch(/^\/uploads\/[0-9a-f]{32}\.jpg$/);
+        expect(res.status).toBe(400);
+        expect(res.body.success).toBe(false);
+        expect(res.body.error.message).toMatch(/no admite archivos/i);
+        // Nada se inserto: ni mensaje ni notificacion.
+        expect(pool.query.mock.calls.some(([sql]) => sql.includes("INSERT INTO mensajes_chat"))).toBe(false);
     });
 
     it("POST /api/chat devuelve 500 si la BD falla", async () => {
@@ -171,7 +172,7 @@ describe("Chat interno (RF101)", () => {
     it("GET /api/chat/conversaciones lista las conversaciones (200)", async () => {
         pool.query.mockImplementation((sql) => {
             if (sql.includes("tokens_invalidados")) return [[], undefined];
-            if (sql.includes("GROUP BY LEAST")) {
+            if (sql.includes("GROUP BY par")) {
                 return [[{
                     usuario_id: 2,
                     nombre_completo: "Carlos Vidal",
@@ -179,9 +180,7 @@ describe("Chat interno (RF101)", () => {
                     mensaje_id: 5,
                     emisor_id: 2,
                     receptor_id: 8,
-                    tipo_mensaje: "texto",
                     mensaje: "Hola Diego",
-                    archivo_url: null,
                     enviado_at: "2026-08-20 10:00:00",
                     leido: 0,
                 }], undefined];
@@ -202,6 +201,16 @@ describe("Chat interno (RF101)", () => {
         expect(res.body.data[0].usuario.id).toBe(2);
         expect(res.body.data[0].ultimo_mensaje.mensaje).toBe("Hola Diego");
         expect(res.body.data[0].no_leidos).toBe(1);
+        // B2: columnas fantasma eliminadas del SELECT y del mapeo
+        expect(res.body.data[0].ultimo_mensaje.tipo_mensaje).toBeUndefined();
+        expect(res.body.data[0].ultimo_mensaje.archivo_url).toBeUndefined();
+        // Refactor sargable: la subconsulta usa JOIN sobre MAX(id) por direccion,
+        // no el GROUP BY LEAST/GREATEST ni el OR no indexable.
+        const sqlConv = pool.query.mock.calls.find(([sql]) => sql.includes("GROUP BY par"))[0];
+        expect(sqlConv).not.toContain("GROUP BY LEAST");
+        expect(sqlConv).not.toContain("emisor_id = ? OR receptor_id = ?");
+        expect(sqlConv).toContain("WHERE emisor_id = ?");
+        expect(sqlConv).toContain("WHERE receptor_id = ?");
     });
 
     // ========================== RECIBIR MENSAJES ============================
@@ -216,9 +225,7 @@ describe("Chat interno (RF101)", () => {
                     id: 5,
                     emisor_id: 2,
                     receptor_id: 8,
-                    tipo_mensaje: "texto",
                     mensaje: "Hola Diego",
-                    archivo_url: null,
                     enviado_at: "2026-08-20 10:00:00",
                     leido: 0,
                 }], undefined];
@@ -234,6 +241,10 @@ describe("Chat interno (RF101)", () => {
         expect(res.body.data.usuario.id).toBe(2);
         expect(res.body.data.mensajes).toHaveLength(1);
         expect(res.body.data.mensajes[0].mensaje).toBe("Hola Diego");
+        // B2: el SELECT del historial ya no pide las columnas fantasma
+        const sqlHist = pool.query.mock.calls.find(([sql]) => sql.includes("ORDER BY enviado_at ASC"))[0];
+        expect(sqlHist).not.toContain("tipo_mensaje");
+        expect(sqlHist).not.toContain("archivo_url");
     });
 
     it("GET /api/chat/mensajes/:usuarioId con usuario inexistente -> 404", async () => {
