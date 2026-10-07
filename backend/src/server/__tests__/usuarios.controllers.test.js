@@ -791,3 +791,199 @@ describe("DELETE /api/usuarios/cuenta (RF40 - comprador elimina su cuenta)", () 
     expect(conn.rollback).toHaveBeenCalled();
   });
 });
+
+describe("GET /api/usuarios/directorio (directorio de usuarios para chat)", () => {
+  it("rechaza la peticion sin token (401)", async () => {
+    const res = await request(app).get("/api/usuarios/directorio");
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("filtra por nombre/email cuando se envia q y excluye al propio usuario (200)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("activo = 1 AND id <> ?"))
+        return [[{ id: 9, nombre_completo: "Ana Perez", foto_perfil: null }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/usuarios/directorio?q=ana")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toEqual([
+      { id: 9, nombre_completo: "Ana Perez", foto_perfil: null },
+    ]);
+
+    const sqlDir = pool.query.mock.calls.find(
+      ([sql]) => typeof sql === "string" && sql.includes("ORDER BY nombre_completo ASC")
+    )[0];
+    // Solo expone datos publicos: nada de password ni otros campos sensibles.
+    expect(sqlDir).toContain("SELECT id, nombre_completo, foto_perfil");
+    expect(sqlDir).not.toContain("password");
+    expect(sqlDir).toContain("nombre_completo LIKE ? OR email LIKE ?");
+    expect(sqlDir).toContain("ORDER BY nombre_completo ASC LIMIT 50");
+    // Excluye al usuario autenticado (id = 7) y busca con comodines %q%.
+    expect(pool.query.mock.calls).toContainEqual([
+      expect.stringContaining("activo = 1 AND id <> ?"),
+      [7, "%ana%", "%ana%"],
+    ]);
+  });
+
+  it("sin q no agrega el filtro LIKE y solo envia el id (200)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/usuarios/directorio")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toEqual([]);
+
+    const sqlDir = pool.query.mock.calls.find(
+      ([sql]) => typeof sql === "string" && sql.includes("ORDER BY nombre_completo ASC")
+    )[0];
+    expect(sqlDir).not.toContain("LIKE ?");
+    expect(pool.query.mock.calls).toContainEqual([
+      expect.stringContaining("activo = 1 AND id <> ?"),
+      [7],
+    ]);
+  });
+
+  it("q con solo espacios se trima y no agrega el filtro LIKE (200)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/usuarios/directorio?q=%20%20%20")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    const sqlDir = pool.query.mock.calls.find(
+      ([sql]) => typeof sql === "string" && sql.includes("ORDER BY nombre_completo ASC")
+    )[0];
+    expect(sqlDir).not.toContain("LIKE ?");
+  });
+
+  it("devuelve 500 si la BD falla", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      throw new Error("BD caida");
+    });
+
+    const res = await request(app)
+      .get("/api/usuarios/directorio")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe("INTERNAL_ERROR");
+  });
+});
+
+describe("PATCH /api/usuarios/me (actualiza nombre de perfil)", () => {
+  it("rechaza la peticion sin token (401)", async () => {
+    const res = await request(app)
+      .patch("/api/usuarios/me")
+      .send({ nombre_completo: "Nuevo Nombre" });
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("devuelve 400 si no se envia body", async () => {
+    const res = await request(app)
+      .patch("/api/usuarios/me")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: "VALIDATION_ERROR", message: "El nombre de perfil es obligatorio" },
+    });
+  });
+
+  it("devuelve 400 si nombre_completo no es string", async () => {
+    const res = await request(app)
+      .patch("/api/usuarios/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ nombre_completo: 12345 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toBe("El nombre de perfil es obligatorio");
+  });
+
+  it("devuelve 400 si nombre_completo queda vacio tras trim", async () => {
+    const res = await request(app)
+      .patch("/api/usuarios/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ nombre_completo: "   " });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.message).toBe("El nombre de perfil es obligatorio");
+  });
+
+  it("devuelve 400 si el nombre supera 100 caracteres", async () => {
+    const res = await request(app)
+      .patch("/api/usuarios/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ nombre_completo: "a".repeat(101) });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toBe("El nombre de perfil no puede superar 100 caracteres");
+  });
+
+  it("actualiza el nombre y devuelve el perfil actualizado (200)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("UPDATE usuarios SET nombre_completo"))
+        return [{ affectedRows: 1 }, undefined];
+      if (sql.includes("SELECT id, email, nombre_completo, foto_perfil FROM usuarios"))
+        return [[{ id: 7, email: "test@test.com", nombre_completo: "Nuevo Nombre", foto_perfil: null }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/usuarios/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ nombre_completo: "  Nuevo Nombre  " });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toBe("Perfil actualizado correctamente");
+    expect(res.body.data).toEqual({
+      id: 7,
+      email: "test@test.com",
+      nombre_completo: "Nuevo Nombre",
+      foto_perfil: null,
+    });
+
+    // El UPDATE es parametrizado y usa el nombre ya recortado (trim).
+    expect(pool.query.mock.calls).toContainEqual([
+      "UPDATE usuarios SET nombre_completo = ? WHERE id = ?",
+      ["Nuevo Nombre", 7],
+    ]);
+  });
+
+  it("devuelve 500 si la BD falla", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      throw new Error("BD caida");
+    });
+
+    const res = await request(app)
+      .patch("/api/usuarios/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ nombre_completo: "Nuevo Nombre" });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe("INTERNAL_ERROR");
+  });
+});

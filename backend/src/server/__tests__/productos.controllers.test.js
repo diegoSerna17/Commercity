@@ -126,6 +126,18 @@ describe("GET /api/categorias", () => {
       expect.stringContaining("WHERE activo = 1")
     );
   });
+
+  it("devuelve 500 con error estructurado si la BD falla", async () => {
+    pool.query.mockRejectedValue(new Error("BD caida"));
+
+    const res = await request(app).get("/api/categorias");
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Error al obtener las categorías" },
+    });
+  });
 });
 
 describe("GET /api/vendedores", () => {
@@ -140,6 +152,18 @@ describe("GET /api/vendedores", () => {
     expect(pool.query).toHaveBeenCalledWith(
       expect.stringContaining("r.nombre = 'vendedor'")
     );
+  });
+
+  it("devuelve 500 con error estructurado si la BD falla", async () => {
+    pool.query.mockRejectedValue(new Error("BD caida"));
+
+    const res = await request(app).get("/api/vendedores");
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Error al obtener los vendedores" },
+    });
   });
 });
 
