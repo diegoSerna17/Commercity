@@ -4,6 +4,26 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-07 - TESTS: corrige asercion falsa positiva en chat y recupera cobertura Lines a 93.75%
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/__tests__/chat.controllers.test.js, backend/src/server/__tests__/usuarios.controllers.test.js, backend/src/server/__tests__/productos.controllers.test.js
+- **Descripcion**: se agrego el helper sinComentariosSQL() para que las aserciones de SQL ignoren comentarios -- (el toContain GROUP BY LEAST matcheaba un comentario del controlador, no la query) y se crearon 14 tests (GET /api/usuarios/directorio, PATCH /api/usuarios/me y 500 de categorias/vendedores) que elevan Lines de 92.19% a 93.75%.
+- **Motivo**: corrida completa de QA del lote de auditoria: 1 test fallaba por falso positivo y Lines habia bajado de la referencia 93.53% a 92.19%.
+- **Requerimientos**: N/A
+- **Evidencia**: 370/370 tests, 22/22 archivos, exit 0 con coverage; Lines 93.75%, Statements 92.93%, Branches 83.07%, Functions 98.95% (umbrales 60% en verde)
+- **Estado**: Completado
+
+## 2026-10-07 - FIX: reembolso total en baneo de vendedor acumula monto_reembolsado (B-R5)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/controllers/admin/pedidos.controllers.js, backend/src/server/__tests__/admin.controllers.test.js
+- **Descripcion**: se corrigio destinoPedidosVendedor para que al quedar un pedido sin lineas activas el pago quede con estado 'Reembolsado' y monto_reembolsado = monto, en lugar de 'Reembolsado' con monto_reembolsado en 0; se agrego la asercion en el test B-R5.
+- **Motivo**: deuda de la auditoria B-R5: con la migracion 013 el estado 'Parcial' se deriva de 0 < monto_reembolsado < monto, por lo que un reembolso total con importe en 0 contradecia el estado escrito en la fila.
+- **Requerimientos**: RF74
+- **Evidencia**: 370/370 tests (suite completa con coverage, exit 0); admin.controllers.test.js 36/36; node --check en verde; commits 14fd147 y a407c3b en PREVIEW
+- **Estado**: Completado
+
 ## 2026-10-06 - DOCS: incorporacion de docs/DRIVE completa a la rama PREVIEW (push a commercycity)
 
 - **Autor**: Daniel Palacios
