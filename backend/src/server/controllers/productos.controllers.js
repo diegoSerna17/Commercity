@@ -381,12 +381,20 @@ function validarRangosProducto({ precio, stock, descuento }) {
     }
   }
   if (stock !== undefined) {
+    // H3: '' y null no son un stock valido (Number('')=0 zereaba el stock en silencio)
+    if (stock === "" || stock === null) {
+      return "Precio y stock deben ser numeros validos";
+    }
     const stockNum = Number(stock);
     if (!Number.isInteger(stockNum) || stockNum < 0) {
       return "Precio y stock deben ser numeros validos";
     }
   }
   if (descuento !== undefined) {
+    // H3: '' y null no son un descuento valido (Number('')=0 lo reseteaba)
+    if (descuento === "" || descuento === null) {
+      return "El descuento debe ser un numero entre 0 y 100";
+    }
     const descuentoNum = Number(descuento);
     if (!Number.isFinite(descuentoNum) || descuentoNum < 0 || descuentoNum > 100) {
       return "El descuento debe ser un numero entre 0 y 100";

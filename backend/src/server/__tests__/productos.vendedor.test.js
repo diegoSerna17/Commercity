@@ -199,6 +199,40 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("H3: stock vacio ('') en crear y editar -> 400 (no se zerea en silencio)", async () => {
+    const resCrear = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Stock vacio")
+      .field("descripcion", "Desc")
+      .field("precio", "1000")
+      .field("stock", "")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", Buffer.from("x"), "foto.jpg");
+
+    expect(resCrear.status).toBe(400);
+    expect(resCrear.body.error.code).toBe("VALIDATION_ERROR");
+
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT id, categoria_id")) {
+        return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
+      }
+      if (sql.includes("UPDATE productos")) return [[], undefined];
+      return [[], undefined];
+    });
+
+    const resEditar = await request(app)
+      .put("/api/productos/1")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("stock", "");
+
+    expect(resEditar.status).toBe(400);
+    expect(resEditar.body.error.code).toBe("VALIDATION_ERROR");
+    expect(pool.query.mock.calls.some(([sql]) => sql.includes("UPDATE productos"))).toBe(false);
+  });
+
   it("PUT /api/productos/:id con precio invalido en la edicion -> 400", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];

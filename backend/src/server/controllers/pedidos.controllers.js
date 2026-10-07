@@ -439,9 +439,11 @@ async function cancelarTodasLasLineas(conn, id) {
  * importe de las lineas canceladas EN ESTA llamada (subtotal x 1.19 por linea),
  * para que la cancelacion parcial del comprador y la general registren el mismo
  * dinero devuelto. El criterio todo-o-nada del ESTADO se conserva.
- * Solo actualiza si el pago ya estaba Aprobado (guard no toca Rechazado/Pendiente).
+ * H2: solo los pagos 'Aprobado' acumulan importe (lectura bloqueada FOR UPDATE,
+ * race-safe); si el pago esta 'Pendiente'/'Rechazado' NO se muta y se reporta
+ * su estado REAL y monto_reembolsado 0 (no se inventa dinero no registrado).
  * @param {Array<{subtotal: number|string}>} lineasCanceladas lineas canceladas en esta llamada
- * @returns {Promise<"Reembolsado"|"Aprobado">}
+ * @returns {Promise<{estado: string, monto_reembolsado: number}>} estado REAL resultante del pago y el importe acumulado en esta llamada
  */
 async function actualizarPagoTrasCancelacion(conn, id, lineasCanceladas) {
   const [restantes] = await conn.query(
@@ -452,8 +454,18 @@ async function actualizarPagoTrasCancelacion(conn, id, lineasCanceladas) {
     [id]
   );
   const r = restantes[0];
-  const nuevoEstadoPago =
+  const estadoCalculado =
     Number(r.canceladas) === Number(r.total) ? "Reembolsado" : "Aprobado";
+
+  const [pagos] = await conn.query(
+    "SELECT estado FROM pagos_simulados WHERE pedido_id = ? FOR UPDATE",
+    [id]
+  );
+  const estadoPagoActual = pagos[0]?.estado;
+  if (estadoPagoActual !== "Aprobado") {
+    return { estado: estadoPagoActual || estadoCalculado, monto_reembolsado: 0 };
+  }
+
   const importeReembolsado = round2(
     lineasCanceladas.reduce((acc, l) => acc + importeReembolsoLinea(l.subtotal), 0)
   );
@@ -461,10 +473,10 @@ async function actualizarPagoTrasCancelacion(conn, id, lineasCanceladas) {
     `UPDATE pagos_simulados
         SET estado = ?,
             monto_reembolsado = monto_reembolsado + ?
-      WHERE pedido_id = ? AND estado = 'Aprobado'`,
-    [nuevoEstadoPago, importeReembolsado, id]
+      WHERE pedido_id = ?`,
+    [estadoCalculado, importeReembolsado, id]
   );
-  return nuevoEstadoPago;
+  return { estado: estadoCalculado, monto_reembolsado: importeReembolsado };
 }
 
 /**
@@ -635,16 +647,19 @@ export const actualizarEstado = async (req, res, next) => {
 
       // ── Actualizar pagos_simulados según lo que quedó en el pedido ──
       // S1: acumula el importe reembolsado de las lineas canceladas AHORA.
-      const nuevoEstadoPago = await actualizarPagoTrasCancelacion(conn, id, lineasCanceladas);
+      // H4: la respuesta expone el mismo contrato que RF135 (estado_pago +
+      // monto_reembolsado real registrado en esta llamada).
+      const pagoResultado = await actualizarPagoTrasCancelacion(conn, id, lineasCanceladas);
 
       // ── Notificaciones fail-soft ──
-      await notificarCancelacion(conn, pedido, id, lineasCanceladas, nuevoEstadoPago);
+      await notificarCancelacion(conn, pedido, id, lineasCanceladas, pagoResultado.estado);
 
       await conn.commit();
       return successResponse(res, "Cancelación procesada", {
         pedido_id: id,
         tipo: detalle_id !== undefined ? "por_linea" : "general",
-        estado_pago: nuevoEstadoPago,
+        estado_pago: pagoResultado.estado,
+        monto_reembolsado: pagoResultado.monto_reembolsado,
         lineas_canceladas: lineasCanceladas.length,
         detalle_ids_cancelados: lineasCanceladas.map((l) => l.detalle_id),
         no_canceladas: lineasNoCanceladas,

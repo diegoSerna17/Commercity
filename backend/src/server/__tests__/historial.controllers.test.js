@@ -214,6 +214,8 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
         conn.query.mockImplementation((sql) => {
             if (sql.includes("FOR UPDATE"))
                 return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 50000, estado_pago_vendedor: "Pendiente" }], undefined];
+            if (sql.includes("UPDATE pagos_simulados"))
+                return [{ affectedRows: 1 }, undefined];
             return [[], undefined];
         });
 
@@ -280,6 +282,8 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
         conn.query.mockImplementation((sql) => {
             if (sql.includes("FOR UPDATE"))
                 return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 25333.33, estado_pago_vendedor: "Pendiente" }], undefined];
+            if (sql.includes("UPDATE pagos_simulados"))
+                return [{ affectedRows: 1 }, undefined];
             return [[], undefined];
         });
 
@@ -294,6 +298,32 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
             expect.stringContaining("UPDATE pagos_simulados"),
             [30146.66, 30146.66, 4]
         );
+    });
+
+    it("S1/H2: pago no Aprobado (affectedRows 0) se cancela sin reembolso reportado", async () => {
+        conn.query.mockImplementation((sql) => {
+            if (sql.includes("FOR UPDATE"))
+                return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 50000, estado_pago_vendedor: "Pendiente" }], undefined];
+            if (sql.includes("UPDATE pagos_simulados"))
+                return [{ affectedRows: 0 }, undefined]; // pago 'Pendiente'/'Rechazado': guard no muta
+            return [[], undefined];
+        });
+
+        const res = await request(app)
+            .post("/api/historial/compras/9/cancelar")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        // H2: NO se reporta un reembolso que la BD no registro
+        expect(res.body.data).toEqual({ id: 9, estado: "Cancelado", reembolsado: false, monto_reembolsado: 0 });
+        // La cancelacion de la linea y el stock SI ocurrieron
+        expect(conn.query).toHaveBeenCalledWith(
+            expect.stringContaining("UPDATE detalle_pedidos SET estado_envio = 'Cancelado'"),
+            [9]
+        );
+        expect(conn.commit).toHaveBeenCalled();
+        expect(conn.rollback).not.toHaveBeenCalled();
     });
 
     it("deberia devolver 500 con rollback si la BD falla", async () => {

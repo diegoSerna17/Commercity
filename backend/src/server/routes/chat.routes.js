@@ -6,7 +6,7 @@ import {
     marcarMensajeLeido,
 } from "../controllers/chat.controllers.js";
 import { authRequired } from "../middleware/auth.middleware.js";
-import uploadChat from "../config/multer.chat.js";
+import { errorResponse } from "../utils/response.js";
 
 const router = Router();
 
@@ -15,18 +15,34 @@ const router = Router();
 //
 // Integracion en el backend oficial (app.js):
 //   1. Copiar este archivo a src/server/routes/chat.routes.js
-//   2. Copiar config/multer.chat.js a src/server/config/multer.chat.js
-//   3. Importar y montar:
+//   2. Importar y montar:
 //        import chatRouter from "./routes/chat.routes.js";
 //        app.use("/api/chat", chatRouter);
 //   La tabla mensajes_chat (6 columnas) esta definida en schema_commercity.sql
-//   (hallazgo B2 auditoria 2026-10-06: sin tipo_mensaje/archivo_url; los
-//   adjuntos se rechazan con 400 en enviarMensaje).
+//   (hallazgo B2 auditoria 2026-10-06: sin tipo_mensaje/archivo_url).
+//   config/multer.chat.js queda DESMONTADO: los adjuntos no tienen columna
+//   de persistencia (rama A) y no se aceptan en la ruta.
 // ============================================================================
 
-// Enviar mensaje de TEXTO (los multipart se parsean para dar un error claro;
-// sin los adjuntos no hay persistencia posible, ver enviarMensaje).
-router.post("/", authRequired, uploadChat.single("archivo"), enviarMensaje);
+/**
+ * H1 (revision del lote 2026-10-06): rechaza el multipart ANTES de multer.
+ * Sin la columna archivo_url los adjuntos no se pueden persistir; si multer
+ * procesara la peticion, el archivo se escribiria en uploads/ y quedaria
+ * huerfano en disco aunque el controller respondiera 400 (llenado de disco
+ * a 10MB por peticion sin crear ningun mensaje).
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
+function rechazarMultipartChat(req, res, next) {
+    if (req.is("multipart/*")) {
+        return errorResponse(res, "El chat no admite archivos en esta versión", 400);
+    }
+    return next();
+}
+
+// Enviar mensaje de TEXTO (JSON). El multipart se rechaza en la puerta.
+router.post("/", authRequired, rechazarMultipartChat, enviarMensaje);
 
 // Listado de conversaciones del usuario autenticado.
 router.get("/conversaciones", authRequired, listarConversaciones);

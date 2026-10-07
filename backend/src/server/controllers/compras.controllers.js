@@ -143,12 +143,13 @@ function estadoPredominante(items) {
 
 /**
  * RF135: el comprador cancela un pedido en estado Pendiente.
- * Transaccion ACID: cancela la linea, restituye el stock al producto y acumula
- * el reembolso PROPORCIONAL por monto en pagos_simulados.monto_reembolsado
- * (S1, mig 013): el importe de la linea es round2(subtotal * 1.19) (lo que pago
- * el comprador por la linea, IVA incluido - RF121/RF140); el estado pasa a
- * 'Reembolsado' solo cuando el reembolso acumulado cubre el monto del pago.
- * Solo el dueno del pedido y solo en estado Pendiente.
+ * Transaccion ACID: cancela la linea y restituye el stock al producto. Solo el
+ * dueno del pedido y solo en estado Pendiente.
+ * S1 (mig 013): acumula el reembolso PROPORCIONAL por monto (importe de la
+ * linea = round2(subtotal * 1.19), IVA incluido) en pagos_simulados.monto_reembolsado
+ * y deriva el estado ('Reembolsado' solo si el acumulado cubre el monto).
+ * H2: si el pago no estaba Aprobado/Reembolsado, la linea se cancela igual pero
+ * la respuesta reporta reembolsado=false (no se inventa dinero no registrado).
  */
 export const cancelarPedidoComprador = async (req, res) => {
     const compradorId = req.userId;
@@ -200,13 +201,17 @@ export const cancelarPedidoComprador = async (req, res) => {
         // evita mutar pagos 'Rechazado'/'Pendiente'; sobre pagos ya parcialmente
         // reembolsados sigue acumulando.
         const importeLinea = importeReembolsoLinea(linea.subtotal);
-        await conn.query(
+        const [resultadoPago] = await conn.query(
             `UPDATE pagos_simulados
                 SET monto_reembolsado = monto_reembolsado + ?,
                     estado = IF(monto_reembolsado + ? >= monto, 'Reembolsado', 'Aprobado')
               WHERE pedido_id = ? AND estado IN ('Aprobado', 'Reembolsado')`,
             [importeLinea, importeLinea, linea.pedido_id]
         );
+        // H2 (revision del lote): reportar SOLO lo que la BD realmente registro.
+        // Si el pago no estaba Aprobado/Reembolsado (affectedRows = 0) no hubo
+        // dinero que reembolsar: la respuesta lo hace explicito.
+        const pagoReembolsado = Number(resultadoPago.affectedRows) > 0;
         // 5. S1: estado de pago del vendedor de la linea, misma regla que RF35
         // (si ya se desembolso al vendedor se conserva; si no, 'Pendiente').
         await conn.query(
@@ -220,8 +225,8 @@ export const cancelarPedidoComprador = async (req, res) => {
             data: {
                 id: detalleId,
                 estado: "Cancelado",
-                reembolsado: true,
-                monto_reembolsado: importeLinea,
+                reembolsado: pagoReembolsado,
+                monto_reembolsado: pagoReembolsado ? importeLinea : 0,
             }
         });
     } catch (error) {
