@@ -1,5 +1,6 @@
 import pool from "../config/db.js";
 import { round2 } from "../utils/finanzas.js";
+import { estadoPagoVendedorTrasCancelacion, importeReembolsoLinea } from "../utils/reembolsos.js";
 
 // ============================================================================
 // MODULO HISTORIAL DE COMPRAS (integrado desde AVANCES/SPRING 1/JARY)
@@ -142,8 +143,12 @@ function estadoPredominante(items) {
 
 /**
  * RF135: el comprador cancela un pedido en estado Pendiente.
- * Transaccion ACID: cancela la linea, restituye el stock al producto y marca el
- * pago como Reembolsado (M8). Solo el dueno del pedido y solo en estado Pendiente.
+ * Transaccion ACID: cancela la linea, restituye el stock al producto y acumula
+ * el reembolso PROPORCIONAL por monto en pagos_simulados.monto_reembolsado
+ * (S1, mig 013): el importe de la linea es round2(subtotal * 1.19) (lo que pago
+ * el comprador por la linea, IVA incluido - RF121/RF140); el estado pasa a
+ * 'Reembolsado' solo cuando el reembolso acumulado cubre el monto del pago.
+ * Solo el dueno del pedido y solo en estado Pendiente.
  */
 export const cancelarPedidoComprador = async (req, res) => {
     const compradorId = req.userId;
@@ -163,7 +168,8 @@ export const cancelarPedidoComprador = async (req, res) => {
         // 1. Bloquear la linea y validar propietario + estado Pendiente.
         // comprador_id vive en pedidos, no en detalle_pedidos (fix RF135).
         const [lineas] = await conn.query(
-            `SELECT dp.id, dp.producto_id, dp.cantidad, dp.pedido_id
+            `SELECT dp.id, dp.producto_id, dp.cantidad, dp.pedido_id,
+                    dp.subtotal, dp.estado_pago_vendedor
                FROM detalle_pedidos dp
                JOIN pedidos p ON p.id = dp.pedido_id
               WHERE dp.id = ? AND p.comprador_id = ? AND dp.estado_envio = 'Pendiente'
@@ -190,16 +196,33 @@ export const cancelarPedidoComprador = async (req, res) => {
             "UPDATE productos SET stock = stock + ? WHERE id = ?",
             [linea.cantidad, linea.producto_id]
         );
-        // 4. Marcar el pago como Reembolsado (M8)
+        // 4. S1 (mig 013): reembolso PROPORCIONAL por monto. El guard de estado
+        // evita mutar pagos 'Rechazado'/'Pendiente'; sobre pagos ya parcialmente
+        // reembolsados sigue acumulando.
+        const importeLinea = importeReembolsoLinea(linea.subtotal);
         await conn.query(
-            "UPDATE pagos_simulados SET estado = 'Reembolsado' WHERE pedido_id = ?",
-            [linea.pedido_id]
+            `UPDATE pagos_simulados
+                SET monto_reembolsado = monto_reembolsado + ?,
+                    estado = IF(monto_reembolsado + ? >= monto, 'Reembolsado', 'Aprobado')
+              WHERE pedido_id = ? AND estado IN ('Aprobado', 'Reembolsado')`,
+            [importeLinea, importeLinea, linea.pedido_id]
+        );
+        // 5. S1: estado de pago del vendedor de la linea, misma regla que RF35
+        // (si ya se desembolso al vendedor se conserva; si no, 'Pendiente').
+        await conn.query(
+            "UPDATE detalle_pedidos SET estado_pago_vendedor = ? WHERE id = ?",
+            [estadoPagoVendedorTrasCancelacion(linea.estado_pago_vendedor), detalleId]
         );
 
         await conn.commit();
         return res.status(200).json({
             success: true,
-            data: { id: detalleId, estado: "Cancelado", reembolsado: true }
+            data: {
+                id: detalleId,
+                estado: "Cancelado",
+                reembolsado: true,
+                monto_reembolsado: importeLinea,
+            }
         });
     } catch (error) {
         await conn.rollback();

@@ -524,7 +524,7 @@ it("cancelación por detalle_id OK (200): restituye stock, marca línea, notific
       if (/WHERE dp\.id = \? AND dp\.pedido_id = \?/.test(sql)) {
         return [[{
           id: 22, cantidad: 2, producto_id: 101, estado_envio: "Pendiente",
-          estado_pago_vendedor: "Pendiente",
+          estado_pago_vendedor: "Pendiente", subtotal: 50000,
           vendedor_id: 3, producto_nombre: "Zapatos"
         }], undefined];
       }
@@ -562,10 +562,11 @@ it("cancelación por detalle_id OK (200): restituye stock, marca línea, notific
       expect.stringContaining("UPDATE productos SET stock = stock + ?"),
       [2, 101]
     );
-    // Verifica que se actualice a 'Aprobado' (no 'Reembolsado'): queda una línea Entregada
+    // Verifica que se actualice a 'Aprobado' (no 'Reembolsado'): queda una línea Entregada.
+    // S1: acumula el importe de la linea cancelada (50000 x 1.19 = 59500.00)
     expect(conn.query).toHaveBeenCalledWith(
       expect.stringMatching(/UPDATE pagos_simulados\s+SET estado = \?/),
-      ["Aprobado", 5]
+      ["Aprobado", 59500, 5]
     );
     // La línea NO estaba desembolsada → estado_pago_vendedor = 'Pendiente' (ENUM real)
     expect(conn.query).toHaveBeenCalledWith(
@@ -583,9 +584,9 @@ it("cancelación general OK con mezcla Pendiente + Entregado → Aprobado + no_c
       }
       if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
         return [[
-          { id: 1, cantidad: 1, producto_id: 50, estado_envio: "Pendiente",  estado_pago_vendedor: "Pendiente", vendedor_id: 3, producto_nombre: "A" },
-          { id: 2, cantidad: 2, producto_id: 51, estado_envio: "En camino", estado_pago_vendedor: "Pendiente", vendedor_id: 4, producto_nombre: "B" },
-          { id: 3, cantidad: 1, producto_id: 52, estado_envio: "Entregado", estado_pago_vendedor: "Pendiente", vendedor_id: 3, producto_nombre: "C" },
+          { id: 1, cantidad: 1, producto_id: 50, estado_envio: "Pendiente",  estado_pago_vendedor: "Pendiente", subtotal: 100000, vendedor_id: 3, producto_nombre: "A" },
+          { id: 2, cantidad: 2, producto_id: 51, estado_envio: "En camino", estado_pago_vendedor: "Pendiente", subtotal: 200000, vendedor_id: 4, producto_nombre: "B" },
+          { id: 3, cantidad: 1, producto_id: 52, estado_envio: "Entregado", estado_pago_vendedor: "Pendiente", subtotal: 300000, vendedor_id: 3, producto_nombre: "C" },
         ], undefined];
       }
       if (sql.includes("UPDATE productos SET stock = stock + ?")) {
@@ -620,6 +621,13 @@ it("cancelación general OK con mezcla Pendiente + Entregado → Aprobado + no_c
     expect(res.body.data.no_canceladas[0].detalle_id).toBe(3);
     expect(res.body.data.no_canceladas[0].motivo).toBe("Entregado");
     expect(res.body.data.estado_pago).toBe("Aprobado");
+    // S1: el importe acumulado SOLO suma las lineas canceladas AHORA
+    // (100000 x 1.19) + (200000 x 1.19) = 119000 + 238000 = 357000.00;
+    // la linea Entregada (300000) no se reembolsa y no aporta.
+    expect(conn.query).toHaveBeenCalledWith(
+      expect.stringMatching(/UPDATE pagos_simulados\s+SET estado = \?/),
+      ["Aprobado", 357000, 10]
+    );
     expect(conn.commit).toHaveBeenCalled();
   });
 
@@ -656,7 +664,7 @@ if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefi
       }
       if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
         return [[
-          { id: 7, cantidad: 3, producto_id: 20, estado_envio: "Pendiente", vendedor_id: 4, producto_nombre: "M" },
+          { id: 7, cantidad: 3, producto_id: 20, estado_envio: "Pendiente", subtotal: 150000, vendedor_id: 4, producto_nombre: "M" },
         ], undefined];
       }
       if (sql.includes("UPDATE productos SET stock = stock + ?")) return [{ affectedRows: 1 }, undefined];
@@ -680,7 +688,8 @@ if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefi
     expect(res.body.data.estado_pago).toBe("Reembolsado");
     expect(conn.query).toHaveBeenCalledWith(
       expect.stringMatching(/UPDATE pagos_simulados\s+SET estado = \?/),
-      ["Reembolsado", 12]
+      // S1: importe de la linea cancelada (150000 x 1.19 = 178500.00) acumulado
+      ["Reembolsado", 178500, 12]
     );
     expect(conn.commit).toHaveBeenCalled();
   });
@@ -702,7 +711,7 @@ if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefi
         if (/WHERE dp\.id = \? AND dp\.pedido_id = \?/.test(sql)) {
           return [[{
             id: 301, cantidad: 1, producto_id: 9, estado_envio: "Pendiente",
-            estado_pago_vendedor: "Pendiente", vendedor_id: 3, producto_nombre: "A"
+            estado_pago_vendedor: "Pendiente", subtotal: 50000, vendedor_id: 3, producto_nombre: "A"
           }], undefined];
         }
         if (sql.includes("UPDATE productos SET stock = stock + ?")) return [{ affectedRows: 1 }, undefined];
@@ -736,7 +745,7 @@ if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefi
         if (/WHERE dp\.id = \? AND dp\.pedido_id = \?/.test(sql)) {
           return [[{
             id: 311, cantidad: 1, producto_id: 9, estado_envio: "Pendiente",
-            estado_pago_vendedor: "Desembolsado", vendedor_id: 3, producto_nombre: "A"
+            estado_pago_vendedor: "Desembolsado", subtotal: 70000, vendedor_id: 3, producto_nombre: "A"
           }], undefined];
         }
         if (sql.includes("UPDATE productos SET stock = stock + ?")) return [{ affectedRows: 1 }, undefined];
@@ -774,8 +783,8 @@ if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefi
         }
         if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
           return [[
-            { id: 71, cantidad: 1, producto_id: 20, estado_envio: "Pendiente",  estado_pago_vendedor: "Pendiente",    vendedor_id: 4, producto_nombre: "M" },
-            { id: 72, cantidad: 1, producto_id: 21, estado_envio: "En camino", estado_pago_vendedor: "Desembolsado", vendedor_id: 4, producto_nombre: "N" },
+            { id: 71, cantidad: 1, producto_id: 20, estado_envio: "Pendiente",  estado_pago_vendedor: "Pendiente",    subtotal: 100000, vendedor_id: 4, producto_nombre: "M" },
+            { id: 72, cantidad: 1, producto_id: 21, estado_envio: "En camino", estado_pago_vendedor: "Desembolsado", subtotal: 200000, vendedor_id: 4, producto_nombre: "N" },
           ], undefined];
         }
         if (sql.includes("UPDATE productos SET stock = stock + ?")) return [{ affectedRows: 1 }, undefined];
@@ -797,7 +806,13 @@ if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefi
       expect(res.body.data.estado_pago).toBe("Reembolsado");
       expect(conn.query).toHaveBeenCalledWith(
         expect.stringMatching(/UPDATE pagos_simulados\s+SET estado = \?/),
-        ["Reembolsado", 32]
+        // S1: importe acumulado de las 2 lineas canceladas (119000 + 238000)
+        ["Reembolsado", 357000, 32]
+      );
+      // S1: el importe vive en monto_reembolsado, el estado NO es 'Parcial'
+      expect(conn.query).toHaveBeenCalledWith(
+        expect.stringContaining("monto_reembolsado = monto_reembolsado + ?"),
+        expect.anything()
       );
       // Mapeo por línea: la desembolsada conserva su estado, la otra vuelve a 'Pendiente'.
       expect(conn.query).toHaveBeenCalledWith(
@@ -819,8 +834,8 @@ if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefi
         }
         if (/FROM detalle_pedidos dp\s+JOIN productos p/.test(sql) && sql.includes("FOR UPDATE") && /WHERE dp\.pedido_id = \?/.test(sql)) {
           return [[
-            { id: 81, cantidad: 1, producto_id: 30, estado_envio: "Pendiente",  estado_pago_vendedor: "Pendiente", vendedor_id: 3, producto_nombre: "X" },
-            { id: 82, cantidad: 1, producto_id: 31, estado_envio: "Entregado", estado_pago_vendedor: "Pendiente", vendedor_id: 3, producto_nombre: "Y" },
+            { id: 81, cantidad: 1, producto_id: 30, estado_envio: "Pendiente",  estado_pago_vendedor: "Pendiente", subtotal: 250000, vendedor_id: 3, producto_nombre: "X" },
+            { id: 82, cantidad: 1, producto_id: 31, estado_envio: "Entregado", estado_pago_vendedor: "Pendiente", subtotal: 300000, vendedor_id: 3, producto_nombre: "Y" },
           ], undefined];
         }
         if (sql.includes("UPDATE productos SET stock = stock + ?")) return [{ affectedRows: 1 }, undefined];
@@ -845,7 +860,9 @@ if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefi
       expect(res.body.data.estado_pago).toBe("Aprobado");
       expect(conn.query).toHaveBeenCalledWith(
         expect.stringMatching(/UPDATE pagos_simulados\s+SET estado = \?/),
-        ["Aprobado", 33]
+        // S1: solo la linea cancelada (81) aporta al importe (250000 x 1.19 =
+        // 297500.00); la Entregada (82) NO se reembolsa ni acumula.
+        ["Aprobado", 297500, 33]
       );
       // 'Parcial' no existe en pagos_simulados.estado: jamás debe escribirse,
       // ni como parámetro ni dentro del SQL.

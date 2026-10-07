@@ -3,6 +3,7 @@ import { z } from "zod";
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { calcularLinea, calcularTotales, validarLuhn, round2 } from "../utils/finanzas.js";
+import { estadoPagoVendedorTrasCancelacion, importeReembolsoLinea } from "../utils/reembolsos.js";
 
 // ============================================================================
 // MODULO DE PEDIDOS Y PAGO (integrado desde AVANCES/SPRING 1/CARLOS VIDAL/Entrega)
@@ -283,19 +284,8 @@ export const confirmarPago = async (req, res, next) => {
   }
 };
 
-/**
- * Mapea el estado de pago al vendedor tras cancelar la línea.
- * detalle_pedidos.estado_pago_vendedor es ENUM('Pendiente','Desembolsado') en la
- * BD real: NO existe un valor 'Reembolsado' para el vendedor. Si ya fue
- * desembolsado se conserva 'Desembolsado'; en caso contrario la línea vuelve a
- * 'Pendiente'. Pérdida semántica asumida y documentada en
- * informes/PROPUESTA_MIGRACION_ENUM_ESTADOS.md (Opción A pendiente de decisión).
- * @param {string} estadoActual valor actual de estado_pago_vendedor
- * @returns {"Pendiente"|"Desembolsado"} valor válido dentro del ENUM real
- */
-function estadoPagoVendedorTrasCancelacion(estadoActual) {
-  return estadoActual === "Desembolsado" ? "Desembolsado" : "Pendiente";
-}
+// La regla de estado de pago del vendedor (Pendiente|Desembolsado) y el calculo
+// del importe reembolsado viven en utils/reembolsos.js (compartidos con RF135).
 
 // ─────────────────────────────────────────────────────────────
 // Camino 2 (RF35) — helpers de cancelación.
@@ -310,7 +300,7 @@ function estadoPagoVendedorTrasCancelacion(estadoActual) {
 async function cancelarUnaLinea(conn, id, detalle_id) {
   const [lineas] = await conn.query(
     `SELECT dp.id, dp.cantidad, dp.producto_id, dp.estado_envio, dp.vendedor_id,
-            dp.estado_pago_vendedor, p.nombre AS producto_nombre
+            dp.estado_pago_vendedor, dp.subtotal, p.nombre AS producto_nombre
        FROM detalle_pedidos dp
        JOIN productos p ON p.id = dp.producto_id
       WHERE dp.id = ? AND dp.pedido_id = ?
@@ -361,6 +351,7 @@ async function cancelarUnaLinea(conn, id, detalle_id) {
         producto_nombre: linea.producto_nombre,
         cantidad: linea.cantidad,
         vendedor_id: linea.vendedor_id,
+        subtotal: linea.subtotal,
       },
     ],
     lineasNoCanceladas: [],
@@ -374,7 +365,7 @@ async function cancelarUnaLinea(conn, id, detalle_id) {
 async function cancelarTodasLasLineas(conn, id) {
   const [todas] = await conn.query(
     `SELECT dp.id, dp.cantidad, dp.producto_id, dp.estado_envio, dp.vendedor_id,
-            dp.estado_pago_vendedor, p.nombre AS producto_nombre
+            dp.estado_pago_vendedor, dp.subtotal, p.nombre AS producto_nombre
        FROM detalle_pedidos dp
        JOIN productos p ON p.id = dp.producto_id
       WHERE dp.pedido_id = ?
@@ -413,6 +404,7 @@ async function cancelarTodasLasLineas(conn, id) {
         producto_nombre: ln.producto_nombre,
         cantidad: ln.cantidad,
         vendedor_id: ln.vendedor_id,
+        subtotal: ln.subtotal,
       });
     }
   }
@@ -435,10 +427,15 @@ async function cancelarTodasLasLineas(conn, id) {
  * en la BD real: NO existe 'Parcial'.
  * Si TODO el pedido fue cancelado → 'Reembolsado'; si quedan lineas vivas →
  * 'Aprobado' (ver informes/PROPUESTA_MIGRACION_ENUM_ESTADOS.md, Opcion A).
- * Solo actualiza si el pago ya estaba Aprobado.
+ * S1 (mig 013): el IMPORTE reembolsado se ACUMULA en monto_reembolsado con el
+ * importe de las lineas canceladas EN ESTA llamada (subtotal x 1.19 por linea),
+ * para que la cancelacion parcial del comprador y la general registren el mismo
+ * dinero devuelto. El criterio todo-o-nada del ESTADO se conserva.
+ * Solo actualiza si el pago ya estaba Aprobado (guard no toca Rechazado/Pendiente).
+ * @param {Array<{subtotal: number|string}>} lineasCanceladas lineas canceladas en esta llamada
  * @returns {Promise<"Reembolsado"|"Aprobado">}
  */
-async function actualizarPagoTrasCancelacion(conn, id) {
+async function actualizarPagoTrasCancelacion(conn, id, lineasCanceladas) {
   const [restantes] = await conn.query(
     `SELECT COUNT(*) AS total,
             SUM(CASE WHEN estado_envio = 'Entregado' THEN 1 ELSE 0 END) AS entregadas,
@@ -449,11 +446,15 @@ async function actualizarPagoTrasCancelacion(conn, id) {
   const r = restantes[0];
   const nuevoEstadoPago =
     Number(r.canceladas) === Number(r.total) ? "Reembolsado" : "Aprobado";
+  const importeReembolsado = round2(
+    lineasCanceladas.reduce((acc, l) => acc + importeReembolsoLinea(l.subtotal), 0)
+  );
   await conn.query(
     `UPDATE pagos_simulados
-        SET estado = ?
+        SET estado = ?,
+            monto_reembolsado = monto_reembolsado + ?
       WHERE pedido_id = ? AND estado = 'Aprobado'`,
-    [nuevoEstadoPago, id]
+    [nuevoEstadoPago, importeReembolsado, id]
   );
   return nuevoEstadoPago;
 }
@@ -625,7 +626,8 @@ export const actualizarEstado = async (req, res, next) => {
       const { lineasCanceladas, lineasNoCanceladas } = resultado;
 
       // ── Actualizar pagos_simulados según lo que quedó en el pedido ──
-      const nuevoEstadoPago = await actualizarPagoTrasCancelacion(conn, id);
+      // S1: acumula el importe reembolsado de las lineas canceladas AHORA.
+      const nuevoEstadoPago = await actualizarPagoTrasCancelacion(conn, id, lineasCanceladas);
 
       // ── Notificaciones fail-soft ──
       await notificarCancelacion(conn, pedido, id, lineasCanceladas, nuevoEstadoPago);

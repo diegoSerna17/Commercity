@@ -210,10 +210,10 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
         expect(res.body.error.code).toBe("NOT_FOUND");
     });
 
-    it("deberia cancelar la linea, restituir stock y reembolsar el pago (200)", async () => {
+    it("deberia cancelar la linea, restituir stock y acumular el reembolso proporcional (200)", async () => {
         conn.query.mockImplementation((sql) => {
             if (sql.includes("FOR UPDATE"))
-                return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4 }], undefined];
+                return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 50000, estado_pago_vendedor: "Pendiente" }], undefined];
             return [[], undefined];
         });
 
@@ -223,7 +223,8 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
-        expect(res.body.data).toEqual({ id: 9, estado: "Cancelado", reembolsado: true });
+        // S1: importe de la linea = 50000 SIN IVA x 1.19 = 59500.00
+        expect(res.body.data).toEqual({ id: 9, estado: "Cancelado", reembolsado: true, monto_reembolsado: 59500 });
 
         expect(conn.query).toHaveBeenCalledWith(
             expect.stringContaining("WHERE dp.id = ? AND p.comprador_id = ? AND dp.estado_envio = 'Pendiente'"),
@@ -237,12 +238,62 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
             expect.stringContaining("UPDATE productos SET stock = stock + ? WHERE id = ?"),
             [2, 3]
         );
+        // S1 (mig 013): acumula el importe en monto_reembolsado y deriva el estado
+        // por monto; el guard de estado protege pagos 'Rechazado'/'Pendiente'.
+        const updatePago = conn.query.mock.calls.find(([sql]) => sql.includes("UPDATE pagos_simulados"));
+        expect(updatePago[0]).toContain("monto_reembolsado = monto_reembolsado + ?");
+        expect(updatePago[0]).toContain("estado IN ('Aprobado', 'Reembolsado')");
+        expect(updatePago[1]).toEqual([59500, 59500, 4]);
+        // S1: el estatus todo-o-nada antiguo (reembolsar el pago completo por
+        // cancelar UNA linea) quedo invalidado: el SQL nuevo nunca reembolsa el
+        // monto completo si no lo cubre el importe acumulado.
+        expect(updatePago[0]).not.toContain("SET estado = 'Reembolsado' WHERE pedido_id = ?");
+        // S1: estado de pago del vendedor de la linea (misma regla que RF35)
         expect(conn.query).toHaveBeenCalledWith(
-            expect.stringContaining("UPDATE pagos_simulados SET estado = 'Reembolsado'"),
-            [4]
+            expect.stringContaining("UPDATE detalle_pedidos SET estado_pago_vendedor = ?"),
+            ["Pendiente", 9]
         );
         expect(conn.commit).toHaveBeenCalled();
         expect(conn.rollback).not.toHaveBeenCalled();
+    });
+
+    it("S1: linea con pago_vendedor ya 'Desembolsado' lo conserva en la linea cancelada", async () => {
+        conn.query.mockImplementation((sql) => {
+            if (sql.includes("FOR UPDATE"))
+                return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 50000, estado_pago_vendedor: "Desembolsado" }], undefined];
+            return [[], undefined];
+        });
+
+        const res = await request(app)
+            .post("/api/historial/compras/9/cancelar")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(200);
+        // Si ya se le desembolso al vendedor (dinero ya salido), no se revierte.
+        expect(conn.query).toHaveBeenCalledWith(
+            expect.stringContaining("UPDATE detalle_pedidos SET estado_pago_vendedor = ?"),
+            ["Desembolsado", 9]
+        );
+    });
+
+    it("S1: subtotales con decimales se redondean con round2 en el importe", async () => {
+        conn.query.mockImplementation((sql) => {
+            if (sql.includes("FOR UPDATE"))
+                return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 25333.33, estado_pago_vendedor: "Pendiente" }], undefined];
+            return [[], undefined];
+        });
+
+        const res = await request(app)
+            .post("/api/historial/compras/9/cancelar")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(200);
+        // 25333.33 * 1.19 = 30146.6627 -> round2 = 30146.66
+        expect(res.body.data.monto_reembolsado).toBe(30146.66);
+        expect(conn.query).toHaveBeenCalledWith(
+            expect.stringContaining("UPDATE pagos_simulados"),
+            [30146.66, 30146.66, 4]
+        );
     });
 
     it("deberia devolver 500 con rollback si la BD falla", async () => {
