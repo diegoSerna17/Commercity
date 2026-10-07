@@ -156,33 +156,41 @@ export const confirmarPago = async (req, res, next) => {
     let totalNeto = 0;
     let totalIva = 0;
 
+    // R1: el bloqueo RF74 de N consultas FOR UPDATE (una por item) se consolida
+    // en UNA sentencia batch: mismo bloqueo de filas, mismo filtro SQL y el
+    // mismo mensaje de error, sin N+1 de round-trips dentro de la transaccion
+    // RF134. carrito_items no puede repetir producto (uq_comprador_producto),
+    // por lo que cada producto aparece exactamente una vez.
+    const [prods] = await conn.query(
+      `SELECT id, vendedor_id, stock, eliminado_por_admin
+         FROM productos
+        WHERE id IN (${items.map(() => "?").join(",")})
+          AND eliminado_por_admin = 0
+          AND vendedor_id IN (SELECT id FROM usuarios WHERE activo = 1)
+          FOR UPDATE`,
+      items.map((item) => item.producto_id)
+    );
+    const prodsPorId = new Map(prods.map((p) => [Number(p.id), p]));
+
     for (const item of items) {
-      // RF74 + bloqueo de fila: producto activo y vendedor activo
-      const [prods] = await conn.query(
-        `SELECT id, vendedor_id, stock, eliminado_por_admin
-           FROM productos
-          WHERE id = ?
-            AND eliminado_por_admin = 0
-            AND vendedor_id IN (SELECT id FROM usuarios WHERE activo = 1)
-            FOR UPDATE`,
-        [item.producto_id]
-      );
-      if (prods.length === 0) {
+      // RF74: producto activo y vendedor activo (ausente del resultado = filtro).
+      const prod = prodsPorId.get(Number(item.producto_id));
+      if (!prod) {
         await conn.rollback();
         return errorResponse(res, `El producto ${item.producto_id} no está disponible (RF74)`, 409);
       }
-      if (Number(prods[0].stock) < item.cantidad) {
+      if (Number(prod.stock) < item.cantidad) {
         await conn.rollback();
         return errorResponse(
           res,
-          `Stock insuficiente para el producto ${item.producto_id}: disponible ${prods[0].stock}, solicitado ${item.cantidad}`,
+          `Stock insuficiente para el producto ${item.producto_id}: disponible ${prod.stock}, solicitado ${item.cantidad}`,
           409
         );
       }
 
       const linea = {
         ...item,
-        vendedor_id: prods[0].vendedor_id,
+        vendedor_id: prod.vendedor_id,
         ...calcularLinea(Number(item.precio), Number(item.descuento_porcentaje), item.cantidad),
       };
       lineas.push(linea);
@@ -197,37 +205,37 @@ export const confirmarPago = async (req, res, next) => {
     );
     const pedidoId = resultadoPedido.insertId;
 
-    // Fix 3.5 + RF140 (CERRADO 20/08): sin imagen_url; los montos 90/10 los
-    // calcula el backend (calcularLinea) y se PERSISTEN en las columnas normales
-    // monto_vendedor / monto_comision (la BD real ya no usa GENERATED).
-    for (const l of lineas) {
-      await conn.query(
-        `INSERT INTO detalle_pedidos
-           (pedido_id, producto_id, vendedor_id, cantidad, precio_unitario_historico,
-            descuento_aplicado, subtotal, monto_vendedor, monto_comision,
-            estado_envio, estado_pago_vendedor)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', 'Pendiente')`,
-        [
-          pedidoId,
-          l.producto_id,
-          l.vendedor_id,
-          l.cantidad,
-          l.precioFinal,
-          l.descuento_porcentaje,
-          l.subtotal,
-          l.montoVendedor,
-          l.montoComision,
-        ]
-      );
-    }
+    // RF140 + R1 (sin N+1): las lineas del detalle se insertan en UNA sentencia
+    // multi-VALUES con montos 90/10 calculados por el backend (calcularLinea).
+    await conn.query(
+      `INSERT INTO detalle_pedidos
+         (pedido_id, producto_id, vendedor_id, cantidad, precio_unitario_historico,
+          descuento_aplicado, subtotal, monto_vendedor, monto_comision,
+          estado_envio, estado_pago_vendedor)
+       VALUES ${lineas
+         .map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', 'Pendiente')")
+         .join(", ")}`,
+      lineas.flatMap((l) => [
+        pedidoId,
+        l.producto_id,
+        l.vendedor_id,
+        l.cantidad,
+        l.precioFinal,
+        l.descuento_porcentaje,
+        l.subtotal,
+        l.montoVendedor,
+        l.montoComision,
+      ])
+    );
 
-    // Fix 3.6 (ACID): descuento de stock dentro de la misma transaccion.
-    for (const l of lineas) {
-      await conn.query(
-        "UPDATE productos SET stock = stock - ? WHERE id = ?",
-        [l.cantidad, l.producto_id]
-      );
-    }
+    // Fix 3.6 + R1: descuento de stock de TODAS las lineas en UNA sentencia
+    // (las filas ya estan bloqueadas y el stock validado en el batch FOR UPDATE).
+    await conn.query(
+      `UPDATE productos
+          SET stock = stock - CASE id ${lineas.map(() => "WHEN ? THEN ?").join(" ")} END
+        WHERE id IN (${lineas.map(() => "?").join(",")})`,
+      lineas.flatMap((l) => [l.producto_id, l.cantidad]).concat(lineas.map((l) => l.producto_id))
+    );
 
     const totalConIva = round2(totalNeto + totalIva);
     const referenciaPago = `PAG-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;

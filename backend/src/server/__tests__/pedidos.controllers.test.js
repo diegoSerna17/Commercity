@@ -196,8 +196,11 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
     expect(detalleCall[0]).not.toContain("imagen_url");
     // subtotal SIN IVA (2000000 = 1190000*2/1.19) y reparto 90/10 exacto
     expect(detalleCall[1]).toEqual([5, 1, 3, 2, 1190000, 0, 2000000, 1800000, 200000]);
-    // ACID: stock y pago en la misma transaccion, carrito consumido
-    expect(conn.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE productos SET stock = stock - ?"), [2, 1]);
+    // ACID: stock y pago en la misma transaccion, carrito consumido.
+    // R1: el descuento de stock es BATCH (CASE), una sola sentencia para N lineas.
+    const updateStock = conn.query.mock.calls.find(([sql]) => sql.includes("stock = stock - CASE"));
+    expect(updateStock[0]).toContain("UPDATE productos");
+    expect(updateStock[1]).toEqual([1, 2, 1]); // (id 1, cantidad 2, WHERE id 1)
     expect(conn.query).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO pagos_simulados"), expect.anything());
     expect(conn.query).toHaveBeenCalledWith(expect.stringContaining("DELETE FROM carrito_items"), [7]);
     expect(conn.commit).toHaveBeenCalled();
