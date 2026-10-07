@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay, EffectFade } from "swiper/modules";
 import FichaProducto from "../../components/inicio/FichaProducto";
+import Categorias from "../../components/inicio/Categorias";
 import Header from "../../components/globales/Header";
 import Reportar from "../../components/inicio/Reportar";
 import { listarProductos } from "../../services/productos.service.js";
@@ -100,6 +101,10 @@ function calcularPrecioFinal(producto) {
 
 const Hero = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // JS Filtros del catalogo leidos de la URL: busqueda (buscador) y categoria.
+  const busqueda = searchParams.get("busqueda") || "";
+  const categoria = searchParams.get("categoria") || "";
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [mostrarReportar, setMostrarReportar] = useState(false);
   // RF62/RF63: producto que se esta reportando en el modal.
@@ -125,6 +130,22 @@ const Hero = () => {
     await agregarProducto(compradorId, product.id, cantidad);
   }
 
+  // JS Navega al perfil publico del vendedor pasando nombre y avatar por state.
+  function irPerfilVendedor(producto) {
+    navigate(`/vendedor/${producto.vendedorId}`, {
+      state: {
+        nombre: producto.vendedorNombre,
+        avatar: producto.vendedorAvatar,
+      },
+    });
+  }
+
+  // JS Abre la ficha de un producto elegido en la busqueda en vivo del header.
+  function manejarSeleccionBusqueda(productoCrudo) {
+    if (!productoCrudo) return;
+    setSelectedProduct(mapearProducto(productoCrudo));
+  }
+
   // JS Consulta el catalogo paginado contra GET /api/productos
   const cargarProductos = useCallback(async (numeroPagina) => {
     const primeraCarga = numeroPagina === 1;
@@ -133,7 +154,12 @@ const Hero = () => {
     setError("");
 
     try {
-      const res = await listarProductos({ page: numeroPagina, limit: LIMITE_PRODUCTOS });
+      const res = await listarProductos({
+        page: numeroPagina,
+        limit: LIMITE_PRODUCTOS,
+        nombre: busqueda,
+        categoria,
+      });
       const data = res.data || {};
       const nuevos = (data.productos || []).map(mapearProducto);
 
@@ -154,7 +180,7 @@ const Hero = () => {
       setCargando(false);
       setCargandoMas(false);
     }
-  }, []);
+  }, [busqueda, categoria]);
 
   useEffect(() => {
     cargarProductos(1);
@@ -167,7 +193,7 @@ const Hero = () => {
   return (
     <div className="flex min-h-screen md:min-h-0 overflow-hidden bg-surface-container-lowest font-sans">
       <main className="flex-grow h-dvh overflow-y-auto relative">
-        <Header showCategories={true} />
+        <Header onSelectProduct={manejarSeleccionBusqueda} />
 
         {/* ===== HERO SLIDER ===== */}
         <section className="px-4 sm:px-6 md:px-padding-lg lg:px-padding-xl pt-2 pb-6 md:pb-10">
@@ -243,7 +269,7 @@ const Hero = () => {
     <h1
       className="max-w-[760px] text-[42px] sm:text-[58px] md:text-[70px] xl:text-[82px] font-black leading-[0.95] tracking-tight"
       style={{
-        color: "var(--color-figma-text-primary)",
+        color: "white",
         textShadow: "0 10px 35px rgba(0,0,0,.45)",
       }}
     >
@@ -305,6 +331,9 @@ const Hero = () => {
           </Swiper>
         </section>
 
+        {/* ===== CATEGORIAS ===== */}
+        <Categorias />
+
         {/* ===== PRODUCTOS ===== */}
         <section className="px-4 sm:px-6 md:px-padding-lg lg:px-padding-xl pb-16 md:pb-20">
           <div className="flex items-end justify-between mb-8 md:mb-10">
@@ -314,13 +343,17 @@ const Hero = () => {
                 id="products-heading"
                 style={{ color: "var(--color-on-surface)" }}
               >
-                Explora Novedades
+                {busqueda
+                  ? `Resultados para "${busqueda}"`
+                  : categoria || "Explora Novedades"}
               </h2>
               <p
                 className="text-sm md:text-base"
                 style={{ color: "var(--color-brand-muted-text)" }}
               >
-                Productos destacados de la semana
+                {busqueda || categoria
+                  ? "Productos que coinciden con tu busqueda"
+                  : "Productos destacados de la semana"}
               </p>
             </div>
             <button
@@ -497,19 +530,24 @@ const Hero = () => {
                     </h3>
                   </button>
 
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => irPerfilVendedor(product)}
+                    className="flex items-center gap-2 mt-0.5 text-left group/vendor transition-opacity hover:opacity-80"
+                    aria-label={`Ver perfil de ${product.vendedorNombre}`}
+                  >
                     <img
                       src={product.vendedorAvatar}
                       alt={product.vendedorNombre}
                       className="w-5 h-5 rounded-full"
                     />
                     <span
-                      className="text-xs font-medium"
+                      className="text-xs font-medium group-hover/vendor:text-brand-orange transition-colors"
                       style={{ color: "var(--color-brand-muted-text)" }}
                     >
                       {product.vendedorNombre}
                     </span>
-                  </div>
+                  </button>
 
                   <div className="flex items-baseline gap-2.5 mt-1.5">
                     {product.descuento > 0 && (
@@ -640,7 +678,7 @@ const Hero = () => {
             setProductoReportado(product);
             setMostrarReportar(true);
           }}
-          onIrPerfilVendedor={() => navigate("/profile")}
+          onIrPerfilVendedor={() => irPerfilVendedor(selectedProduct)}
           onAgregarCarrito={manejarAgregarCarrito}
         />
       )}

@@ -125,8 +125,7 @@ export default function PerfilVendedor() {
   const [seguidores, setSeguidores] = useState([]);
   const [siguiendo, setSiguiendo] = useState([]);
   const [activeTab, setActiveTab] = useState("mis-productos");
-  const [sellerRatingSum, setSellerRatingSum] = useState(0);
-  const [sellerRatingCount, setSellerRatingCount] = useState(0);
+  const [sellerRating, setSellerRating] = useState(5);
   const [sellerHover, setSellerHover] = useState(0);
   const [bioText, setBioText] = useState(
     'Me gusta encontrar productos de buena calidad y apoyar tiendas con excelente atención. Siempre busco compras con buenas recomendaciones."'
@@ -195,15 +194,12 @@ export default function PerfilVendedor() {
     };
   }, []);
 
-  const sellerAverage =
-    sellerRatingCount === 0 ? 5 : sellerRatingSum / sellerRatingCount;
-  const sellerDisplay =
-    sellerHover > 0 ? sellerHover : Math.round(sellerAverage);
+  const sellerDisplay = sellerHover > 0 ? sellerHover : sellerRating;
   const isMisProductos = activeTab === "mis-productos";
 
-  const setSellerRating = (rating) => {
-    setSellerRatingSum((p) => p + rating);
-    setSellerRatingCount((p) => p + 1);
+  // JS Fija la calificacion al hacer clic y limpia el hover.
+  const seleccionarRating = (rating) => {
+    setSellerRating(rating);
     setSellerHover(0);
   };
 
@@ -403,7 +399,7 @@ export default function PerfilVendedor() {
                           key={i}
                           className="flex-shrink-0 transition-all duration-150 hover:scale-125 cursor-pointer"
                           style={{ width: "18px", height: "17px" }}
-                          onClick={() => setSellerRating(i)}
+                          onClick={() => seleccionarRating(i)}
                           onMouseEnter={() => setSellerHover(i)}
                           onMouseLeave={() => setSellerHover(0)}
                         >
@@ -430,7 +426,7 @@ export default function PerfilVendedor() {
                         color: "var(--color-brand-muted-text)",
                       }}
                     >
-                      {sellerAverage.toFixed(1)}
+                      {sellerRating.toFixed(1)}
                     </span>
                   </div>
                 </div>

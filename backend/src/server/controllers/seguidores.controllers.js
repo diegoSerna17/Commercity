@@ -114,3 +114,41 @@ export const listarSeguidores = async (req, res, next) => {
         next(err);
     }
 };
+
+/**
+ * Cuenta los seguidores y seguidos de cualquier usuario (perfil publico).
+ * Endpoint publico: no requiere autenticacion porque solo expone totales.
+ */
+export const contarSeguidores = async (req, res, next) => {
+    try {
+        const idParsed = idParamSchema.safeParse(req.params.id);
+
+        if (!idParsed.success) {
+            return errorResponse(res, "Id de usuario inválido", 400);
+        }
+
+        const usuarioId = idParsed.data;
+
+        if (!(await usuarioExiste(usuarioId))) {
+            return errorResponse(res, "Usuario no encontrado", 404);
+        }
+
+        const [[seguidores], [siguiendo]] = await Promise.all([
+            pool.query(
+                "SELECT COUNT(*) AS total FROM seguidores WHERE seguido_id = ?",
+                [usuarioId]
+            ),
+            pool.query(
+                "SELECT COUNT(*) AS total FROM seguidores WHERE seguidor_id = ?",
+                [usuarioId]
+            ),
+        ]);
+
+        return successResponse(res, "Contadores sociales del usuario.", {
+            seguidores: seguidores[0]?.total ?? 0,
+            siguiendo: siguiendo[0]?.total ?? 0,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
