@@ -1,12 +1,6 @@
-import { z } from "zod";
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-
-const seguirSchema = z.object({
-    seguido_id: z.coerce.number().int().positive(),
-});
-
-const idParamSchema = z.coerce.number().int().positive();
+import { seguirSchema, seguidorIdParamSchema as idParamSchema } from "../schemas/seguidores.schema.js";
 
 async function usuarioExiste(usuarioId) {
     const [filas] = await pool.query(

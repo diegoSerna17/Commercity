@@ -1,6 +1,6 @@
-import { z } from "zod";
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
+import { calificacionSchema } from "../schemas/calificaciones.schema.js";
 
 // ============================================================================
 // MODULO DE CALIFICACIONES DE VENDEDORES (RF107 del documento 20/08)
@@ -8,14 +8,7 @@ import { successResponse, errorResponse } from "../utils/response.js";
 // estrellas despues de realizar una compra."
 // Tabla real: calificaciones_vendedores (pedido_id UNIQUE -> una calificacion
 // por pedido; estrellas CHECK 1-5; comprador_id, vendedor_id, comentario).
-// ============================================================================
-
-const calificacionSchema = z.object({
-  pedido_id: z.number().int().positive(),
-  vendedor_id: z.number().int().positive(),
-  estrellas: z.number().int().min(1).max(5),
-  comentario: z.string().trim().max(500).optional(),
-});
+// Contrato de entrada: calificacionSchema (schemas/calificaciones.schema.js).
 
 /**
  * POST /api/calificaciones/vendedor
