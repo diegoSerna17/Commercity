@@ -1,0 +1,5752 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CommerCity API",
+    "version": "1.0.0",
+    "description": "API REST de la plataforma CommerCity (comprador, vendedor, administrador). Contratos de entrada generados desde esquemas Zod; respuestas con envoltorio uniforme { success, data }."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Desarrollo local"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Base",
+      "description": "Verificacion del servidor"
+    },
+    {
+      "name": "Usuarios",
+      "description": "Registro, login, perfil y recuperacion (RF2, RF40)"
+    },
+    {
+      "name": "Productos",
+      "description": "Catalogo publico y gestion del vendedor (RF45-RF49, RF54, RF78-RF94)"
+    },
+    {
+      "name": "Pedidos",
+      "description": "Resumen, checkout ACID y estados (RF35, RF113-RF118, RF134)"
+    },
+    {
+      "name": "Carrito",
+      "description": "Carrito persistente del comprador"
+    },
+    {
+      "name": "Tienda",
+      "description": "Cuenta bancaria, ventas e ingresos del vendedor (RF119-RF123, RF130-RF139)"
+    },
+    {
+      "name": "Historial",
+      "description": "Historial de compras y cancelaciones (RF26-RF32, RF135)"
+    },
+    {
+      "name": "Chat",
+      "description": "Chat interno comprador-vendedor (RF101)"
+    },
+    {
+      "name": "Notificaciones",
+      "description": "Notificaciones internas"
+    },
+    {
+      "name": "Calificaciones",
+      "description": "Calificacion de vendedores (RF107)"
+    },
+    {
+      "name": "Seguidores",
+      "description": "Seguir/dejar de seguir y perfiles publicos (RF106, RF110)"
+    },
+    {
+      "name": "Reportes",
+      "description": "Reportes de contenido (RF60-RF66)"
+    },
+    {
+      "name": "Admin",
+      "description": "Panel de administracion (RF55-RF76, rol administrador)"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "verificarServidor",
+        "tags": [
+          "Base"
+        ],
+        "summary": "Verificacion del servidor",
+        "description": "Endpoint raiz de verificacion (responde el modulo usuarios).",
+        "responses": {
+          "200": {
+            "description": "Servidor en linea.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/": {
+      "get": {
+        "operationId": "verificarModuloUsuarios",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Verificacion del modulo usuarios",
+        "description": "Verificacion del modulo de usuarios.",
+        "responses": {
+          "200": {
+            "description": "Modulo usuarios en linea.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/perfil-publico/{id}": {
+      "get": {
+        "operationId": "verPerfilPublico",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Ver perfil publico de un usuario",
+        "description": "Perfil publico de otro usuario por su ID (RF110).",
+        "responses": {
+          "200": {
+            "description": "Perfil publico.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      }
+    },
+    "/api/usuarios/directorio": {
+      "get": {
+        "operationId": "listarDirectorio",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Directorio de usuarios",
+        "description": "Directorio de usuarios para iniciar un chat con cualquier persona.",
+        "responses": {
+          "200": {
+            "description": "Directorio de usuarios.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Texto a buscar en nombre o correo",
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/usuarios/cuenta": {
+      "delete": {
+        "operationId": "eliminarMiCuenta",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Eliminar mi cuenta (comprador)",
+        "description": "Desactivacion logica de la cuenta propia; el comprador_id sale del token (RF40).",
+        "responses": {
+          "200": {
+            "description": "Cuenta desactivada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/usuarios/register": {
+      "post": {
+        "operationId": "registrarUsuario",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Registrar usuario",
+        "description": "Crea un comprador. Valida con registerSchema (H5: min 8 + letra y numero).",
+        "responses": {
+          "201": {
+            "description": "Usuario registrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Registro"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/login": {
+      "post": {
+        "operationId": "iniciarSesion",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Iniciar sesion",
+        "description": "Emite el JWT Bearer. Rate limit 10/min. Valida con loginSchema.",
+        "responses": {
+          "200": {
+            "description": "Sesion iniciada (JWT).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas peticiones (rate limit 10/min).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/recover": {
+      "post": {
+        "operationId": "solicitarRecuperacion",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Solicitar recuperacion de contraseña",
+        "description": "Envia el correo de restablecimiento (modo simulacion sin API key). Rate limit 10/min.",
+        "responses": {
+          "200": {
+            "description": "Correo de recuperacion enviado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas peticiones (rate limit 10/min).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Recuperacion"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/reset-password": {
+      "post": {
+        "operationId": "restablecerPassword",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Restablecer contraseña",
+        "description": "Restablece la contraseña con el token recibido por correo. Valida con resetSchema.",
+        "responses": {
+          "200": {
+            "description": "Contraseña restablecida.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestablecerPassword"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/logout": {
+      "post": {
+        "operationId": "cerrarSesion",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Cerrar sesion",
+        "description": "Revoca el token actual (lista negra en BD, RF2). Exige token.",
+        "responses": {
+          "200": {
+            "description": "Sesion cerrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/usuarios/me": {
+      "get": {
+        "operationId": "obtenerMiPerfil",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Obtener mi perfil",
+        "description": "Perfil del usuario autenticado.",
+        "responses": {
+          "200": {
+            "description": "Perfil propio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "actualizarMiPerfil",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Actualizar mi nombre de perfil",
+        "description": "Actualiza unicamente el nombre de perfil (obligatorio, max 100).",
+        "responses": {
+          "200": {
+            "description": "Perfil actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPerfil"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/me/rol": {
+      "patch": {
+        "operationId": "cambiarMiRol",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Cambiar mi rol",
+        "description": "Alterna entre comprador y vendedor. Valida con cambiarRolSchema.",
+        "responses": {
+          "200": {
+            "description": "Rol actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarRol"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/admin": {
+      "get": {
+        "operationId": "obtenerDatosAdmin",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Datos del panel admin (atajo)",
+        "description": "Atajo al panel de administracion; exige rol administrador.",
+        "responses": {
+          "200": {
+            "description": "Datos de administracion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ]
+      }
+    },
+    "/api/productos": {
+      "get": {
+        "operationId": "listarCatalogo",
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Listar catalogo",
+        "description": "Catalogo publico con busqueda, filtros y paginacion (RF87-RF94).",
+        "responses": {
+          "200": {
+            "description": "Pagina del catalogo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Pagina, base 1",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 4,
+              "description": "Registros por pagina (max 100)",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "nombre",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Filtro por nombre",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Filtro por categoria",
+              "type": "string"
+            }
+          },
+          {
+            "name": "vendedor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Filtro por vendedor",
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "crearProducto",
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Crear producto (vendedor)",
+        "description": "Publica un producto con imagen obligatoria (multipart). Precio con IVA incluido (RF45/RF46/RF48).",
+        "responses": {
+          "201": {
+            "description": "Producto creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "vendedor"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Nombre del producto"
+                  },
+                  "descripcion": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Descripcion"
+                  },
+                  "precio": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Precio publicado (ya incluye IVA 19%, RF48)"
+                  },
+                  "stock": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991,
+                    "description": "Stock disponible (entero >= 0)"
+                  },
+                  "descuento": {
+                    "description": "Descuento porcentual (opcional)",
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "categoria": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Categoria (se crea si no existe)"
+                  },
+                  "imagen": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Archivo adjunto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/categorias": {
+      "get": {
+        "operationId": "listarCategorias",
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Listar categorias",
+        "description": "Categorias del catalogo.",
+        "responses": {
+          "200": {
+            "description": "Lista de categorias.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/vendedores": {
+      "get": {
+        "operationId": "listarVendedores",
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Listar vendedores",
+        "description": "Vendedores con tienda activa.",
+        "responses": {
+          "200": {
+            "description": "Lista de vendedores.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/productos/mis-productos": {
+      "get": {
+        "operationId": "listarMisProductos",
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Listar mis productos (vendedor)",
+        "description": "Productos del vendedor autenticado (el ID sale del JWT, Fix 4.1).",
+        "responses": {
+          "200": {
+            "description": "Productos del vendedor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "vendedor"
+        ]
+      }
+    },
+    "/api/productos/{id}/validar-stock": {
+      "get": {
+        "operationId": "validarStock",
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Validar stock de un producto",
+        "description": "Valida si hay stock suficiente para una cantidad (RF86).",
+        "responses": {
+          "200": {
+            "description": "Resultado de la validacion de stock.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          },
+          {
+            "name": "cantidad",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Cantidad a validar contra el stock"
+            }
+          }
+        ]
+      }
+    },
+    "/api/productos/{id}": {
+      "get": {
+        "operationId": "verDetalleProducto",
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Ver detalle de producto",
+        "description": "Detalle con calificacion promedio y total de calificaciones (RF78/RF79).",
+        "responses": {
+          "200": {
+            "description": "Detalle del producto.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "editarProducto",
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Editar producto (vendedor)",
+        "description": "Edicion parcial; conserva los valores de BD no enviados. Imagen opcional (multipart).",
+        "responses": {
+          "200": {
+            "description": "Producto actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "vendedor"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": {
+                    "description": "Nombre del producto",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "descripcion": {
+                    "description": "Descripcion",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "precio": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Precio publicado (ya incluye IVA 19%, RF48)"
+                  },
+                  "stock": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991,
+                    "description": "Stock disponible (entero >= 0)"
+                  },
+                  "descuento": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Descuento porcentual 0-100"
+                  },
+                  "categoria": {
+                    "description": "Categoria",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "imagen": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Archivo adjunto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pedidos/resumen": {
+      "get": {
+        "operationId": "obtenerResumenCarrito",
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Resumen del carrito con desglose",
+        "description": "Resumen agrupado por vendedor con IVA 19% y reparto 90/10 en vuelo (RF113/RF114/RF117/RF134). Solo lectura.",
+        "responses": {
+          "200": {
+            "description": "Resumen del carrito.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/pedidos/confirmar-pago": {
+      "post": {
+        "operationId": "confirmarPago",
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Confirmar pago (checkout)",
+        "description": "Crea pedido + lineas + descuenta stock + registra pago en UNA transaccion ACID (RF134). Tarjeta validada con Luhn (RF118).",
+        "responses": {
+          "201": {
+            "description": "Pedido y pago registrados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmarPago"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pedidos/{id}/estado": {
+      "patch": {
+        "operationId": "actualizarEstadoPedido",
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Actualizar estado del pedido",
+        "description": "Dos caminos con RBAC por ownership en el controller: vendedor/admin avanza 1 nivel (RF122/RF124); comprador cancela por linea o total con reembolso (RF35).",
+        "responses": {
+          "200": {
+            "description": "Estado actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarEstadoPedido"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/carrito/": {
+      "post": {
+        "operationId": "agregarAlCarrito",
+        "tags": [
+          "Carrito"
+        ],
+        "summary": "Agregar producto al carrito",
+        "description": "Upsert atomico con validacion de stock. El comprador_id sale del JWT (H1).",
+        "responses": {
+          "201": {
+            "description": "Producto agregado al carrito.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgregarAlCarrito"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listarCarrito",
+        "tags": [
+          "Carrito"
+        ],
+        "summary": "Listar carrito",
+        "description": "Carrito agrupado por vendedor con resumen de totales.",
+        "responses": {
+          "200": {
+            "description": "Carrito del comprador.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/carrito/{productoId}": {
+      "delete": {
+        "operationId": "eliminarDelCarrito",
+        "tags": [
+          "Carrito"
+        ],
+        "summary": "Eliminar producto del carrito",
+        "description": "Elimina una linea del carrito del comprador autenticado.",
+        "responses": {
+          "200": {
+            "description": "Producto eliminado del carrito.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "productoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "modificarCantidadCarrito",
+        "tags": [
+          "Carrito"
+        ],
+        "summary": "Modificar cantidad en el carrito",
+        "description": "Fija la cantidad validando stock disponible.",
+        "responses": {
+          "200": {
+            "description": "Cantidad actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "productoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarCantidadCarrito"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tienda/mi-cuenta-bancaria": {
+      "get": {
+        "operationId": "obtenerMiCuentaBancaria",
+        "tags": [
+          "Tienda"
+        ],
+        "summary": "Ver mi cuenta bancaria",
+        "description": "Cuenta bancaria del vendedor (datos sensibles, RNF11 cifrado).",
+        "responses": {
+          "200": {
+            "description": "Cuenta bancaria.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "vendedor"
+        ]
+      },
+      "post": {
+        "operationId": "crearMiCuentaBancaria",
+        "tags": [
+          "Tienda"
+        ],
+        "summary": "Crear mi cuenta bancaria",
+        "description": "Alta de cuenta bancaria del vendedor (RNF9/RNF11).",
+        "responses": {
+          "201": {
+            "description": "Cuenta bancaria creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "vendedor"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuentaBancaria"
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "actualizarMiCuentaBancaria",
+        "tags": [
+          "Tienda"
+        ],
+        "summary": "Actualizar mi cuenta bancaria",
+        "description": "Actualiza la cuenta bancaria del vendedor.",
+        "responses": {
+          "200": {
+            "description": "Cuenta bancaria actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "vendedor"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuentaBancaria"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tienda/mi-cuenta-bancaria/masked": {
+      "get": {
+        "operationId": "obtenerMiCuentaBancariaEnmascarada",
+        "tags": [
+          "Tienda"
+        ],
+        "summary": "Ver mi cuenta bancaria enmascarada",
+        "description": "Version enmascarada para mostrar (RF122).",
+        "responses": {
+          "200": {
+            "description": "Cuenta bancaria enmascarada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "vendedor"
+        ]
+      }
+    },
+    "/api/tienda/ventas": {
+      "get": {
+        "operationId": "historialVentas",
+        "tags": [
+          "Tienda"
+        ],
+        "summary": "Historial de ventas",
+        "description": "Ventas del vendedor con filtros y resumen 90/10 (RF119/RF120).",
+        "responses": {
+          "200": {
+            "description": "Historial de ventas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "vendedor"
+        ],
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Filtra por estado (otro valor = sin filtro)",
+              "type": "string",
+              "enum": [
+                "Pendiente",
+                "En camino",
+                "Entregado",
+                "Cancelado"
+              ]
+            }
+          },
+          {
+            "name": "fecha_desde",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Fecha inicial (YYYY-MM-DD)",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fecha_hasta",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Fecha final (YYYY-MM-DD)",
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Busca en producto, comprador o referencia de pago",
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Pagina base 1 (alias: page)",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "por_pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Registros por pagina, max 100 (alias: limit)",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        ]
+      }
+    },
+    "/api/tienda/ingresos": {
+      "get": {
+        "operationId": "historialIngresos",
+        "tags": [
+          "Tienda"
+        ],
+        "summary": "Historial de ingresos",
+        "description": "Ingresos del 90% del vendedor, por transaccion o por dia (RF121/RF123).",
+        "responses": {
+          "200": {
+            "description": "Historial de ingresos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "vendedor"
+        ],
+        "parameters": [
+          {
+            "name": "fecha_desde",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Fecha inicial (YYYY-MM-DD)",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fecha_hasta",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Fecha final (YYYY-MM-DD)",
+              "type": "string"
+            }
+          },
+          {
+            "name": "agrupar_por",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "transaccion",
+              "description": "Agrupacion de ingresos (default transaccion)",
+              "type": "string",
+              "enum": [
+                "transaccion",
+                "dia"
+              ]
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Pagina base 1 (alias: page)",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "por_pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Registros por pagina, max 100 (alias: limit)",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        ]
+      }
+    },
+    "/api/tienda/dashboard/stats": {
+      "get": {
+        "operationId": "dashboardTienda",
+        "tags": [
+          "Tienda"
+        ],
+        "summary": "Estadisticas del dashboard",
+        "description": "Estadisticas de ventas de la tienda del vendedor.",
+        "responses": {
+          "200": {
+            "description": "Estadisticas de la tienda.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "vendedor"
+        ]
+      }
+    },
+    "/api/tienda/validacion": {
+      "get": {
+        "operationId": "validarMiTienda",
+        "tags": [
+          "Tienda"
+        ],
+        "summary": "Validacion integral de Mi Tienda",
+        "description": "Verifica cuenta bancaria, reparto 90/10 y devoluciones (RF130-RF139).",
+        "responses": {
+          "200": {
+            "description": "Resultado de la validacion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "vendedor"
+        ]
+      }
+    },
+    "/api/historial/compras": {
+      "get": {
+        "operationId": "historialCompras",
+        "tags": [
+          "Historial"
+        ],
+        "summary": "Historial de compras",
+        "description": "Compras del comprador agrupadas por pedido con IVA y totales (RF26-RF32).",
+        "responses": {
+          "200": {
+            "description": "Historial de compras.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Filtra lineas por estado (otro valor = sin filtro)",
+              "type": "string",
+              "enum": [
+                "Pendiente",
+                "En camino",
+                "Entregado",
+                "Cancelado"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/api/historial/compras/{id}/cancelar": {
+      "post": {
+        "operationId": "cancelarPedido",
+        "tags": [
+          "Historial"
+        ],
+        "summary": "Cancelar un pedido",
+        "description": "Cancela un pedido en estado Pendiente: restituye stock y reembolsa (RF135).",
+        "responses": {
+          "200": {
+            "description": "Pedido cancelado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/stats": {
+      "get": {
+        "operationId": "estadisticasAdmin",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Estadisticas globales",
+        "description": "Estadisticas de la plataforma (RF55-RF59).",
+        "responses": {
+          "200": {
+            "description": "Estadisticas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ]
+      }
+    },
+    "/api/admin/usuarios": {
+      "get": {
+        "operationId": "listarUsuariosAdmin",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Listar usuarios (admin)",
+        "description": "Gestion de usuarios con busqueda (RF67/RF73/RF74).",
+        "responses": {
+          "200": {
+            "description": "Lista de usuarios.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Busca por nombre o correo",
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/usuarios/{id}/estado": {
+      "patch": {
+        "operationId": "cambiarEstadoUsuarioAdmin",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Cambiar estado de usuario",
+        "description": "Activa o banea un usuario; el motivo lo genera el servidor.",
+        "responses": {
+          "200": {
+            "description": "Estado actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarEstadoUsuario"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/usuarios/{id}": {
+      "delete": {
+        "operationId": "eliminarUsuarioAdmin",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Eliminar usuario (admin)",
+        "description": "Desactivacion de un usuario por el administrador.",
+        "responses": {
+          "200": {
+            "description": "Usuario desactivado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/productos": {
+      "get": {
+        "operationId": "listarProductosAdmin",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Listar productos (admin)",
+        "description": "Moderacion de productos con busqueda (RF68/RF72).",
+        "responses": {
+          "200": {
+            "description": "Lista de productos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Busca por producto o vendedor",
+              "type": "string"
+            }
+          },
+          {
+            "name": "soloActivos",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "\"true\" para excluir suspendidos",
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/productos/{id}": {
+      "delete": {
+        "operationId": "suspenderProductoAdmin",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Suspender producto",
+        "description": "Suspende un producto (eliminado_por_admin).",
+        "responses": {
+          "200": {
+            "description": "Producto suspendido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/productos/{id}/restaurar": {
+      "patch": {
+        "operationId": "restaurarProductoAdmin",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Restaurar producto",
+        "description": "Levanta la suspension de un producto.",
+        "responses": {
+          "200": {
+            "description": "Producto restaurado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/reportes": {
+      "get": {
+        "operationId": "listarReportesAdmin",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Listar reportes (admin)",
+        "description": "Bandeja de reportes de contenido (RF60-RF66).",
+        "responses": {
+          "200": {
+            "description": "Lista de reportes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Texto a buscar",
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Filtra por estado",
+              "type": "string",
+              "enum": [
+                "pendiente",
+                "resuelto"
+              ]
+            }
+          },
+          {
+            "name": "incluir_archivados",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Valores que incluyen archivados: \"1\", \"true\", \"si\"",
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/reportes/{id}": {
+      "get": {
+        "operationId": "verReporteAdmin",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Ver reporte (admin)",
+        "description": "Detalle de un reporte.",
+        "responses": {
+          "200": {
+            "description": "Detalle del reporte.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "eliminarReporteAdmin",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Eliminar reporte (admin)",
+        "description": "Descarta un reporte.",
+        "responses": {
+          "200": {
+            "description": "Reporte eliminado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/reportes/{id}/resolver": {
+      "patch": {
+        "operationId": "resolverReporteAdmin",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Resolver reporte (admin)",
+        "description": "Resuelve un reporte con respuesta obligatoria.",
+        "responses": {
+          "200": {
+            "description": "Reporte resuelto.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolverReporte"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/busqueda": {
+      "get": {
+        "operationId": "buscarAdmin",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Buscador global (admin)",
+        "description": "Buscador unificado de usuarios y productos con FULLTEXT y fallback LIKE (RF69-RF71).",
+        "responses": {
+          "200": {
+            "description": "Resultados de busqueda.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Texto a buscar (vacio = listas vacias)"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "description": "Alcance de la busqueda",
+              "type": "string",
+              "enum": [
+                "all",
+                "usuario",
+                "producto"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/mi-cuenta-bancaria": {
+      "get": {
+        "operationId": "obtenerCuentaBancariaPlataforma",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Ver cuenta bancaria de la plataforma",
+        "description": "Cuenta bancaria de CommerCity para la comision del 10% (RF75/RF76, RNF11 cifrado).",
+        "responses": {
+          "200": {
+            "description": "Cuenta bancaria.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ]
+      },
+      "post": {
+        "operationId": "crearCuentaBancariaPlataforma",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Crear cuenta bancaria de la plataforma",
+        "description": "Alta de la cuenta que recibe la comision (RF75/RF76).",
+        "responses": {
+          "201": {
+            "description": "Cuenta bancaria creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuentaBancaria"
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "actualizarCuentaBancariaPlataforma",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Actualizar cuenta bancaria de la plataforma",
+        "description": "Actualiza la cuenta que recibe la comision.",
+        "responses": {
+          "200": {
+            "description": "Cuenta bancaria actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuentaBancaria"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/mi-cuenta-bancaria/masked": {
+      "get": {
+        "operationId": "obtenerCuentaBancariaPlataformaEnmascarada",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Ver cuenta de la plataforma enmascarada",
+        "description": "Version enmascarada de la cuenta de la plataforma.",
+        "responses": {
+          "200": {
+            "description": "Cuenta bancaria enmascarada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-roles": [
+          "administrador"
+        ]
+      }
+    },
+    "/api/reportes/": {
+      "post": {
+        "operationId": "crearReporte",
+        "tags": [
+          "Reportes"
+        ],
+        "summary": "Crear reporte",
+        "description": "Reporta un producto o un usuario con evidencia opcional (multipart). El informante sale del JWT (RF62/RF63, RF79, RF101).",
+        "responses": {
+          "201": {
+            "description": "Reporte creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/CrearReporte"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "evidencia": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "Archivo adjunto"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calificaciones/vendedor": {
+      "post": {
+        "operationId": "calificarVendedor",
+        "tags": [
+          "Calificaciones"
+        ],
+        "summary": "Calificar a un vendedor",
+        "description": "Calificacion de 1 a 5 estrellas tras una compra; una por pedido (RF107).",
+        "responses": {
+          "201": {
+            "description": "Calificacion registrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Prohibido: sin rol suficiente o sin ownership del recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalificacionVendedor"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/": {
+      "post": {
+        "operationId": "enviarMensaje",
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Enviar mensaje",
+        "description": "Mensaje de texto al otro usuario; el multipart se rechaza en puerta con 400 (RF101).",
+        "responses": {
+          "201": {
+            "description": "Mensaje enviado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnviarMensaje"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/conversaciones": {
+      "get": {
+        "operationId": "listarConversaciones",
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Listar conversaciones",
+        "description": "Conversaciones del usuario con ultimo mensaje y no leidos.",
+        "responses": {
+          "200": {
+            "description": "Lista de conversaciones.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/chat/mensajes/{usuarioId}": {
+      "get": {
+        "operationId": "obtenerConversacion",
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Ver historial con un usuario",
+        "description": "Mensajes entre el autenticado y otro usuario.",
+        "responses": {
+          "200": {
+            "description": "Historial de mensajes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "usuarioId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      }
+    },
+    "/api/chat/mensajes/{id}/leido": {
+      "patch": {
+        "operationId": "marcarMensajeLeido",
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Marcar mensaje como leido",
+        "description": "Marca como leido un mensaje recibido por el autenticado.",
+        "responses": {
+          "200": {
+            "description": "Mensaje marcado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      }
+    },
+    "/api/notificaciones/": {
+      "get": {
+        "operationId": "listarNotificaciones",
+        "tags": [
+          "Notificaciones"
+        ],
+        "summary": "Listar notificaciones",
+        "description": "Notificaciones del usuario con filtros opcionales de tipo y limite.",
+        "responses": {
+          "200": {
+            "description": "Lista de notificaciones.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tipo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Filtra por tipo de notificacion",
+              "type": "string",
+              "enum": [
+                "compra",
+                "pedido enviado",
+                "en camino",
+                "entregado",
+                "devolucion",
+                "mensajes",
+                "reporte"
+              ]
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Maximo de registros (default 50)",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "eliminarTodas",
+        "tags": [
+          "Notificaciones"
+        ],
+        "summary": "Eliminar todas",
+        "description": "Elimina todas las notificaciones del usuario.",
+        "responses": {
+          "200": {
+            "description": "Notificaciones eliminadas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/notificaciones/no-leidas": {
+      "get": {
+        "operationId": "contarNoLeidas",
+        "tags": [
+          "Notificaciones"
+        ],
+        "summary": "Contar no leidas",
+        "description": "Total de notificaciones no leidas.",
+        "responses": {
+          "200": {
+            "description": "Total de no leidas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/notificaciones/leidas": {
+      "patch": {
+        "operationId": "marcarTodasLeidas",
+        "tags": [
+          "Notificaciones"
+        ],
+        "summary": "Marcar todas como leidas",
+        "description": "Marca todas las notificaciones del usuario como leidas.",
+        "responses": {
+          "200": {
+            "description": "Notificaciones actualizadas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/notificaciones/{id}/leida": {
+      "patch": {
+        "operationId": "marcarLeida",
+        "tags": [
+          "Notificaciones"
+        ],
+        "summary": "Marcar una como leida",
+        "description": "Marca una notificacion como leida.",
+        "responses": {
+          "200": {
+            "description": "Notificacion actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      }
+    },
+    "/api/notificaciones/{id}": {
+      "delete": {
+        "operationId": "eliminarNotificacion",
+        "tags": [
+          "Notificaciones"
+        ],
+        "summary": "Eliminar una notificacion",
+        "description": "Elimina una notificacion del usuario.",
+        "responses": {
+          "200": {
+            "description": "Notificacion eliminada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Identificador entero positivo de ruta o cuerpo",
+              "title": "IdParam"
+            }
+          }
+        ]
+      }
+    },
+    "/api/seguidores/siguiendo": {
+      "get": {
+        "operationId": "listarSiguiendo",
+        "tags": [
+          "Seguidores"
+        ],
+        "summary": "Listar a quienes sigo",
+        "description": "Usuarios seguidos por el autenticado.",
+        "responses": {
+          "200": {
+            "description": "Lista de seguidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/seguidores/seguidores": {
+      "get": {
+        "operationId": "listarSeguidores",
+        "tags": [
+          "Seguidores"
+        ],
+        "summary": "Listar mis seguidores",
+        "description": "Usuarios que siguen al autenticado.",
+        "responses": {
+          "200": {
+            "description": "Lista de seguidores.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/seguidores/": {
+      "post": {
+        "operationId": "seguirUsuario",
+        "tags": [
+          "Seguidores"
+        ],
+        "summary": "Seguir a un usuario",
+        "description": "Sigue a otro usuario (no a si mismo).",
+        "responses": {
+          "201": {
+            "description": "Seguimiento creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeguirUsuario"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/seguidores/{id}": {
+      "delete": {
+        "operationId": "dejarDeSeguir",
+        "tags": [
+          "Seguidores"
+        ],
+        "summary": "Dejar de seguir",
+        "description": "Elimina el seguimiento a un usuario.",
+        "responses": {
+          "200": {
+            "description": "Seguimiento eliminado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/seguidores/{id}/contadores": {
+      "get": {
+        "operationId": "contarSeguidores",
+        "tags": [
+          "Seguidores"
+        ],
+        "summary": "Contadores publicos de un usuario",
+        "description": "Totales de seguidores/siguiendo para el perfil publico (RF106). Sin autenticacion.",
+        "responses": {
+          "200": {
+            "description": "Contadores del usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "EnvoltorioOk": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true,
+            "description": "Siempre true en respuestas exitosas"
+          },
+          "message": {
+            "description": "Mensaje humano opcional",
+            "type": "string"
+          },
+          "data": {
+            "description": "Carga util (forma por endpoint)"
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ],
+        "title": "EnvoltorioOk",
+        "description": "Envoltorio uniforme de respuestas exitosas"
+      },
+      "EnvoltorioError": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": false,
+            "description": "Siempre false en errores"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Codigo maquina (p. ej. VALIDATION_ERROR, NOT_FOUND)"
+              },
+              "message": {
+                "type": "string",
+                "description": "Mensaje humano"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "success",
+          "error"
+        ],
+        "title": "EnvoltorioError",
+        "description": "Envoltorio uniforme de respuestas de error"
+      },
+      "ParamsId": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Identificador entero positivo de ruta o cuerpo",
+            "title": "IdParam"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "ParamsId",
+        "description": "Parametro de ruta :id (entero positivo)",
+        "examples": [
+          {
+            "id": 12
+          }
+        ]
+      },
+      "DirectorioQuery": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "description": "Texto a buscar en nombre o correo",
+            "type": "string"
+          }
+        },
+        "title": "DirectorioQuery",
+        "description": "Query de GET /api/usuarios/directorio (directorio para iniciar chat)",
+        "examples": [
+          {
+            "q": "ana"
+          }
+        ]
+      },
+      "Registro": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+            "description": "Correo del usuario",
+            "title": "Email",
+            "examples": [
+              "comprador@ejemplo.com"
+            ]
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "allOf": [
+              {
+                "pattern": "[A-Za-z]"
+              },
+              {
+                "pattern": "\\d"
+              }
+            ],
+            "description": "Contraseña: minimo 8 caracteres, con letra y numero",
+            "title": "Password"
+          },
+          "nombre_completo": {
+            "description": "Nombre completo (opcional, min 2)",
+            "type": "string",
+            "minLength": 2
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false,
+        "title": "Registro",
+        "description": "Body de POST /api/usuarios/register (crea comprador)",
+        "examples": [
+          {
+            "email": "comprador@ejemplo.com",
+            "password": "Clave1234",
+            "nombre_completo": "Ana Compradora"
+          }
+        ]
+      },
+      "Login": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+            "description": "Correo del usuario",
+            "title": "Email",
+            "examples": [
+              "comprador@ejemplo.com"
+            ]
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "allOf": [
+              {
+                "pattern": "[A-Za-z]"
+              },
+              {
+                "pattern": "\\d"
+              }
+            ],
+            "description": "Contraseña: minimo 8 caracteres, con letra y numero",
+            "title": "Password"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false,
+        "title": "Login",
+        "description": "Body de POST /api/usuarios/login (emite JWT)",
+        "examples": [
+          {
+            "email": "comprador@ejemplo.com",
+            "password": "Clave1234"
+          }
+        ]
+      },
+      "Recuperacion": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+            "description": "Correo del usuario",
+            "title": "Email",
+            "examples": [
+              "comprador@ejemplo.com"
+            ]
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "additionalProperties": false,
+        "title": "Recuperacion",
+        "description": "Body de POST /api/usuarios/recover (envia correo de restablecimiento)",
+        "examples": [
+          {
+            "email": "comprador@ejemplo.com"
+          }
+        ]
+      },
+      "RestablecerPassword": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Token de restablecimiento recibido por correo"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "allOf": [
+              {
+                "pattern": "[A-Za-z]"
+              },
+              {
+                "pattern": "\\d"
+              }
+            ],
+            "description": "Contraseña: minimo 8 caracteres, con letra y numero",
+            "title": "Password"
+          }
+        },
+        "required": [
+          "token",
+          "password"
+        ],
+        "additionalProperties": false,
+        "title": "RestablecerPassword",
+        "description": "Body de POST /api/usuarios/reset-password",
+        "examples": [
+          {
+            "token": "0123456789abcdef",
+            "password": "Nueva1234"
+          }
+        ]
+      },
+      "ActualizarPerfil": {
+        "type": "object",
+        "properties": {
+          "nombre_completo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Nombre de perfil (obligatorio, max 100)"
+          }
+        },
+        "required": [
+          "nombre_completo"
+        ],
+        "additionalProperties": false,
+        "title": "ActualizarPerfil",
+        "description": "Body de PATCH /api/usuarios/me (actualiza unicamente el nombre)",
+        "examples": [
+          {
+            "nombre_completo": "Ana Compradora"
+          }
+        ]
+      },
+      "CambiarRol": {
+        "type": "object",
+        "properties": {
+          "rol": {
+            "type": "string",
+            "enum": [
+              "comprador",
+              "vendedor"
+            ],
+            "description": "Rol destino del usuario"
+          }
+        },
+        "required": [
+          "rol"
+        ],
+        "additionalProperties": false,
+        "title": "CambiarRol",
+        "description": "Body de PATCH /api/usuarios/me/rol (comprador <-> vendedor)",
+        "examples": [
+          {
+            "rol": "vendedor"
+          }
+        ]
+      },
+      "CatalogoQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Pagina, base 1",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "limit": {
+            "default": 4,
+            "description": "Registros por pagina (max 100)",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "nombre": {
+            "description": "Filtro por nombre",
+            "type": "string"
+          },
+          "categoria": {
+            "description": "Filtro por categoria",
+            "type": "string"
+          },
+          "vendedor": {
+            "description": "Filtro por vendedor",
+            "type": "string"
+          }
+        },
+        "title": "CatalogoQuery",
+        "description": "Query de GET /api/productos (busqueda, filtros y paginacion)",
+        "examples": [
+          {
+            "page": 1,
+            "limit": 4,
+            "nombre": "cafe",
+            "categoria": "Alimentos"
+          }
+        ]
+      },
+      "ProductoIdParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Identificador entero positivo de ruta o cuerpo",
+            "title": "IdParam"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "ProductoIdParams",
+        "description": "Params de GET /api/productos/:id y /:id/validar-stock",
+        "examples": [
+          {
+            "id": 5
+          }
+        ]
+      },
+      "ValidarStock": {
+        "type": "object",
+        "properties": {
+          "cantidad": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Cantidad a validar contra el stock"
+          }
+        },
+        "required": [
+          "cantidad"
+        ],
+        "title": "ValidarStock",
+        "description": "Cantidad de GET /api/productos/:id/validar-stock (RF86)",
+        "examples": [
+          {
+            "cantidad": 2
+          }
+        ]
+      },
+      "CrearProducto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Nombre del producto"
+          },
+          "descripcion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Descripcion"
+          },
+          "precio": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Precio publicado (ya incluye IVA 19%, RF48)"
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Stock disponible (entero >= 0)"
+          },
+          "descuento": {
+            "description": "Descuento porcentual (opcional)",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "categoria": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Categoria (se crea si no existe)"
+          }
+        },
+        "required": [
+          "nombre",
+          "descripcion",
+          "precio",
+          "stock",
+          "categoria"
+        ],
+        "title": "CrearProducto",
+        "description": "Body de POST /api/productos (vendedor; imagen multipart obligatoria, RF45/RF46/RF48)",
+        "examples": [
+          {
+            "nombre": "Cafe especial",
+            "descripcion": "Libra de cafe de origen",
+            "precio": 25000,
+            "stock": 10,
+            "categoria": "Alimentos"
+          }
+        ]
+      },
+      "EditarProducto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "description": "Nombre del producto",
+            "type": "string",
+            "minLength": 1
+          },
+          "descripcion": {
+            "description": "Descripcion",
+            "type": "string",
+            "minLength": 1
+          },
+          "precio": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Precio publicado (ya incluye IVA 19%, RF48)"
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Stock disponible (entero >= 0)"
+          },
+          "descuento": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Descuento porcentual 0-100"
+          },
+          "categoria": {
+            "description": "Categoria",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "title": "EditarProducto",
+        "description": "Body de PUT /api/productos/:id (edicion parcial del vendedor)",
+        "examples": [
+          {
+            "precio": 27000,
+            "stock": 8
+          }
+        ]
+      },
+      "ConfirmarPago": {
+        "type": "object",
+        "properties": {
+          "direccion_envio": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000,
+            "description": "Direccion de envio (5-1000)"
+          },
+          "metodo_pago": {
+            "type": "string",
+            "enum": [
+              "tarjeta",
+              "transferencia",
+              "pse"
+            ],
+            "description": "Metodo de pago simulado"
+          },
+          "numero_tarjeta": {
+            "description": "Requerido si metodo_pago=tarjeta (se valida Luhn, RF118)",
+            "type": "string"
+          },
+          "nombre_tarjeta": {
+            "description": "Nombre en la tarjeta",
+            "type": "string",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "direccion_envio",
+          "metodo_pago"
+        ],
+        "additionalProperties": false,
+        "title": "ConfirmarPago",
+        "description": "Body de POST /api/pedidos/confirmar-pago (checkout ACID RF134)",
+        "examples": [
+          {
+            "direccion_envio": "Calle 10 #20-30, Medellin",
+            "metodo_pago": "tarjeta",
+            "numero_tarjeta": "4111111111111111",
+            "nombre_tarjeta": "Ana Compradora"
+          }
+        ]
+      },
+      "ActualizarEstadoPedido": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "En camino",
+              "Entregado",
+              "Cancelado"
+            ],
+            "description": "Transicion de estado solicitada"
+          },
+          "detalle_id": {
+            "description": "Linea a cancelar (solo con estado=Cancelado)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "estado"
+        ],
+        "additionalProperties": false,
+        "title": "ActualizarEstadoPedido",
+        "description": "Body de PATCH /api/pedidos/:id/estado (vendedor avanza nivel; comprador cancela RF35)",
+        "examples": [
+          {
+            "estado": "En camino"
+          },
+          {
+            "estado": "Cancelado",
+            "detalle_id": 3
+          }
+        ]
+      },
+      "AgregarAlCarrito": {
+        "type": "object",
+        "properties": {
+          "producto_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Producto a agregar",
+            "title": "IdParam"
+          },
+          "cantidad": {
+            "default": 1,
+            "description": "Cantidad (default 1)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "producto_id"
+        ],
+        "title": "AgregarAlCarrito",
+        "description": "Body de POST /api/carrito/ (upsert atomico, valida stock)",
+        "examples": [
+          {
+            "producto_id": 5,
+            "cantidad": 2
+          }
+        ]
+      },
+      "CarritoProductoParams": {
+        "type": "object",
+        "properties": {
+          "productoId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Identificador entero positivo de ruta o cuerpo",
+            "title": "IdParam"
+          }
+        },
+        "required": [
+          "productoId"
+        ],
+        "title": "CarritoProductoParams",
+        "description": "Params de DELETE/PATCH /api/carrito/:productoId",
+        "examples": [
+          {
+            "productoId": 5
+          }
+        ]
+      },
+      "ModificarCantidadCarrito": {
+        "type": "object",
+        "properties": {
+          "cantidad": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Nueva cantidad (valida stock)"
+          }
+        },
+        "required": [
+          "cantidad"
+        ],
+        "title": "ModificarCantidadCarrito",
+        "description": "Body de PATCH /api/carrito/:productoId",
+        "examples": [
+          {
+            "cantidad": 3
+          }
+        ]
+      },
+      "CuentaBancaria": {
+        "type": "object",
+        "properties": {
+          "titular_nombre": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100,
+            "pattern": "^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\\s]+$",
+            "description": "Nombre del titular (solo letras y espacios)"
+          },
+          "banco": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 50,
+            "description": "Nombre del banco"
+          },
+          "tipo_cuenta": {
+            "type": "string",
+            "enum": [
+              "ahorros",
+              "corriente"
+            ],
+            "description": "Tipo de cuenta"
+          },
+          "numero_cuenta": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 20,
+            "pattern": "^\\d+$",
+            "description": "Numero de cuenta (solo digitos, 6-20)"
+          }
+        },
+        "required": [
+          "titular_nombre",
+          "banco",
+          "tipo_cuenta",
+          "numero_cuenta"
+        ],
+        "additionalProperties": false,
+        "title": "CuentaBancaria",
+        "description": "Body de alta/actualizacion de cuenta bancaria (vendedor y admin). RNF11: se cifra en BD.",
+        "examples": [
+          {
+            "titular_nombre": "Ana Compradora",
+            "banco": "Bancolombia",
+            "tipo_cuenta": "ahorros",
+            "numero_cuenta": "1234567890"
+          }
+        ]
+      },
+      "HistorialVentasQuery": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "description": "Filtra por estado (otro valor = sin filtro)",
+            "type": "string",
+            "enum": [
+              "Pendiente",
+              "En camino",
+              "Entregado",
+              "Cancelado"
+            ]
+          },
+          "fecha_desde": {
+            "description": "Fecha inicial (YYYY-MM-DD)",
+            "type": "string"
+          },
+          "fecha_hasta": {
+            "description": "Fecha final (YYYY-MM-DD)",
+            "type": "string"
+          },
+          "q": {
+            "description": "Busca en producto, comprador o referencia de pago",
+            "type": "string"
+          },
+          "pagina": {
+            "description": "Pagina base 1 (alias: page)",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "por_pagina": {
+            "description": "Registros por pagina, max 100 (alias: limit)",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "title": "HistorialVentasQuery",
+        "description": "Query de GET /api/tienda/ventas (filtros + paginacion del vendedor)",
+        "examples": [
+          {
+            "estado": "Pendiente",
+            "pagina": 1,
+            "por_pagina": 10
+          }
+        ]
+      },
+      "HistorialIngresosQuery": {
+        "type": "object",
+        "properties": {
+          "fecha_desde": {
+            "description": "Fecha inicial (YYYY-MM-DD)",
+            "type": "string"
+          },
+          "fecha_hasta": {
+            "description": "Fecha final (YYYY-MM-DD)",
+            "type": "string"
+          },
+          "agrupar_por": {
+            "default": "transaccion",
+            "description": "Agrupacion de ingresos (default transaccion)",
+            "type": "string",
+            "enum": [
+              "transaccion",
+              "dia"
+            ]
+          },
+          "pagina": {
+            "description": "Pagina base 1 (alias: page)",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "por_pagina": {
+            "description": "Registros por pagina, max 100 (alias: limit)",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "title": "HistorialIngresosQuery",
+        "description": "Query de GET /api/tienda/ingresos (ingresos 90/10 agrupados)",
+        "examples": [
+          {
+            "agrupar_por": "dia",
+            "pagina": 1,
+            "por_pagina": 10
+          }
+        ]
+      },
+      "HistorialComprasQuery": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "description": "Filtra lineas por estado (otro valor = sin filtro)",
+            "type": "string",
+            "enum": [
+              "Pendiente",
+              "En camino",
+              "Entregado",
+              "Cancelado"
+            ]
+          }
+        },
+        "title": "HistorialComprasQuery",
+        "description": "Query de GET /api/historial/compras (filtro opcional por estado RF30)",
+        "examples": [
+          {
+            "estado": "Pendiente"
+          }
+        ]
+      },
+      "AdminUsuariosQuery": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "description": "Busca por nombre o correo",
+            "type": "string"
+          }
+        },
+        "title": "AdminUsuariosQuery",
+        "description": "Query de GET /api/admin/usuarios (RF67/RF73/RF74)",
+        "examples": [
+          {
+            "q": "ana"
+          }
+        ]
+      },
+      "CambiarEstadoUsuario": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "baneado"
+            ],
+            "description": "Nuevo estado del usuario"
+          }
+        },
+        "required": [
+          "estado"
+        ],
+        "additionalProperties": false,
+        "title": "CambiarEstadoUsuario",
+        "description": "Body de PATCH /api/admin/usuarios/:id/estado (banear/suspender/reactivar)",
+        "examples": [
+          {
+            "estado": "baneado"
+          }
+        ]
+      },
+      "AdminProductosQuery": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "description": "Busca por producto o vendedor",
+            "type": "string"
+          },
+          "soloActivos": {
+            "description": "\"true\" para excluir suspendidos",
+            "type": "string"
+          }
+        },
+        "title": "AdminProductosQuery",
+        "description": "Query de GET /api/admin/productos (RF68/RF72)",
+        "examples": [
+          {
+            "q": "cafe",
+            "soloActivos": "true"
+          }
+        ]
+      },
+      "AdminReportesQuery": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "description": "Texto a buscar",
+            "type": "string"
+          },
+          "estado": {
+            "description": "Filtra por estado",
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "resuelto"
+            ]
+          },
+          "incluir_archivados": {
+            "description": "Valores que incluyen archivados: \"1\", \"true\", \"si\"",
+            "type": "string"
+          }
+        },
+        "title": "AdminReportesQuery",
+        "description": "Query de GET /api/admin/reportes (RF60-RF66)",
+        "examples": [
+          {
+            "estado": "pendiente"
+          }
+        ]
+      },
+      "ResolverReporte": {
+        "type": "object",
+        "properties": {
+          "respuesta": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Respuesta de resolucion del admin (max 2000)"
+          }
+        },
+        "required": [
+          "respuesta"
+        ],
+        "additionalProperties": false,
+        "title": "ResolverReporte",
+        "description": "Body de PATCH /api/admin/reportes/:id/resolver",
+        "examples": [
+          {
+            "respuesta": "Contenido retirado tras revision"
+          }
+        ]
+      },
+      "BusquedaAdminQuery": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Texto a buscar (vacio = listas vacias)"
+          },
+          "scope": {
+            "default": "all",
+            "description": "Alcance de la busqueda",
+            "type": "string",
+            "enum": [
+              "all",
+              "usuario",
+              "producto"
+            ]
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "BusquedaAdminQuery",
+        "description": "Query de GET /api/admin/busqueda (buscador unificado, limite 20 por tipo)",
+        "examples": [
+          {
+            "q": "cafe",
+            "scope": "all"
+          }
+        ]
+      },
+      "CrearReporte": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "tipo": {
+                "type": "string",
+                "const": "Producto"
+              },
+              "motivo": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "description": "Motivo del reporte (max 2000)"
+              },
+              "producto_id": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Producto reportado"
+              }
+            },
+            "required": [
+              "tipo",
+              "motivo",
+              "producto_id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "tipo": {
+                "type": "string",
+                "const": "Usuario"
+              },
+              "motivo": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "description": "Motivo del reporte (max 2000)"
+              },
+              "usuario_reportado_id": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Usuario reportado (distinto del informante)"
+              }
+            },
+            "required": [
+              "tipo",
+              "motivo",
+              "usuario_reportado_id"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "title": "CrearReporte",
+        "description": "Body de POST /api/reportes/ (multipart: evidencia opcional; informante del JWT)",
+        "examples": [
+          {
+            "tipo": "Producto",
+            "motivo": "Producto falsificado",
+            "producto_id": 9
+          },
+          {
+            "tipo": "Usuario",
+            "motivo": "Mensajes ofensivos",
+            "usuario_reportado_id": 7
+          }
+        ]
+      },
+      "CalificacionVendedor": {
+        "type": "object",
+        "properties": {
+          "pedido_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Pedido comprado por el usuario autenticado"
+          },
+          "vendedor_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Vendedor a calificar (con linea no cancelada en el pedido)"
+          },
+          "estrellas": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Calificacion de 1 a 5 estrellas"
+          },
+          "comentario": {
+            "description": "Comentario opcional (max 500)",
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "pedido_id",
+          "vendedor_id",
+          "estrellas"
+        ],
+        "title": "CalificacionVendedor",
+        "description": "Body de POST /api/calificaciones/vendedor (RF107: calificar tras comprar)",
+        "examples": [
+          {
+            "pedido_id": 10,
+            "vendedor_id": 4,
+            "estrellas": 5,
+            "comentario": "Excelente vendedor"
+          }
+        ]
+      },
+      "EnviarMensaje": {
+        "type": "object",
+        "properties": {
+          "receptor_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Destinatario (distinto del usuario autenticado)",
+            "title": "IdParam"
+          },
+          "mensaje": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Texto del mensaje (no vacio)"
+          }
+        },
+        "required": [
+          "receptor_id",
+          "mensaje"
+        ],
+        "title": "EnviarMensaje",
+        "description": "Body de POST /api/chat/ (solo texto; el multipart se rechaza con 400)",
+        "examples": [
+          {
+            "receptor_id": 7,
+            "mensaje": "Hola, sigue disponible?"
+          }
+        ]
+      },
+      "ConversacionParams": {
+        "type": "object",
+        "properties": {
+          "usuarioId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Identificador entero positivo de ruta o cuerpo",
+            "title": "IdParam"
+          }
+        },
+        "required": [
+          "usuarioId"
+        ],
+        "title": "ConversacionParams",
+        "description": "Params de GET /api/chat/mensajes/:usuarioId (historial con otro usuario)",
+        "examples": [
+          {
+            "usuarioId": 7
+          }
+        ]
+      },
+      "MensajeIdParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Identificador entero positivo de ruta o cuerpo",
+            "title": "IdParam"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "MensajeIdParams",
+        "description": "Params de PATCH /api/chat/mensajes/:id/leido (marca mensaje recibido como leido)",
+        "examples": [
+          {
+            "id": 15
+          }
+        ]
+      },
+      "ListarNotificacionesQuery": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "description": "Filtra por tipo de notificacion",
+            "type": "string",
+            "enum": [
+              "compra",
+              "pedido enviado",
+              "en camino",
+              "entregado",
+              "devolucion",
+              "mensajes",
+              "reporte"
+            ]
+          },
+          "limite": {
+            "description": "Maximo de registros (default 50)",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "title": "ListarNotificacionesQuery",
+        "description": "Query de GET /api/notificaciones/ (tipo y limite opcionales)",
+        "examples": [
+          {
+            "tipo": "mensajes",
+            "limite": 20
+          }
+        ]
+      },
+      "SeguirUsuario": {
+        "type": "object",
+        "properties": {
+          "seguido_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Usuario a seguir (distinto del autenticado)",
+            "title": "IdParam"
+          }
+        },
+        "required": [
+          "seguido_id"
+        ],
+        "title": "SeguirUsuario",
+        "description": "Body de POST /api/seguidores/ (seguir a un usuario)",
+        "examples": [
+          {
+            "seguido_id": 7
+          }
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Bearer emitido por POST /api/usuarios/login"
+      }
+    }
+  }
+}
