@@ -18,6 +18,7 @@ import calificacionesRouter from "./routes/calificaciones.routes.js";
 import chatRouter from "./routes/chat.routes.js";
 import notificacionesRouter from "./routes/notificaciones.routes.js";
 import seguidoresRouter from "./routes/seguidores.routes.js";
+import docsRouter from "./docs/docs.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { authRequired } from "./middleware/auth.middleware.js";
 
@@ -102,6 +103,9 @@ app.use("/api/calificaciones", calificacionesRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/notificaciones", notificacionesRouter);
 app.use("/api/seguidores", seguidoresRouter);
+// Documentacion OpenAPI (Fase 3 docs-api): /api/openapi.json + /api/docs.
+// Gate DOCS_ENABLED dentro del router; no toca helmet/CSP/CORS.
+app.use("/api", docsRouter);
 app.use("/api", productosRouter);
 
 // Catch-all 404: cualquier ruta que no coincida con los routers anteriores
