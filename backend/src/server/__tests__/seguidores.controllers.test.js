@@ -221,4 +221,58 @@ describe("Seguidores", () => {
         expect(response.status).toBe(500);
         expect(response.body.error.code).toBe("INTERNAL_ERROR");
     });
+
+    it("contadores: endpoint publico sin token", async () => {
+        pool.query.mockImplementation((sql) => {
+            if (sql.includes("FROM usuarios WHERE id")) return [[{ 1: 1 }], undefined];
+            if (sql.includes("seguido_id = ?")) return [[{ total: 7 }], undefined];
+            if (sql.includes("seguidor_id = ?")) return [[{ total: 2 }], undefined];
+            return [[], undefined];
+        });
+        const response = await request(app).get("/api/seguidores/3/contadores");
+        expect(response.status).toBe(200);
+        expect(response.body.data).toEqual({ seguidores: 7, siguiendo: 2 });
+        const conteos = pool.query.mock.calls.filter(([sql]) => sql.includes("COUNT(*)"));
+        expect(conteos).toHaveLength(2);
+        expect(conteos[0][1]).toEqual([3]);
+        expect(conteos[1][1]).toEqual([3]);
+    });
+
+    it("contadores: rechaza un id invalido (400)", async () => {
+        const response = await request(app).get("/api/seguidores/abc/contadores");
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("contadores: devuelve 404 si el usuario no existe", async () => {
+        pool.query.mockImplementation((sql) => {
+            if (sql.includes("FROM usuarios WHERE id")) return [[], undefined];
+            return [[], undefined];
+        });
+        const response = await request(app).get("/api/seguidores/999/contadores");
+        expect(response.status).toBe(404);
+    });
+
+    it("contadores: devuelve 0 y 0 si no hay relaciones", async () => {
+        pool.query.mockImplementation((sql) => {
+            if (sql.includes("FROM usuarios WHERE id")) return [[{ 1: 1 }], undefined];
+            if (sql.includes("seguido_id = ?")) return [[[{ total: 0 }]], undefined];
+            if (sql.includes("seguidor_id = ?")) return [[[{ total: 0 }]], undefined];
+            return [[], undefined];
+        });
+        const response = await request(app).get("/api/seguidores/5/contadores");
+        expect(response.status).toBe(200);
+        expect(response.body.data).toEqual({ seguidores: 0, siguiendo: 0 });
+    });
+
+    it("contadores: devuelve 500 si la BD falla", async () => {
+        pool.query.mockImplementation((sql) => {
+            if (sql.includes("FROM usuarios WHERE id")) return [[{ 1: 1 }], undefined];
+            if (sql.includes("COUNT(*)")) throw new Error("BD caida");
+            return [[], undefined];
+        });
+        const response = await request(app).get("/api/seguidores/5/contadores");
+        expect(response.status).toBe(500);
+        expect(response.body.error.code).toBe("INTERNAL_ERROR");
+    });
 });

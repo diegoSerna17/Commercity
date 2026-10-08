@@ -33,3 +33,12 @@ export const seguirUsuario = (seguidoId) =>
  */
 export const dejarDeSeguir = (seguidoId) =>
   request(`/api/seguidores/${seguidoId}`, { method: "DELETE" });
+
+/**
+ * Contadores publicos de un usuario (seguidores y seguidos) para el perfil
+ * publico del vendedor. No requiere autenticacion.
+ * @param {number} usuarioId id del usuario consultado
+ * @returns {Promise<{success: boolean, data: {seguidores: number, siguiendo: number}}>}
+ */
+export const contarSeguidores = (usuarioId) =>
+  request(`/api/seguidores/${usuarioId}/contadores`);
