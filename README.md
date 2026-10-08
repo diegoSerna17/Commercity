@@ -319,7 +319,7 @@ E2E con backend vivo (2026-09-28): runner de los 69 endpoints = **129/129** y ca
 
 La API es REST, escucha en `http://localhost:3000` y responde siempre con el contrato uniforme `{ success, data }` en caso de éxito o `{ success, error }` ante un fallo. Las rutas protegidas exigen la cabecera `Authorization: Bearer <token>`.
 
-Los 69 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`):
+Los 72 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`):
 
 | Prefijo                 | Módulo                                                            |
 | ----------------------- | ----------------------------------------------------------------- |
@@ -337,6 +337,8 @@ Los 69 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`
 | `/api/admin`            | Panel de administración (RF57-RF80)                               |
 
 Los nombres exactos, verbos y cuerpos de cada endpoint están en los archivos de rutas del backend.
+
+> **Referencia generada desde Zod (v1.2.0):** interactiva en `http://localhost:3000/api/docs` (Scalar) y JSON en `/api/openapi.json` — ver `docs/api/openapi.json`, `docs/api/entidades.md` (40 contratos), `docs/api/inventario-endpoints.md`, `docs/bd/modelo-datos.md`, `docs/arquitectura.md` y `docs/guias/`. Se regenera con `npm run docs:api` y `npm run docs:entidades` desde `backend/`.
 
 ## Roles del sistema
 
