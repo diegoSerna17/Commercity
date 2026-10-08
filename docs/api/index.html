@@ -10,9 +10,10 @@
       integrity="sha384-kYDGzV91Jnn3TbHINV3nt54riK2uMJDfN5Al8dAkz4FssELTBWbD8rgw32sTKfOi"
       crossorigin="anonymous"
     ></script>
+    <script src="./docs.js"></script>
     <style>
       body { margin: 0; font-family: system-ui, sans-serif; }
-      #aviso { padding: 2rem; max-width: 60rem; margin: 0 auto; display: none; }
+      #aviso { padding: 2rem; max-width: 60rem; margin: 0 auto; }
     </style>
   </head>
   <body>
@@ -30,14 +31,5 @@
       </ul>
     </div>
     <noscript><p style="padding:2rem">Esta pagina requiere JavaScript (Scalar). Usa <a href="./openapi.json">openapi.json</a>.</p></noscript>
-    <script>
-      (function () {
-        if (typeof Scalar === "undefined" || !Scalar.createApiReference) {
-          document.getElementById("aviso").style.display = "block";
-          return;
-        }
-        Scalar.createApiReference("#app", { url: "./openapi.json" });
-      })();
-    </script>
   </body>
 </html>

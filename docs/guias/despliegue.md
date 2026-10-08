@@ -19,7 +19,7 @@ Plantilla en `backend/.env.example` (nunca commitear `.env` real):
 
 ## Documentacion en despliegue
 - Generar antes de publicar: `npm run docs:api` y `npm run docs:entidades` (artefactos versionados en `docs/api/`).
-- `/api/docs` y `/api/openapi.json` responden solo si `DOCS_ENABLED=true` o `NODE_ENV !== "production"`.
+- `/api/docs` y `/api/openapi.json` responden solo si `DOCS_ENABLED=true` o `NODE_ENV !== "production"`. La pagina usa Scalar 1.73.1 (CDN pineado + SRI) con CSP acotada a esa ruta (el init vive en `/api/docs.js` para no necesitar `unsafe-inline`); la config global de helmet no se modifica.
 - Produccion: exponer la referencia desde un estatico (`docs/api/index.html` + `openapi.json`) en lugar de habilitarla en la API, salvo decision explicita.
 
 ## Checklist previo a release

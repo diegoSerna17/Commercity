@@ -27,6 +27,23 @@ describe("Documentacion OpenAPI (/api/openapi.json y /api/docs)", () => {
     expect(res.headers["content-type"]).toMatch(/html/);
     expect(res.text).toContain("@scalar/api-reference@1.73.1");
     expect(res.text).toContain("sha384-");
+    expect(res.text).toContain('src="./docs.js"');
+  });
+
+  it("/api/docs tiene CSP acotada (CDN permitido) y el resto conserva la global", async () => {
+    const docs = await request(app).get("/api/docs");
+    const cspDocs = docs.headers["content-security-policy"];
+    const scriptSrc = cspDocs.split(";").map((d) => d.trim()).find((d) => d.startsWith("script-src "));
+    expect(scriptSrc).toBe("script-src 'self' https://cdn.jsdelivr.net");
+    const otra = await request(app).get("/api/ruta-inexistente-docs");
+    expect(otra.headers["content-security-policy"]).not.toMatch(/jsdelivr/);
+  });
+
+  it("sirve /api/docs.js como javascript same-origin", async () => {
+    const res = await request(app).get("/api/docs.js");
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/javascript/);
+    expect(res.text).toContain("createApiReference");
   });
 
   it("no captura rutas de productos (/api/productos sigue vivo)", async () => {

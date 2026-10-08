@@ -4,6 +4,16 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-08 - DOCS: CSP acotada a /api/docs para UI Scalar completa (cierre Fase 3)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/docs/docs.routes.js; backend/src/server/__tests__/docs.routes.test.js; docs/api/index.html; docs/api/docs.js (NUEVO); docs/guias/despliegue.md
+- **Descripcion**: Cierre de la puerta pendiente de Fase 3 con autorizacion explicita: GET /api/docs emite CSP acotada (identica a la default de helmet v8 salvo script-src que suma https://cdn.jsdelivr.net e img-src que suma https:), aplicada con res.set() solo en esa respuesta; la config global de helmet en app.js no se modifica. El init de Scalar se externalizo a GET /api/docs.js (same-origin) para no necesitar 'unsafe-inline'. Bundle: CDN Scalar 1.73.1 pineado con SRI (cero dependencias npm nuevas). Nota de sesion: a mitad del trabajo la sesion amanecio en la rama ajena fix/command-code-write-eof-resiliente; se verifico que origin/feature/docs-api-zod-openapi conservaba los 9 commits, se limpiaron 2 archivos escritos por error en la rama ajena y, con decision del usuario, se volvio a la rama propia para terminar.
+- **Motivo**: completar la UI interactiva de la API sin debilitar la seguridad global (antes la pagina solo mostraba el fallback por script-src 'self').
+- **Requerimientos**: N/A (documentacion)
+- **Evidencia**: docs.routes.test.js 6/6 (incluye CSP exacta de /api/docs y global intacta en otras rutas + docs.js javascript); servidor vivo: /api/docs 200 con CSP acotada observada, /api/docs.js 200 application/javascript, /api/openapi.json 200 con CSP global sin jsdelivr; puerto 3000 liberado.
+- **Estado**: Completado
+
 ## 2026-10-08 - DOCS: referencia OpenAPI 3.1 + contratos Zod centralizados de los 72 endpoints (plan docs-api, v1.2.0)
 
 - **Autor**: Daniel Palacios
