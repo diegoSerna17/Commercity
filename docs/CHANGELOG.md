@@ -4,6 +4,16 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-07 - FEATURE: integracion rama seguidores/perfil publico/tema (Diego Serna) con correcciones del lider
+
+- **Autor**: Daniel Palacios
+- **Archivos**: backend/src/server/controllers/seguidores.controllers.js; backend/src/server/routes/seguidores.routes.js; backend/src/server/__tests__/seguidores.controllers.test.js; backend/.env.example; frontend/src/pages/Perfil/PerfilPublico.jsx (NUEVO); frontend/src/pages/Perfil/Ajustes.jsx; frontend/src/utils/tema.js (NUEVO); frontend/src/components/inicio/Categorias.jsx; frontend/src/components/globales/Header.jsx; frontend/src/pages/Inicio/Inicio.jsx; frontend/src/constants/colors.css; frontend/src/services/seguidores.service.js (NUEVO); frontend/src/services/productos.service.js; frontend/src/App.jsx; frontend/src/main.jsx
+- **Descripcion**: Se integro a PREVIEW la rama feature/seguidores-perfil-publico-tema del integrante Diego Serna (commit base 7db1b0d): endpoint publico GET /api/seguidores/:id/contadores (RF106), pagina PerfilPublico con botones Seguir/Siguiendo y mensaje directo (RF110), sistema de tema light/dark/system con data-theme en html y persistencia localStorage, toggle en Ajustes, y refinamiento de Categorias/Header/Inicio. El lider aplico tres correcciones sobre la rama: (1) restauro el promedio real de estrellas del vendedor en PerfilVendedor.jsx (sellerRatingSum/sellerRatingCount con promedio, 5 default) que la rama habia reemplazado por un rating estatico fijo de 5; (2) .env.example con DB_NAME=commercity_v2 coherente con la BD real (antes vacio); (3) tests del endpoint contadores (5 casos: 200 publico con params, 400, 404, 200 con 0/0, 500).
+- **Motivo**: corregir los hallazgos reales detectados en la revision de la rama del integrante (regresion del promedio de calificaciones, .env.example incoherente, falta de tests del endpoint nuevo) antes del merge a PREVIEW; los candidatos de color del tema (h1 de Inicio sobre overlays negros y texto --color-auth-card-bg sobre naranja #12121A/#EF9918, contraste ~8:1) fueron evaluados y NO requieren cambio.
+- **Requerimientos**: RF106 (seguidores), RF110 (perfil publico), RF81-RF90 (catalogo, busqueda en Header), N/A (tema visual)
+- **Evidencia**: suite de seguidores 20/20; corrida completa en la rama 333/333 tests (22 archivos, exit 0); cobertura All files Lines 92.6%, Statements 92.07% (>= umbral 60%; nota: base de la rama mas antigua que PREVIEW, referencia vigente 95.37% Lines se re-verifica en PREVIEW). Commits f6e7879 (fix rating), 0d89790 (fix .env.example), fe9fcf8 (test contadores) sobre la rama; merge 4d1873c en PREVIEW de origin y commercycity.
+- **Estado**: Completado
+
 ## 2026-10-07 - FIX: reporte de devoluciones acumula monto_reembolsado CON IVA
 
 - **Autor**: Daniel Palacios
