@@ -138,6 +138,15 @@ docs/informes/*
 !docs/informes/EVIDENCIA_E2E_CAPA_RED_2026-09-28.md
 !docs/informes/INFORME_ESTADO_INTEGRACION_2026-09-28.md
 !docs/informes/INFORME_FINAL_SENA_2026-09-25.md
+# Excepción aprobada 2026-10-08 (Daniel): se versiona la documentacion
+# tecnica generada desde Zod/OpenAPI (plan docs-api). El resto de docs/ sigue fuera.
+!docs/api/
+!docs/api/**
+!docs/bd/
+!docs/bd/**
+!docs/guias/
+!docs/guias/**
+!docs/arquitectura.md
 !docs/CHANGELOG.md
 scripts/
 TES.MD
