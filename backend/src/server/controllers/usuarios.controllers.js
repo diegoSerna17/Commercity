@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import pool from "../config/db.js";
+import pkg from "../../../package.json" with { type: "json" };
 import { JWT_SECRET } from "../utils/config.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { enviarCorreoRecuperacion } from "../utils/mailer.js";
@@ -28,13 +29,15 @@ import { enviarCorreoRecuperacion } from "../utils/mailer.js";
  * @param {import("express").Response} res
  */
 export const getUsuarios = (req, res) => {
+    // Banner dinamico: major de backend/package.json (hoy "Commercity API v1").
+    const apiMajor = String(pkg.version).split(".")[0];
     return res.json({
         success: true,
         data: {
             message: "servidor creado",
             status: "ok",
             timestamp: new Date().toISOString(),
-            version: "Commercity API v1"
+            version: `Commercity API v${apiMajor}`
         }
     });
 };
