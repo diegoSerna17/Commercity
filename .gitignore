@@ -152,6 +152,7 @@ scripts/
 # Excepcion 2026-10-08: generador OpenAPI versionado (plan docs-api).
 !backend/scripts/
 !backend/scripts/gen-openapi.mjs
+!backend/scripts/gen-entidades.mjs
 TES.MD
 INFORME_CALIDAD*.pdf
 INFORME_CALIDAD*.PDF

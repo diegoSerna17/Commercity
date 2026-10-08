@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "docs:api": "node scripts/gen-openapi.mjs"
+    "docs:api": "node scripts/gen-openapi.mjs",
+    "docs:entidades": "node scripts/gen-entidades.mjs"
   },
   "keywords": [],
   "author": "",
