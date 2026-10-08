@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { z } from "zod";
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { calcularLinea, calcularTotales, validarLuhn, round2 } from "../utils/finanzas.js";
 import { estadoPagoVendedorTrasCancelacion, importeReembolsoLinea } from "../utils/reembolsos.js";
+import { confirmarPagoSchema, estadoSchema, paramsIdSchema } from "../schemas/pedidos.schema.js";
 
 // ============================================================================
 // MODULO DE PEDIDOS Y PAGO (integrado desde AVANCES/SPRING 1/CARLOS VIDAL/Entrega)
@@ -18,26 +18,9 @@ import { estadoPagoVendedorTrasCancelacion, importeReembolsoLinea } from "../uti
 //   3.11: redondeo round2 en todos los montos.
 // ============================================================================
 
-const confirmarPagoSchema = z
-  .object({
-    direccion_envio: z.string().trim().min(5).max(1000),
-    metodo_pago: z.enum(["tarjeta", "transferencia", "pse"]),
-    numero_tarjeta: z.string().trim().optional(),
-    nombre_tarjeta: z.string().trim().max(100).optional(),
-  })
-  .strict();
-
-const estadoSchema = z
-  .object({
-    // Vendedor: "En camino" | "Entregado" (avanza 1 nivel).
-    // Comprador: "Cancelado" (RF35 reembolso y restitución de stock).
-    estado: z.enum(["En camino", "Entregado", "Cancelado"]),
-    // Opcional. Solo se usa cuando estado = "Cancelado": si se pasa detalle_id
-    // se cancela SOLO esa línea; si no, se cancela TODO el pedido
-    // (líneas que aún no están Entregado).
-    detalle_id: z.coerce.number().int().positive().optional(),
-  })
-  .strict();
+// Contratos de entrada: confirmarPagoSchema, estadoSchema, paramsIdSchema
+// (schemas/pedidos.schema.js). El helper parse() convierte el fallo de
+// safeParse en Error 400 VALIDATION_ERROR para el errorHandler central.
 
 const ESTADO_NIVEL = { Pendiente: 0, "En camino": 1, Entregado: 2 };
 
@@ -698,7 +681,7 @@ export const actualizarEstado = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
-const paramsIdSchema = z.object({ id: z.coerce.number().int().positive() });
+// paramsIdSchema vive en schemas/pedidos.schema.js (re-export de common).
 
 const parse = (schema, data) => {
   const result = schema.safeParse(data);
