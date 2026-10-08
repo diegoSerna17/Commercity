@@ -10,6 +10,7 @@ import Registro from './pages/IniciarSesion/Registro';
 import Recuperar from './pages/IniciarSesion/Recuperar';
 import Restablecer from './pages/IniciarSesion/Restablecer';
 import PerfilVendedor from './pages/Perfil/PerfilVendedor';
+import PerfilPublico from './pages/Perfil/PerfilPublico';
 import Pedidos from './pages/Perfil/Pedidos';
 import Mensajes from './pages/Perfil/Mensajes';
 import Chats from './pages/Perfil/Chats';
@@ -66,6 +67,7 @@ function AppContent() {
           <Route path="/restore" element={<Restablecer />} />
           <Route path="/profile" element={<PerfilVendedor />} />
           <Route path="/PerfilVendedor" element={<PerfilVendedor />} />
+          <Route path="/vendedor/:id" element={<PerfilPublico />} />
           <Route path="/orders" element={<Pedidos />} />
           <Route path="/messages" element={<Mensajes />} />
           <Route path="/messages/chat" element={<Chats />} />

@@ -31,6 +31,9 @@ export const obtenerProducto = (id) => request(`/api/productos/${id}`);
 // Categorias activas para el filtro del catalogo.
 export const listarCategorias = () => request("/api/categorias");
 
+// Vendedores activos (para resolver nombre/avatar del perfil publico).
+export const listarVendedores = () => request("/api/vendedores");
+
 // Productos del vendedor autenticado (RF54, requiere JWT de vendedor).
 export const listarMisProductos = () => request("/api/productos/mis-productos");
 

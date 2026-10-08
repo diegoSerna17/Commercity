@@ -1,0 +1,202 @@
+<mxfile host="app.diagrams.net" agent="Claude">
+  <diagram name="SEC-SOC-04 Seguir - Dejar de seguir" id="secsoc04segu">
+    <mxGraphModel dx="2777" dy="1550" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1110" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c24" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" value="Usuario" vertex="1">
+          <mxGeometry height="55" width="30" x="105" y="5" as="geometry" />
+        </mxCell>
+        <mxCell id="c25" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontSize=12;fontStyle=1;" value="Frontend (PerfilVendedor.jsx)" vertex="1">
+          <mxGeometry height="40" width="180" x="330" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c26" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontSize=12;fontStyle=1;" value="API (seguidores.controllers.js)" vertex="1">
+          <mxGeometry height="40" width="180" x="670" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c27" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontSize=12;fontStyle=1;" value="MySQL" vertex="1">
+          <mxGeometry height="40" width="180" x="970" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c28" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="60" as="sourcePoint" />
+            <mxPoint x="120" y="1050" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c29" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="60" as="sourcePoint" />
+            <mxPoint x="420" y="1050" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c30" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="60" as="sourcePoint" />
+            <mxPoint x="760" y="1050" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c31" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="60" as="sourcePoint" />
+            <mxPoint x="1060" y="1050" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c32" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="885" width="10" x="415" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="c33" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="815" width="10" x="755" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="c34" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="485" width="10" x="1055" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="c35" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [Datos inválidos o intento de auto-seguimiento]" vertex="1">
+          <mxGeometry height="61" width="1120" x="40" y="252" as="geometry" />
+        </mxCell>
+        <mxCell id="c36" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [Usuario a seguir no existe o está inactivo]" vertex="1">
+          <mxGeometry height="61" width="1120" x="40" y="407" as="geometry" />
+        </mxCell>
+        <mxCell id="c37" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [ dejar de seguir usuario)]" vertex="1">
+          <mxGeometry height="400" width="1120" x="40" y="570" as="geometry" />
+        </mxCell>
+        <mxCell id="c1" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="1. Clic en el botón &#39;Seguir&#39; del Perfil del vendedor">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="110" as="sourcePoint" />
+            <mxPoint x="420" y="110" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c2" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="2. POST /api/seguidores { seguido_id }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="145" as="sourcePoint" />
+            <mxPoint x="760" y="145" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c3" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;curved=0;rounded=0;" value="3. authRequired(token) → req.userId (seguidorId)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="180" />
+              <mxPoint x="810" y="195" />
+            </Array>
+            <mxPoint x="760" y="180" as="sourcePoint" />
+            <mxPoint x="760" y="195" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c4" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;curved=0;rounded=0;" value="4. seguirSchema.safeParse(req.body) con Zod + valida seguido_id ≠ seguidorId">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="225" />
+              <mxPoint x="810" y="240" />
+            </Array>
+            <mxPoint x="760" y="225" as="sourcePoint" />
+            <mxPoint x="760" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c5" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="5. 400 Datos inválidos / No puedes seguirte a ti mismo">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="270" as="sourcePoint" />
+            <mxPoint x="420" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c6" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="6. Muestra error de validación">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="305" as="sourcePoint" />
+            <mxPoint x="120" y="305" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c7" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="7. SELECT 1 FROM usuarios WHERE id=? AND activo=1 LIMIT 1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="355" as="sourcePoint" />
+            <mxPoint x="1060" y="355" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c8" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="8. fila (o vacía)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="390" as="sourcePoint" />
+            <mxPoint x="760" y="390" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c9" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="9. 404 Usuario a seguir no encontrado">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="425" as="sourcePoint" />
+            <mxPoint x="420" y="425" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c10" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="10. Muestra error">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="460" as="sourcePoint" />
+            <mxPoint x="120" y="460" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c11" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="11. INSERT INTO seguidores (seguidor_id, seguido_id)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="510" as="sourcePoint" />
+            <mxPoint x="1060" y="510" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c12" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="12. OK">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="545" as="sourcePoint" />
+            <mxPoint x="760" y="545" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c13" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="13. 201 { seguidor_id, seguido_id }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="580" as="sourcePoint" />
+            <mxPoint x="420" y="580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c14" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="14. Cambia el botón a &#39;Siguiendo&#39; y actualiza el contador de seguidores">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="615" as="sourcePoint" />
+            <mxPoint x="120" y="615" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c15" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="15. Clic en el botón &#39;Siguiendo&#39; (deja de seguir)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="670" as="sourcePoint" />
+            <mxPoint x="420" y="670" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c16" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="16. DELETE /api/seguidores/:id">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="705" as="sourcePoint" />
+            <mxPoint x="760" y="705" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c17" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;curved=0;rounded=0;" value="17. authRequired(token) → req.userId (seguidorId)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="740" />
+              <mxPoint x="810" y="755" />
+            </Array>
+            <mxPoint x="760" y="740" as="sourcePoint" />
+            <mxPoint x="760" y="755" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c18" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="18. DELETE FROM seguidores WHERE seguidor_id=? AND seguido_id=?">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="785" as="sourcePoint" />
+            <mxPoint x="1060" y="785" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c19" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="19. affectedRows">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="820" as="sourcePoint" />
+            <mxPoint x="760" y="820" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c22" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="22. 200 Has dejado de seguir a este usuario">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="869" as="sourcePoint" />
+            <mxPoint x="420" y="869" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c23" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="23. Cambia el botón a &#39;Seguir&#39; y actualiza el contador de seguidores">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="928" as="sourcePoint" />
+            <mxPoint x="120" y="928" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,222 @@
+<mxfile host="app.diagrams.net" agent="Claude">
+  <diagram name="SEC-SOC-01 Chat comprador-vendedor" id="secsoc01chat">
+    <mxGraphModel dx="2777" dy="1550" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1140" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c26" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" value="Usuario" vertex="1">
+          <mxGeometry height="55" width="30" x="105" y="5" as="geometry" />
+        </mxCell>
+        <mxCell id="c27" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontSize=12;fontStyle=1;" value="Frontend (Mensajes.jsx / Chats.jsx)" vertex="1">
+          <mxGeometry height="40" width="180" x="330" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c28" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontSize=12;fontStyle=1;" value="API (chat.controllers.js)" vertex="1">
+          <mxGeometry height="40" width="180" x="670" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c29" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontSize=12;fontStyle=1;" value="MySQL" vertex="1">
+          <mxGeometry height="40" width="180" x="970" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c30" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="60" as="sourcePoint" />
+            <mxPoint x="120" y="1080" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c31" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="60" as="sourcePoint" />
+            <mxPoint x="420" y="1080" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c32" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="60" as="sourcePoint" />
+            <mxPoint x="760" y="1080" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c33" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="60" as="sourcePoint" />
+            <mxPoint x="1060" y="1080" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c34" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="915" width="10" x="415" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="c35" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="845" width="10" x="755" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="c36" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="730" width="10" x="1055" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="c37" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [Usuario no encontrado]" vertex="1">
+          <mxGeometry height="61" width="1120" x="40" y="277" as="geometry" />
+        </mxCell>
+        <mxCell id="c38" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [Datos inválidos]" vertex="1">
+          <mxGeometry height="61" width="1120" x="40" y="682" as="geometry" />
+        </mxCell>
+        <mxCell id="c1" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="1. Hace clic en una conversación de la lista">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="110" as="sourcePoint" />
+            <mxPoint x="420" y="110" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c2" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="2. GET /api/chat/mensajes/:usuarioId (Bearer token)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="145" as="sourcePoint" />
+            <mxPoint x="760" y="145" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c3" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;curved=0;rounded=0;" value="3. authRequired(token) → valida firma y lista negra, req.userId">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="180" />
+              <mxPoint x="810" y="195" />
+            </Array>
+            <mxPoint x="760" y="180" as="sourcePoint" />
+            <mxPoint x="760" y="195" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c4" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="4. SELECT id, nombre_completo, foto_perfil FROM usuarios WHERE id = ?">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="225" as="sourcePoint" />
+            <mxPoint x="1060" y="225" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c5" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="5. fila usuario (o vacía)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="260" as="sourcePoint" />
+            <mxPoint x="760" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c6" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="6. 404 Usuario no encontrado">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="295" as="sourcePoint" />
+            <mxPoint x="420" y="295" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c7" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="7. Muestra error de conversación">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="330" as="sourcePoint" />
+            <mxPoint x="120" y="330" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c8" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="8. SELECT * FROM mensajes_chat WHERE (emisor=?,receptor=?) OR (receptor=?,emisor=?) ORDER BY enviado_at ASC">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="380" as="sourcePoint" />
+            <mxPoint x="1060" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c9" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="9. filas de mensajes []">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="415" as="sourcePoint" />
+            <mxPoint x="760" y="415" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c10" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="10. 200 { usuario, mensajes[] }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="450" as="sourcePoint" />
+            <mxPoint x="420" y="450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c11" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="11. Renderiza burbujas de la conversación (MessageBubble)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="485" as="sourcePoint" />
+            <mxPoint x="120" y="485" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c12" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="12. Escribe texto o adjunta archivo y clic en enviar">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="540" as="sourcePoint" />
+            <mxPoint x="420" y="540" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c13" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="13. POST /api/chat multipart { receptor_id, mensaje, archivo? }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="575" as="sourcePoint" />
+            <mxPoint x="760" y="575" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c14" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;curved=0;rounded=0;" value="14. authRequired(token) → req.userId">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="610" />
+              <mxPoint x="810" y="625" />
+            </Array>
+            <mxPoint x="760" y="610" as="sourcePoint" />
+            <mxPoint x="760" y="625" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c15" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;curved=0;rounded=0;" value="15. Valida receptor_id, receptor ≠ emisor, texto/archivo no vacío, largo ≤ 5000">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="655" />
+              <mxPoint x="810" y="670" />
+            </Array>
+            <mxPoint x="760" y="655" as="sourcePoint" />
+            <mxPoint x="760" y="670" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c16" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="16. 400 Datos de mensaje inválidos">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="700" as="sourcePoint" />
+            <mxPoint x="420" y="700" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c17" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="17. Muestra error de validación">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="735" as="sourcePoint" />
+            <mxPoint x="120" y="735" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c18" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="18. INSERT INTO mensajes_chat (emisor_id, receptor_id, tipo_mensaje, mensaje, archivo_url)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="785" as="sourcePoint" />
+            <mxPoint x="1060" y="785" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c19" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="19. mensajeId">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="820" as="sourcePoint" />
+            <mxPoint x="760" y="820" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c20" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;curved=0;rounded=0;" value="20. registrarNotificacion({ usuario_id: receptorId, tipo:&#39;mensajes&#39;, descripcion, url:&#39;/perfil/chats&#39; })">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="855" />
+              <mxPoint x="810" y="870" />
+            </Array>
+            <mxPoint x="760" y="855" as="sourcePoint" />
+            <mxPoint x="760" y="870" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c21" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="21. INSERT INTO notificaciones (usuario_id, tipo, descripcion, url_redireccion, estado)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="900" as="sourcePoint" />
+            <mxPoint x="1060" y="900" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c22" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="22. OK&amp;nbsp;">
+          <mxGeometry relative="1" x="0.0032" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="1060" y="935" as="sourcePoint" />
+            <mxPoint x="760" y="935" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c24" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="23. 201 { id: mensajeId }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="970" as="sourcePoint" />
+            <mxPoint x="420" y="970" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c25" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="24. Agrega al chat mensaje enviado en la UI">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="1005" as="sourcePoint" />
+            <mxPoint x="120" y="1005" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

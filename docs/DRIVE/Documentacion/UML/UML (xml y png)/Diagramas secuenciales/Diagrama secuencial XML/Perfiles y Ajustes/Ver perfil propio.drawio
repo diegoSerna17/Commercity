@@ -1,0 +1,128 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="PA-03 Ver su perfil" id="pa03perfil">
+    <mxGraphModel dx="1388" dy="775" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1229" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="r3-1" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" value="Usuario" vertex="1">
+          <mxGeometry height="55" width="30" x="105" y="5" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="Frontend&amp;nbsp;&lt;div&gt;(PerfilVendedor.jsx)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="40" width="280" x="290" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="API&lt;div&gt;&amp;nbsp;(usuarios.controllers.js)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="40" width="280" x="650" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="MySQL" vertex="1">
+          <mxGeometry height="40" width="140" x="1030" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-22" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="60" as="sourcePoint" />
+            <mxPoint x="120" y="645" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-23" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="60" as="sourcePoint" />
+            <mxPoint x="430" y="645" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-24" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="790" y="60" as="sourcePoint" />
+            <mxPoint x="790" y="645" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-25" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1100" y="60" as="sourcePoint" />
+            <mxPoint x="1100" y="645" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-13" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [rol = vendedor]" vertex="1">
+          <mxGeometry height="250" width="1160" x="40" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="35" width="10" x="1095" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="105" width="10" x="785" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="35" width="10" x="1095" y="365" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="105" width="10" x="785" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-5" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="1. Entra a &quot;Mi perfil&quot;&amp;nbsp;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="100" as="sourcePoint" />
+            <mxPoint x="430" y="100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-6" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="2. GET /api/usuarios/me">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="135" as="sourcePoint" />
+            <mxPoint x="790" y="135" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-7" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="3. SELECT datos personales + roles WHERE id=?">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="790" y="170" as="sourcePoint" />
+            <mxPoint x="1100" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-9" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="4. datos y roles (comprador/vendedor)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1100" y="205" as="sourcePoint" />
+            <mxPoint x="790" y="205" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-10" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="5. 200 { usuario, roles }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="790" y="240" as="sourcePoint" />
+            <mxPoint x="430" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-12" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="6. Muestra foto, nombre y descripcion (comun a ambos roles)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="275" as="sourcePoint" />
+            <mxPoint x="120" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-14" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="7. GET /api/productos/mis-productos">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="330" as="sourcePoint" />
+            <mxPoint x="790" y="330" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-15" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="8. SELECT productos WHERE vendedor_id=? ORDER BY id DESC">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="790" y="365" as="sourcePoint" />
+            <mxPoint x="1100" y="365" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-17" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="9. productos publicados por el vendedor">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1100" y="400" as="sourcePoint" />
+            <mxPoint x="790" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-18" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="10. 200 { productos }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="790" y="435" as="sourcePoint" />
+            <mxPoint x="430" y="435" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3-20" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="11. Muestra la seccion &quot;Mis productos&quot;&amp;nbsp;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="430" y="470" as="sourcePoint" />
+            <mxPoint x="120" y="470" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

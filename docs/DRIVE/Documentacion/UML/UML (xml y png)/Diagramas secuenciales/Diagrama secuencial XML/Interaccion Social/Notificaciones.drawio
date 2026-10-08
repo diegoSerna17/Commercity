@@ -1,0 +1,268 @@
+<mxfile host="app.diagrams.net" agent="Claude">
+  <diagram name="SEC-SOC-02 Notificaciones" id="secsoc02notif">
+    <mxGraphModel dx="1515" dy="845" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1465" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c33" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" value="Usuario" vertex="1">
+          <mxGeometry height="55" width="30" x="105" y="5" as="geometry" />
+        </mxCell>
+        <mxCell id="c34" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontSize=12;fontStyle=1;" value="Frontend (NotificacionesDropdown.jsx)" vertex="1">
+          <mxGeometry height="40" width="180" x="330" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c35" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontSize=12;fontStyle=1;" value="API (notificaciones.controllers.js)" vertex="1">
+          <mxGeometry height="40" width="180" x="670" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c36" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontSize=12;fontStyle=1;" value="MySQL" vertex="1">
+          <mxGeometry height="40" width="180" x="970" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c37" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="60" as="sourcePoint" />
+            <mxPoint x="120" y="1405" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c38" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="60" as="sourcePoint" />
+            <mxPoint x="420" y="1405" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c39" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="60" as="sourcePoint" />
+            <mxPoint x="760" y="1405" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c40" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="60" as="sourcePoint" />
+            <mxPoint x="1060" y="1405" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c41" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="1225" width="10" x="415" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="c42" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="1190" width="10" x="755" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="c43" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="1075" width="10" x="1055" y="185" as="geometry" />
+        </mxCell>
+        <mxCell id="c44" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [Usuario hace clic en una notificación]" vertex="1">
+          <mxGeometry height="201" width="1120" x="40" y="652" as="geometry" />
+        </mxCell>
+        <mxCell id="c45" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [Usuario elimina una notificación individual]" vertex="1">
+          <mxGeometry height="201" width="1120" x="40" y="887" as="geometry" />
+        </mxCell>
+        <mxCell id="c46" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [Usuario limpia todas las notificaciones]" vertex="1">
+          <mxGeometry height="201" width="1120" x="40" y="1122" as="geometry" />
+        </mxCell>
+        <mxCell id="c1" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="1. GET /api/notificaciones/no-leidas (Bearer token)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="110" as="sourcePoint" />
+            <mxPoint x="760" y="110" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c2" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;curved=0;rounded=0;" value="2. authRequired(token) → req.userId">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="145" />
+              <mxPoint x="810" y="160" />
+            </Array>
+            <mxPoint x="760" y="145" as="sourcePoint" />
+            <mxPoint x="760" y="160" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c3" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="3. SELECT COUNT(*) FROM notificaciones WHERE usuario_id=? AND estado=&#39;no leido&#39;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="190" as="sourcePoint" />
+            <mxPoint x="1060" y="190" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c4" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="4. total_no_leidas">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="225" as="sourcePoint" />
+            <mxPoint x="760" y="225" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c5" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="5. 200 { total_no_leidas }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="260" as="sourcePoint" />
+            <mxPoint x="420" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c6" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="6. Muestra el indicador (badge) sobre el ícono de la campana">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="295" as="sourcePoint" />
+            <mxPoint x="120" y="295" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c7" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="7. Clic en el ícono de la campana">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="350" as="sourcePoint" />
+            <mxPoint x="420" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c8" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="8. GET /api/notificaciones?tipo=&amp;limite= (Bearer token)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="385" as="sourcePoint" />
+            <mxPoint x="760" y="385" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c9" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;curved=0;rounded=0;" value="9. authRequired(token) → req.userId">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="420" />
+              <mxPoint x="810" y="435" />
+            </Array>
+            <mxPoint x="760" y="420" as="sourcePoint" />
+            <mxPoint x="760" y="435" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c10" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="10. SELECT id, tipo, descripcion, estado, url_redireccion, fecha_hora FROM notificaciones WHERE usuario_id=? ORDER BY fecha_hora DESC LIMIT ?">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="465" as="sourcePoint" />
+            <mxPoint x="1060" y="465" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c11" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="11. filas de notificaciones []">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="500" as="sourcePoint" />
+            <mxPoint x="760" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c12" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;curved=0;rounded=0;" value="12. calcularDiasHoras(fecha_hora) por cada fila → &#39;Hace 5 min&#39;, &#39;Hace 2 días&#39; ...">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="810" y="535" />
+              <mxPoint x="810" y="550" />
+            </Array>
+            <mxPoint x="760" y="535" as="sourcePoint" />
+            <mxPoint x="760" y="550" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c13" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="13. 200 { total, notificaciones[] }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="580" as="sourcePoint" />
+            <mxPoint x="420" y="580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c14" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="14. Renderiza las primeras 4 (RF100) y botón &#39;Ver todas&#39;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="615" as="sourcePoint" />
+            <mxPoint x="120" y="615" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c15" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="15. Clic en una notificación (RF103)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="670" as="sourcePoint" />
+            <mxPoint x="420" y="670" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c16" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="16. PATCH /api/notificaciones/:id/leida">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="705" as="sourcePoint" />
+            <mxPoint x="760" y="705" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c17" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="17. UPDATE notificaciones SET estado=&#39;leido&#39; WHERE id=? AND usuario_id=?">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="740" as="sourcePoint" />
+            <mxPoint x="1060" y="740" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c18" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="18. affectedRows">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="775" as="sourcePoint" />
+            <mxPoint x="760" y="775" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c19" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="19. 200 { id }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="810" as="sourcePoint" />
+            <mxPoint x="420" y="810" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c20" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="20. Marca como leída, actualiza el indicador y navega a url_redireccion">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="845" as="sourcePoint" />
+            <mxPoint x="120" y="845" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c21" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="21. Clic en &#39;×&#39; de una notificación&amp;nbsp;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="905" as="sourcePoint" />
+            <mxPoint x="420" y="905" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c22" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="22. DELETE /api/notificaciones/:id">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="940" as="sourcePoint" />
+            <mxPoint x="760" y="940" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c23" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="23. DELETE FROM notificaciones WHERE id=? AND usuario_id=?">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="975" as="sourcePoint" />
+            <mxPoint x="1060" y="975" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c24" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="24. affectedRows">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="1010" as="sourcePoint" />
+            <mxPoint x="760" y="1010" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c25" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="25. 200 { id }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="1045" as="sourcePoint" />
+            <mxPoint x="420" y="1045" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c26" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="26. Quita la notificación de la lista local">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="1080" as="sourcePoint" />
+            <mxPoint x="120" y="1080" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c27" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="27. Clic en &#39;Limpiar todo&#39;&amp;nbsp;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="1140" as="sourcePoint" />
+            <mxPoint x="420" y="1140" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c28" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="28. DELETE /api/notificaciones">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="1175" as="sourcePoint" />
+            <mxPoint x="760" y="1175" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c29" edge="1" parent="1" style="html=1;fontSize=11;endArrow=block;startArrow=none;dashed=0;" value="29. DELETE FROM notificaciones WHERE usuario_id=?">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="1210" as="sourcePoint" />
+            <mxPoint x="1060" y="1210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c30" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="30. eliminadas">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="1245" as="sourcePoint" />
+            <mxPoint x="760" y="1245" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c31" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="31. 200 { eliminadas }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="1280" as="sourcePoint" />
+            <mxPoint x="420" y="1280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c32" edge="1" parent="1" style="html=1;fontSize=11;endArrow=open;startArrow=none;dashed=1;" value="32. Vacía la lista local y oculta el indicador">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="1315" as="sourcePoint" />
+            <mxPoint x="120" y="1315" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

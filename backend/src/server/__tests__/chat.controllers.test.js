@@ -37,6 +37,17 @@ const tokenComprador = jwt.sign(
     { expiresIn: "1h" }
 );
 
+// Elimina los comentarios SQL en linea (`-- ...`) para que las aserciones de
+// texto evaluen SOLO la query ejecutable. Sin este strip, frases de comentario
+// del controlador (p. ej. "-- ... GROUP BY LEAST/GREATEST, que no aprovechaba
+// indices.") disparaban falsos positivos en `not.toContain`.
+function sinComentariosSQL(sql) {
+    return sql
+        .split("\n")
+        .map((linea) => linea.replace(/--.*$/, "").trimEnd())
+        .join("\n");
+}
+
 // authRequired consulta la lista negra de tokens; no hay rol exigido.
 function mockAuth() {
     pool.query.mockImplementation((sql) => {
@@ -206,11 +217,16 @@ describe("Chat interno (RF101)", () => {
         expect(res.body.data[0].ultimo_mensaje.archivo_url).toBeUndefined();
         // Refactor sargable: la subconsulta usa JOIN sobre MAX(id) por direccion,
         // no el GROUP BY LEAST/GREATEST ni el OR no indexable.
+        // Se evalua SIN comentarios SQL para que la nota del controlador
+        // ("-- ... GROUP BY LEAST/GREATEST ...") no altere la asercion.
         const sqlConv = pool.query.mock.calls.find(([sql]) => sql.includes("GROUP BY par"))[0];
-        expect(sqlConv).not.toContain("GROUP BY LEAST");
-        expect(sqlConv).not.toContain("emisor_id = ? OR receptor_id = ?");
-        expect(sqlConv).toContain("WHERE emisor_id = ?");
-        expect(sqlConv).toContain("WHERE receptor_id = ?");
+        const sqlConvEjecutable = sinComentariosSQL(sqlConv);
+        expect(sqlConvEjecutable).toContain("GROUP BY par");
+        expect(sqlConvEjecutable).not.toContain("GROUP BY LEAST");
+        expect(sqlConvEjecutable).not.toContain("GREATEST");
+        expect(sqlConvEjecutable).not.toContain("emisor_id = ? OR receptor_id = ?");
+        expect(sqlConvEjecutable).toContain("WHERE emisor_id = ?");
+        expect(sqlConvEjecutable).toContain("WHERE receptor_id = ?");
     });
 
     // ========================== RECIBIR MENSAJES ============================
@@ -242,9 +258,11 @@ describe("Chat interno (RF101)", () => {
         expect(res.body.data.mensajes).toHaveLength(1);
         expect(res.body.data.mensajes[0].mensaje).toBe("Hola Diego");
         // B2: el SELECT del historial ya no pide las columnas fantasma
+        // (sin comentarios SQL, para no depender de notas del controlador).
         const sqlHist = pool.query.mock.calls.find(([sql]) => sql.includes("ORDER BY enviado_at ASC"))[0];
-        expect(sqlHist).not.toContain("tipo_mensaje");
-        expect(sqlHist).not.toContain("archivo_url");
+        const sqlHistEjecutable = sinComentariosSQL(sqlHist);
+        expect(sqlHistEjecutable).not.toContain("tipo_mensaje");
+        expect(sqlHistEjecutable).not.toContain("archivo_url");
     });
 
     it("GET /api/chat/mensajes/:usuarioId con usuario inexistente -> 404", async () => {

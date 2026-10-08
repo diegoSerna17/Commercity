@@ -12,7 +12,7 @@ Proyecto productivo desarrollado en el marco del **SENA**, programa **Tecnólogo
 
 - **Tres roles** con permisos diferenciados: comprador, vendedor y administrador (RBAC con JWT).
 - **Catálogo y búsqueda:** productos con imágenes, categorías, etiquetas, filtros y búsqueda global.
-- **Carrito y pedidos:** carrito persistente por usuario, creación de pedidos y pasarela de pago simulada.
+- **Carrito y pedidos:** carrito persistente por usuario, creación de pedidos y pasarela de pago simulada; cancelación por línea con reembolso proporcional (el importe de cada línea cancelada se acumula en `pagos_simulados.monto_reembolsado` y el pago pasa a `Reembolsado` solo cuando se cubre el monto total, RF135/RF35).
 - **Tienda del vendedor:** publicación y gestión de productos, estadísticas de ventas, cuenta bancaria cifrada.
 - **Interacción social:** chat comprador-vendedor, seguidores, calificaciones de productos y vendedores, reportes de contenido.
 - **Notificaciones** internas y **correo transaccional** (Resend, con modo simulación si no hay API key).
@@ -88,10 +88,11 @@ COMMER CITY/
 │       ├── __tests__/      # 22 archivos de pruebas (Vitest + supertest)
 │       ├── config/         # db.js, multer.js, multer.chat.js
 │       ├── controllers/    # Controladores por módulo (incluye subcarpeta admin/)
+│       ├── db/             # Migraciones SQL incrementales (008-014, con rollback en comentarios)
 │       ├── middleware/     # auth, error, role, validate
 │       ├── routes/         # 12 archivos de rutas por módulo
 │       ├── schemas/        # Esquemas Zod de autenticación
-│       ├── utils/          # config, crypto, finanzas, mailer, response
+│       ├── utils/          # config, crypto, finanzas, mailer, response, reembolsos
 │       ├── app.js          # Middlewares globales y montaje de routers
 │       └── server.js       # Arranque del servidor (puerto 3000)
 ├── frontend/
@@ -118,6 +119,7 @@ COMMER CITY/
 │   │   ├── EVIDENCIA_E2E_CAPA_RED_2026-09-28.md
 │   │   ├── INFORME_ESTADO_INTEGRACION_2026-09-28.md
 │   │   └── INFORME_FINAL_SENA_2026-09-25.md
+│   ├── DRIVE/              # Documentación del equipo (315 archivos: Documentación, Guía de Diseño, Iconos, Imágenes)
 │   ├── CHANGELOG.md        # Bitácora de cambios (fecha real, evidencia y estado)
 │   └── AVANCES/            # Fuentes locales de las apps + PRUEBAS (gitignorado)
 ├── schema_commercity.sql   # Esquema oficial (crea la BD commercity_v2)
@@ -149,7 +151,9 @@ git pull origin PREVIEW
 
 Notas:
 
-- `PREVIEW` contiene el código consolidado (backend, frontend, apps, esquema y seed SQL, README) **sin** documentación interna ni artefactos de análisis: se excluyen `docs/`, `graphify-out/`, `Scripts.txt` y `TEST.MD`. Por eso las referencias de este README a `docs/` aplican solo al repositorio ECOMMERCE.
+- `PREVIEW` contiene el código consolidado (backend, frontend, apps, esquema y seed SQL, README) **más** la documentación del equipo trackeada en git: `docs/DRIVE/` (315 archivos: Documentación, Guía de Diseño, Iconos, Imágenes de Categorías), `docs/informes/` y `docs/CHANGELOG.md`.
+- NO se versionan en PREVIEW los dumps de base de datos (carpeta `docs/DRIVE/Base de Datos - Commercity 2.0/`, con hashes bcrypt y datos personales) por ser un repositorio público, ni `graphify-out/`, `Scripts.txt` ni el resto de carpetas de `docs/` (LAST VERSION, metodologia, etc.), que viven solo en el repositorio ECOMMERCE.
+- `PREVIEW` se actualiza con merge desde `main` (del repositorio ECOMMERCE); en esos merges el `docs/CHANGELOG.md` de PREVIEW **no se modifica** — la bitácora oficial del proyecto se lleva en ECOMMERCE.
 - Las ramas `main` y `master` del repositorio oficial **no se tocan**: las organizan los líderes al finalizar el proyecto.
 - La rama no incluye secretos: solo va `backend/.env.example`; cada quien crea su propio `.env`.
 
@@ -227,6 +231,8 @@ El esquema corresponde al diseño oficial del proyecto (documento Commercity 2.0
 mysql -u root -p < schema_commercity.sql               # crea commercity_v2 con todas las tablas
 mysql -u root -p commercity_v2 < seed_commercity.sql   # datos de prueba (usuarios, productos, pedidos)
 ```
+
+**Migraciones incrementales:** los cambios de esquema posteriores viven en `backend/src/server/db/` (`008` a `014`, cada una con su rollback en comentarios). Una base local creada con `schema_commercity.sql` ya trae el esquema vigente; contra la **base compartida del equipo** hay que aplicar las migraciones que `docs/CHANGELOG.md` marque como pendientes (hoy `013_reembolso_parcial_pagos.sql` y `014_indices_consultas.sql`) **antes** de arrancar el backend, porque el código de reembolso parcial y los índices los exigen.
 
 Entre las tablas principales se encuentran: `usuarios`, `productos`, `pedidos`, `detalle_pedidos`, `pagos_simulados`, `carrito_items` y `tokens_invalidados`.
 
@@ -342,17 +348,20 @@ Los nombres exactos, verbos y cuerpos de cada endpoint están en los archivos de
 
 ## Usuarios de prueba
 
-Los usuarios de prueba los crea el script `seed_commercity.sql`. **La contraseña de todos es `123456`** (el hash bcrypt está en el seed y coincide con la lógica de login del backend). Sirven para probar cada rol en la web, el móvil y el escritorio.
+Los usuarios de prueba los crea el script `seed_commercity.sql`. Sirven para probar cada rol en la web, el móvil y el escritorio. **La contraseña la define el líder y se comunica fuera del repositorio** (el seed solo versiona hashes bcrypt distintos por usuario, nunca la contraseña en texto; pídesela al líder).
 
-| Rol           | Correo                            | Contraseña | Nombre                    |
-| ------------- | --------------------------------- | ---------- | ------------------------- |
-| Administrador | `carlos.munoz@commercity.com`     | `123456`   | Administrador Carlos Muñoz |
-| Vendedor      | `juan.giraldo@commercity.com`     | `123456`   | Vendedor Juan Giraldo     |
-| Vendedor      | `alex.rivera@commercity.com`      | `123456`   | Vendedor Alex Rivera      |
-| Comprador     | `camila.torres@commercity.com`    | `123456`   | Compradora Camila Torres  |
-| Comprador     | `sebastian.ruiz@commercity.com`   | `123456`   | Comprador Sebastian Ruiz  |
+| Rol           | Correo                            | Nombre                     |
+| ------------- | --------------------------------- | -------------------------- |
+| Administrador | `carlos.munoz@commercity.com`     | Administrador Carlos Muñoz |
+| Vendedor      | `juan.giraldo@commercity.com`     | Vendedor Juan Giraldo      |
+| Vendedor      | `alex.rivera@commercity.com`      | Vendedor Alex Rivera       |
+| Comprador     | `camila.torres@commercity.com`    | Compradora Camila Torres   |
+| Comprador     | `sebastian.ruiz@commercity.com`   | Comprador Sebastian Ruiz   |
 
-El seed completo trae 20 usuarios (1 administrador con los tres roles, 10 vendedores y 9 compradores). Los demás correos siguen el patrón `<nombre>.<apellido>@commercity.com` y usan la misma contraseña; el listado exacto está en `seed_commercity.sql`.
+El seed completo trae 20 usuarios (1 administrador con los tres roles, 10 vendedores y 9 compradores). Los demás correos siguen el patrón `<nombre>.<apellido>@commercity.com` y el listado exacto está en `seed_commercity.sql`.
+
+> \[!WARNING]
+> El seed es re-ejecutable y **vacía (TRUNCATE) las 18 tablas** antes de cargar: ejecútalo solo en entorno de desarrollo, nunca sobre datos que quieras conservar. Requiere `schema_commercity.sql` aplicado y la migración `013_reembolso_parcial_pagos.sql`.
 
 > \[!NOTE]
 > Los usuarios de prueba solo existen si se cargó `seed_commercity.sql` en la base de datos. Si usas la base compartida del equipo, ya vienen cargados. Estas credenciales son de datos de prueba del proyecto académico, no de un entorno productivo.

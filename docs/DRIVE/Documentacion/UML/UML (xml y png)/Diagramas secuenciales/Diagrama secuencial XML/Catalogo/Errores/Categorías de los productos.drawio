@@ -1,0 +1,139 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="SEC-CAT-04 Categorias de los productos" id="cat0004">
+    <mxGraphModel dx="1720" dy="930" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1229" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p4-1" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" value="Comprador" vertex="1">
+          <mxGeometry height="55" width="30" x="105" y="5" as="geometry" />
+        </mxCell>
+        <mxCell id="p4-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="Frontend&#xa;(Categorias.jsx / Inicio.jsx)" vertex="1">
+          <mxGeometry height="40" width="260" x="290" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="p4-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="API&#xa;(productos.controllers.js)" vertex="1">
+          <mxGeometry height="40" width="220" x="670" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="p4-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;" value="MySQL" vertex="1">
+          <mxGeometry height="40" width="140" x="1010" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="p4-5" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="60" as="sourcePoint" />
+            <mxPoint x="120" y="620" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-6" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="60" as="sourcePoint" />
+            <mxPoint x="420" y="620" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-7" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="60" as="sourcePoint" />
+            <mxPoint x="780" y="620" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-8" edge="1" parent="1" style="endArrow=none;dashed=1;dashPattern=4 4;html=1;strokeColor=#888888;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1080" y="60" as="sourcePoint" />
+            <mxPoint x="1080" y="620" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="210" width="10" x="415" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="p4-10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="140" width="10" x="775" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="p4-11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="35" width="10" x="1075" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="p4-12" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="1. Entra a la pagina principal / abre el menu de categorias">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="100" as="sourcePoint" />
+            <mxPoint x="420" y="100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-13" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="2. GET /api/categorias">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="135" as="sourcePoint" />
+            <mxPoint x="780" y="135" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-14" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="3. SELECT id, nombre FROM categorias WHERE activo = 1 ORDER BY nombre ASC">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="170" as="sourcePoint" />
+            <mxPoint x="1080" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-15" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="4. lista de categorias activas">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1080" y="205" as="sourcePoint" />
+            <mxPoint x="780" y="205" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-16" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="5. 200 { success:true, data: categorias }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="240" as="sourcePoint" />
+            <mxPoint x="420" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-17" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="6. Muestra menu / filtro de categorias (RF93)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="275" as="sourcePoint" />
+            <mxPoint x="120" y="275" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-18" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;fontSize=11;align=left;verticalAlign=top;fillColor=none;strokeColor=#666666;" value="opt  [Comprador selecciona una categoria]" vertex="1">
+          <mxGeometry height="250" width="1160" x="40" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="p4-19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="190" width="10" x="415" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="p4-20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="120" width="10" x="775" y="355" as="geometry" />
+        </mxCell>
+        <mxCell id="p4-21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#444444;" vertex="1">
+          <mxGeometry height="35" width="10" x="1075" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="p4-22" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="7. Selecciona una categoria (ej. &#39;Calzado&#39;)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="320" as="sourcePoint" />
+            <mxPoint x="420" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-23" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="8. GET /api/productos?categoria=Calzado&amp;nbsp;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="355" as="sourcePoint" />
+            <mxPoint x="780" y="355" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-24" edge="1" parent="1" style="html=1;endArrow=block;startArrow=none;dashed=0;fontSize=11;" value="9. SELECT p.* FROM productos p JOIN categorias c ON p.categoria_id=c.id WHERE c.nombre LIKE &#39;%Calzado%&#39; AND p.estado=&#39;Disponible&#39; AND p.eliminado_por_admin=0">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="390" as="sourcePoint" />
+            <mxPoint x="1080" y="390" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-25" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="10. productos de esa categoria">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1080" y="425" as="sourcePoint" />
+            <mxPoint x="780" y="425" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-26" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="11. 200 { productos filtrados por categoria }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="460" as="sourcePoint" />
+            <mxPoint x="420" y="460" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4-27" edge="1" parent="1" style="html=1;endArrow=open;startArrow=none;dashed=1;fontSize=11;" value="12. Muestra productos de la categoria seleccionada">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="495" as="sourcePoint" />
+            <mxPoint x="120" y="495" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

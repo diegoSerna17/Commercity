@@ -1,0 +1,55 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="CU-PER2 Perfiles publicos" id="per0003">
+    <mxGraphModel dx="859" dy="465" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1250" pageHeight="650" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="sys3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;verticalAlign=top;align=center;fillColor=none;strokeColor=#444444;spacingTop=10;" value="Commercity — Perfiles Publicos" vertex="1">
+          <mxGeometry height="620" width="1050" x="150" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pact1" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" value="Usuario" vertex="1">
+          <mxGeometry height="55" width="30" x="45" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="puc1" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=none;strokeColor=#000000;" value="Ver perfil publico" vertex="1">
+          <mxGeometry height="70" width="200" x="220" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="puc2" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=none;strokeColor=#000000;" value="Ver perfil publico de comprador" vertex="1">
+          <mxGeometry height="70" width="230" x="560" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="puc3" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=none;strokeColor=#000000;" value="Ver perfil publico de vendedor" vertex="1">
+          <mxGeometry height="70" width="230" x="560" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="puc6" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=none;strokeColor=#000000;" value="Ver seguidores y seguidos" vertex="1">
+          <mxGeometry height="70" width="230" x="560" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="puc4" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=none;strokeColor=#000000;" value="Ver productos publicados del vendedor" vertex="1">
+          <mxGeometry height="70" width="240" x="900" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="puc5" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=none;strokeColor=#000000;" value="Ver calificaciones del vendedor" vertex="1">
+          <mxGeometry height="70" width="240" x="900" y="550" as="geometry" />
+        </mxCell>
+        <mxCell id="pe1" edge="1" parent="1" source="pact1" style="endArrow=none;html=1;strokeColor=#444444;" target="puc1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe2" edge="1" parent="1" source="puc2" style="endArrow=block;endFill=0;html=1;strokeColor=#000000;" target="puc1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe3" edge="1" parent="1" source="puc3" style="endArrow=block;endFill=0;html=1;strokeColor=#000000;" target="puc1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe4" edge="1" parent="1" source="puc2" style="endArrow=open;dashed=1;html=0;fontSize=11;fontStyle=2;" target="puc6" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe5" edge="1" parent="1" source="puc3" style="endArrow=open;dashed=1;html=0;fontSize=11;fontStyle=2;" target="puc6" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe6" edge="1" parent="1" source="puc3" style="endArrow=open;dashed=1;html=0;fontSize=11;fontStyle=2;" target="puc4" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe7" edge="1" parent="1" source="puc3" style="endArrow=open;dashed=1;html=0;fontSize=11;fontStyle=2;" target="puc5" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

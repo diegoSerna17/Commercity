@@ -9,6 +9,7 @@ import {
   maskFullName,
 } from "../utils/crypto.js";
 import { round2 } from "../utils/finanzas.js";
+import { importeReembolsoLinea } from "../utils/reembolsos.js";
 
 // ============================================================================
 // MODULO TIENDA DEL VENDEDOR (integrado desde AVANCES/SPRING 1/ERICK/TIENDA)
@@ -570,7 +571,12 @@ export const getValidacionTienda = async (req, res, next) => {
       (acc, d) => {
         acc.lineas_canceladas += 1;
         acc.unidades_restituidas_stock += Number(d.cantidad || 0);
-        acc.monto_reembolsado = round2(acc.monto_reembolsado + Number(d.subtotal || 0));
+        // Reporte el dinero devuelto al comprador: importe CON IVA
+        // (subtotal SIN IVA x 1.19, RF48/RF121/RF140, misma regla de
+        // importeReembolsoLinea), no el subtotal 90/10.
+        acc.monto_reembolsado = round2(
+          acc.monto_reembolsado + importeReembolsoLinea(d.subtotal || 0)
+        );
         acc.monto_vendedor_descontado = round2(
           acc.monto_vendedor_descontado + Number(d.monto_vendedor || 0)
         );
