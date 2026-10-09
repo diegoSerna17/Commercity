@@ -15,12 +15,10 @@ import {
   listarSiguiendo,
   seguirUsuario,
 } from "../../services/seguidores.service.js";
+import ReportarUsuario from "../../components/perfil/ReportarUsuario.jsx";
 
 // JS Avatar de respaldo cuando el vendedor no tiene foto de perfil.
 const AVATAR_FALLBACK = "https://picsum.photos/seed/avatar1/400/400";
-
-const STAR_PATH =
-  "M2.86875 14.25L4.0875 8.98125L0 5.4375L5.4 4.96875L7.5 0L9.6 4.96875L15 5.4375L10.9125 8.98125L12.1313 14.25L7.5 11.4563L2.86875 14.25Z";
 
 /**
  * Resuelve una ruta de archivo del backend a una URL absoluta.
@@ -104,6 +102,7 @@ export default function PerfilPublico() {
   const [error, setError] = useState("");
   const [siguiendo, setSiguiendo] = useState(false);
   const [cargandoSeguimiento, setCargandoSeguimiento] = useState(false);
+  const [reportarAbierto, setReportarAbierto] = useState(false);
 
   useEffect(() => {
     let activo = true;
@@ -228,6 +227,10 @@ export default function PerfilPublico() {
     }
   };
 
+  const usuarioActual = getCurrentUser();
+  const esPerfilPropio =
+    Boolean(usuarioActual) && Number(usuarioActual.id) === vendedor.id;
+
   return (
     <div
       className="flex-1 flex flex-col min-w-0 overflow-y-auto"
@@ -287,34 +290,7 @@ export default function PerfilPublico() {
                     {vendedor.nombre || "Vendedor"}
                   </h1>
 
-                  <div className="flex items-center gap-[6px]">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div
-                        key={i}
-                        className="flex-shrink-0"
-                        style={{ width: "18px", height: "17px" }}
-                      >
-                        <svg
-                          viewBox="0 0 15 14.25"
-                          fill="var(--color-brand-orange)"
-                        >
-                          <path d={STAR_PATH} />
-                        </svg>
-                      </div>
-                    ))}
-                    <span
-                      className="ml-2 font-medium"
-                      style={{
-                        fontFamily: "var(--font-sans)",
-                        fontWeight: 600,
-                        fontSize: "13px",
-                        lineHeight: "16px",
-                        color: "var(--color-brand-muted-text)",
-                      }}
-                    >
-                      5.0
-                    </span>
-                  </div>
+                  {/* Sin rating: el backend no expone el promedio de calificaciones del vendedor (RF49/RF107). */}
                 </div>
 
                 {/* Accion principal: enviar mensaje (reemplaza Agregar Producto) */}
@@ -370,6 +346,35 @@ export default function PerfilPublico() {
                     </svg>
                     Enviar mensaje
                   </button>
+
+                  {!esPerfilPropio && (
+                    <button
+                      onClick={() => setReportarAbierto(true)}
+                      className="flex items-center gap-2 rounded-full font-semibold transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
+                      style={{
+                        padding: "10px 24px",
+                        fontSize: "14px",
+                        fontFamily: "var(--font-sans)",
+                        backgroundColor: "transparent",
+                        color: "var(--color-report-red-text)",
+                        border: "1.5px solid var(--color-report-red-text)",
+                      }}
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                        <line x1="4" y1="22" x2="4" y2="15" />
+                      </svg>
+                      Reportar
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -626,6 +631,13 @@ export default function PerfilPublico() {
           ))}
         </div>
       </main>
+
+      {reportarAbierto && (
+        <ReportarUsuario
+          usuario={{ id: vendedor.id, nombre: vendedor.nombre }}
+          onClose={() => setReportarAbierto(false)}
+        />
+      )}
     </div>
   );
 }

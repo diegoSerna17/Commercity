@@ -35,6 +35,7 @@ describe("request", () => {
     // Assert
     expect(globalThis.fetch).toHaveBeenCalledWith(`${API_BASE_URL}/usuarios`, {
       method: "POST",
+      credentials: "include",
       headers: {
         Authorization: "Bearer jwt-de-prueba",
         "Content-Type": "application/json",
@@ -58,6 +59,7 @@ describe("request", () => {
     // Assert
     expect(globalThis.fetch).toHaveBeenCalledWith(`${API_BASE_URL}/estado`, {
       method: "GET",
+      credentials: "include",
       headers: {},
     });
     expect(result).toBe("respuesta de texto");

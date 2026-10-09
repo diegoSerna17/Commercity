@@ -4,6 +4,16 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-08 - FEATURE: reporte de usuarios y perfil publico en el frontend web (RF108/RF109/RF110)
+
+- **Autor**: Daniel Palacios
+- **Archivos**: frontend/src/components/perfil/ReportarUsuario.jsx (NUEVO); frontend/src/components/perfil/ReportarUsuario.test.jsx (NUEVO); frontend/src/pages/Perfil/Chats.jsx; frontend/src/pages/Perfil/PerfilPublico.jsx; frontend/src/pages/Perfil/PerfilPublico.test.jsx (NUEVO); frontend/src/services/reportes.service.test.js (NUEVO); frontend/src/api/client.test.js (ajuste de expect por credentials)
+- **Descripcion**: Cierre del plan feature-web-completar-modulos-1.md. (1) Nuevo modal accesible ReportarUsuario.jsx (role="dialog", aria-labelledby, cierre con onClose) que envia crearReporte({ tipo: "Usuario", usuarioReportadoId, motivo, evidencia opcional }) y nunca el id del informante (SEC-001). (2) Chats.jsx: el boton "Reportar" abre el modal y se deshabilita si el contacto es el propio usuario autenticado (CON-003); el boton "Ver Perfil" navega a /vendedor/:id (RF110). (3) PerfilPublico.jsx: boton "Reportar" (oculto en el propio perfil) junto a Seguir/Enviar mensaje; se elimino el rating hardcodeado 5.0 y su bloque de estrellas porque el backend no expone el promedio del vendedor (RF49/RF107). (4) Tests nuevos con el patron Vitest + @testing-library/react + jsdom de los modulos tocados.
+- **Motivo**: los botones "Reportar" y "Ver Perfil" de Chats.jsx estaban muertos (sin handler), PerfilPublico carecia de la accion de reporte de usuario y mostraba un rating 5.0 sin fuente real (informacion falsa verificada contra el backend: getVendedores solo devuelve id/nombre); la cobertura de tests del frontend era baja en los modulos tocados.
+- **Requerimientos**: RF108/RF109 (reportar usuario desde el chat), RF110 (perfil publico), RF49/RF107 (calificaciones: se oculta el rating sin fuente real)
+- **Evidencia**: suite frontend 25/25 tests passed en 7 archivos (2 fallos iniciales en client.test.js corregidos: expect sin credentials: include quedo desfasado del cliente tras el commit f4/cookies); cobertura frontend Lines 62.96% (umbral 60%); ejecucion con autorizacion explicita del lider. Lint eslint de los archivos tocados sin hallazgos.
+- **Estado**: Completado
+
 ## 2026-10-08 - DOCS: CSP acotada a /api/docs para UI Scalar completa (cierre Fase 3)
 
 - **Autor**: Daniel Palacios

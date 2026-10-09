@@ -9,6 +9,7 @@ import {
 } from "../../services/chat.service.js";
 import { getCurrentUser } from "../../api/client.js";
 import { API_BASE_URL } from "../../constants/config.js";
+import ReportarUsuario from "../../components/perfil/ReportarUsuario.jsx";
 
 // JS Icono de adjuntar archivo como SVG inline
 const PaperclipIcon = () => (
@@ -168,6 +169,7 @@ const Chats = () => {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [reportarAbierto, setReportarAbierto] = useState(false);
 
   // RE Si no hay contacto, vuelve a la lista; si lo hay, carga la conversacion
   useEffect(() => {
@@ -253,6 +255,10 @@ const Chats = () => {
     return null;
   }
 
+  // CON-003: no se permite reportar al propio usuario autenticado.
+  const esContactoPropio =
+    Boolean(currentUser) && Number(contacto.id) === Number(currentUser.id);
+
   return (
     <div className="flex h-screen bg-surface-container-lowest">
       <main className="flex-1 flex flex-col overflow-hidden relative">
@@ -276,10 +282,17 @@ const Chats = () => {
             >
               Volver
             </button>
-            <button className="bg-surface-container hover:bg-white/10 px-3 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors border border-border-subtle text-on-surface">
+            <button
+              onClick={() => navigate(`/vendedor/${contacto.id}`)}
+              className="bg-surface-container hover:bg-white/10 px-3 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors border border-border-subtle text-on-surface"
+            >
               Ver Perfil
             </button>
-            <button className="bg-report-red-bg text-report-red-text hover:bg-report-red-hover px-3 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors border border-report-red-hover/30">
+            <button
+              onClick={() => setReportarAbierto(true)}
+              disabled={esContactoPropio}
+              className="bg-report-red-bg text-report-red-text hover:bg-report-red-hover px-3 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors border border-report-red-hover/30 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
               Reportar
             </button>
           </div>
@@ -342,6 +355,13 @@ const Chats = () => {
           </div>
         </div>
       </main>
+
+      {reportarAbierto && (
+        <ReportarUsuario
+          usuario={{ id: contacto.id, nombre: contacto.name }}
+          onClose={() => setReportarAbierto(false)}
+        />
+      )}
     </div>
   );
 };
