@@ -4,8 +4,8 @@ Copia trackeable (aprobada por Daniel 2026-09-28) de las dos aplicaciones client
 
 | App | Carpeta | Stack | Conexión a la API |
 |---|---|---|---|
-| Móvil (Android/iOS) | `apps/movil/` | Ionic **Capacitor 8.4**, HTML/CSS/JS puro (`www/`) | `www/api.js` → `http://10.0.2.2:3000` (emulador) o IP-LAN; 69 endpoints |
-| Escritorio (Windows) | `apps/escritorio/` | **Electron 35** + electron-builder, `src/` | `src/api.js` → `http://localhost:3000`; 69 endpoints |
+| Móvil (Android/iOS) | `apps/movil/` | Ionic **Capacitor 8.4**, HTML/CSS/JS puro (`www/`) | `www/api.js` → `http://10.0.2.2:3000` (emulador) o IP-LAN; 72 endpoints |
+| Escritorio (Windows) | `apps/escritorio/` | **Electron 35** + electron-builder, `src/` | `src/api.js` → `http://localhost:3000`; 72 endpoints |
 
 En ambas apps, `index.html` carga `api.js` **antes** de `app.js`; todos los handlers mock (auth, catálogo, carrito, pago, perfil, vendedor, admin, social, chat, notificaciones) migraron a llamadas reales con JWT (`commercity_token`). Credenciales hardcodeadas eliminadas (`admin@gmail.com/admin123`, `admin/admin123`, `juan_giraldo/1234`, `rem_pass` en claro).
 
@@ -45,22 +45,22 @@ npm start
 
 ## Usuarios de prueba
 
-Creados por `seed_commercity.sql`; la contraseña de todos es `123456`:
+Creados por `seed_commercity.sql`; la contraseña de prueba de todos es la misma y **se pide al líder por canal privado** (2026-10-11, R-1: el seed solo versiona hashes bcrypt; la contraseña no está en el repositorio):
 
-| Rol           | Correo                          | Contraseña |
-| ------------- | ------------------------------- | ---------- |
-| Administrador | `carlos.munoz@commercity.com`   | `123456`   |
-| Vendedor      | `juan.giraldo@commercity.com`   | `123456`   |
-| Comprador     | `camila.torres@commercity.com`  | `123456`   |
+| Rol           | Correo                          |
+| ------------- | ------------------------------- |
+| Administrador | `carlos.munoz@commercity.com`   |
+| Vendedor      | `juan.giraldo@commercity.com`   |
+| Comprador     | `camila.torres@commercity.com`  |
 
 El listado completo (20 usuarios) está en `seed_commercity.sql` y en el `README.md` de la raíz.
 
-## E2E (2026-09-28, backend vivo `localhost:3000`, BD `commercity_v2`)
+## E2E (2026-09-28, backend vivo `localhost:3000`)
 
-- **Runner 69 endpoints: 129/129 OK** — `docs/AVANCES/PRUEBAS/ejecutar_pruebas.mjs`
-- **Capa de red de ambos `api.js`: 102/102 OK** — `docs/AVANCES/PRUEBAS/harness_capa_red.mjs`
-- Evidencia: `docs/informes/EVIDENCIA_E2E_CAPA_RED_2026-09-28.md` (+ informes de rama en `docs/informes/INFORME_RAMA_{MOVIL,ESCRITORIO}_2026-09-27.md`, secciones "Cierre de pendings 2026-09-28")
-- Backend: 328/328 tests (commit `14d6056`: `GET /api/tienda/validacion` RF130-139 + CORS Electron).
+- **Runner de endpoints (69 en esa fecha): 129/129 OK** — `docs/AVANCES/PRUEBAS/ejecutar_pruebas.mjs` (carpeta local, gitignorada)
+- **Capa de red de ambos `api.js`: 102/102 OK** — `docs/AVANCES/PRUEBAS/harness_capa_red.mjs` (carpeta local, gitignorada)
+- Evidencia en `docs/CHANGELOG.md` (entradas del 2026-09-28); los scripts de la corrida viven en `docs/AVANCES/PRUEBAS/`.
+- Backend al cierre de esa integracion: 328/328 tests; estado vigente: 413/413 en 25 archivos (corrida 2026-10-08).
 
 ## Build
 
@@ -68,7 +68,7 @@ El listado completo (20 usuarios) está en `seed_commercity.sql` y en el `README
 
 ```bash
 cd apps/movil
-npm install
+npm ci
 npx cap sync android        # regenera android/app/src/main/assets/public desde www/
 npx cap open android        # Android Studio -> Build > Build Bundle(s)/APK(s) > Build APK(s)
 ```
@@ -80,7 +80,7 @@ npx cap open android        # Android Studio -> Build > Build Bundle(s)/APK(s) >
 
 ```bash
 cd apps/escritorio
-npm install
+npm ci
 npm run build               # electron-builder NSIS -> dist/CommerCity Setup 2.0.0.exe
 ```
 

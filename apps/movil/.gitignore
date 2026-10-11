@@ -6,3 +6,16 @@ node_modules/
 *.ipa
 ios/App/build/
 android/app/build/
+
+# Firma Android y artefactos de SDK (auditoria 2026-10-11, TASK-2.4/A-4):
+# la identidad de firma vive fuera del repo (gradle.properties local o variables
+# de entorno). NUNCA versionar llaves, contrasenas de firma ni credenciales de
+# servicios (Firebase/Google).
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+keystore.properties
+google-services.json
+GoogleService-Info.plist

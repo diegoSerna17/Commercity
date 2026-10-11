@@ -6,9 +6,33 @@ node_modules/
 
 .env
 .env.local
+.env.production
+.env.staging
 .env.development.local
 .env.test.local
 .env.production.local
+
+# ---------------------------------------------------------------------------
+# Llaves, certificados y artefactos de firma (auditoria 2026-10-11, TASK-2.4/A-4).
+# NUNCA al repo: identidad de firma de Android, certificados TLS y credenciales
+# de servicios (Firebase/Google).
+# ---------------------------------------------------------------------------
+*.pem
+*.key
+*.jks
+*.keystore
+*.p12
+google-services.json
+GoogleService-Info.plist
+keystore.properties
+
+# Volcados de BD e instantaneas comprimidas (R-2/M-GIT-1: nunca versionar dumps).
+*.sql.gz
+*.dump
+
+# Respaldos locales generados por backend/scripts/backup.ps1 (TASK-8.5):
+# contienen hashes bcrypt y datos personales; NUNCA al repositorio.
+backups/
 
 
 dist/
@@ -127,17 +151,15 @@ Meneses/
 "LAST VERSION"/
 Audios/
 docs/*
-# Excepción aprobada 2026-09-27 (Daniel): se versionan el plan de integración
-# API móvil/escritorio y los 3 informes de rama. El resto de docs/ sigue fuera.
+# Excepción aprobada 2026-09-27 (Daniel), corregida 2026-10-11 (M-GIT-1): las
+# excepciones nominadas PLAN_INTEGRACION_*, INFORME_RAMA_*, EVIDENCIA_E2E_*,
+# INFORME_ESTADO_* e INFORME_FINAL_SENA_* se retiraron porque esos archivos ya
+# no existen en el arbol: una excepcion de archivo inexistente no versiona nada
+# y solo obligaba a recordar `git add -f`. El resto de docs/ sigue fuera.
 !docs/informes/
 docs/informes/*
-!docs/informes/PLAN_INTEGRACION_API_MOVIL_ESCRITORIO_2026-09-27.md
-!docs/informes/INFORME_RAMA_BACKEND_2026-09-27.md
-!docs/informes/INFORME_RAMA_MOVIL_2026-09-27.md
-!docs/informes/INFORME_RAMA_ESCRITORIO_2026-09-27.md
-!docs/informes/EVIDENCIA_E2E_CAPA_RED_2026-09-28.md
-!docs/informes/INFORME_ESTADO_INTEGRACION_2026-09-28.md
-!docs/informes/INFORME_FINAL_SENA_2026-09-25.md
+# Informes de auditoria de PREVIEW que SI se versionan (los del plan de remediacion):
+!docs/informes/INFORME_AUDITORIA_PREVIEW_*.md
 # Excepción aprobada 2026-10-08 (Daniel): se versiona la documentacion
 # tecnica generada desde Zod/OpenAPI (plan docs-api). El resto de docs/ sigue fuera.
 !docs/api/
@@ -148,6 +170,11 @@ docs/informes/*
 !docs/guias/**
 !docs/arquitectura.md
 !docs/CHANGELOG.md
+# Excepción 2026-10-11 (M-GIT-1): docs/DRIVE ya esta versionado (315 archivos,
+# 32,5 MB; sus rutas largas rompen el checkout en Windows). Se un-ignora para
+# que su mantenimiento no dependa de `git add -f`.
+!docs/DRIVE/
+!docs/DRIVE/**
 scripts/
 # Excepcion 2026-10-08: generador OpenAPI versionado (plan docs-api).
 !backend/scripts/

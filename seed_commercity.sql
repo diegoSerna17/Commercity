@@ -1,21 +1,51 @@
 -- ============================================================
--- SEED CommerCity v2 - Inyeccion de registros de prueba
--- Base de datos: commercity_v2 (schema_commercity.sql)
+-- SEED CommerCity - Inyeccion de registros de prueba
+-- Base de datos por defecto: commercity_dev (schema_commercity.sql)
 --
--- Uso:  mysql -u root -p --default-character-set=utf8mb4 < seed_commercity.sql
--- REQUISITOS: schema_commercity.sql ya aplicado en commercity_v2 y
--- la migracion 013_reembolso_parcial_pagos.sql (pagos_simulados.monto_reembolsado).
--- RE-EJECUTABLE: vacia todas las tablas y carga desde cero.
+-- Uso (PowerShell):
+--   Get-Content .\seed_commercity.sql -Raw | mysql -u root -p --default-character-set=utf8mb4
+-- REQUISITOS: schema_commercity.sql ya aplicado en la MISMA base (commercity_dev
+-- por defecto) o, en una BD preexistente, sus migraciones aplicadas con
+-- backend/scripts/aplicar-migraciones.mjs.
+-- RE-EJECUTABLE: vacia todas las tablas del seed y carga desde cero.
 --
 -- *** ADVERTENCIA: EJECUTAR SOLO EN ENTORNO DE DESARROLLO. ***
--- *** ESTE SCRIPT DESTRUYE TODOS LOS DATOS (TRUNCATE de 18 tablas). ***
+-- *** ESTE SCRIPT DESTRUYE TODOS LOS DATOS (TRUNCATE de 15 tablas). ***
 --
--- NOTA DE SEGURIDAD: la password semilla de los usuarios la define el lider y
--- se comunica FUERA del repositorio (nunca versionar credenciales). Cada
--- usuario tiene su PROPIO hash bcrypt (rotacion/hash independiente por cuenta).
+-- GUARDA A-6 (auditoria 2026-10-11): aborta si la base objetivo es una de las
+-- COMPARTIDAS (commercity_v2 / commercycity_v2 / commercy_v2) salvo que la
+-- sesion declare `SET @permitir_destructivo = 1;` de forma explicita:
+--   "SET @permitir_destructivo = 1;" + (Get-Content .\seed_commercity.sql -Raw) | mysql -u root -p
+--
+-- NOTA DE SEGURIDAD (R-1, auditoria 2026-10-11): este seed SOLO contiene hashes
+-- bcrypt (uno distinto por usuario, sal aleatoria); la contrasena semilla NO
+-- esta en el repositorio ni en este archivo: se solicita al lider por canal
+-- privado. Para rotarla: `SEED_PASSWORD=<nueva> node backend/scripts/gen-seed-hashes.mjs`
+-- (la clave solo entra por variable de entorno, nunca por argumentos, y jamas
+-- se imprime).
+-- NOTA DE DATOS BANCARIOS (M-DB-6): numero_cuenta y titular_nombre se guardan
+-- CIFRADOS con el mismo esquema de la app (AES-256-GCM, iv:tag:dato). Se
+-- regeneran con backend/scripts/gen-seed-cuentas.mjs usando la clave de
+-- desarrollo (CRYPTO_SECRET_KEY, canal privado). Sin esa clave, el backend
+-- muestra la cuenta como no registrada y pide re-registrarla.
 -- ============================================================
 
-USE commercity_v2;
+CREATE DATABASE IF NOT EXISTS commercity_dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE commercity_dev;
+
+-- Guarda A-6: mismo mecanismo que schema_commercity.sql (aborta con error 1146).
+SET @bd_actual := DATABASE();
+SET @es_compartida := @bd_actual IN ('commercity_v2', 'commercycity_v2', 'commercy_v2');
+SET @permitido := IFNULL(@permitir_destructivo, 0);
+SET @sql_guarda := IF(
+    @es_compartida AND @permitido <> 1,
+    'SELECT 1 FROM __ABORTA_A6_BD_COMPARTIDA_SIN_PERMITIR_DESTRUCTIVO__',
+    'SELECT ''Guarda A-6 OK: base de desarrollo'' AS guarda'
+);
+PREPARE stmt_guarda FROM @sql_guarda;
+EXECUTE stmt_guarda;
+DEALLOCATE PREPARE stmt_guarda;
+
 SET NAMES utf8mb4;
 
 -- ============================================================
@@ -26,14 +56,11 @@ SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE reportes;
 TRUNCATE TABLE notificaciones;
 TRUNCATE TABLE mensajes_chat;
-TRUNCATE TABLE calificaciones_productos;
 TRUNCATE TABLE calificaciones_vendedores;
 TRUNCATE TABLE pagos_simulados;
 TRUNCATE TABLE detalle_pedidos;
 TRUNCATE TABLE pedidos;
 TRUNCATE TABLE carrito_items;
-TRUNCATE TABLE producto_etiquetas;
-TRUNCATE TABLE etiquetas;
 TRUNCATE TABLE productos;
 TRUNCATE TABLE categorias;
 TRUNCATE TABLE datos_bancarios;
@@ -56,26 +83,26 @@ INSERT IGNORE INTO roles (id, nombre, descripcion) VALUES
 -- USUARIOS
 -- ------------------------------------------------------------
 INSERT INTO usuarios (id, email, password, nombre_completo, foto_perfil, descripcion_personal, direccion_envio, activo) VALUES
-(1, 'carlos.munoz@commercity.com', '$2b$10$1hQbvo1lSmWoozlSAzp7Du5xBgBxOWY5bG/bnZz7Zzq4/Lj0jzguO', 'Administrador Carlos Muñoz', NULL, 'Administrador general de CommerCity', 'Calle 10 # 5-20, Bogotá', 1),
-(2, 'juan.giraldo@commercity.com', '$2b$10$f1CjepWhqpZ7rAOTasuurOxcoMn.UVNaroa6BxLb1b75PSPlmRkd.', 'Vendedor Juan Giraldo', NULL, 'Vendedor de calzado deportivo y moda urbana', 'Carrera 43 # 12-45, Medellín', 1),
-(3, 'alex.rivera@commercity.com', '$2b$10$RWr1wzAdh94p8fpqcHg4yec4OQ4scAGgxEY.O18ymFzFO.BAzy4GK', 'Vendedor Alex Rivera', NULL, 'Especialista en computadores y accesorios', 'Av. El Poblado # 8A-99, Medellín', 1),
-(4, 'elena.sanz@commercity.com', '$2b$10$FRnNmVJELbmphY7.E9t1BOgzK56/ovwLqIhH8s2QIkLB7k3FGyDwO', 'Vendedora Elena Sanz', NULL, 'Tienda de electrodomésticos y hogar', 'Calle 72 # 10-34, Bogotá', 1),
-(5, 'julian.thorne@commercity.com', '$2b$10$hR7LhYgOqvBNXXG9XZ868uDdz184J8K9OKqs64J6eRMF/KwGjDMdi', 'Vendedor Julian Thorne', NULL, 'Celulares y tecnología de punta', 'Carrera 15 # 93-60, Bogotá', 1),
-(6, 'marco.rossi@commercity.com', '$2b$10$A/zC0/d/Q6SAADuf4NbGTOkINqWyjv4mUQXKypEXhv9Lf4zFjNKi2', 'Vendedor Marco Rossi', NULL, 'Accesorios y periféricos gaming', 'Calle 53 # 45-112, Barranquilla', 1),
-(7, 'camila.torres@commercity.com', '$2b$10$FDmf.hcaOO.BaDfhHxPUeusUHAEJQP9kpyvssOuz.9wCr9e6YPK2S', 'Compradora Camila Torres', NULL, 'Compradora frecuente', 'Calle 5 # 20-10, Cali', 1),
-(8, 'sebastian.ruiz@commercity.com', '$2b$10$GabaDGtB8dqVRfMXo5Zu.OezauQVl1KLKq7kXUb/B6kv9/zWzjpf.', 'Comprador Sebastian Ruiz', NULL, NULL, 'Carrera 21 # 40-15, Cali', 1),
-(9, 'mariana.gomez@commercity.com', '$2b$10$CEmsmWBDmadzKbT20i6W6O4NieOrTs5.lOU8mn23n5BuYty.DJrbe', 'Compradora Mariana Gomez', NULL, NULL, 'Calle 44 # 9-30, Barranquilla', 1),
-(10, 'felipe.restrepo@commercity.com', '$2b$10$Nro.3b3GHIw9NxqYSLaH9u8NFg7Ppb/GOtz8PbTU3X6FHTg4Wscnm', 'Comprador Felipe Restrepo', NULL, NULL, 'Av. 30 # 22-18, Medellín', 1),
-(11, 'laura.jimenez@commercity.com', '$2b$10$JE3kJGzmsFZT35akp2QCtuyriifNokSjwpfIH1Ieok./t8liU6LBa', 'Compradora Laura Jimenez', NULL, NULL, 'Calle 63 # 5-40, Bogotá', 1),
-(12, 'daniela.perez@commercity.com', '$2b$10$WRRymemnPhmTqtpQAzu4zOaU9B5XLuIWSAdubI37huijM4T/eAEs2', 'Compradora Daniela Perez', NULL, NULL, 'Carrera 80 # 30-11, Bogotá', 1),
-(13, 'andres.bedoya@commercity.com', '$2b$10$ijTtX7MXHr8qZ0FCyMhXheM/7pYCo/OkrLZDr3WaHO5CxQzbKQYq6', 'Vendedor Andres Bedoya', NULL, 'Vendedor de tecnología y accesorios', 'Calle 33 # 14-70, Medellín', 1),
-(14, 'paula.castano@commercity.com', '$2b$10$pUD0GfC2ZT/evKFRv82A9O./dDU8lOUhOEoC40DgAV3ZYYgp8quXS', 'Vendedora Paula Castaño', NULL, 'Vendedora de moda y accesorios', 'Carrera 13 # 67-80, Bogotá', 1),
-(15, 'tomas.herrera@commercity.com', '$2b$10$MPQD0K.jXu2mrKR/V9GfBeHyVi67HpgJXCh88J8tmr0uF0ytzJ//a', 'Vendedor Tomas Herrera', NULL, 'Vendedor de juguetes y juegos de mesa', 'Calle 52 # 18-40, Bucaramanga', 1),
-(16, 'isabela.quintero@commercity.com', '$2b$10$lavF9gN2th1CYyhkpOP6WOKriaLypdrdnI8Ic6Og3/EVgj1J7K5y6', 'Vendedora Isabela Quintero', NULL, 'Belleza y productos de cuidado personal', 'Av. Ciudad de Cali # 25-10, Cali', 1),
-(17, 'santiago.velez@commercity.com', '$2b$10$1tHWYezM.0.fP0KPC//pz.IT8f04DqiTx/IHtXNjBm0t5YnvykZJu', 'Vendedor Santiago Velez', NULL, 'Vendedor de mascotas y accesorios', 'Calle 29 # 31-20, Barranquilla', 1),
-(18, 'esteban.cardenas@commercity.com', '$2b$10$VXzyUQMc9pf7c/DGQ6SVne4qICE/KklI6QvV5MVj.89rzphxiUFna', 'Comprador Esteban Cardenas', NULL, NULL, 'Carrera 70 # 45-12, Medellín', 1),
-(19, 'natalia.vargas@commercity.com', '$2b$10$67Vo0jRu7yab7F0KIBbWF.keb4rdXNLmG.KNW5xSK14.fo.YjxFCa', 'Compradora Natalia Vargas', NULL, NULL, 'Calle 93 # 15-33, Bogotá', 1),
-(20, 'valeria.rios@commercity.com', '$2b$10$9YmEm61Zqom9GSM5c6GEmuBcm1AHZz9DY5DlIyEQOIRDhKXk4ulZe', 'Compradora Valeria Rios', NULL, NULL, 'Av. 6N # 22-40, Cali', 1);
+(1, 'carlos.munoz@commercity.com', '$2b$10$Bt3m9iSWgBmwmjeQELm.Be67qnjXP4FR2UWL5vSLbCDvUovKtlAfC', 'Administrador Carlos Muñoz', NULL, 'Administrador general de CommerCity', 'Calle 10 # 5-20, Bogotá', 1),
+(2, 'juan.giraldo@commercity.com', '$2b$10$ahL85vVo6wWHdX8g9tAHtuhxBMRdA3ea4c8V0/t75olcdk.sqwZoG', 'Vendedor Juan Giraldo', NULL, 'Vendedor de calzado deportivo y moda urbana', 'Carrera 43 # 12-45, Medellín', 1),
+(3, 'alex.rivera@commercity.com', '$2b$10$rgPrjpVFpDTQgIYW2dsQjeJpKLdM54XQlmMKIZYgYnPfQ0wRfsime', 'Vendedor Alex Rivera', NULL, 'Especialista en computadores y accesorios', 'Av. El Poblado # 8A-99, Medellín', 1),
+(4, 'elena.sanz@commercity.com', '$2b$10$VBX72KokKsWgWktfco.NOeieEUNTm2pfVgCDTj8N3RBuxhpTKLzw.', 'Vendedora Elena Sanz', NULL, 'Tienda de electrodomésticos y hogar', 'Calle 72 # 10-34, Bogotá', 1),
+(5, 'julian.thorne@commercity.com', '$2b$10$XSzcjIF6dM4bsIRdLYnDY.utyF0G.FxMiCOo6pql9u/didCtDjlky', 'Vendedor Julian Thorne', NULL, 'Celulares y tecnología de punta', 'Carrera 15 # 93-60, Bogotá', 1),
+(6, 'marco.rossi@commercity.com', '$2b$10$/Jhx1kTO4bhNCRAr/zSguuA.O.XN7B7GCrCKi9V3ilO3SrkgqtDt6', 'Vendedor Marco Rossi', NULL, 'Accesorios y periféricos gaming', 'Calle 53 # 45-112, Barranquilla', 1),
+(7, 'camila.torres@commercity.com', '$2b$10$s5qAhdz3g7YKrhCWKnaQgOL6KXQOQB/Z4/zbBQBGjnOEC4eGY/Az2', 'Compradora Camila Torres', NULL, 'Compradora frecuente', 'Calle 5 # 20-10, Cali', 1),
+(8, 'sebastian.ruiz@commercity.com', '$2b$10$CQuLJJz8z/ODam9/Z14z6usRAv1ejXBOOPoMRiRNQXeT5l5HrrRru', 'Comprador Sebastian Ruiz', NULL, NULL, 'Carrera 21 # 40-15, Cali', 1),
+(9, 'mariana.gomez@commercity.com', '$2b$10$RXx3k9McsgZymD0f1w2hkORh8O5T90XYEzN/FDZnFaYnIA8ubMBNy', 'Compradora Mariana Gomez', NULL, NULL, 'Calle 44 # 9-30, Barranquilla', 1),
+(10, 'felipe.restrepo@commercity.com', '$2b$10$dUQ29oPRdWVn.ZcLygybCO0gDMp5y9GVdaOnZvBNe2k09cizPaX8m', 'Comprador Felipe Restrepo', NULL, NULL, 'Av. 30 # 22-18, Medellín', 1),
+(11, 'laura.jimenez@commercity.com', '$2b$10$QsL2LgSOGoSa9OTIRMR4z.rk0eBeKSd/xpZdUekHJNgbRCBHrF4D6', 'Compradora Laura Jimenez', NULL, NULL, 'Calle 63 # 5-40, Bogotá', 1),
+(12, 'daniela.perez@commercity.com', '$2b$10$3.6QuGFPeV1ek87Eet0uC.Yo5D6goWAhbf9ntddsjJtb5x2qKhdNK', 'Compradora Daniela Perez', NULL, NULL, 'Carrera 80 # 30-11, Bogotá', 1),
+(13, 'andres.bedoya@commercity.com', '$2b$10$JZZzMDjQOdQ.eHhiWr4bNej3GUaecxf/UoMQlBOIvv57FHcwsQs/u', 'Vendedor Andres Bedoya', NULL, 'Vendedor de tecnología y accesorios', 'Calle 33 # 14-70, Medellín', 1),
+(14, 'paula.castano@commercity.com', '$2b$10$N3N4zB2b4HJimIq.c071w.zXp9tJh6Jcnj/5D/t/NiHCaCK5lgEOe', 'Vendedora Paula Castaño', NULL, 'Vendedora de moda y accesorios', 'Carrera 13 # 67-80, Bogotá', 1),
+(15, 'tomas.herrera@commercity.com', '$2b$10$PRekDvNlS6Bv6ReNykBbHeaYWKKQRcRX1EgQq3m/iviT3L9JRhETm', 'Vendedor Tomas Herrera', NULL, 'Vendedor de juguetes y juegos de mesa', 'Calle 52 # 18-40, Bucaramanga', 1),
+(16, 'isabela.quintero@commercity.com', '$2b$10$cqF9h4qcZog9VU2EQuRbM.PqbEJhLHflRtTD3qMn2l1xCpkfZV2wq', 'Vendedora Isabela Quintero', NULL, 'Belleza y productos de cuidado personal', 'Av. Ciudad de Cali # 25-10, Cali', 1),
+(17, 'santiago.velez@commercity.com', '$2b$10$Gwf8zP3s.pVoWxQcvgpPWOcPStgfcCSz9sBFohkOXwcJod6ueDVb2', 'Vendedor Santiago Velez', NULL, 'Vendedor de mascotas y accesorios', 'Calle 29 # 31-20, Barranquilla', 1),
+(18, 'esteban.cardenas@commercity.com', '$2b$10$zlMph3WYD8rMf0Kba7VrVODZ8Jhosv28RhcM5F.ghQoDk9DjK6HXy', 'Comprador Esteban Cardenas', NULL, NULL, 'Carrera 70 # 45-12, Medellín', 1),
+(19, 'natalia.vargas@commercity.com', '$2b$10$0jetlgKzeCE1ugpHDxO1Ku2bP5RexS2jqMurSRX8LwnKeHtP.a1V2', 'Compradora Natalia Vargas', NULL, NULL, 'Calle 93 # 15-33, Bogotá', 1),
+(20, 'valeria.rios@commercity.com', '$2b$10$8VjsmPq99blDj6HSTsa2buro3q6sP82.Tq/bohmGq9YdKExAieRCm', 'Compradora Valeria Rios', NULL, NULL, 'Av. 6N # 22-40, Cali', 1);
 
 -- ------------------------------------------------------------
 -- USUARIO - ROLES
@@ -104,14 +131,16 @@ INSERT INTO seguidores (seguidor_id, seguido_id) VALUES
 
 -- ------------------------------------------------------------
 -- DATOS BANCARIOS (uno por vendedor + cuenta commercy)
+-- M-DB-6: titular_nombre y numero_cuenta van CIFRADOS (iv:tag:dato); se
+-- regeneran con backend/scripts/gen-seed-cuentas.mjs y la clave de desarrollo.
 -- ------------------------------------------------------------
 INSERT INTO datos_bancarios (usuario_id, banco, titular_nombre, tipo_cuenta, numero_cuenta, es_commercity) VALUES
-(1, 'Bancolombia', 'CommerCity SAS', 'ahorros', '1234567890', 1),
-(2, 'Davivienda', 'Juan Giraldo', 'corriente', '2255667788', 0),
-(3, 'Banco de Bogotá', 'Alex Rivera', 'ahorros', '3344556677', 0),
-(4, 'Nequi', 'Elena Sanz', 'corriente', '4455667788', 0),
-(5, 'DaviPlata', 'Julian Thorne', 'ahorros', '5566778899', 0),
-(6, 'Bancolombia', 'Marco Rossi', 'corriente', '6677889900', 0);
+(1, 'Bancolombia', 'sk1Ebde8fXyolJ4n:p_BaRiKNi2BqPNs0m4Su3w:LsJFIjCCbh0ErZEVnT0', 'ahorros', 'R5sLWA4sdVzTgCDm:7DC4_JAij0gxXu4z7RkevA:1As9uEdjR0kfdg', 1),
+(2, 'Davivienda', 'ASQ0A_lMANYjDcKN:Y2mOGR8KVC471bQGFtD6Bw:QXrVS3PHRiyF1UE_', 'corriente', 'va258Jl2uRLgn27Q:a98zzYFam5t22aXsnqs6wQ:XbxQzbbLR08FIQ', 0),
+(3, 'Banco de Bogotá', 'wkcG7NXuAw4uj__T:RTrnqP8utP2pmhHvfiyOGA:4pHw-CV5o0B7n-0', 'ahorros', 't3ZOHWCUjBPVjqPu:OI9hFip8TaGhyOrsn3tx_Q:wm3WvL_wJxpXZQ', 0),
+(4, 'Nequi', 'X0rj3XYA9FYKe01m:i3nY2ivnN2Jpezf93uv82A:XIxFUDGT280p2g', 'corriente', 'RulnOgH8xlcQ9Gg4:aljj8OdZq_SNGsmXLQPcCQ:j2TnAGZbNwvT_w', 0),
+(5, 'DaviPlata', 'Y3Vn2H3hg6yVxuum:mEhBTaTfZNXDZCwMGWWmMQ:XfRDyFZOF2i8yhNWuA', 'ahorros', 'LHlWqzEng2jD81Jw:79szBEc3eBNuYy2n383JgA:YUpgPxgmhEOFQA', 0),
+(6, 'Bancolombia', 'YimFqB5xzpWyknU5:MUOSbeQat2ewE5hRwCsf6A:Gdxd6xjVRUwD8z0', 'corriente', 'ANFdFeEC0R_-mRoT:yfDsqM4yikoRGR2SczMciA:NBOVo0Zb4iibmQ', 0);
 
 -- ------------------------------------------------------------
 -- CATEGORIAS (con subcategorias)
@@ -135,14 +164,9 @@ INSERT INTO categorias (id, nombre, descripcion, categoria_padre_id, activo) VAL
 (16, 'Videojuegos', 'Consolas, videojuegos y accesorios', 1, 1);
 
 -- ------------------------------------------------------------
--- ETIQUETAS
+-- (Las tablas muertas etiquetas/producto_etiquetas se retiraron del esquema
+--  y del seed el 2026-10-11: TASK-7.6/TASK-7.7. No hay INSERT de etiquetas.)
 -- ------------------------------------------------------------
-INSERT INTO etiquetas (id, nombre) VALUES
-(1, 'Nuevo'),
-(2, 'Oferta'),
-(3, 'Envío gratis'),
-(4, 'Recomendado'),
-(5, 'Top ventas');
 
 -- ------------------------------------------------------------
 -- PRODUCTOS (la columna estado es GENERADA -> no se inserta)
@@ -232,42 +256,6 @@ INSERT INTO productos (id, vendedor_id, categoria_id, nombre, descripcion, image
 (82, 6, 16, 'Tarjeta de Regalo PSN 50USD', 'Saldo digital para la tienda PlayStation', 'https://images.unsplash.com/photo-1616553926536-07a9b46dd729?w=300&h=300&fit=crop', 235000.00, 100, 0.00);
 
 -- ------------------------------------------------------------
--- PRODUCTO - ETIQUETAS
--- ------------------------------------------------------------
-INSERT INTO producto_etiquetas (producto_id, etiqueta_id) VALUES
-(1, 1), (1, 4), (1, 5),
-(2, 4),
-(3, 5),
-(4, 1), (4, 4),
-(5, 2), (5, 3), (5, 5),
-(6, 2),
-(7, 3),
-(8, 4),
-(9, 4), (9, 5),
-(10, 2), (10, 3),
-(11, 5),
-(12, 1), (12, 4),
-(13, 3),
-(14, 1),
-(15, 2), (15, 3),
-(16, 3),
-(20, 5),
-(22, 1), (22, 4),
-(24, 1),
-(25, 2), (25, 3),
-(32, 3),
-(38, 5),
-(44, 2), (44, 4),
-(48, 3),
-(56, 4),
-(58, 5),
-(73, 2), (73, 3),
-(74, 2),
-(78, 5),
-(80, 1),
-(82, 1);
-
--- ------------------------------------------------------------
 -- CARRITO (se deja vacio: se llena cuando el comprador agrega
 -- productos desde la tienda)
 -- ------------------------------------------------------------
@@ -291,31 +279,37 @@ INSERT INTO pedidos (id, comprador_id, direccion_envio, total_neto) VALUES
 -- S2/RF140: subtotal SIN IVA y montos 90/10 calculados por el backend,
 -- identico a lo que confirmarPago graba (precio_unitario_historico ya lleva
 -- el descuento aplicado; el IVA nunca se persiste).
+-- M-DB-6 (TASK-7.6): estados coherentes con el flujo real. confirmarPago crea
+-- las lineas en 'Pendiente' + 'Pendiente'; el vendedor avanza 'En camino' y
+-- 'Entregado' (con desembolso). Los pedidos con pago Aprobado avanzan; los
+-- pedidos recien pagados (5, 7) quedan Pendientes como en la vida real.
 -- ------------------------------------------------------------
-INSERT INTO detalle_pedidos (pedido_id, producto_id, vendedor_id, cantidad, precio_unitario_historico, descuento_aplicado, subtotal, monto_vendedor, monto_comision) VALUES
-(1, 1, 3, 1, 1299000.00, 0.00, 1091596.64, 982436.98, 109159.66),
-(2, 3, 5, 1, 3000000.00, 0.00, 2521008.40, 2268907.56, 252100.84),
-(2, 13, 6, 2, 95000.00, 0.00, 159663.87, 143697.48, 15966.39),
-(3, 2, 4, 1, 950000.00, 0.00, 798319.33, 718487.40, 79831.93),
-(4, 4, 6, 1, 2799000.00, 0.00, 2352100.84, 2116890.76, 235210.08),
-(5, 5, 2, 2, 75050.00, 5.00, 126134.45, 113521.01, 12613.45),
-(6, 15, 2, 1, 153000.00, 15.00, 128571.43, 115714.29, 12857.14),
-(7, 11, 5, 1, 2517500.00, 5.00, 2115546.22, 1903991.60, 211554.62),
-(8, 7, 3, 2, 85000.00, 0.00, 142857.14, 128571.43, 14285.71),
-(8, 12, 5, 1, 320000.00, 0.00, 268907.56, 242016.80, 26890.76);
+INSERT INTO detalle_pedidos (pedido_id, producto_id, vendedor_id, cantidad, precio_unitario_historico, descuento_aplicado, subtotal, monto_vendedor, monto_comision, estado_envio, estado_pago_vendedor, fecha_desembolso) VALUES
+(1, 1, 3, 1, 1299000.00, 0.00, 1091596.64, 982436.98, 109159.66, 'Entregado', 'Desembolsado', NOW() - INTERVAL 5 DAY),
+(2, 3, 5, 1, 3000000.00, 0.00, 2521008.40, 2268907.56, 252100.84, 'Entregado', 'Desembolsado', NOW() - INTERVAL 4 DAY),
+(2, 13, 6, 2, 95000.00, 0.00, 159663.87, 143697.48, 15966.39, 'Entregado', 'Desembolsado', NOW() - INTERVAL 4 DAY),
+(3, 2, 4, 1, 950000.00, 0.00, 798319.33, 718487.40, 79831.93, 'En camino', 'Pendiente', NULL),
+(4, 4, 6, 1, 2799000.00, 0.00, 2352100.84, 2116890.76, 235210.08, 'Entregado', 'Desembolsado', NOW() - INTERVAL 3 DAY),
+(5, 5, 2, 2, 75050.00, 5.00, 126134.45, 113521.01, 12613.45, 'Pendiente', 'Pendiente', NULL),
+(6, 15, 2, 1, 153000.00, 15.00, 128571.43, 115714.29, 12857.14, 'En camino', 'Pendiente', NULL),
+(7, 11, 5, 1, 2517500.00, 5.00, 2115546.22, 1903991.60, 211554.62, 'Pendiente', 'Pendiente', NULL),
+(8, 7, 3, 2, 85000.00, 0.00, 142857.14, 128571.43, 14285.71, 'Entregado', 'Desembolsado', NOW() - INTERVAL 2 DAY),
+(8, 12, 5, 1, 320000.00, 0.00, 268907.56, 242016.80, 26890.76, 'Entregado', 'Desembolsado', NOW() - INTERVAL 2 DAY);
 
 -- ------------------------------------------------------------
 -- PAGOS SIMULADOS (uno por pedido, referencia unica)
--- monto = lo que pago el comprador (CON IVA); monto_reembolsado requiere mig 013.
+-- monto = lo que pago el comprador (CON IVA); monto_reembolsado (mig 013).
+-- M-DB-6: todos 'Aprobado' porque confirmarPago solo registra ese estado al
+-- aceptar la pasarela (los 'Pendiente' con stock ya descontado eran incoherentes).
 -- ------------------------------------------------------------
 INSERT INTO pagos_simulados (pedido_id, metodo_pago, referencia_pago, monto, monto_reembolsado, estado) VALUES
 (1, 'tarjeta', 'PAG-CC-0001', 1299000.00, 0.00, 'Aprobado'),
 (2, 'pse', 'PAG-CC-0002', 3190000.01, 0.00, 'Aprobado'),
 (3, 'tarjeta', 'PAG-CC-0003', 950000.00, 0.00, 'Aprobado'),
 (4, 'transferencia', 'PAG-CC-0004', 2799000.00, 0.00, 'Aprobado'),
-(5, 'pse', 'PAG-CC-0005', 150100.00, 0.00, 'Pendiente'),
+(5, 'pse', 'PAG-CC-0005', 150100.00, 0.00, 'Aprobado'),
 (6, 'tarjeta', 'PAG-CC-0006', 153000.00, 0.00, 'Aprobado'),
-(7, 'transferencia', 'PAG-CC-0007', 2517500.00, 0.00, 'Pendiente'),
+(7, 'transferencia', 'PAG-CC-0007', 2517500.00, 0.00, 'Aprobado'),
 (8, 'tarjeta', 'PAG-CC-0008', 490000.00, 0.00, 'Aprobado');
 
 -- ------------------------------------------------------------
@@ -326,17 +320,6 @@ INSERT INTO calificaciones_vendedores (pedido_id, comprador_id, vendedor_id, est
 (2, 8, 5, 4, 'Buen producto, empaque muy seguro'),
 (4, 10, 6, 5, 'Totalmente recomendado'),
 (8, 9, 3, 3, 'Todo bien, pero tardó un poco el envío');
-
--- ------------------------------------------------------------
--- CALIFICACIONES PRODUCTOS (una por pedido + producto)
--- ------------------------------------------------------------
-INSERT INTO calificaciones_productos (pedido_id, comprador_id, producto_id, estrellas, comentario) VALUES
-(1, 7, 1, 5, 'La MacBook es una maravilla, súper rápida'),
-(2, 8, 3, 4, 'El iPhone llegó perfecto'),
-(2, 8, 13, 4, 'Buen mouse, silencioso'),
-(4, 10, 4, 5, 'El iPad supera las expectativas'),
-(8, 9, 7, 3, 'El balón está bien, buena calidad'),
-(8, 9, 12, 4, 'El teclado RGB es excelente');
 
 -- ------------------------------------------------------------
 -- MENSAJES CHAT (emisor <> receptor)
@@ -353,18 +336,20 @@ INSERT INTO mensajes_chat (emisor_id, receptor_id, mensaje, leido) VALUES
 
 -- ------------------------------------------------------------
 -- NOTIFICACIONES
+-- M-DB-6: url_redireccion con las rutas REALES del frontend web
+-- (/history, /messages, /store): antes apuntaban a rutas inexistentes.
 -- ------------------------------------------------------------
 INSERT INTO notificaciones (usuario_id, tipo, descripcion, estado, url_redireccion) VALUES
-(7, 'compra', 'Tu pedido #1 ha sido confirmado', 'leido', '/perfil/historial'),
-(7, 'pedido enviado', 'Tu pedido #1 está en camino', 'leido', '/perfil/historial'),
-(8, 'compra', 'Tu pedido #2 ha sido confirmado', 'leido', '/perfil/historial'),
-(9, 'compra', 'Tu pedido #3 ha sido confirmado', 'no leido', '/perfil/historial'),
-(10, 'compra', 'Tu pedido #4 ha sido confirmado', 'leido', '/perfil/historial'),
-(9, 'mensajes', 'Tienes un nuevo mensaje de Marco Rossi', 'no leido', '/chats'),
-(8, 'mensajes', 'Tienes un nuevo mensaje de Julian Thorne', 'no leido', '/chats'),
-(2, 'compra', '¡Vendiste 2 unidades de Zapatos Deportivos!', 'leido', '/vendedor/ventas'),
-(3, 'compra', '¡Vendiste 1 MacBook Air M2!', 'leido', '/vendedor/ventas'),
-(11, 'pedido enviado', 'Tu pedido #5 está pendiente de pago', 'no leido', '/perfil/historial');
+(7, 'compra', 'Tu pedido #1 ha sido confirmado', 'leido', '/history'),
+(7, 'pedido enviado', 'Tu pedido #1 está en camino', 'leido', '/history'),
+(8, 'compra', 'Tu pedido #2 ha sido confirmado', 'leido', '/history'),
+(9, 'compra', 'Tu pedido #3 ha sido confirmado', 'no leido', '/history'),
+(10, 'compra', 'Tu pedido #4 ha sido confirmado', 'leido', '/history'),
+(9, 'mensajes', 'Tienes un nuevo mensaje de Marco Rossi', 'no leido', '/messages'),
+(8, 'mensajes', 'Tienes un nuevo mensaje de Julian Thorne', 'no leido', '/messages'),
+(2, 'compra', '¡Vendiste 2 unidades de Zapatos Deportivos!', 'leido', '/store'),
+(3, 'compra', '¡Vendiste 1 MacBook Air M2!', 'leido', '/store'),
+(11, 'pedido enviado', 'Tu pedido #5 está pendiente de pago', 'no leido', '/history');
 
 -- ------------------------------------------------------------
 -- REPORTES (CHECK: Producto -> solo producto_id | Usuario -> solo usuario_reportado_id)

@@ -43,13 +43,13 @@ Abre **`http://127.0.0.1:8080/www/index.html`**.
 
 ## 🔑 Usuarios de prueba
 
-Creados por `seed_commercity.sql`; la contraseña de todos es `123456`:
+Creados por `seed_commercity.sql`; la contraseña de prueba de todos es la misma y **se pide al líder por canal privado** (2026-10-11, R-1: el seed solo versiona hashes bcrypt; la contraseña no está en el repositorio):
 
-| Rol           | Correo                          | Contraseña |
-| ------------- | ------------------------------- | ---------- |
-| Administrador | `carlos.munoz@commercity.com`   | `123456`   |
-| Vendedor      | `juan.giraldo@commercity.com`   | `123456`   |
-| Comprador     | `camila.torres@commercity.com`  | `123456`   |
+| Rol           | Correo                          |
+| ------------- | ------------------------------- |
+| Administrador | `carlos.munoz@commercity.com`   |
+| Vendedor      | `juan.giraldo@commercity.com`   |
+| Comprador     | `camila.torres@commercity.com`  |
 
 ## 📦 Compilar la APK
 

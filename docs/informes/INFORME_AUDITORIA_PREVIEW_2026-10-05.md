@@ -5,6 +5,33 @@
 - **Metodologia**: skill `full-project-auditor` (10 fases: alcance, calidad, seguridad, rendimiento, arquitectura, testing, DevOps, documentacion, dependencias, reporte por severidad).
 - **Evidencia**: revision estatica de codigo en PREVIEW, `npm audit --omit=dev` (backend y frontend), lectura del workflow iOS, contraste contra RF documento oficial 2026-08-20 y contra `schema_commercity.sql`.
 - **Nota de contexto**: la auditoria cubre el ESTADO del codigo en la rama PREVIEW; los hallazgos de dependencias npm son posteriores al ultimo commit y aun no se corrigen.
+- **Estado de vigencia (2026-10-11)**: **SUPERADO por `INFORME_AUDITORIA_PREVIEW_2026-10-11.md`** (auditoria de remediacion sobre la rama de fix `fix/auditoria-preview-2026-10-11`). Este documento se conserva como historial; la tabla siguiente resume el estado de cada hallazgo al 2026-10-11 y la tarea del plan de remediacion que lo cierra:
+
+| ID | Tema | Estado al 2026-10-11 | Cierre |
+|---|---|---|---|
+| H1 | IDOR carrito | **Cerrado** | `authRequired` + `req.userId` con tests de regresion |
+| H2 | `/uploads` publico | **Cerrado (matiz)** | Solo imagenes por GET son publicas; el resto exige JWT |
+| H3 | Token de reset en claro / log | **Cerrado (residuo)** | SHA-256, un uso, 5 min; residuo del email en `mailer.js` lo cierra TASK-4.9 |
+| H4 | Multer extension/nombres | **Parcial** | Nombres aleatorios hechos; magic bytes y errores 400/413 en TASK-4.6 |
+| H5 | Enumeracion de usuarios | **Parcial** | Login uniforme; `register`/`directorio`/403-404 se cierran en TASK-4.7/TASK-4.8 |
+| H6 | CORS `null`/`file://` | **Parcial** | Fail-open hasta TASK-4.1 (default cerrado + `ALLOW_DESKTOP_ORIGINS`) |
+| H7 | Rate-limit | **Parcial** | Limites especificos y `trust proxy` en TASK-4.2 |
+| H8 | Password minima | **Cerrado (parcial)** | Minimo 8 hecho; maximo <= 72 bytes en TASK-4.8 |
+| H9 | Defaults `root` en BD | **Parcial** | Aborto sin `NODE_ENV` en TASK-4.8; `.env.example` en TASK-2.5 |
+| H10 | `JWT_SECRET` como clave AES | **Parcial** | Derivacion separada hecha; KDF + AAD + prefijo v2 en TASK-4.4 |
+| A1 | Columnas GENERATED vs RF140 | **Cerrado** | Columnas normales en `schema_commercity.sql` (RF140 sin migracion) |
+| A2 | Filtro `archivado` | **Cerrado** | `admin/reportes` filtra; `getReporte` por id conserva archivados (intencional) |
+| A3 | Duplicacion cuenta bancaria | **Parcial** | Schema Zod unificado; extraccion a `utils/cuentaBancaria.js` en TASK-4.10 |
+| A4 | `actualizarEstado`, `validarId`, `asyncHandler` | **Parcial** | `actualizarEstado` dividido; el resto en TASK-4.10 |
+| F1-F3 | XSS + `nodeIntegration` = RCE (escritorio) | **Cerrado (RCE); XSS residual** | Endurecimiento Electron y escapes en TASK-6.1/TASK-6.2 |
+| F4 | JWT en `localStorage` | **Abierto** | Cookie httpOnly unica en web en TASK-5.2 (DEC-005) |
+| F5 | Datos bancarios en movil / `allowBackup` | **Cerrado** | `allowBackup=false`; no se persisten datos bancarios |
+| F6 | Contrato de API | **Parcial** | El 401 global introduce el bug A-5; se cierra en TASK-5.1 |
+| B1 | Objetos usados sin definicion | **Cerrado** | Definidos en el schema; `banco` VARCHAR(50) -> 100 en TASK-7.2 |
+| B2 | RF119 / RF140 en el esquema | **Cerrado** | `estado_pedido` fuera del schema; montos normales |
+| B3 | Migraciones 009/012 | **Parcial** | 009 corregida; 012 no atomica -> corregida en TASK-7.3 |
+
+> Las marcas de seccion (`H#`, `A#`, `F#`, `B#`) se mantienen por trazabilidad; la numeracion vigente de hallazgos es la de `INFORME_AUDITORIA_PREVIEW_2026-10-11.md` (`R-#`, `A-#`, `M-*`, `M-DB-*`, `M-DOC-*`, `M-GIT-*`, `M-OPS-*`).
 
 ---
 
@@ -160,7 +187,7 @@ Faltan en el schema (el codigo las usa): `detalle_pedidos.estado_envio` (RF119),
 | P2 | H3-H4 token en claro, multer | hash del token, validacion real de archivos |
 | P2 | A2-A4, F6, B3 | filtros, deduplicacion, contrato unico, migracion 009/012 |
 
-## Verificacion pendiente (requiere usuario, BD real 149.130.178.228/commercity_v2)
+## Verificacion pendiente (requiere usuario, BD real compartida `commercity_v2` — host retirado de la documentacion el 2026-10-11 por A3/R-1; pidelo al lider por canal privado)
 
 ```sql
 SHOW CREATE TABLE detalle_pedidos\G
