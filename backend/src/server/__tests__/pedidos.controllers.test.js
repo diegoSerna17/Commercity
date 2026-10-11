@@ -624,7 +624,7 @@ describe("PATCH /api/pedidos/:id/estado = Cancelado (RF35 - cancelación por com
     expect(res.status).toBe(401);
   });
 
-  it("rechaza si quien cancela NO es el comprador del pedido (403)", async () => {
+  it("rechaza con 404 uniforme si quien cancela NO es el comprador del pedido (M-15)", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
@@ -641,9 +641,10 @@ describe("PATCH /api/pedidos/:id/estado = Cancelado (RF35 - cancelación por com
       .set("Authorization", `Bearer ${tokenVendedor}`) // 3 ≠ 7
       .send({ estado: "Cancelado" });
 
-    expect(res.status).toBe(403);
+    // M-15: no se revela la existencia del pedido a terceros
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
     expect(conn.rollback).toHaveBeenCalled();
-    expect(res.body.error.message).toMatch(/solo el comprador/i);
   });
 
 it("rechaza (404) si detalle_id no pertenece al pedido", async () => {

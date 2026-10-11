@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { enviarCorreoRecuperacion } from "../utils/mailer.js";
+import { enviarCorreoRecuperacion, enviarAvisoRegistroDuplicado } from "../utils/mailer.js";
 
 // Mock de mysql2/promise: createPool devuelve un pool simulado (sin BD real).
 vi.mock("mysql2/promise", () => {
@@ -41,6 +41,7 @@ vi.mock("bcrypt", () => ({
 // Mock del mailer: no envia correos reales en tests.
 vi.mock("../utils/mailer.js", () => ({
   enviarCorreoRecuperacion: vi.fn().mockResolvedValue({ id: "mock-mail" }),
+  enviarAvisoRegistroDuplicado: vi.fn().mockResolvedValue({ id: "mock-mail" }),
 }));
 
 // El secreto debe existir antes de importar app.js (utils/config.js lo exige).
@@ -205,16 +206,22 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
     expect(conn.rollback).not.toHaveBeenCalled();
   });
 
-  it("rechaza email duplicado (400)", async () => {
+  it("M-15: email duplicado -> 201 uniforme sin token y aviso al titular", async () => {
     pool.query.mockResolvedValue([[{ id: 5 }], undefined]);
 
     const res = await request(app)
       .post("/api/usuarios/register")
       .send({ email: "duplicado@test.com", password: "SuperPass123" });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    // Misma respuesta que un alta (no se revela que el email existe)
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.token).toBeNull();
+    expect(res.body.data.user.email).toBe("duplicado@test.com");
+    // No se crea ninguna cuenta ni se toca la transaccion
     expect(pool.getConnection).not.toHaveBeenCalled();
+    // Se avisa al titular real del intento (anti-enumeracion)
+    expect(enviarAvisoRegistroDuplicado).toHaveBeenCalledWith("duplicado@test.com");
   });
 
   it("rechaza body con campo extra 'rol' (.strict())", async () => {
@@ -246,7 +253,7 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
     expect(conn.rollback).toHaveBeenCalled();
   });
 
-  it("maneja la race condition de email duplicado (ER_DUP_ENTRY -> 400)", async () => {
+  it("M-15: race condition de email duplicado (ER_DUP_ENTRY) -> 201 uniforme", async () => {
     pool.query.mockResolvedValue([[], undefined]);
     conn.query.mockRejectedValue(Object.assign(new Error("dup"), { code: "ER_DUP_ENTRY" }));
 
@@ -254,9 +261,10 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
       .post("/api/usuarios/register")
       .send({ email: "race@test.com", password: "SuperPass123" });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error.message).toContain("ya está registrado");
+    expect(res.status).toBe(201);
+    expect(res.body.data.token).toBeNull();
     expect(conn.rollback).toHaveBeenCalled();
+    expect(enviarAvisoRegistroDuplicado).toHaveBeenCalledWith("race@test.com");
   });
 
   it("hace rollback si el rol comprador no existe en la BD (500)", async () => {
@@ -1026,12 +1034,14 @@ describe("GET /api/usuarios/directorio (directorio de usuarios para chat)", () =
     // Solo expone datos publicos: nada de password ni otros campos sensibles.
     expect(sqlDir).toContain("SELECT id, nombre_completo, foto_perfil");
     expect(sqlDir).not.toContain("password");
-    expect(sqlDir).toContain("nombre_completo LIKE ? OR email LIKE ?");
+    // M-15: el directorio no filtra por email (no confirma correos)
+    expect(sqlDir).toContain("nombre_completo LIKE ?");
+    expect(sqlDir).not.toContain("email LIKE ?");
     expect(sqlDir).toContain("ORDER BY nombre_completo ASC LIMIT 50");
-    // Excluye al usuario autenticado (id = 7) y busca con comodines %q%.
+    // Excluye al usuario autenticado (id = 7) y busca con un unico comodin %q%.
     expect(pool.query.mock.calls).toContainEqual([
       expect.stringContaining("activo = 1 AND id <> ?"),
-      [7, "%ana%", "%ana%"],
+      [7, "%ana%"],
     ]);
   });
 

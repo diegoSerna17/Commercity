@@ -40,6 +40,7 @@ import {
 import {
   enviarMensajeSchema,
   conversacionParamsSchema,
+  conversacionQuerySchema,
   mensajeIdParamsSchema,
 } from "../schemas/chat.schema.js";
 import { listarNotificacionesQuerySchema } from "../schemas/notificaciones.schema.js";
@@ -530,8 +531,8 @@ export const operaciones = [
   {
     method: "get", path: "/api/chat/mensajes/{usuarioId}", operationId: "obtenerConversacion", tag: "Chat",
     summary: "Ver historial con un usuario",
-    description: "Mensajes entre el autenticado y otro usuario.",
-    auth: true, params: conversacionParamsSchema,
+    description: "Mensajes entre el autenticado y otro usuario (paginado; M-14).",
+    auth: true, params: conversacionParamsSchema, query: conversacionQuerySchema,
     responses: ok("Historial de mensajes.", { ...R400, ...R401, ...R404 }),
   },
   {

@@ -1,7 +1,7 @@
 # Contratos de datos — CommerCity
 
 > Generado con `npm run docs:api` + `npm run docs:entidades` desde `backend/src/server/schemas/`. No editar a mano.
-> 41 contratos documentados. Fuente de verdad: los esquemas Zod.
+> 42 contratos documentados. Fuente de verdad: los esquemas Zod.
 
 ## Indice
 
@@ -34,6 +34,7 @@
 - [HistorialVentasQuery](#historialventasquery)
 - [HistorialComprasQuery](#historialcomprasquery)
 - [ConversacionParams](#conversacionparams)
+- [ConversacionQuery](#conversacionquery)
 - [EnviarMensaje](#enviarmensaje)
 - [MensajeIdParams](#mensajeidparams)
 - [ListarNotificacionesQuery](#listarnotificacionesquery)
@@ -643,6 +644,27 @@
 }
 ```
 
+## ConversacionQuery (`ConversacionQuery`)
+
+> Query de GET /api/chat/mensajes/:usuarioId (paginado)
+
+- **Fuente:** `backend/src/server/schemas/chat.schema.js`
+- **Usado en:** `GET /api/chat/mensajes/{usuarioId}`
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `pagina` | integer [max 9007199254740991, > 0] | no | Pagina (default 1) |
+| `por_pagina` | integer [max 100, > 0] | no | Mensajes por pagina (default 50, max 100) |
+
+**Ejemplo:**
+
+```json
+{
+  "pagina": 1,
+  "por_pagina": 50
+}
+```
+
 ## EnviarMensaje (`EnviarMensaje`)
 
 > Body de POST /api/chat/ (solo texto; el multipart se rechaza con 400)
@@ -653,7 +675,7 @@
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
 | `receptor_id` | integer [max 9007199254740991, > 0] | si | Destinatario (distinto del usuario autenticado) |
-| `mensaje` | string [longitud >= 1] | si | Texto del mensaje (no vacio) |
+| `mensaje` | string [longitud >= 1, longitud <= 2000] | si | Texto del mensaje (1-2000) |
 
 **Ejemplo:**
 

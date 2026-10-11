@@ -5,7 +5,8 @@ import pool from "../config/db.js";
 import pkg from "../../../package.json" with { type: "json" };
 import { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } from "../utils/config.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-import { enviarCorreoRecuperacion } from "../utils/mailer.js";
+import { enviarCorreoRecuperacion, enviarAvisoRegistroDuplicado } from "../utils/mailer.js";
+import { escapeLike } from "../utils/sql.js";
 import { destinoPedidosVendedor } from "./admin/pedidos.controllers.js";
 
 // ============================================================================
@@ -61,13 +62,23 @@ export const register = async (req, res) => {
     const { email, password, nombre_completo } = req.body;
 
     try {
-        // Email duplicado (la UNIQUE de la BD es la garantia final)
+        // M-15 (TASK-4.7): respuesta UNIFORME. Si el email ya existe NO se
+        // revela: se avisa al titular real por correo y se responde igual que
+        // un alta (sin token, porque la cuenta existente no se toca).
         const [existente] = await pool.query(
             "SELECT id FROM usuarios WHERE email = ?",
             [email]
         );
         if (existente.length > 0) {
-            return errorResponse(res, "El email ya está registrado", 400);
+            try {
+                await enviarAvisoRegistroDuplicado(email);
+            } catch {
+                // fail-soft: la respuesta no cambia aunque falle el correo
+            }
+            return successResponse(res, "Usuario registrado correctamente", {
+                token: null,
+                user: { email, nombre_completo: nombre_completo || null, roles: [] },
+            }, 201);
         }
 
         const rolSolicitado = "comprador";
@@ -130,9 +141,18 @@ export const register = async (req, res) => {
             connection.release();
         }
     } catch (error) {
-        // Duplicado de email a pesar del pre-check (race condition)
+        // Duplicado de email a pesar del pre-check (race condition): M-15, misma
+        // respuesta uniforme (aviso al titular, sin token).
         if (error?.code === "ER_DUP_ENTRY") {
-            return errorResponse(res, "El email ya está registrado", 400);
+            try {
+                await enviarAvisoRegistroDuplicado(email);
+            } catch {
+                // fail-soft
+            }
+            return successResponse(res, "Usuario registrado correctamente", {
+                token: null,
+                user: { email, nombre_completo: nombre_completo || null, roles: [] },
+            }, 201);
         }
         console.error("Error en register:", error);
         return errorResponse(res, "Error interno del servidor", 500);
@@ -613,8 +633,10 @@ export const listarUsuarios = async (req, res, next) => {
         const params = [req.userId];
 
         if (q) {
-            sql += " AND (nombre_completo LIKE ? OR email LIKE ?)";
-            params.push(`%${q}%`, `%${q}%`);
+            // M-15: el directorio no filtra por email (no confirma correos);
+            // B-8: los comodines LIKE del usuario se escapan.
+            sql += " AND nombre_completo LIKE ?";
+            params.push(escapeLike(String(q)));
         }
 
         sql += " ORDER BY nombre_completo ASC LIMIT 50";

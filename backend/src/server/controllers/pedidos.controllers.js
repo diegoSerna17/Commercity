@@ -607,10 +607,11 @@ export const actualizarEstado = async (req, res, next) => {
     // CAMINO 2 — Cancelación por el comprador (RF35)
     // ─────────────────────────────────────────────────────────────
     if (estado === "Cancelado") {
-      // RBAC: solo el dueño del pedido puede cancelar.
+      // RBAC + M-15: solo el dueño puede cancelar; para el resto la respuesta es
+      // la MISMA que un pedido inexistente (no se revela su existencia).
       if (Number(pedido.comprador_id) !== Number(req.userId)) {
         await conn.rollback();
-        return errorResponse(res, "Solo el comprador del pedido puede cancelarlo", 403);
+        return errorResponse(res, "Pedido no encontrado", 404);
       }
 
       // ── Sub-caso A: cancelar SOLO una línea por detalle_id ──

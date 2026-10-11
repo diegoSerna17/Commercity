@@ -189,6 +189,32 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
     expect(insert[1][5]).toMatch(/^\/uploads\/[0-9a-f]{32}\.jpg$/);
   });
 
+  it("M-14: deduplica un reporte abierto del mismo informante sobre el mismo objetivo (409)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT id FROM productos")) return [[{ id: 1 }], undefined];
+      if (sql.includes("FROM reportes") && sql.includes("estado_reporte = 'Pendiente'")) {
+        return [[{ id: 30 }], undefined]; // ya existe un reporte abierto
+      }
+      if (sql.includes("INSERT INTO reportes")) return [{ insertId: 999 }, undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .post("/api/reportes")
+      .set("Authorization", `Bearer ${tokenComprador}`)
+      .field("tipo", "Producto")
+      .field("motivo", "Repetido")
+      .field("producto_id", "1")
+      .attach("evidencia", IMAGEN_JPEG, "evidencia.jpg");
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("CONFLICT");
+    // No se inserta un duplicado
+    expect(pool.query.mock.calls.some(([sql]) =>
+      String(sql).includes("INSERT INTO reportes"))).toBe(false);
+  });
+
   it("devuelve 500 si la BD falla al crear", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];

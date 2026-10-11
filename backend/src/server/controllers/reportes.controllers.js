@@ -90,6 +90,20 @@ export const crearReporte = async (req, res, next) => {
       usuarioReportadoId = id;
     }
 
+    // M-14: deduplicar por (informante, objetivo, estado abierto): un usuario
+    // no puede tener dos reportes Pendientes sobre el mismo producto/usuario.
+    const [duplicado] = await pool.query(
+      `SELECT id FROM reportes
+        WHERE informante_id = ? AND estado_reporte = 'Pendiente' AND archivado = 0
+          AND ${tipo === "Producto" ? "producto_id = ?" : "usuario_reportado_id = ?"}
+        LIMIT 1`,
+      [req.userId, tipo === "Producto" ? productoId : usuarioReportadoId]
+    );
+    if (duplicado.length > 0) {
+      borrarArchivoSubido(req.file);
+      return errorResponse(res, "Ya tienes un reporte abierto sobre este objetivo", 409);
+    }
+
     const [result] = await pool.query(
       `INSERT INTO reportes
          (informante_id, tipo_reporte, producto_id, usuario_reportado_id, motivo, evidencia_url)

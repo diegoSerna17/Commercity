@@ -1,6 +1,10 @@
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { validarId } from "./admin/admin.utils.js";
+import {
+    enviarMensajeSchema,
+    conversacionQuerySchema,
+} from "../schemas/chat.schema.js";
 
 // ============================================================================
 // MODULO DE CHAT INTERNO (RF101)
@@ -22,12 +26,14 @@ import { validarId } from "./admin/admin.utils.js";
  */
 export const enviarMensaje = async (req, res, next) => {
     try {
-        const receptorId = Number(req.body.receptor_id);
-        const texto = typeof req.body.mensaje === "string" ? req.body.mensaje.trim() : "";
-
-        if (!validarId(receptorId)) {
-            return errorResponse(res, "Debe indicar un destinatario válido", 400);
+        // M-14 (TASK-4.7): contrato Zod con longitud maxima (2000) del mensaje.
+        const parsed = enviarMensajeSchema.safeParse(req.body ?? {});
+        if (!parsed.success) {
+            return errorResponse(res, "Datos del mensaje inválidos", 400, parsed.error.issues);
         }
+        const receptorId = Number(parsed.data.receptor_id);
+        const texto = parsed.data.mensaje;
+
         if (receptorId === req.userId) {
             return errorResponse(res, "No puedes enviarte un mensaje a ti mismo", 400);
         }
@@ -35,11 +41,6 @@ export const enviarMensaje = async (req, res, next) => {
         // adjunto; rechazar con 400 evita perder el archivo silenciosamente.
         if (req.file) {
             return errorResponse(res, "El chat no admite archivos en esta versión", 400);
-        }
-
-        // Regla RF101: sin texto no hay mensaje que enviar.
-        if (!texto) {
-            return errorResponse(res, "El mensaje está vacío", 400);
         }
 
         // Verificar que el receptor exista y este activo.
@@ -170,21 +171,42 @@ export const obtenerConversacion = async (req, res, next) => {
             return errorResponse(res, "El id del usuario debe ser un entero positivo", 400);
         }
 
+        // M-15: mismo 404 para usuario inexistente o inactivo (no se enumeran cuentas).
         const [otro] = await pool.query(
-            "SELECT id, nombre_completo, foto_perfil FROM usuarios WHERE id = ?",
+            "SELECT id, nombre_completo, foto_perfil FROM usuarios WHERE id = ? AND activo = 1",
             [otroId]
         );
         if (otro.length === 0) {
             return errorResponse(res, "Usuario no encontrado", 404);
         }
 
+        // M-14: paginacion del historial (default 50 por pagina, max 100).
+        const parsedQuery = conversacionQuerySchema.safeParse(req.query ?? {});
+        if (!parsedQuery.success) {
+            return errorResponse(res, "Parámetros de paginación inválidos", 400, parsedQuery.error.issues);
+        }
+        const { pagina, por_pagina: porPagina } = parsedQuery.data;
+        const offset = (pagina - 1) * porPagina;
+
+        const [totalRows] = await pool.query(
+            `SELECT COUNT(*) AS total
+               FROM mensajes_chat
+              WHERE (emisor_id = ? AND receptor_id = ?) OR (emisor_id = ? AND receptor_id = ?)`,
+            [req.userId, otroId, otroId, req.userId]
+        );
+        const total = Number(totalRows[0]?.total || 0);
+
+        // La pagina se trae de la mas reciente a la mas antigua y se invierte
+        // para responder en orden cronologico ascendente (chat).
         const [mensajes] = await pool.query(
             `SELECT id, emisor_id, receptor_id, mensaje, enviado_at, leido
              FROM mensajes_chat
              WHERE (emisor_id = ? AND receptor_id = ?) OR (emisor_id = ? AND receptor_id = ?)
-             ORDER BY enviado_at ASC, id ASC`,
-            [req.userId, otroId, otroId, req.userId]
+             ORDER BY enviado_at DESC, id DESC
+             LIMIT ? OFFSET ?`,
+            [req.userId, otroId, otroId, req.userId, porPagina, offset]
         );
+        mensajes.reverse();
 
         return successResponse(res, "Mensajes obtenidos", {
             usuario: {
@@ -193,6 +215,10 @@ export const obtenerConversacion = async (req, res, next) => {
                 foto_perfil: otro[0].foto_perfil,
             },
             mensajes,
+            total,
+            pagina,
+            por_pagina: porPagina,
+            total_paginas: Math.max(1, Math.ceil(total / porPagina)),
         });
     } catch (err) {
         next(err);
