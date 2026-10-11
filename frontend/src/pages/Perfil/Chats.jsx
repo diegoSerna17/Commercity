@@ -331,6 +331,7 @@ const Chats = () => {
               onClick={() => fileInputRef.current?.click()}
               className="p-2 hover:bg-white/5 rounded-lg text-brand-muted-text"
               title="Adjuntar archivo"
+              aria-label="Adjuntar archivo"
             >
               <PaperclipIcon />
             </button>
@@ -348,6 +349,7 @@ const Chats = () => {
               type="button"
               onClick={handleEnviar}
               disabled={enviando}
+              aria-label="Enviar mensaje"
               className="w-12 h-12 bg-brand-orange hover:bg-orange-500 rounded-xl flex items-center justify-center transition-transform active:scale-95 disabled:opacity-60"
             >
               <SendIcon />

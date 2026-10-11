@@ -156,6 +156,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                   className={`absolute right-sm top-1/2 -translate-y-1/2 p-sm transition-colors ${
                     showPassword ? "text-brand-orange" : "text-icon-gray-500 hover:text-on-surface"
                   }`}
