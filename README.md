@@ -1,12 +1,12 @@
 # CommerCity
 
-**Estado:** Proyecto académico en etapa productiva | Backend: 328/328 pruebas OK (22 archivos) | Frontend: 17/17 pruebas OK | Móvil (Capacitor) y Escritorio (Electron): cableados a la API y verificados (capa de red 102/102, RF4 12/12) | Cobertura backend: 92.55% líneas
+**Estado:** Proyecto académico en etapa productiva | Backend: 413/413 pruebas OK (25 archivos, última corrida completa 2026-10-08) | Frontend: 25/25 pruebas OK (7 archivos) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API y verificados (capa de red 102/102, RF4 12/12) | Cobertura backend: 95.37% líneas
 
 CommerCity es una plataforma de comercio electrónico para mercados locales con roles de comprador, vendedor y administrador. Incluye catálogo de productos con imágenes, carrito de compras, pedidos, pasarela de pago simulada, tiendas de vendedores, chat, notificaciones, seguidores, calificaciones, reportes de contenido y panel de administración.
 
 ## Contexto académico
 
-Proyecto productivo desarrollado en el marco del **SENA**, programa **Tecnólogo en Análisis y Desarrollo de Software (ADSO)**, como alternativa de **Proyecto Productivo** dentro de la **Formación Profesional Integral (FPI)** y la **etapa productiva**. La fuente única de requerimientos es el documento oficial vigente (`docs/LAST VERSION/Commercity (optimizado)/Commercity (optimizado).docx.md`, versión final del 2026-08-20).
+Proyecto productivo desarrollado en el marco del **SENA**, programa **Tecnólogo en Análisis y Desarrollo de Software (ADSO)**, como alternativa de **Proyecto Productivo** dentro de la **Formación Profesional Integral (FPI)** y la **etapa productiva**. La fuente única de requerimientos es el documento oficial vigente (versión final del 2026-08-20), conservado por el equipo fuera del control de versiones; el mapeo RF/RNF aplicado al código está en `docs/bd/modelo-datos.md` y `docs/api/inventario-endpoints.md`.
 
 ## Características principales
 
@@ -37,8 +37,8 @@ Pipeline de middlewares y flujo de una petición autenticada:
 
 ```text
 Petición entrante
-  -> helmet, CORS (origen único FRONTEND_URL), express.json (límite 10mb)
-  -> rate limit: 10 peticiones/min en /api/usuarios/login y /api/usuarios/recover
+  -> helmet, CORS (allow-list CORS_ALLOWLIST: FRONTEND_URL + orígenes de Capacitor; null/file:// solo con ALLOW_DESKTOP_ORIGINS), express.json
+  -> rate limit: base 200/15 min en /api + 10 peticiones/min en /api/usuarios/login y /api/usuarios/recover (el lote de auditoría agrega límites específicos)
   -> auth.middleware: JWT Bearer + lista negra en BD (tokens_invalidados, hash SHA-256)
      + verificación de usuarios.activo (fail-closed)
   -> role.middleware: control de acceso RBAC por roles
@@ -55,16 +55,16 @@ Petición entrante
 | ---------------------------------------- | ------------------------------------ | ---------------- |
 | Node.js                                  | Runtime                              | 22+              |
 | Express                                  | Framework web                        | ^5.2.1           |
-| MySQL2                                   | Driver de MySQL (pool de conexiones) | ^3.20.0          |
+| MySQL2                                   | Driver de MySQL (pool de conexiones) | ^3.24.5          |
 | jsonwebtoken                             | Autenticación JWT                    | ^9.0.3           |
-| Zod                                      | Validación de entrada                | ^4.4.3           |
-| Multer                                   | Carga de archivos                    | ^2.2.0           |
+| Zod                                      | Validación de entrada                | ^4.6.5           |
+| Multer                                   | Carga de archivos                    | ^2.4.0           |
 | helmet                                   | Cabeceras de seguridad               | ^8.3.0           |
-| express-rate-limit                       | Limitación de peticiones             | ^8.6.2           |
-| Resend                                   | Correo transaccional                 | ^6.18.1          |
+| express-rate-limit                       | Limitación de peticiones             | ^8.7.0           |
+| Resend                                   | Correo transaccional                 | ^6.32.0          |
 | bcrypt                                   | Hash de contraseñas                  | ^6.0.0           |
-| cors / dotenv                            | CORS y variables de entorno          | ^2.8.6 / ^17.3.1 |
-| Vitest + supertest + @vitest/coverage-v8 | Pruebas y cobertura                  | ^4.1.10 / ^7.2.2 |
+| cors / dotenv                            | CORS y variables de entorno          | ^2.8.6 / ^17.4.2 |
+| Vitest + supertest + @vitest/coverage-v8 | Pruebas y cobertura                  | ^4.1.11 / ^7.3.1 / ^4.1.11 |
 
 ### Frontend (`frontend/package.json`)
 
@@ -85,10 +85,10 @@ Petición entrante
 COMMER CITY/
 ├── backend/
 │   └── src/server/
-│       ├── __tests__/      # 22 archivos de pruebas (Vitest + supertest)
-│       ├── config/         # db.js, multer.js, multer.chat.js
+│       ├── __tests__/      # 25 archivos de pruebas (Vitest + supertest)
+│       ├── config/         # db.js, multer.js
 │       ├── controllers/    # Controladores por módulo (incluye subcarpeta admin/)
-│       ├── db/             # Migraciones SQL incrementales (008-014, con rollback en comentarios)
+│       ├── db/             # Migraciones SQL incrementales (000 y 008-018, idempotentes, con rollback en comentarios)
 │       ├── middleware/     # auth, error, role, validate
 │       ├── routes/         # 12 archivos de rutas por módulo
 │       ├── schemas/        # Esquemas Zod de autenticación
@@ -109,21 +109,17 @@ COMMER CITY/
 │   ├── .nvmrc              # Node 22.23.2
 │   └── package.json
 ├── apps/
-│   ├── movil/              # Snapshot versionado de la app Capacitor (www/ con api.js de los 69 endpoints)
+│   ├── movil/              # Snapshot versionado de la app Capacitor (www/ con api.js de los 72 endpoints)
 │   ├── escritorio/         # Snapshot versionado de la app Electron (src/ con api.js)
 │   └── README.md           # Builds (APK/EXE), exclusiones y notas de firma (keystore)
 ├── docs/                   # Requerimientos, entregas, informes y evidencias
-│   ├── informes/           # Versionada por excepción (ver .gitignore): PLAN_*, INFORME_RAMA_*, EVIDENCIA_*
-│   │   ├── PLAN_INTEGRACION_API_MOVIL_ESCRITORIO_2026-09-27.md
-│   │   ├── INFORME_RAMA_{BACKEND,MOVIL,ESCRITORIO}_2026-09-27.md
-│   │   ├── EVIDENCIA_E2E_CAPA_RED_2026-09-28.md
-│   │   ├── INFORME_ESTADO_INTEGRACION_2026-09-28.md
-│   │   └── INFORME_FINAL_SENA_2026-09-25.md
-│   ├── DRIVE/              # Documentación del equipo (315 archivos: Documentación, Guía de Diseño, Iconos, Imágenes)
+│   ├── informes/           # Versionada por excepción (ver .gitignore): INFORME_AUDITORIA_PREVIEW_*.md
+│   │   └── INFORME_AUDITORIA_PREVIEW_2026-10-05.md
+│   ├── DRIVE/              # Documentación del equipo (315 archivos, ~31 MB: Documentación, Guía de Diseño, Iconos, Imágenes). Rutas de hasta 179 caracteres: en Windows usa `git config --global core.longpaths true` (ver docs/guias/ramas-obsoletas.md)
 │   ├── CHANGELOG.md        # Bitácora de cambios (fecha real, evidencia y estado)
 │   └── AVANCES/            # Fuentes locales de las apps + PRUEBAS (gitignorado)
-├── schema_commercity.sql   # Esquema oficial (crea la BD commercity_v2)
-├── seed_commercity.sql     # Datos de prueba (usuarios, productos, pedidos)
+├── schema_commercity.sql   # Esquema oficial (crea la BD local commercity_dev; guarda A-6 contra las bases compartidas)
+├── seed_commercity.sql     # Datos de prueba (usuarios con hashes bcrypt, productos, pedidos)
 ├── VERSION                 # Versión SemVer del proyecto
 └── .gitignore
 ```
@@ -152,6 +148,7 @@ git pull origin PREVIEW
 Notas:
 
 - `PREVIEW` contiene el código consolidado (backend, frontend, apps, esquema y seed SQL, README) **más** la documentación del equipo trackeada en git: `docs/DRIVE/` (315 archivos: Documentación, Guía de Diseño, Iconos, Imágenes de Categorías), `docs/informes/` y `docs/CHANGELOG.md`.
+- `docs/DRIVE` pesa ~31 MB y tiene rutas de hasta 179 caracteres: en Windows activa `git config --global core.longpaths true` o usa un checkout disperso que lo excluya (detalle en `docs/guias/ramas-obsoletas.md`).
 - NO se versionan en PREVIEW los dumps de base de datos (carpeta `docs/DRIVE/Base de Datos - Commercity 2.0/`, con hashes bcrypt y datos personales) por ser un repositorio público, ni `graphify-out/`, `Scripts.txt` ni el resto de carpetas de `docs/` (LAST VERSION, metodologia, etc.), que viven solo en el repositorio ECOMMERCE.
 - `PREVIEW` se actualiza con merge desde `main` (del repositorio ECOMMERCE); en esos merges el `docs/CHANGELOG.md` de PREVIEW **no se modifica** — la bitácora oficial del proyecto se lleva en ECOMMERCE.
 - Las ramas `main` y `master` del repositorio oficial **no se tocan**: las organizan los líderes al finalizar el proyecto.
@@ -194,7 +191,7 @@ El backend se configura por variables de entorno. Copia la plantilla y completa 
 Copy-Item backend\.env.example backend\.env     # desde la raiz del repositorio
 ```
 
-Los datos de conexion a la base de datos (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME=commercity_v2`) los entrega el lider del equipo. Si prefieres una base local, importa `schema_commercity.sql` y `seed_commercity.sql` (ver Base de datos mas abajo) y usa `DB_HOST=localhost`.
+Los datos de conexión a la base de datos compartida (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME=commercity_v2`) los entrega el líder del equipo **por canal privado**. Si prefieres una base local, no necesitas nada de eso: `schema_commercity.sql` y `seed_commercity.sql` crean la base `commercity_dev` (ver Base de datos más abajo).
 
 > \[!NOTE]
 > Nunca versiones el archivo `.env`: contiene credenciales locales y ya está excluido por `.gitignore`.
@@ -206,15 +203,17 @@ Los datos de conexion a la base de datos (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_P
 | `DB_PORT`           | Puerto de MySQL (por defecto 3306).                                                                                                                                   |
 | `DB_USER`           | Usuario de MySQL.                                                                                                                                                     |
 | `DB_PASSWORD`       | Contraseña de MySQL.                                                                                                                                                  |
-| `DB_NAME`           | Nombre de la base de datos (usa `commercity_v2`, el que crean los scripts SQL del proyecto).                                                                         |
+| `DB_NAME`           | Nombre de la base de datos. Para local usa `commercity_dev` (el que crean los scripts SQL); la compartida es `commercity_v2` (dato del líder).                          |
 | `JWT_SECRET`        | **Obligatoria.** El servidor no arranca sin ella. Genera una clave aleatoria, por ejemplo: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
 | `CRYPTO_SECRET_KEY` | Clave para cifrar datos sensibles (cuenta bancaria). Si se omite, se usa `JWT_SECRET` como respaldo.                                                                  |
-| `FRONTEND_URL`      | Origen único permitido por CORS y enlaces del correo. Por defecto `http://localhost:5173`.                                                                            |
+| `FRONTEND_URL`      | Origen web permitido por CORS y enlaces del correo. Por defecto `http://localhost:5173`.                                                                            |
+| `NODE_ENV`          | `production` activa gates estrictos (docs off salvo `DOCS_ENABLED=true`; CORS de escritorio cerrado).                                                               |
+| `ALLOW_DESKTOP_ORIGINS` | `true` acepta los orígenes `null`/`file://` del escritorio Electron (solo dev/entorno controlado).                                                             |
 | `RESEND_API_KEY`    | API key de Resend. Si se omite, el mailer entra en modo simulación.                                                                                                   |
 | `RESEND_FROM`       | Remitente del correo. Por defecto `CommerCity <onboarding@resend.dev>`.                                                                                               |
 
 > \[!IMPORTANT]
-> El CORS del backend usa una allow-list (`CORS_ORIGINS` en `backend/src/server/app.js`): `FRONTEND_URL` (web, por defecto `http://localhost:5173`) + los orígenes de la WebView de Capacitor (`https://localhost`, `http://localhost`, `capacitor://localhost`) + `null`/`file://` de Electron. Si sirves el frontend en otro origen, agrégalo a esa lista (nunca uses `*`).
+> El CORS del backend usa una allow-list (constante `CORS_ALLOWLIST` en `backend/src/server/app.js`): `FRONTEND_URL` (web, por defecto `http://localhost:5173`) + los orígenes de la WebView de Capacitor (`https://localhost`, `http://localhost`, `capacitor://localhost`). Los orígenes `null`/`file://` del escritorio Electron **solo** se aceptan con `ALLOW_DESKTOP_ORIGINS=true` (nunca en producción). Si sirves el frontend en otro origen, agrégalo a esa lista (nunca uses `*`).
 
 En el frontend, la URL de la API se toma de `VITE_API_URL` (archivo `.env` en la raíz de `frontend/`); por defecto apunta a `http://localhost:3000`.
 
@@ -224,17 +223,21 @@ En el frontend, la URL de la API se toma de `VITE_API_URL` (archivo `.env` en la
 
 El esquema corresponde al diseño oficial del proyecto (documento Commercity 2.0). Tienes dos opciones:
 
-- **Base compartida del equipo:** solo configura las variables `DB_*` en `backend/.env` con los datos que entrega el lider. No importes nada.
-- **Base local:** crea la base importando los scripts de la raíz y usa `DB_HOST=localhost` en `backend/.env`:
+- **Base compartida del equipo:** solo configura las variables `DB_*` en `backend/.env` con los datos que el líder entrega **por canal privado**. No importes nada.
+- **Base local (recomendada para pruebas):** los scripts crean la base `commercity_dev` y llevan la **guarda A-6** que aborta si la base objetivo es una de las compartidas (`commercity_v2`/`commercycity_v2`/`commercy_v2`) salvo que la sesión declare `SET @permitir_destructivo = 1;` de forma explícita. En PowerShell:
 
 ```powershell
-mysql -u root -p < schema_commercity.sql               # crea commercity_v2 con todas las tablas
-mysql -u root -p commercity_v2 < seed_commercity.sql   # datos de prueba (usuarios, productos, pedidos)
+Get-Content .\schema_commercity.sql -Raw | mysql -u root -p --default-character-set=utf8mb4   # crea commercity_dev con las tablas
+Get-Content .\seed_commercity.sql -Raw | mysql -u root -p --default-character-set=utf8mb4     # datos de prueba
 ```
 
-**Migraciones incrementales:** los cambios de esquema posteriores viven en `backend/src/server/db/` (`008` a `014`, cada una con su rollback en comentarios). Una base local creada con `schema_commercity.sql` ya trae el esquema vigente; contra la **base compartida del equipo** hay que aplicar las migraciones que `docs/CHANGELOG.md` marque como pendientes (hoy `013_reembolso_parcial_pagos.sql` y `014_indices_consultas.sql`) **antes** de arrancar el backend, porque el código de reembolso parcial y los índices los exigen.
+**Migraciones incrementales:** viven en `backend/src/server/db/` (`000` y `008`-`018`, idempotentes, con rollback en comentarios) y se aplican en orden con `npm run db:migrate` desde `backend/` (registra cada archivo en `schema_migrations` con checksum; se niega a tocar una base compartida sin `--permitir-compartida`). Una base local creada con `schema_commercity.sql` ya trae el esquema vigente; contra la **base compartida del equipo** el líder aplica las migraciones pendientes **antes** de arrancar el backend.
 
-Entre las tablas principales se encuentran: `usuarios`, `productos`, `pedidos`, `detalle_pedidos`, `pagos_simulados`, `carrito_items` y `tokens_invalidados`.
+**Eventos programados:** el esquema define `limpiar_carritos_inactivos` (RF109) y `purgar_tokens_invalidados`; ambos requieren `event_scheduler = ON` en el servidor MySQL (ver `docs/guias/despliegue.md`).
+
+**Contraseña del seed:** el seed solo versiona hashes bcrypt; la contraseña de las cuentas de prueba se solicita al líder por canal privado (R-1) y se rota con `backend/scripts/gen-seed-hashes.mjs` (la clave entra por variable de entorno, nunca por argumentos). Las cuentas bancarias del seed van cifradas (`iv:tag:dato`): se regeneran con `backend/scripts/gen-seed-cuentas.mjs` y la clave de desarrollo.
+
+Entre las tablas principales se encuentran: `usuarios`, `productos`, `pedidos`, `detalle_pedidos`, `pagos_simulados`, `carrito_items`, `tokens_invalidados` y `schema_migrations`.
 
 ### Backend
 
@@ -301,19 +304,19 @@ Resultados actuales:
 
 | Suite                           | Comando                   | Resultado                                 |
 | ------------------------------- | ------------------------- | ----------------------------------------- |
-| Backend (Vitest + supertest)    | `cd backend && npm test`  | 328 pruebas en 22 archivos, todas pasando |
-| Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 17 pruebas en 4 archivos, todas pasando   |
+| Backend (Vitest + supertest)    | `cd backend && npm test`  | 413 pruebas en 25 archivos, todas pasando (corrida 2026-10-08) |
+| Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 25 pruebas en 7 archivos, todas pasando (corrida 2026-10-08)  |
 
-Cobertura actual del backend (`npm run test:coverage`, proveedor v8):
+Cobertura del backend (`npm run test:coverage`, proveedor v8; última corrida completa registrada 2026-10-07):
 
 | Métrica    | Valor  | Umbral configurado |
 | ---------- | ------ | ------------------ |
-| Statements | 92.01% | 60%                |
-| Branches   | 81.31% | 60%                |
-| Functions  | 98.21% | 60%                |
-| Lines      | 92.55% | 60%                |
+| Statements | 94.91% | 60%                |
+| Branches   | 86.30% | 60%                |
+| Functions  | 100%   | 60%                |
+| Lines      | 95.37% | 60%                |
 
-E2E con backend vivo (2026-09-28): runner de los 69 endpoints = **129/129** y capa de red de los `api.js` reales de móvil/escritorio = **102/102** (incluye RF4 recover/reset 12/12). Ver `docs/informes/EVIDENCIA_E2E_CAPA_RED_2026-09-28.md` y `docs/informes/INFORME_ESTADO_INTEGRACION_2026-09-28.md`.
+E2E con backend vivo (2026-09-28): runner de los endpoints de entonces (69) = **129/129** y capa de red de los `api.js` reales de móvil/escritorio = **102/102** (incluye RF4 recover/reset 12/12). Evidencia conservada por el equipo en `docs/AVANCES/PRUEBAS/` (local, fuera del repositorio) y en `docs/CHANGELOG.md`.
 
 ## Documentación de la API
 
@@ -350,7 +353,7 @@ Los nombres exactos, verbos y cuerpos de cada endpoint están en los archivos de
 
 ## Usuarios de prueba
 
-Los usuarios de prueba los crea el script `seed_commercity.sql`. Sirven para probar cada rol en la web, el móvil y el escritorio. **La contraseña la define el líder y se comunica fuera del repositorio** (el seed solo versiona hashes bcrypt distintos por usuario, nunca la contraseña en texto; pídesela al líder).
+Los usuarios de prueba los crea el script `seed_commercity.sql`. Sirven para probar cada rol en la web, el móvil y el escritorio. **La contraseña de prueba la define el líder y se pide por canal privado** (el seed solo versiona hashes bcrypt distintos por usuario, nunca la contraseña en texto; rotada el 2026-10-11, R-1).
 
 | Rol           | Correo                            | Nombre                     |
 | ------------- | --------------------------------- | -------------------------- |
@@ -363,11 +366,11 @@ Los usuarios de prueba los crea el script `seed_commercity.sql`. Sirven para pro
 El seed completo trae 20 usuarios (1 administrador con los tres roles, 10 vendedores y 9 compradores). Los demás correos siguen el patrón `<nombre>.<apellido>@commercity.com` y el listado exacto está en `seed_commercity.sql`.
 
 > \[!WARNING]
-> El seed es re-ejecutable y **vacía (TRUNCATE) las 18 tablas** antes de cargar: ejecútalo solo en entorno de desarrollo, nunca sobre datos que quieras conservar. Requiere `schema_commercity.sql` aplicado y la migración `013_reembolso_parcial_pagos.sql`.
+> El seed es re-ejecutable y **vacía (TRUNCATE) las 15 tablas** que carga antes de insertar: ejecútalo solo en la base local `commercity_dev`, nunca sobre datos que quieras conservar. Lleva la misma guarda A-6 del esquema (aborta contra bases compartidas sin `SET @permitir_destructivo = 1;`). Requiere `schema_commercity.sql` (o las migraciones) aplicadas.
 
 > \[!NOTE]
 > Los usuarios de prueba solo existen si se cargó `seed_commercity.sql` en la base de datos. Si usas la base compartida del equipo, ya vienen cargados. Estas credenciales son de datos de prueba del proyecto académico, no de un entorno productivo.
 
 # Uso académico y créditos
 
-Proyecto con fines exclusivamente educativos, desarrollado como proyecto productivo del **SENA** (programa ADSO) en el marco de la Formación Profesional Integral. Sin licencia comercial. Los requerimientos y entregas del equipo se conservan localmente en `docs/`; el registro de cambios del proyecto está en `docs/CHANGELOG.md`.
+Proyecto con fines exclusivamente educativos, desarrollado como proyecto productivo del **SENA** (programa ADSO) en el marco de la Formación Profesional Integral. Distribuido bajo licencia **ISC** (ver `LICENSE`; coherente con `backend/package.json`, DEC-007). Los requerimientos y entregas del equipo se conservan localmente en `docs/`; el registro de cambios del proyecto está en `docs/CHANGELOG.md`.

@@ -1,0 +1,81 @@
+# docker-compose.yml — entorno de DESARROLLO de CommerCity (TASK-8.4).
+#
+# Levanta MySQL 8 local (base `commercity_dev`, con schema + seed aplicados la
+# primera vez) y la API del backend con healthcheck en GET /health.
+#
+# Uso (desde la raiz del repositorio):
+#   $env:JWT_SECRET = (clave aleatoria de desarrollo)
+#   docker compose up --build
+#
+# Variables opcionales: MYSQL_ROOT_PASSWORD (default de desarrollo),
+# CRYPTO_SECRET_KEY (clave de cifrado; sin ella el backend usa el fallback).
+# NUNCA usar los valores por defecto ni este compose en produccion.
+
+name: commercity-dev
+
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-commercity_dev_root}
+      MYSQL_DATABASE: commercity_dev
+    ports:
+      - "3306:3306"
+    volumes:
+      - datos_mysql:/var/lib/mysql
+      # Solo se ejecutan con el volumen VACIO (primera vez):
+      # schema_commercity.sql crea commercity_dev y las tablas (guarda A-6 OK,
+      # no es una base compartida); seed_commercity.sql carga los datos de prueba.
+      - ./schema_commercity.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./seed_commercity.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-uroot",
+          "-p${MYSQL_ROOT_PASSWORD:-commercity_dev_root}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-commercity_dev_root}
+      DB_NAME: commercity_dev
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en el entorno antes de levantar el compose}
+      CRYPTO_SECRET_KEY: ${CRYPTO_SECRET_KEY:-}
+      FRONTEND_URL: http://localhost:5173
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  datos_mysql:

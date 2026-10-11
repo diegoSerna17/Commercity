@@ -1,7 +1,8 @@
-# Modelo de datos — CommerCity (`commercity_v2`)
+# Modelo de datos — CommerCity (BD compartida `commercity_v2`; el esquema local crea `commercity_dev`)
 
 > Fuente: `schema_commercity.sql` (MySQL 8, InnoDB, `utf8mb4_unicode_ci`). Semilla: `seed_commercity.sql`.
-> 19 tablas en 6 modulos. Notas de negocio verificadas contra el codigo (`utils/finanzas.js`, `utils/reembolsos.js`, controllers).
+> 16 tablas vigentes en 6 modulos + `schema_migrations` (ledger de migraciones). Notas de negocio verificadas contra el codigo (`utils/finanzas.js`, `utils/reembolsos.js`, controllers).
+> Tablas en desuso RETIRADAS del esquema canonico el 2026-10-11 (siguen en la BD real, sin uso por el codigo): `etiquetas`, `producto_etiquetas`, `calificaciones_productos` (TASK-7.6/TASK-7.7).
 
 ## Diagrama entidad-relacion
 
@@ -22,16 +23,12 @@ erDiagram
     USUARIOS ||--o{ REPORTES : informa
     CATEGORIAS ||--o{ CATEGORIAS : "padre (SET NULL)"
     CATEGORIAS ||--o{ PRODUCTOS : clasifica
-    ETIQUETAS ||--o{ PRODUCTO_ETIQUETAS : marca
-    PRODUCTOS ||--o{ PRODUCTO_ETIQUETAS : tiene
     PRODUCTOS ||--o{ CARRITO_ITEMS : contiene
     PRODUCTOS ||--o{ DETALLE_PEDIDOS : integra
-    PRODUCTOS ||--o{ CALIFICACIONES_PRODUCTOS : recibe
     PRODUCTOS ||--o{ REPORTES : "es reportado"
     PEDIDOS ||--|| PAGOS_SIMULADOS : liquida
     PEDIDOS ||--o{ DETALLE_PEDIDOS : agrupa
     PEDIDOS ||--o{ CALIFICACIONES_VENDEDORES : origina
-    PEDIDOS ||--o{ CALIFICACIONES_PRODUCTOS : origina
 ```
 
 ## Modulo 1 — Usuarios y roles
@@ -71,8 +68,8 @@ PK (seguidor_id, seguido_id); ambas FK a usuarios con CASCADE; CHECK `seguidor_i
 |---|---|---|
 | id | INT AUTO_INCREMENT PK | — |
 | usuario_id | INT UNIQUE, FK usuarios CASCADE | 1:1 por usuario |
-| titular_nombre | VARCHAR(100) | Solo letras/espacios (Zod `CuentaBancaria`) |
-| banco | VARCHAR(50) | — |
+| titular_nombre | VARCHAR(255) | Cifrado en reposo (`iv:tag:dato`); 255 cubre el ciphertext de un nombre largo (M-DB-1, mig 017). Zod `CuentaBancaria` valida el valor en claro |
+| banco | VARCHAR(100) | Longitud de la BD real (M-DB-1, mig 017) |
 | tipo_cuenta | VARCHAR(50) | `ahorros` \| `corriente` |
 | numero_cuenta | VARCHAR(100) | Cifrado en reposo (RNF11); API enmascara lectura |
 | es_commercity | TINYINT(1) DEFAULT 0 | 1 = cuenta de la plataforma (comision 10%) |
@@ -83,8 +80,8 @@ PK (seguidor_id, seguido_id); ambas FK a usuarios con CASCADE; CHECK `seguidor_i
 ### `categorias`
 id PK, nombre UNIQUE, descripcion NULL, categoria_padre_id FK autorreferencial ON DELETE SET NULL, activo default 1.
 
-### `etiquetas`
-id PK, nombre VARCHAR(50) UNIQUE.
+### ~~`etiquetas`~~ (RETIRADA del esquema 2026-10-11)
+Tabla en desuso: el codigo no la consulta y el seed dejo de cargarla. Sigue en la BD real; su DROP es opcional y con aprobacion.
 
 ### `productos`
 | Columna | Tipo | Notas |
@@ -102,8 +99,8 @@ id PK, nombre VARCHAR(50) UNIQUE.
 | fecha_publicacion | DATETIME DEFAULT now | — |
 | eliminado_por_admin | TINYINT(1) DEFAULT 0 | Suspension logica (bandeo admin) |
 
-### `producto_etiquetas` (N:M)
-PK (producto_id, etiqueta_id), CASCADE en ambas.
+### ~~`producto_etiquetas` (N:M)~~ (RETIRADA del esquema 2026-10-11)
+Tabla en desuso (misma decision que `etiquetas`).
 
 ## Modulo 4 — Compras y pagos
 
@@ -131,10 +128,10 @@ pedido_id (CASCADE), producto_id (RESTRICT), vendedor_id (RESTRICT), cantidad, p
 ## Modulo 5 — Reputacion
 
 ### `calificaciones_vendedores`
-pedido_id (CASCADE) + UNIQUE (una por pedido), comprador_id, vendedor_id (CASCADE), estrellas TINYINT CHECK 1-5, comentario TEXT NULL, fecha_calificacion. RF107.
+pedido_id (CASCADE) + vendedor_id, comprador_id (CASCADE), estrellas TINYINT CHECK 1-5, comentario TEXT NULL, fecha_calificacion. UNIQUE (pedido_id, vendedor_id): cada comprador califica una vez a cada vendedor del pedido (M-DB-5, mig 018). RF107.
 
-### `calificaciones_productos`
-Igual, con producto_id (CASCADE) y UNIQUE (pedido_id, producto_id).
+### ~~`calificaciones_productos`~~ (RETIRADA del esquema 2026-10-11)
+Tabla en desuso: el codigo solo califica vendedores; el seed dejo de cargarla.
 
 ## Modulo 6 — Comunicacion y moderacion
 
@@ -145,7 +142,7 @@ emisor_id + receptor_id (FK CASCADE), mensaje TEXT, enviado_at, leido default 0.
 usuario_id (CASCADE), tipo VARCHAR(50) (`compra`, `pedido enviado`, `en camino`, `entregado`, `devolucion`, `mensajes`, `reporte`; VARCHAR porque el ENUM truncaba), descripcion TEXT, estado VARCHAR(20) DEFAULT 'no leido' (sin acentos, como escribe el codigo), url_redireccion NULL, fecha_hora.
 
 ### `reportes`
-informante_id (CASCADE), tipo_reporte ENUM('Producto','Usuario'), producto_id NULL / usuario_reportado_id NULL (CASCADE) con CHECK de exclusividad (uno y solo uno segun el tipo), motivo TEXT, evidencia_url NULL (multipart `evidencia`), estado_reporte ENUM('Pendiente','Resuelto') DEFAULT 'Pendiente', archivado default 0 (borrado logico), respuesta_admin NULL, respondido_at NULL, fecha_reporte. RF60-RF66.
+informante_id NULL (FK usuarios **SET NULL**: el reporte sobrevive aunque se borre el informante), tipo_reporte ENUM('Producto','Usuario'), producto_id NULL / usuario_reportado_id NULL (FK **RESTRICT**: no se borra la entidad reportada mientras exista el reporte) con CHECK de exclusividad (uno y solo uno segun el tipo), motivo TEXT, evidencia_url NULL (multipart `evidencia`), estado_reporte ENUM('Pendiente','Resuelto') DEFAULT 'Pendiente', archivado default 0 (borrado logico), respuesta_admin NULL, respondido_at NULL, fecha_reporte. RF60-RF66. FKs ajustadas en TASK-7.7 (los reportes no se borran).
 
 ### `tokens_invalidados` (lista negra JWT, RF2)
 token_hash CHAR(64) PK (SHA-256 del token revocado en logout), expira_en DATETIME (limpieza), creado_en. Indice en expira_en.
