@@ -2,6 +2,13 @@ import { request } from "../api/client.js";
 
 // Acciones de la cuenta del usuario autenticado (RF2, RF4, RF20/RF21, RF40).
 
+/**
+ * Perfil del usuario autenticado con sus roles vigentes (GET /api/usuarios/me).
+ * Se usa para confirmar la sesion y el rol antes de renderizar rutas protegidas.
+ * @returns {Promise<{success: boolean, data: {id: number, email: string, nombre_completo: string, roles: string[]}}>}
+ */
+export const obtenerMiUsuario = () => request("/api/usuarios/me");
+
 export const actualizarPerfil = (nombre_completo) =>
   request("/api/usuarios/me", {
     method: "PATCH",
