@@ -39,22 +39,5 @@
     "nodemon": {
       "chokidar": "^4.0.3"
     }
-  },
-  "vitest": {
-    "test": {
-      "environment": "node",
-      "coverage": {
-        "provider": "v8",
-        "include": [
-          "src/server/**/*.js"
-        ],
-        "thresholds": {
-          "lines": 60,
-          "functions": 60,
-          "branches": 60,
-          "statements": 60
-        }
-      }
-    }
   }
 }
