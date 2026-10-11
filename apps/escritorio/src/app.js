@@ -528,7 +528,7 @@ async function doRegistro() {
   const esVend      = document.getElementById('reg-vendedor').checked;
 
   if (!email || !email.includes('@')) { showAuthError('reg-error', 'Ingresa un correo electrónico válido.'); return; }
-  if (pass.length < 4) { showAuthError('reg-error', 'La contraseña debe tener al menos 4 caracteres.'); return; }
+  if (pass.length < 8) { showAuthError('reg-error', 'La contraseña debe tener al menos 8 caracteres.'); return; }
   if (pass !== confirm) { showAuthError('reg-error', 'Las contraseñas no coinciden.'); return; }
   hideAuthError('reg-error');
 
@@ -1235,9 +1235,10 @@ async function doRecuperar() {
   }
   try {
     const body = await api.recover(email);
-    // En desarrollo la API puede devolver el token de reseteo en data.
+    // El backend solo devuelve el token de reseteo en desarrollo; se conserva
+    // en memoria para el flujo inmediato y NUNCA se persiste (Info auditoria).
+    try { localStorage.removeItem('commercity_recovery'); } catch (e) {}
     recoveryToken = (body && body.data && (body.data.token || body.data.reset_token)) || null;
-    if (recoveryToken) { try { localStorage.setItem('commercity_recovery', recoveryToken); } catch (e) {} }
   } catch (e) {
     if (errEl) { errEl.textContent = (e && e.message) || 'No se pudo iniciar la recuperación.'; errEl.style.display = 'block'; } return;
   }
@@ -1263,9 +1264,9 @@ async function doRestablecer() {
   const p1    = document.getElementById('reset-p1')?.value;
   const p2    = document.getElementById('reset-p2')?.value;
   const errEl = document.getElementById('reset-error');
-  if (!p1 || p1.length < 6) { if (errEl) { errEl.textContent='La contraseña debe tener al menos 6 caracteres.'; errEl.style.display='block'; } return; }
+  if (!p1 || p1.length < 8) { if (errEl) { errEl.textContent='La contraseña debe tener al menos 8 caracteres.'; errEl.style.display='block'; } return; }
   if (p1 !== p2)             { if (errEl) { errEl.textContent='Las contraseñas no coinciden.'; errEl.style.display='block'; } return; }
-  const token = recoveryToken || (() => { try { return localStorage.getItem('commercity_recovery'); } catch (e) { return null; } })();
+  const token = recoveryToken;
   if (!token) { if (errEl) { errEl.textContent='Sesión de recuperación expirada. Solicita un nuevo correo.'; errEl.style.display='block'; } return; }
   try {
     await api.resetPassword(token, p1);
