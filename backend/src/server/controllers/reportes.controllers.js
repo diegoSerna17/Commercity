@@ -2,6 +2,7 @@ import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { validarId } from "../utils/ids.js";
 import { registrarAuditoria, ACCIONES } from "../utils/auditoria.js";
+import { borrarArchivoSubido } from "../config/multer.js";
 
 const TIPOS_VALIDOS = ["Producto", "Usuario"];
 
@@ -33,42 +34,59 @@ export const crearReporte = async (req, res, next) => {
     const evidenciaUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!TIPOS_VALIDOS.includes(tipo)) {
+      // TASK-4.6: sin reporte, la evidencia subida no debe quedar huerfana.
+      borrarArchivoSubido(req.file);
       return errorResponse(
         res,
         "El tipo de reporte debe ser 'Producto' o 'Usuario'",
         400
       );
     }
-    if (!motivo) return errorResponse(res, "El motivo es obligatorio", 400);
-    if (motivo.length > 2000)
+    if (!motivo) {
+      borrarArchivoSubido(req.file);
+      return errorResponse(res, "El motivo es obligatorio", 400);
+    }
+    if (motivo.length > 2000) {
+      borrarArchivoSubido(req.file);
       return errorResponse(res, "El motivo es demasiado largo", 400);
+    }
 
     let productoId = null;
     let usuarioReportadoId = null;
 
     if (tipo === "Producto") {
       const id = Number(req.body.producto_id);
-      if (!validarId(id))
+      if (!validarId(id)) {
+        borrarArchivoSubido(req.file);
         return errorResponse(res, "Debe indicar un producto valido", 400);
+      }
       const [producto] = await pool.query(
         "SELECT id FROM productos WHERE id = ?",
         [id]
       );
-      if (producto.length === 0)
+      if (producto.length === 0) {
+        borrarArchivoSubido(req.file);
         return errorResponse(res, "Producto no encontrado", 404);
+      }
       productoId = id;
     } else {
       const id = Number(req.body.usuario_reportado_id);
-      if (!validarId(id))
+      if (!validarId(id)) {
+        borrarArchivoSubido(req.file);
         return errorResponse(res, "Debe indicar un usuario valido", 400);
-      if (id === req.userId)
+      }
+      if (id === req.userId) {
+        borrarArchivoSubido(req.file);
         return errorResponse(res, "No puedes reportarte a ti mismo", 400);
+      }
       const [usuario] = await pool.query(
         "SELECT id FROM usuarios WHERE id = ?",
         [id]
       );
-      if (usuario.length === 0)
+      if (usuario.length === 0) {
+        borrarArchivoSubido(req.file);
         return errorResponse(res, "Usuario no encontrado", 404);
+      }
       usuarioReportadoId = id;
     }
 
@@ -96,6 +114,7 @@ export const crearReporte = async (req, res, next) => {
       201
     );
   } catch (err) {
+    borrarArchivoSubido(req.file);
     next(err);
   }
 };

@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { borrarArchivoSubido, borrarUploadPorUrl } from "../config/multer.js";
 
 /**
  * Panel Principal (RF87-RF94): catalogo de productos con busqueda, filtros
@@ -412,6 +413,8 @@ export const crearProductoVendedor = async (req, res) => {
     const { nombre, descripcion, precio, stock, descuento, categoria } = req.body;
 
     if (!nombre || !descripcion || !categoria) {
+      // TASK-4.6: la imagen ya quedo en disco; sin producto no debe quedar huerfana.
+      borrarArchivoSubido(req.file);
       return res.status(400).json({
         success: false,
         error: { code: "VALIDATION_ERROR", message: "Faltan campos requeridos (nombre, descripcion, categoria)" },
@@ -420,6 +423,7 @@ export const crearProductoVendedor = async (req, res) => {
 
     // S3 (RF81-RF90): presencia y rangos de precio/stock/descuento.
     if (precio === undefined || stock === undefined) {
+      borrarArchivoSubido(req.file);
       return res.status(400).json({
         success: false,
         error: { code: "VALIDATION_ERROR", message: "Faltan campos requeridos (precio, stock)" },
@@ -427,6 +431,7 @@ export const crearProductoVendedor = async (req, res) => {
     }
     const errorRangos = validarRangosProducto({ precio, stock, descuento });
     if (errorRangos) {
+      borrarArchivoSubido(req.file);
       return res.status(400).json({
         success: false,
         error: { code: "VALIDATION_ERROR", message: errorRangos },
@@ -464,6 +469,7 @@ export const crearProductoVendedor = async (req, res) => {
       data: { id: resultado.insertId, mensaje: "Producto creado exitosamente" },
     });
   } catch (error) {
+    borrarArchivoSubido(req.file);
     console.error("Error al crear producto del vendedor:", error.message);
     return res.status(500).json({
       success: false,
@@ -481,6 +487,7 @@ export const editarProductoVendedor = async (req, res) => {
     const { id } = req.params;
     const productoId = Number(id);
     if (!Number.isInteger(productoId) || productoId <= 0) {
+      borrarArchivoSubido(req.file);
       return res.status(400).json({
         success: false,
         error: { code: "VALIDATION_ERROR", message: "ID inválido" },
@@ -496,6 +503,7 @@ export const editarProductoVendedor = async (req, res) => {
     );
 
     if (productoExistente.length === 0) {
+      borrarArchivoSubido(req.file);
       return res.status(404).json({
         success: false,
         error: { code: "NOT_FOUND", message: "Producto no encontrado" },
@@ -509,6 +517,7 @@ export const editarProductoVendedor = async (req, res) => {
     // Los campos son opcionales: si no viene uno se conserva el valor actual.
     const errorRangos = validarRangosProducto({ precio, stock, descuento });
     if (errorRangos) {
+      borrarArchivoSubido(req.file);
       return res.status(400).json({
         success: false,
         error: { code: "VALIDATION_ERROR", message: errorRangos },
@@ -521,6 +530,10 @@ export const editarProductoVendedor = async (req, res) => {
     }
 
     const imagenUrl = req.file ? `/uploads/${req.file.filename}` : producto.imagen_url;
+    // TASK-4.6: al reemplazar la imagen, la anterior deja de estar referenciada.
+    if (req.file && producto.imagen_url && producto.imagen_url !== imagenUrl) {
+      borrarUploadPorUrl(producto.imagen_url);
+    }
 
     await pool.query(
       `UPDATE productos
@@ -545,6 +558,7 @@ export const editarProductoVendedor = async (req, res) => {
       data: { mensaje: "Producto actualizado exitosamente" },
     });
   } catch (error) {
+    borrarArchivoSubido(req.file);
     console.error("Error al editar producto del vendedor:", error.message);
     return res.status(500).json({
       success: false,

@@ -11,7 +11,7 @@ import {
 } from "../controllers/productos.controllers.js";
 import { authRequired } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
-import upload from "../config/multer.js";
+import { subirImagen } from "../config/multer.js";
 
 const router = Router();
 
@@ -41,14 +41,14 @@ router.post(
   "/productos",
   authRequired,
   requireRoles(["vendedor"]),
-  upload.single("imagen"),
+  subirImagen("imagen"),
   crearProductoVendedor
 );
 router.put(
   "/productos/:id",
   authRequired,
   requireRoles(["vendedor"]),
-  upload.single("imagen"),
+  subirImagen("imagen"),
   editarProductoVendedor
 );
 

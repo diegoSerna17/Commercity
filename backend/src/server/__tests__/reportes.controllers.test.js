@@ -28,6 +28,9 @@ vi.mock("mysql2/promise", () => {
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto_test";
 
+// TASK-4.6: buffer con magic bytes reales de JPEG (la subida valida contenido).
+const IMAGEN_JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(24)]);
+
 const { __pool: pool } = await import("mysql2/promise");
 const { default: app } = await import("../app.js");
 
@@ -179,7 +182,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
       .field("tipo", "Producto")
       .field("motivo", "Producto con defecto")
       .field("producto_id", "1")
-      .attach("evidencia", Buffer.from("imagen-fake"), "evidencia.jpg");
+      .attach("evidencia", IMAGEN_JPEG, "evidencia.jpg");
 
     expect(res.status).toBe(201);
     const insert = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO reportes"));

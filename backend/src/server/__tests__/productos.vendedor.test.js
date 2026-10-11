@@ -28,6 +28,14 @@ vi.mock("mysql2/promise", () => {
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto_test";
 
+// TASK-4.6: buffers con magic bytes reales; la subida valida el CONTENIDO
+// (no solo la extension/MIME declarados) antes de escribir en disco.
+const IMAGEN_JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(24)]);
+const IMAGEN_PNG = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.alloc(24),
+]);
+
 const { __pool: pool } = await import("mysql2/promise");
 const { default: app } = await import("../app.js");
 
@@ -89,7 +97,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("stock", "10")
       .field("descuento", "0")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("imagen-fake"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -117,6 +125,55 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("TASK-4.6: rechaza contenido que no es imagen real (magic bytes) -> 400", async () => {
+    const res = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Fake")
+      .field("descripcion", "Desc")
+      .field("precio", "1000")
+      .field("stock", "1")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", Buffer.from("esto-no-es-una-imagen"), "foto.jpg");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("UPLOAD_INVALIDO");
+    // No se escribe nada ni se llega al controller
+    expect(pool.query.mock.calls.some(([sql]) =>
+      String(sql).includes("INSERT INTO productos"))).toBe(false);
+  });
+
+  it("TASK-4.6: rechaza extension que no coincide con el contenido real -> 400", async () => {
+    const res = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Fake")
+      .field("descripcion", "Desc")
+      .field("precio", "1000")
+      .field("stock", "1")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", IMAGEN_PNG, "foto.jpg"); // PNG con nombre .jpg
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("UPLOAD_INVALIDO");
+  });
+
+  it("TASK-4.6: imagen mayor a 5 MB -> 413", async () => {
+    const grande = Buffer.concat([IMAGEN_JPEG, Buffer.alloc(5 * 1024 * 1024 + 32)]);
+    const res = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Grande")
+      .field("descripcion", "Desc")
+      .field("precio", "1000")
+      .field("stock", "1")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", grande, "grande.jpg");
+
+    expect(res.status).toBe(413);
+    expect(res.body.error.code).toBe("PAYLOAD_TOO_LARGE");
+  });
+
   it("POST /api/productos con precio invalido -> 400", async () => {
     const res = await request(app)
       .post("/api/productos")
@@ -126,7 +183,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("precio", "-5")
       .field("stock", "1")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -143,7 +200,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("stock", "1")
       .field("descuento", "150")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -160,7 +217,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("stock", "1")
       .field("descuento", "abc")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -176,7 +233,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("stock", "1")
       .field("descuento", "-3")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -191,7 +248,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("precio", "1000")
       .field("stock", "5.5")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -206,7 +263,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("precio", "1000")
       .field("stock", "")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(resCrear.status).toBe(400);
     expect(resCrear.body.error.code).toBe("VALIDATION_ERROR");
@@ -438,7 +495,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("precio", "10000")
       .field("stock", "2")
       .field("categoria", "Nueva Categoria")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(201);
     const insertCategoria = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO categorias"));
@@ -475,7 +532,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .put("/api/productos/1")
       .set("Authorization", `Bearer ${tokenVendedor}`)
       .field("nombre", "Editado con imagen")
-      .attach("imagen", Buffer.from("nueva"), "nueva.png");
+      .attach("imagen", IMAGEN_PNG, "nueva.png");
 
     expect(res.status).toBe(200);
     const update = pool.query.mock.calls.find(([sql]) => sql.includes("UPDATE productos"));
