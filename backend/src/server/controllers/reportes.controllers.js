@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { validarId } from "../utils/ids.js";
+import { registrarAuditoria, ACCIONES } from "../utils/auditoria.js";
 
 const TIPOS_VALIDOS = ["Producto", "Usuario"];
 
@@ -77,6 +78,16 @@ export const crearReporte = async (req, res, next) => {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [req.userId, tipo, productoId, usuarioReportadoId, motivo, evidenciaUrl]
     );
+
+    // M-11: auditoria del reporte creado (sin el texto del motivo).
+    await registrarAuditoria({
+      actorId: req.userId,
+      accion: ACCIONES.REPORTE_CREADO,
+      objetivoTipo: "reporte",
+      objetivoId: result.insertId,
+      detalle: { tipo, producto_id: productoId, usuario_reportado_id: usuarioReportadoId },
+      ip: req.ip,
+    });
 
     return successResponse(
       res,

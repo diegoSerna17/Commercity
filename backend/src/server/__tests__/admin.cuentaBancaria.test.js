@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
 // Mock del pool MySQL (sin BD real).
 vi.mock("mysql2/promise", () => {
@@ -52,6 +53,9 @@ const filaCifrada = {
   es_commercity: 1,
   updated_at: null,
 };
+
+// M-12: hash real de la contrasena del admin para el step-up.
+const HASH_ADMIN = await bcrypt.hash("ClaveAdmin123", 4);
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -143,11 +147,12 @@ describe("GET /api/admin/mi-cuenta-bancaria (RF76)", () => {
 });
 
 describe("POST /api/admin/mi-cuenta-bancaria (RF76 upsert)", () => {
-  it("crea la cuenta de Commercity con es_commercity = 1 (201)", async () => {
+  it("crea la cuenta de Commercity con es_commercity = 1 (201) y la audita", async () => {
     // SELECT de existencia -> vacio (INSERT)
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      if (sql.includes("SELECT password FROM usuarios")) return [[{ password: HASH_ADMIN }], undefined];
       if (sql.includes("SELECT id FROM datos_bancarios WHERE es_commercity")) return [[], undefined];
       if (sql.includes("WHERE es_commercity = 1")) return [[filaCifrada], undefined];
       return [[], undefined];
@@ -170,6 +175,7 @@ describe("POST /api/admin/mi-cuenta-bancaria (RF76 upsert)", () => {
         banco: "Bancolombia",
         tipo_cuenta: "corriente",
         numero_cuenta: "1234567890",
+        password: "ClaveAdmin123",
       });
 
     expect(res.status).toBe(201);
@@ -181,12 +187,68 @@ describe("POST /api/admin/mi-cuenta-bancaria (RF76 upsert)", () => {
     expect(insert).toBeDefined();
     expect(insert[0]).toContain("es_commercity");
     expect(insert[0]).toMatch(/VALUES\s*\([^)]*1\)\s*$/i);
+    // M-11: la auditoria registra el cambio (sin datos sensibles)
+    const auditoria = pool.query.mock.calls.find(([sql]) =>
+      typeof sql === "string" && sql.includes("INSERT INTO auditoria_acciones"));
+    expect(auditoria).toBeTruthy();
+    expect(auditoria[1][1]).toBe("cuenta_bancaria_plataforma.cambiada");
+  });
+
+  it("M-12: sin contrasena de step-up -> 400 (zod)", async () => {
+    const res = await request(app)
+      .post("/api/admin/mi-cuenta-bancaria")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({
+        titular_nombre: "CommerCity SAS",
+        banco: "Bancolombia",
+        tipo_cuenta: "corriente",
+        numero_cuenta: "1234567890",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    // El step-up ni siquiera se evalua: zod corta antes de tocar la cuenta
+    expect(pool.query.mock.calls.some(([sql]) =>
+      typeof sql === "string" && sql.includes("INSERT INTO datos_bancarios"))).toBe(false);
+  });
+
+  it("M-12: contrasena incorrecta -> 403 y no toca la cuenta", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      if (sql.includes("SELECT password FROM usuarios")) return [[{ password: HASH_ADMIN }], undefined];
+      return [[], undefined];
+    });
+    const connQuery = vi.fn().mockResolvedValue([[], undefined]);
+    pool.getConnection.mockResolvedValue({
+      beginTransaction: vi.fn().mockResolvedValue(),
+      commit: vi.fn().mockResolvedValue(),
+      rollback: vi.fn().mockResolvedValue(),
+      release: vi.fn().mockResolvedValue(),
+      query: connQuery,
+    });
+
+    const res = await request(app)
+      .put("/api/admin/mi-cuenta-bancaria")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({
+        titular_nombre: "CommerCity SAS",
+        banco: "Bancolombia",
+        tipo_cuenta: "corriente",
+        numero_cuenta: "1234567890",
+        password: "Incorrecta999",
+      });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.message).toMatch(/Contraseña/i);
+    expect(connQuery).not.toHaveBeenCalled();
   });
 
   it("actualiza la cuenta existente (200)", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      if (sql.includes("SELECT password FROM usuarios")) return [[{ password: HASH_ADMIN }], undefined];
       if (sql.includes("WHERE es_commercity = 1")) return [[filaCifrada], undefined];
       return [[], undefined];
     });
@@ -211,6 +273,7 @@ describe("POST /api/admin/mi-cuenta-bancaria (RF76 upsert)", () => {
         banco: "Davivienda",
         tipo_cuenta: "ahorros",
         numero_cuenta: "9876543210",
+        password: "ClaveAdmin123",
       });
 
     expect(res.status).toBe(200);

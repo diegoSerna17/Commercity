@@ -1,7 +1,8 @@
 import { z } from "zod";
+import bcrypt from "bcrypt";
 import pool from "../../config/db.js";
 import { successResponse, errorResponse } from "../../utils/response.js";
-import { bancoSchema } from "../../schemas/cuentaBancaria.schema.js";
+import { bancoPlataformaSchema } from "../../schemas/cuentaBancaria.schema.js";
 import {
   buscarCuentaCommercity,
   recifrarCuentaBancariaSiEsLegado,
@@ -9,6 +10,7 @@ import {
   buildPrivateRecord,
   buildPublicRecord,
 } from "../../utils/cuentaBancaria.js";
+import { registrarAuditoria, ACCIONES } from "../../utils/auditoria.js";
 
 // ============================================================================
 // MODULO: CUENTA BANCARIA DE COMMERCITY (RF75/RF76)
@@ -70,8 +72,20 @@ export const getMiCuentaBancariaMasked = async (req, res, next) => {
 export const upsertMiCuentaBancaria = async (req, res, next) => {
   const conn = await pool.getConnection();
   try {
-    const data = bancoSchema.parse(req.body);
+    const data = bancoPlataformaSchema.parse(req.body);
     const usuarioId = req.userId;
+
+    // M-12 (TASK-4.5): step-up obligatorio con la contrasena del administrador
+    // (la cuenta de la plataforma recibe la comision del 10%).
+    const [adminFila] = await pool.query(
+      "SELECT password FROM usuarios WHERE id = ? LIMIT 1",
+      [usuarioId]
+    );
+    const passwordValida =
+      adminFila.length > 0 && (await bcrypt.compare(data.password, adminFila[0].password));
+    if (!passwordValida) {
+      return errorResponse(res, "Contraseña incorrecta (operación sensible)", 403);
+    }
 
     // M-10: v2 con AAD = usuario_id (el admin registrador).
     const encryptedTitular = cifrarCampo(data.titular_nombre, usuarioId);
@@ -102,6 +116,19 @@ export const upsertMiCuentaBancaria = async (req, res, next) => {
     await conn.commit();
 
     const fila = await buscarCuentaCommercity();
+    // M-11: auditoria del cambio de la cuenta de la plataforma (sin datos sensibles).
+    await registrarAuditoria({
+      actorId: usuarioId,
+      accion: ACCIONES.CUENTA_PLATAFORMA_CAMBIADA,
+      objetivoTipo: "datos_bancarios",
+      objetivoId: fila?.id ?? existing[0]?.id ?? null,
+      detalle: {
+        banco: data.banco,
+        tipo_cuenta: data.tipo_cuenta,
+        es_actualizacion: existing.length > 0,
+      },
+      ip: req.ip,
+    });
     return successResponse(
       res,
       existing.length === 0

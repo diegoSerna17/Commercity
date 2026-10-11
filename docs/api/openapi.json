@@ -3499,7 +3499,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CuentaBancaria"
+                "$ref": "#/components/schemas/CuentaBancariaPlataforma"
               }
             }
           }
@@ -3567,7 +3567,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CuentaBancaria"
+                "$ref": "#/components/schemas/CuentaBancariaPlataforma"
               }
             }
           }
@@ -5531,6 +5531,64 @@
           {
             "q": "cafe",
             "scope": "all"
+          }
+        ]
+      },
+      "CuentaBancariaPlataforma": {
+        "type": "object",
+        "properties": {
+          "titular_nombre": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100,
+            "pattern": "^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\\s]+$",
+            "description": "Nombre del titular (solo letras y espacios)"
+          },
+          "banco": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 50,
+            "description": "Nombre del banco"
+          },
+          "tipo_cuenta": {
+            "type": "string",
+            "enum": [
+              "ahorros",
+              "corriente"
+            ],
+            "description": "Tipo de cuenta"
+          },
+          "numero_cuenta": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 20,
+            "pattern": "^\\d+$",
+            "description": "Numero de cuenta (solo digitos, 6-20)"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "description": "Contrasena del administrador (step-up obligatorio)"
+          }
+        },
+        "required": [
+          "titular_nombre",
+          "banco",
+          "tipo_cuenta",
+          "numero_cuenta",
+          "password"
+        ],
+        "additionalProperties": false,
+        "title": "CuentaBancariaPlataforma",
+        "description": "Body de alta/actualizacion de la cuenta bancaria de Commercity (admin + contrasena)",
+        "examples": [
+          {
+            "titular_nombre": "CommerCity SAS",
+            "banco": "Bancolombia",
+            "tipo_cuenta": "corriente",
+            "numero_cuenta": "1234567890",
+            "password": "ClaveAdmin123"
           }
         ]
       },

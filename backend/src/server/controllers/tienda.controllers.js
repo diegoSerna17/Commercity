@@ -12,6 +12,7 @@ import {
   buildPublicRecord,
   validarCuentaBancaria,
 } from "../utils/cuentaBancaria.js";
+import { registrarAuditoria, ACCIONES } from "../utils/auditoria.js";
 
 // ============================================================================
 // MODULO TIENDA DEL VENDEDOR (integrado desde AVANCES/SPRING 1/ERICK/TIENDA)
@@ -96,6 +97,19 @@ export const upsertMiCuentaBancaria = async (req, res, next) => {
     await conn.commit();
 
     const fila = await buscarCuentaBancaria(usuarioId);
+    // M-11: auditoria del cambio de cuenta bancaria del vendedor (sin datos sensibles).
+    await registrarAuditoria({
+      actorId: usuarioId,
+      accion: ACCIONES.CUENTA_BANCARIA_CAMBIADA,
+      objetivoTipo: "datos_bancarios",
+      objetivoId: fila?.id ?? existing[0]?.id ?? null,
+      detalle: {
+        banco: data.banco,
+        tipo_cuenta: data.tipo_cuenta,
+        es_actualizacion: existing.length > 0,
+      },
+      ip: req.ip,
+    });
     return successResponse(
       res,
       existing.length === 0 ? "Cuenta bancaria registrada correctamente." : "Cuenta bancaria actualizada correctamente.",

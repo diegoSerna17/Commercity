@@ -232,6 +232,14 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
       expect(insertCall[1][1]).not.toContain("Maria");
       expect(insertCall[1][4]).not.toContain("12345678901234");
       expect(conn.commit).toHaveBeenCalled();
+      // M-10: el valor persistido es v2 (con AAD = usuario_id)
+      expect(insertCall[1][1].startsWith("v2:")).toBe(true);
+      expect(insertCall[1][4].startsWith("v2:")).toBe(true);
+      // M-11: el cambio de cuenta bancaria queda auditado
+      const auditoria = pool.query.mock.calls.find(([sql]) =>
+        typeof sql === "string" && sql.includes("INSERT INTO auditoria_acciones"));
+      expect(auditoria).toBeTruthy();
+      expect(auditoria[1][1]).toBe("cuenta_bancaria.cambiada");
     });
 
     it("actualiza la cuenta bancaria existente (200)", async () => {

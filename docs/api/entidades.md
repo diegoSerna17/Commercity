@@ -1,7 +1,7 @@
 # Contratos de datos — CommerCity
 
 > Generado con `npm run docs:api` + `npm run docs:entidades` desde `backend/src/server/schemas/`. No editar a mano.
-> 40 contratos documentados. Fuente de verdad: los esquemas Zod.
+> 41 contratos documentados. Fuente de verdad: los esquemas Zod.
 
 ## Indice
 
@@ -16,6 +16,7 @@
 - [Recuperacion](#recuperacion)
 - [Registro](#registro)
 - [RestablecerPassword](#restablecerpassword)
+- [CuentaBancariaPlataforma](#cuentabancariaplataforma)
 - [CuentaBancaria](#cuentabancaria)
 - [ActualizarPerfil](#actualizarperfil)
 - [DirectorioQuery](#directorioquery)
@@ -242,12 +243,39 @@
 }
 ```
 
+## CuentaBancariaPlataforma (`CuentaBancariaPlataforma`)
+
+> Body de alta/actualizacion de la cuenta bancaria de Commercity (admin + contrasena)
+
+- **Fuente:** `backend/src/server/schemas/cuentaBancaria.schema.js`
+- **Usado en:** `POST /api/admin/mi-cuenta-bancaria`, `PUT /api/admin/mi-cuenta-bancaria`
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `titular_nombre` | string [longitud >= 3, longitud <= 100] | si | Nombre del titular (solo letras y espacios) |
+| `banco` | string [longitud >= 3, longitud <= 50] | si | Nombre del banco |
+| `tipo_cuenta` | enum: "ahorros" \| "corriente" | si | Tipo de cuenta |
+| `numero_cuenta` | string [longitud >= 6, longitud <= 20] | si | Numero de cuenta (solo digitos, 6-20) |
+| `password` | string [longitud >= 8, longitud <= 72] | si | Contrasena del administrador (step-up obligatorio) |
+
+**Ejemplo:**
+
+```json
+{
+  "titular_nombre": "CommerCity SAS",
+  "banco": "Bancolombia",
+  "tipo_cuenta": "corriente",
+  "numero_cuenta": "1234567890",
+  "password": "ClaveAdmin123"
+}
+```
+
 ## CuentaBancaria (`CuentaBancaria`)
 
 > Body de alta/actualizacion de cuenta bancaria (vendedor y admin). RNF11: se cifra en BD.
 
 - **Fuente:** `backend/src/server/schemas/cuentaBancaria.schema.js`
-- **Usado en:** `POST /api/tienda/mi-cuenta-bancaria`, `PUT /api/tienda/mi-cuenta-bancaria`, `POST /api/admin/mi-cuenta-bancaria`, `PUT /api/admin/mi-cuenta-bancaria`
+- **Usado en:** `POST /api/tienda/mi-cuenta-bancaria`, `PUT /api/tienda/mi-cuenta-bancaria`
 
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|

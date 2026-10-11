@@ -228,6 +228,61 @@ describe("PATCH /api/admin/usuarios/:id/estado (RF73/RF74 - baneo)", () => {
     );
     expect(conn.commit).toHaveBeenCalled();
     expect(conn.rollback).not.toHaveBeenCalled();
+    // M-11: el baneo queda auditado (actor, accion y objetivo)
+    const auditoria = pool.query.mock.calls.find(([sql]) =>
+      typeof sql === "string" && sql.includes("INSERT INTO auditoria_acciones"));
+    expect(auditoria).toBeTruthy();
+    expect(auditoria[1][1]).toBe("usuario.baneado");
+    expect(auditoria[1][3]).toBe(2);
+  });
+
+  it("M-11: un admin no puede banear su propia cuenta (403)", async () => {
+    const res = await request(app)
+      .patch("/api/admin/usuarios/1/estado") // tokenAdmin.id = 1
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ estado: "baneado" });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.message).toMatch(/tu propia cuenta/i);
+    expect(pool.getConnection).not.toHaveBeenCalled();
+  });
+
+  it("M-11: no se puede banear a otro administrador (403)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("MAX(CASE WHEN r.nombre = 'administrador'")) return [[{ id: 2, es_admin: 1 }], undefined];
+      if (sql.includes("COUNT(DISTINCT u.id) AS total")) return [[{ total: 2 }], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/admin/usuarios/2/estado")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ estado: "baneado" });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.message).toMatch(/otro administrador/i);
+    expect(pool.getConnection).not.toHaveBeenCalled();
+  });
+
+  it("M-11: protege al ultimo administrador activo (403)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("MAX(CASE WHEN r.nombre = 'administrador'")) return [[{ id: 2, es_admin: 1 }], undefined];
+      if (sql.includes("COUNT(DISTINCT u.id) AS total")) return [[{ total: 1 }], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/admin/usuarios/2/estado")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ estado: "baneado" });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.message).toMatch(/último administrador/i);
+    expect(pool.getConnection).not.toHaveBeenCalled();
   });
 
   it("A-3/M-1: cancela Pendiente con reembolso por linea y deja 'En camino' en revision (DEC-004)", async () => {
@@ -342,6 +397,11 @@ describe("PATCH /api/admin/usuarios/:id/estado (RF73/RF74 - baneo)", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.estado).toBe("activo");
     expect(pool.getConnection).not.toHaveBeenCalled();
+    // M-11: la reactivacion tambien se audita
+    const auditoria = pool.query.mock.calls.find(([sql]) =>
+      typeof sql === "string" && sql.includes("INSERT INTO auditoria_acciones"));
+    expect(auditoria).toBeTruthy();
+    expect(auditoria[1][1]).toBe("usuario.reactivado");
   });
 
   it("hace rollback si falla la BD (500)", async () => {
@@ -492,6 +552,11 @@ describe("Reportes admin (RF60-RF66 + fix 4.2)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.estado).toBe("resuelto");
+    // M-11: la resolucion del reporte queda auditada
+    const auditoria = pool.query.mock.calls.find(([sql]) =>
+      typeof sql === "string" && sql.includes("INSERT INTO auditoria_acciones"));
+    expect(auditoria).toBeTruthy();
+    expect(auditoria[1][1]).toBe("reporte.resuelto");
   });
 
   it("rechaza resolver sin respuesta (400)", async () => {
