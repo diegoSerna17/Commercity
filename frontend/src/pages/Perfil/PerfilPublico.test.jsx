@@ -104,4 +104,34 @@ describe("PerfilPublico", () => {
       screen.queryByRole("button", { name: "Reportar" })
     ).not.toBeInTheDocument();
   });
+
+  it("M-20: filtra los productos por vendedor_id en vez de por nombre", async () => {
+    // Act
+    renderPerfil();
+
+    // Assert
+    await screen.findByText("Tienda Demo");
+    expect(listarProductos).toHaveBeenCalledWith({ vendedorId: "5", limit: 100 });
+  });
+
+  it("M-21: consulta la lista de seguidos solo con sesion", async () => {
+    // Act
+    renderPerfil();
+
+    // Assert
+    await screen.findByText("Tienda Demo");
+    expect(listarSiguiendo).toHaveBeenCalledTimes(1);
+  });
+
+  it("M-21: sin sesion no consulta la lista de seguidos", async () => {
+    // Arrange
+    getCurrentUser.mockReturnValue(null);
+
+    // Act
+    renderPerfil();
+
+    // Assert
+    await screen.findByText("Tienda Demo");
+    expect(listarSiguiendo).not.toHaveBeenCalled();
+  });
 });

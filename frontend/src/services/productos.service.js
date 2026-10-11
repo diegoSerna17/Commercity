@@ -5,7 +5,7 @@ import { request } from "../api/client.js";
 /**
  * Lista productos con paginacion y filtros opcionales.
  * Solo envia los parametros que tienen valor.
- * @param {{ page?: number, limit?: number, nombre?: string, categoria?: string, vendedor?: string }} opciones
+ * @param {{ page?: number, limit?: number, nombre?: string, categoria?: string, vendedor?: string, vendedorId?: number|string }} opciones
  */
 export const listarProductos = ({
   page = 1,
@@ -13,6 +13,7 @@ export const listarProductos = ({
   nombre = "",
   categoria = "",
   vendedor = "",
+  vendedorId = "",
 } = {}) => {
   const params = new URLSearchParams();
   params.set("page", String(page));
@@ -21,6 +22,8 @@ export const listarProductos = ({
   if (nombre.trim() !== "") params.set("nombre", nombre.trim());
   if (categoria.trim() !== "") params.set("categoria", categoria.trim());
   if (vendedor.trim() !== "") params.set("vendedor", vendedor.trim());
+  // M-20: filtra por vendedor_id (exacto) en vez de por nombre (LIKE).
+  if (String(vendedorId).trim() !== "") params.set("vendedor_id", String(vendedorId).trim());
 
   return request(`/api/productos?${params.toString()}`);
 };

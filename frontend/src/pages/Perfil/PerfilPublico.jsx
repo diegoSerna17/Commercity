@@ -124,8 +124,8 @@ export default function PerfilPublico() {
         if (!activo) return;
         setVendedor({ id: Number(id), nombre, avatar });
 
-        // Lista los productos en venta del vendedor (filtro por nombre).
-        const resProductos = await listarProductos({ vendedor: nombre, limit: 100 });
+        // Lista los productos en venta del vendedor (M-20: filtro exacto por vendedor_id).
+        const resProductos = await listarProductos({ vendedorId: id, limit: 100 });
         const data = resProductos?.data || {};
         if (!activo) return;
         setProductos((data.productos || []).map(mapearProducto));
@@ -152,16 +152,19 @@ export default function PerfilPublico() {
         // silencio: si falla, los contadores quedan en 0
       });
 
-    // Estado de seguimiento del usuario autenticado hacia este vendedor.
-    listarSiguiendo()
-      .then((res) => {
-        if (!activo) return;
-        const lista = Array.isArray(res?.data) ? res.data : [];
-        setSiguiendo(lista.some((u) => Number(u.id) === Number(id)));
-      })
-      .catch(() => {
-        // silencio: sin sesion o error, se muestra como no seguido
-      });
+    // M-21: el estado de seguimiento es del usuario autenticado; sin sesion
+    // no se consulta la API (evita el 401 anonimo).
+    if (getCurrentUser()) {
+      listarSiguiendo()
+        .then((res) => {
+          if (!activo) return;
+          const lista = Array.isArray(res?.data) ? res.data : [];
+          setSiguiendo(lista.some((u) => Number(u.id) === Number(id)));
+        })
+        .catch(() => {
+          // silencio: error de red, se muestra como no seguido
+        });
+    }
 
     return () => {
       activo = false;
