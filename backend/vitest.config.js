@@ -7,6 +7,9 @@ export default defineConfig({
   test: {
     environment: "node",
     setupFiles: ["./vitest.setup.js"],
+    // TASK-3.9: la integracion con MySQL real vive en su propio runner
+    // (vitest.integration.config.js + `npm run test:integration`).
+    exclude: ["**/node_modules/**", "**/dist/**", "**/__tests__/integration/**"],
     coverage: {
       provider: "v8",
       include: ["src/server/**/*.js"],
