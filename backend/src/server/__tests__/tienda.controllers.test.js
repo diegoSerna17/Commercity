@@ -260,6 +260,9 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
     const sqlItemsVentas = pool.query.mock.calls.find(([sql]) => sql.includes("AS nombre_comprador"));
     expect(sqlItemsVentas).toBeTruthy();
     expect(sqlItemsVentas[0]).toContain("p.direccion_envio");
+    // M-6: el resumen (dinero) excluye las lineas canceladas
+    const resumenVentas = pool.query.mock.calls.find(([sql]) => sql.includes("SUM(dp.subtotal)"));
+    expect(resumenVentas[0]).toContain("estado_envio <> 'Cancelado'");
   });
 
   it("R2: la paginacion fuerza enteros y usa placeholders LIMIT ? OFFSET ?", async () => {
@@ -323,6 +326,9 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.resumen.consistencia_90_10_validada).toBe(true);
     expect(JSON.stringify(res.body)).not.toContain("numero_cuenta");
+    // M-6: el historial de ingresos excluye las lineas canceladas
+    const totalesIngresos = pool.query.mock.calls.find(([sql]) => sql.includes("COUNT(dp.id) AS total_transacciones"));
+    expect(totalesIngresos[0]).toContain("estado_envio <> 'Cancelado'");
   });
 
   it("GET /api/tienda/ingresos agrupa por dia cuando agrupar_por=dia", async () => {
@@ -364,6 +370,11 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
     expect(res.body.data.tarjetas.total_neto_vendedor).toBe(7200000);
     expect(res.body.data.por_estado[0].estado).toBe("Pendiente");
     expect(res.body.data.ultimos_6_meses[0].mes).toBe("2026-07");
+    // M-6: tarjetas y ganancias por mes excluyen lineas canceladas
+    const tarjetasQ = pool.query.mock.calls.find(([sql]) => sql.includes("COUNT(DISTINCT p.id) AS total_ventas"));
+    expect(tarjetasQ[0]).toContain("estado_envio <> 'Cancelado'");
+    const mesesQ = pool.query.mock.calls.find(([sql]) => sql.includes("GROUP BY DATE_FORMAT"));
+    expect(mesesQ[0]).toContain("estado_envio <> 'Cancelado'");
   });
 });
 

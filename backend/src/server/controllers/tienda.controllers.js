@@ -216,13 +216,15 @@ export const getHistorialVentas = async (req, res, next) => {
       [...params, porPagina, offset]
     );
 
+    // M-6: el resumen (dinero) excluye las lineas canceladas, igual que
+    // admin/stats; el listado de items conserva el historial completo (RF137).
     const [resumenRows] = await pool.query(
       `SELECT
          COUNT(*) AS total_ventas,
          COALESCE(SUM(dp.subtotal), 0) AS total_bruto,
          COALESCE(SUM(dp.monto_vendedor), 0) AS total_neto_vendedor,
          COALESCE(SUM(dp.monto_comision), 0) AS total_comision_plataforma
-       ` + fromJoin, params
+       ` + fromJoin + ` AND dp.estado_envio <> 'Cancelado'`, params
     );
 
     return successResponse(res, "Historial de ventas", {
@@ -260,7 +262,9 @@ export const getHistorialIngresos = async (req, res, next) => {
     const { fecha_desde, fecha_hasta, agrupar_por = "transaccion" } = req.query;
     const { pagina, porPagina } = parsePaginacion(req.query);
 
-    const where = ["dp.vendedor_id = ?"];
+    // M-6: el historial de INGRESOS excluye las lineas canceladas (fueron
+    // reembolsadas al comprador y no generan ingreso para el vendedor).
+    const where = ["dp.vendedor_id = ?", "dp.estado_envio <> 'Cancelado'"];
     const params = [vendedorId];
     if (fecha_desde) {
       where.push("DATE(p.fecha_pedido) >= DATE(?)");
@@ -378,6 +382,7 @@ export const getDashboardStats = async (req, res, next) => {
   try {
     const vendedorId = req.userId;
 
+    // M-6: las tarjetas (dinero) excluyen lineas canceladas, igual que admin/stats.
     const [totalRows] = await pool.query(
       `SELECT
          COUNT(DISTINCT p.id) AS total_ventas,
@@ -387,7 +392,7 @@ export const getDashboardStats = async (req, res, next) => {
          SUM(dp.cantidad) AS unidades_vendidas
        FROM detalle_pedidos dp
        INNER JOIN pedidos p ON p.id = dp.pedido_id
-       WHERE dp.vendedor_id = ?`,
+       WHERE dp.vendedor_id = ? AND dp.estado_envio <> 'Cancelado'`,
       [vendedorId]
     );
 
@@ -402,12 +407,13 @@ export const getDashboardStats = async (req, res, next) => {
       [vendedorId]
     );
 
+    // M-6: ganancias por mes solo de lineas vivas (sin canceladas).
     const [meses] = await pool.query(
       `SELECT DATE_FORMAT(p.fecha_pedido, '%Y-%m') AS mes,
               COALESCE(SUM(dp.monto_vendedor), 0) AS ganancias
          FROM detalle_pedidos dp
          INNER JOIN pedidos p ON p.id = dp.pedido_id
-        WHERE dp.vendedor_id = ?
+        WHERE dp.vendedor_id = ? AND dp.estado_envio <> 'Cancelado'
         GROUP BY DATE_FORMAT(p.fecha_pedido, '%Y-%m')
         ORDER BY mes DESC
         LIMIT 6`,

@@ -232,22 +232,24 @@ describe("PATCH /api/admin/usuarios/:id/estado (RF73/RF74 - baneo)", () => {
     expect(conn.rollback).not.toHaveBeenCalled();
   });
 
-  it("B-R5: cancela lineas Pendiente, completa En camino y reembolsa si el pedido queda vacio", async () => {
+  it("A-3/M-1: cancela Pendiente con reembolso por linea y deja 'En camino' en revision (DEC-004)", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("UPDATE productos SET eliminado_por_admin = 1")) return [{ affectedRows: 1 }, undefined];
       if (sql.includes("UPDATE usuarios SET activo = 0")) return [{ affectedRows: 1 }, undefined];
+      if (sql.includes("SELECT comprador_id FROM pedidos WHERE id = ?")) return [[{ comprador_id: 7 }], undefined];
+      if (sql.includes("FROM pagos_simulados")) {
+        return [[{ estado: "Aprobado", monto: 119000, monto_reembolsado: 0 }], undefined];
+      }
       if (sql.includes("FOR UPDATE")) {
         return [
           [
-            { id: 10, producto_id: 3, cantidad: 2, estado_envio: "Pendiente", pedido_id: 4, stock_actual: 5 },
-            { id: 11, producto_id: 5, cantidad: 1, estado_envio: "En camino", pedido_id: 5, stock_actual: 3 },
+            { id: 10, producto_id: 3, cantidad: 2, estado_envio: "Pendiente", pedido_id: 4, subtotal: 100000, stock_actual: 5 },
+            { id: 11, producto_id: 5, cantidad: 1, estado_envio: "En camino", pedido_id: 5, subtotal: 80000, stock_actual: 3 },
           ],
           undefined,
         ];
       }
-      if (sql.includes("estado_envio <> 'Cancelado'")) return [[{ total: 0 }], undefined];
-      if (sql.includes("UPDATE pagos_simulados SET estado = 'Reembolsado'")) return [{ affectedRows: 1 }, undefined];
-      if (sql.includes("estado_pago_vendedor = 'Desembolsado'")) return [{ affectedRows: 1 }, undefined];
+      if (sql.includes("UPDATE pagos_simulados")) return [{ affectedRows: 1 }, undefined];
       return [{ affectedRows: 1 }, undefined];
     });
 
@@ -258,21 +260,27 @@ describe("PATCH /api/admin/usuarios/:id/estado (RF73/RF74 - baneo)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.motivo.cancelados).toBe(1);
-    expect(res.body.data.motivo.completados).toBe(1);
-    // RF74: el pago del pedido 4 (quedo sin lineas activas) pasa a Reembolsado
+    // DEC-004: la linea 'En camino' NO se auto-desembolsa; queda en revision.
+    expect(res.body.data.motivo.enRevision).toBe(1);
+    // A-3/M-1: el reembolso de la linea cancelada se acumula aunque el pedido
+    // conserve lineas y el estado lo deriva la regla por monto.
     expect(conn.query).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE pagos_simulados SET estado = 'Reembolsado'"),
-      [4]
+      expect.stringContaining("UPDATE pagos_simulados"),
+      [119000, 119000, 4]
     );
-    // B-R5 (mig 013): el reembolso total acumula el importe completo para que
-    // el estado derivado (monto_reembolsado >= monto) coincida con 'Reembolsado'
-    expect(conn.query).toHaveBeenCalledWith(
-      expect.stringContaining("monto_reembolsado = monto WHERE pedido_id = ?"),
-      [4]
+    // Jamás se marca Entregado/Desembolsado por el baneo (DEC-004)
+    expect(conn.query).not.toHaveBeenCalledWith(
+      expect.stringContaining("estado_pago_vendedor = 'Desembolsado'"),
+      expect.anything()
     );
     expect(conn.query).toHaveBeenCalledWith(
       expect.stringContaining("UPDATE productos SET stock = stock + ?"),
       [2, 3]
+    );
+    // El comprador recibe la notificacion del reembolso (fail-soft)
+    expect(conn.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notificaciones"),
+      [7, "reembolso", expect.stringContaining("Pedido #4"), "/history", "no leido"]
     );
   });
 

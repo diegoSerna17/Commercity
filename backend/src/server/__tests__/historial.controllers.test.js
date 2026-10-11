@@ -212,6 +212,8 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
 
     it("deberia cancelar la linea, restituir stock y acumular el reembolso proporcional (200)", async () => {
         conn.query.mockImplementation((sql) => {
+            if (sql.includes("FROM pagos_simulados"))
+                return [[{ estado: "Aprobado", monto: 100000, monto_reembolsado: 0 }], undefined];
             if (sql.includes("FOR UPDATE"))
                 return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 50000, estado_pago_vendedor: "Pendiente" }], undefined];
             if (sql.includes("UPDATE pagos_simulados"))
@@ -240,12 +242,24 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
             expect.stringContaining("UPDATE productos SET stock = stock + ? WHERE id = ?"),
             [2, 3]
         );
-        // S1 (mig 013): acumula el importe en monto_reembolsado y deriva el estado
-        // por monto; el guard de estado protege pagos 'Rechazado'/'Pendiente'.
+        // S1 (mig 013) + A-2: acumula el importe en monto_reembolsado y deriva
+        // el estado por monto; el estado se evalua ANTES de incrementar (MySQL
+        // evalua el SET de izquierda a derecha) y con tolerancia +-0.01 (B-10);
+        // el guard de estado protege pagos 'Rechazado'/'Pendiente'.
         const updatePago = conn.query.mock.calls.find(([sql]) => sql.includes("UPDATE pagos_simulados"));
-        expect(updatePago[0]).toContain("monto_reembolsado = monto_reembolsado + ?");
+        expect(updatePago[0]).toContain("estado = IF(monto_reembolsado + ? >= monto - 0.01, 'Reembolsado', 'Aprobado')");
+        expect(updatePago[0]).toContain("monto_reembolsado = LEAST(monto_reembolsado + ?, monto)");
+        // A-2: el estado se asigna ANTES que el acumulado, nunca despues.
+        expect(updatePago[0].indexOf("estado = IF")).toBeLessThan(
+            updatePago[0].indexOf("monto_reembolsado = LEAST")
+        );
         expect(updatePago[0]).toContain("estado IN ('Aprobado', 'Reembolsado')");
         expect(updatePago[1]).toEqual([59500, 59500, 4]);
+        // La lectura del pago va bloqueada y trae los montos para derivar estado.
+        expect(conn.query).toHaveBeenCalledWith(
+            expect.stringContaining("FROM pagos_simulados WHERE pedido_id = ? FOR UPDATE"),
+            [4]
+        );
         // S1: el estatus todo-o-nada antiguo (reembolsar el pago completo por
         // cancelar UNA linea) quedo invalidado: el SQL nuevo nunca reembolsa el
         // monto completo si no lo cubre el importe acumulado.
@@ -261,8 +275,11 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
 
     it("S1: linea con pago_vendedor ya 'Desembolsado' lo conserva en la linea cancelada", async () => {
         conn.query.mockImplementation((sql) => {
+            if (sql.includes("FROM pagos_simulados"))
+                return [[{ estado: "Aprobado", monto: 100000, monto_reembolsado: 0 }], undefined];
             if (sql.includes("FOR UPDATE"))
                 return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 50000, estado_pago_vendedor: "Desembolsado" }], undefined];
+            if (sql.includes("UPDATE pagos_simulados")) return [{ affectedRows: 1 }, undefined];
             return [[], undefined];
         });
 
@@ -280,6 +297,8 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
 
     it("S1: subtotales con decimales se redondean con round2 en el importe", async () => {
         conn.query.mockImplementation((sql) => {
+            if (sql.includes("FROM pagos_simulados"))
+                return [[{ estado: "Aprobado", monto: 100000, monto_reembolsado: 0 }], undefined];
             if (sql.includes("FOR UPDATE"))
                 return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 25333.33, estado_pago_vendedor: "Pendiente" }], undefined];
             if (sql.includes("UPDATE pagos_simulados"))
@@ -300,8 +319,10 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
         );
     });
 
-    it("S1/H2: pago no Aprobado (affectedRows 0) se cancela sin reembolso reportado", async () => {
+    it("S1/H2: pago no Aprobado se cancela sin reembolso reportado", async () => {
         conn.query.mockImplementation((sql) => {
+            if (sql.includes("FROM pagos_simulados"))
+                return [[{ estado: "Pendiente", monto: 100000, monto_reembolsado: 0 }], undefined];
             if (sql.includes("FOR UPDATE"))
                 return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 50000, estado_pago_vendedor: "Pendiente" }], undefined];
             if (sql.includes("UPDATE pagos_simulados"))
@@ -317,6 +338,8 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
         expect(res.body.success).toBe(true);
         // H2: NO se reporta un reembolso que la BD no registro
         expect(res.body.data).toEqual({ id: 9, estado: "Cancelado", reembolsado: false, monto_reembolsado: 0 });
+        // H2: el guard de estado del helper evita el UPDATE sobre el pago
+        expect(conn.query.mock.calls.some(([sql]) => sql.includes("UPDATE pagos_simulados"))).toBe(false);
         // La cancelacion de la linea y el stock SI ocurrieron
         expect(conn.query).toHaveBeenCalledWith(
             expect.stringContaining("UPDATE detalle_pedidos SET estado_envio = 'Cancelado'"),

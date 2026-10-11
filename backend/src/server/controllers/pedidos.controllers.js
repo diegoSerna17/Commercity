@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { calcularLinea, calcularTotales, validarLuhn, round2 } from "../utils/finanzas.js";
-import { estadoPagoVendedorTrasCancelacion, importeReembolsoLinea } from "../utils/reembolsos.js";
+import {
+  estadoPagoVendedorTrasCancelacion,
+  importeReembolsoLineas,
+  reembolsarPago,
+} from "../utils/reembolsos.js";
 import { confirmarPagoSchema, estadoSchema, paramsIdSchema } from "../schemas/pedidos.schema.js";
 
 // ============================================================================
@@ -26,8 +30,11 @@ const ESTADO_NIVEL = { Pendiente: 0, "En camino": 1, Entregado: 2 };
 
 /**
  * Consulta los items del carrito del comprador autenticado.
- * El filtro RF74 (productos suspendidos / vendedores inactivos) se aplica en la
- * consulta FOR UPDATE de confirmarPago, donde se bloquean las filas.
+ * A-1 (auditoria 2026-10-11): se lee con FOR UPDATE DENTRO de la transaccion de
+ * confirmarPago. Las filas del carrito quedan bloqueadas hasta el commit: dos
+ * confirmaciones simultaneas del mismo comprador se serializan y la segunda
+ * encuentra el carrito ya consumido (no se crean pedidos duplicados), que es la
+ * idempotencia elegida sin migracion (no se persiste Idempotency-Key).
  * @param {import("mysql2/promise").PoolConnection} conn
  * @param {number} compradorId
  */
@@ -38,7 +45,8 @@ async function getItemsCarrito(conn, compradorId) {
        FROM carrito_items ci
        JOIN productos p ON p.id = ci.producto_id
       WHERE ci.comprador_id = ?
-      ORDER BY p.id`,
+      ORDER BY p.id
+        FOR UPDATE`,
     [compradorId]
   );
   return items;
@@ -144,8 +152,11 @@ export const confirmarPago = async (req, res, next) => {
     // mismo mensaje de error, sin N+1 de round-trips dentro de la transaccion
     // RF134. carrito_items no puede repetir producto (uq_comprador_producto),
     // por lo que cada producto aparece exactamente una vez.
+    // A-1: el precio y el descuento se leen en ESTA misma sentencia que bloquea
+    // `productos` (y no de la lectura previa del carrito), para calcular las
+    // lineas con el precio vigente bajo el lock.
     const [prods] = await conn.query(
-      `SELECT id, vendedor_id, stock, eliminado_por_admin
+      `SELECT id, vendedor_id, stock, precio, descuento_porcentaje, eliminado_por_admin
          FROM productos
         WHERE id IN (${items.map(() => "?").join(",")})
           AND eliminado_por_admin = 0
@@ -171,10 +182,19 @@ export const confirmarPago = async (req, res, next) => {
         );
       }
 
+      // DEC-002/M-4: prohibida la autocompra (el carrito ya la bloquea; aqui se
+      // revalida por si la linea se agrego antes de la regla).
+      if (Number(prod.vendedor_id) === Number(compradorId)) {
+        await conn.rollback();
+        return errorResponse(res, "No puedes comprar tus propios productos (autocompra)", 400);
+      }
+
       const linea = {
         ...item,
         vendedor_id: prod.vendedor_id,
-        ...calcularLinea(Number(item.precio), Number(item.descuento_porcentaje), item.cantidad),
+        // A-1: el precio/descuento que se factura sale del SELECT FOR UPDATE
+        // de productos, no de la lectura previa del carrito.
+        ...calcularLinea(Number(prod.precio), Number(prod.descuento_porcentaje), item.cantidad),
       };
       lineas.push(linea);
       totalNeto = round2(totalNeto + linea.subtotal);
@@ -308,12 +328,14 @@ async function cancelarUnaLinea(conn, id, detalle_id) {
   }
   const linea = lineas[0];
 
-  // No se puede cancelar lo que ya está Entregado o ya Cancelado.
-  if (linea.estado_envio === "Entregado" || linea.estado_envio === "Cancelado") {
+  // M-2 / DEC-003: el comprador solo cancela lineas 'Pendiente'. 'En camino'
+  // requiere el flujo de devolucion del administrador; 'Entregado'/'Cancelado'
+  // tampoco se tocan (alineado con RF135 en compras.controllers).
+  if (linea.estado_envio !== "Pendiente") {
     return {
       error: {
         status: 409,
-        message: `Línea en estado '${linea.estado_envio}' no se puede cancelar`,
+        message: `Línea en estado '${linea.estado_envio}' no se puede cancelar por el comprador (solo 'Pendiente'; 'En camino' requiere devolución del administrador)`,
       },
     };
   }
@@ -368,11 +390,12 @@ async function cancelarTodasLasLineas(conn, id) {
   const lineasNoCanceladas = [];
 
   for (const ln of todas) {
-    if (ln.estado_envio === "Entregado" || ln.estado_envio === "Cancelado") {
+    // M-2 / DEC-003: solo 'Pendiente' es cancelable por el comprador.
+    if (ln.estado_envio !== "Pendiente") {
       lineasNoCanceladas.push({
         detalle_id: ln.id,
         producto_nombre: ln.producto_nombre,
-        motivo: ln.estado_envio === "Entregado" ? "Entregado" : "Ya estaba Cancelado",
+        motivo: ln.estado_envio,
       });
     } else {
       await conn.query(
@@ -405,7 +428,7 @@ async function cancelarTodasLasLineas(conn, id) {
       error: {
         status: 409,
         message:
-          "Ninguna línea del pedido se puede cancelar (todas están Entregadas o Canceladas)",
+          "Ninguna línea del pedido se puede cancelar (solo las líneas 'Pendiente' son cancelables por el comprador)",
       },
     };
   }
@@ -413,53 +436,23 @@ async function cancelarTodasLasLineas(conn, id) {
 }
 
 /**
- * Actualiza pagos_simulados segun lo que quedo en el pedido.
- * pagos_simulados.estado es ENUM('Aprobado','Rechazado','Pendiente','Reembolsado')
- * en la BD real: NO existe 'Parcial'.
- * Si TODO el pedido fue cancelado → 'Reembolsado'; si quedan lineas vivas →
- * 'Aprobado' (ver informes/PROPUESTA_MIGRACION_ENUM_ESTADOS.md, Opcion A).
- * S1 (mig 013): el IMPORTE reembolsado se ACUMULA en monto_reembolsado con el
- * importe de las lineas canceladas EN ESTA llamada (subtotal x 1.19 por linea),
- * para que la cancelacion parcial del comprador y la general registren el mismo
- * dinero devuelto. El criterio todo-o-nada del ESTADO se conserva.
- * H2: solo los pagos 'Aprobado' acumulan importe (lectura bloqueada FOR UPDATE,
- * race-safe); si el pago esta 'Pendiente'/'Rechazado' NO se muta y se reporta
- * su estado REAL y monto_reembolsado 0 (no se inventa dinero no registrado).
+ * Aplica a pagos_simulados el reembolso de las lineas canceladas EN ESTA
+ * llamada con la regla unica por monto de utils/reembolsos.js (A-2, auditoria
+ * 2026-10-11): el estado se evalua ANTES de incrementar el acumulado (con
+ * tolerancia de redondeo +-0.01, B-10), el acumulado se acota al monto y NO hay
+ * early-return por estado 'Reembolsado' (un error previo no bloquea la
+ * correccion). La guarda de estado ('Aprobado'/'Reembolsado') vive en el helper.
+ * H2: un pago 'Pendiente'/'Rechazado' se reporta tal cual, sin mutarlo.
  * @param {Array<{subtotal: number|string}>} lineasCanceladas lineas canceladas en esta llamada
  * @returns {Promise<{estado: string, monto_reembolsado: number}>} estado REAL resultante del pago y el importe acumulado en esta llamada
  */
 async function actualizarPagoTrasCancelacion(conn, id, lineasCanceladas) {
-  const [restantes] = await conn.query(
-    `SELECT COUNT(*) AS total,
-            SUM(CASE WHEN estado_envio = 'Entregado' THEN 1 ELSE 0 END) AS entregadas,
-            SUM(CASE WHEN estado_envio = 'Cancelado' THEN 1 ELSE 0 END) AS canceladas
-       FROM detalle_pedidos WHERE pedido_id = ?`,
-    [id]
-  );
-  const r = restantes[0];
-  const estadoCalculado =
-    Number(r.canceladas) === Number(r.total) ? "Reembolsado" : "Aprobado";
-
-  const [pagos] = await conn.query(
-    "SELECT estado FROM pagos_simulados WHERE pedido_id = ? FOR UPDATE",
-    [id]
-  );
-  const estadoPagoActual = pagos[0]?.estado;
-  if (estadoPagoActual !== "Aprobado") {
-    return { estado: estadoPagoActual || estadoCalculado, monto_reembolsado: 0 };
-  }
-
-  const importeReembolsado = round2(
-    lineasCanceladas.reduce((acc, l) => acc + importeReembolsoLinea(l.subtotal), 0)
-  );
-  await conn.query(
-    `UPDATE pagos_simulados
-        SET estado = ?,
-            monto_reembolsado = monto_reembolsado + ?
-      WHERE pedido_id = ?`,
-    [estadoCalculado, importeReembolsado, id]
-  );
-  return { estado: estadoCalculado, monto_reembolsado: importeReembolsado };
+  const importeReembolsado = importeReembolsoLineas(lineasCanceladas);
+  const resultado = await reembolsarPago(conn, id, importeReembolsado);
+  return {
+    estado: resultado.estado || "Aprobado",
+    monto_reembolsado: resultado.monto_reembolsado,
+  };
 }
 
 /**
@@ -524,12 +517,16 @@ async function avanzarEnviosVendedor(conn, id, vendedorId, estado) {
     return { error: { status: 404, message: "El vendedor no tiene envíos en este pedido" } };
   }
 
-  for (const d of detalles) {
-    if (d.estado_envio === "Cancelado") {
-      return {
-        error: { status: 409, message: "Un envío cancelado no puede cambiar de estado" },
-      };
-    }
+  // M-3: las lineas 'Cancelado' no bloquean ni participan en el avance; solo
+  // se valida y actualizan las lineas vivas (Pendiente/En camino).
+  const vivas = detalles.filter((d) => d.estado_envio !== "Cancelado");
+  if (vivas.length === 0) {
+    return {
+      error: { status: 409, message: "El vendedor no tiene envíos activos en este pedido" },
+    };
+  }
+
+  for (const d of vivas) {
     const actual = ESTADO_NIVEL[d.estado_envio];
     if (actual === undefined || ESTADO_NIVEL[estado] !== actual + 1) {
       return {
@@ -541,7 +538,7 @@ async function avanzarEnviosVendedor(conn, id, vendedorId, estado) {
     }
   }
 
-  const ids = detalles.map((d) => d.id);
+  const ids = vivas.map((d) => d.id);
   await conn.query(
     `UPDATE detalle_pedidos SET estado_envio = ? WHERE id IN (${ids.map(() => "?").join(",")})`,
     [estado, ...ids]

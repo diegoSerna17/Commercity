@@ -19,16 +19,16 @@ function esEnteroPositivo(valor) {
 }
 
 /**
- * Obtiene el stock disponible de un producto activo (no eliminado por admin).
+ * Obtiene stock y vendedor de un producto activo (no eliminado por admin).
  * @param {number} productoId - ID del producto
- * @returns {Promise<number|null>} Stock disponible o null si no existe
+ * @returns {Promise<{stock: number, vendedor_id: number}|null>} Datos o null si no existe
  */
-async function obtenerStock(productoId) {
+async function obtenerProducto(productoId) {
   const [filas] = await pool.query(
-    "SELECT stock FROM productos WHERE id = ? AND eliminado_por_admin = 0 LIMIT 1",
+    "SELECT stock, vendedor_id FROM productos WHERE id = ? AND eliminado_por_admin = 0 LIMIT 1",
     [productoId]
   );
-  return filas.length > 0 ? filas[0].stock : null;
+  return filas.length > 0 ? filas[0] : null;
 }
 
 /**
@@ -70,14 +70,23 @@ export async function agregarProducto(req, res) {
       });
     }
 
-    const stock = await obtenerStock(productoId);
-    if (stock === null) {
+    const producto = await obtenerProducto(productoId);
+    if (producto === null) {
       return res.status(404).json({
         success: false,
         error: { code: "PRODUCT_NOT_FOUND", message: "El producto no existe o fue eliminado por el administrador" },
       });
     }
 
+    // DEC-002/M-4: prohibida la autocompra (tambien se valida en confirmarPago).
+    if (Number(producto.vendedor_id) === compradorId) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "AUTOCOMPRA", message: "No puedes agregar tus propios productos al carrito" },
+      });
+    }
+
+    const stock = Number(producto.stock);
     if (!(await compradorExiste(compradorId))) {
       return res.status(404).json({
         success: false,
@@ -190,18 +199,18 @@ export async function modificarCantidad(req, res) {
       });
     }
 
-    const stock = await obtenerStock(productoId);
-    if (stock === null) {
+    const producto = await obtenerProducto(productoId);
+    if (producto === null) {
       return res.status(404).json({
         success: false,
         error: { code: "PRODUCT_NOT_FOUND", message: "El producto no existe o fue eliminado por el administrador" },
       });
     }
 
-    if (cantidad > stock) {
+    if (cantidad > producto.stock) {
       return res.status(400).json({
         success: false,
-        error: { code: "INSUFFICIENT_STOCK", message: `Stock insuficiente. Disponible: ${stock}` },
+        error: { code: "INSUFFICIENT_STOCK", message: `Stock insuficiente. Disponible: ${producto.stock}` },
       });
     }
 

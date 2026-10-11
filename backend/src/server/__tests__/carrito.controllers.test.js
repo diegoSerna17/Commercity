@@ -62,7 +62,7 @@ function setupAgregar({ stock, compradorActivo: activo, itemExistente }) {
   pool.query.mockImplementation((sql) => {
     if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
     if (sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) return Promise.resolve([[{ activo: 1 }], undefined]);
-    if (sql.includes("SELECT stock")) return Promise.resolve([stock ? [{ stock }] : []]);
+    if (sql.includes("SELECT stock")) return Promise.resolve([stock ? [{ stock, vendedor_id: 2 }] : []]);
     if (sql.includes("SELECT 1 FROM usuarios")) return Promise.resolve([activo ? [{}] : []]);
     return Promise.resolve([[], undefined]);
   });
@@ -76,7 +76,7 @@ function soloStock(stock) {
   pool.query.mockImplementation((sql) => {
     if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
     if (sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) return Promise.resolve([[{ activo: 1 }], undefined]);
-    if (sql.includes("SELECT stock")) return Promise.resolve([[{ stock }]]);
+    if (sql.includes("SELECT stock")) return Promise.resolve([[{ stock, vendedor_id: 2 }]]);
     return Promise.resolve([[], undefined]);
   });
 }
@@ -142,6 +142,23 @@ describe("POST /api/carrito (agregarProducto)", () => {
       .send({ producto_id: 999, cantidad: 2 });
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("PRODUCT_NOT_FOUND");
+  });
+
+  it("M-4/DEC-002: rechaza agregar un producto propio (autocompra) -> 400", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
+      if (sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) return Promise.resolve([[{ activo: 1 }], undefined]);
+      // vendedor_id 1 = el propio comprador del JWT
+      if (sql.includes("SELECT stock")) return Promise.resolve([[{ stock: 10, vendedor_id: 1 }]]);
+      return Promise.resolve([[], undefined]);
+    });
+    const res = await request(app)
+      .post("/api/carrito")
+      .set(auth1)
+      .send({ producto_id: 5, cantidad: 1 });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("AUTOCOMPRA");
+    expect(conn.beginTransaction).not.toHaveBeenCalled();
   });
 
   it("devuelve 404 si el comprador no existe o esta inactivo", async () => {

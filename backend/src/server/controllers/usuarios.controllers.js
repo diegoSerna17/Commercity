@@ -6,6 +6,7 @@ import pkg from "../../../package.json" with { type: "json" };
 import { JWT_SECRET } from "../utils/config.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { enviarCorreoRecuperacion } from "../utils/mailer.js";
+import { destinoPedidosVendedor } from "./admin/pedidos.controllers.js";
 
 // ============================================================================
 // MODULO DE AUTENTICACION (integrado desde AVANCES/SPRING 1/DIEGO SERNA/2)
@@ -460,22 +461,29 @@ export const getPerfilPublico = async (req, res) => {
 };
 
 /**
- * RF40 / B-R6: el comprador elimina su cuenta desde ajustes (desactivacion logica).
+ * RF40 / B-R6 / M-7: el comprador elimina su cuenta desde ajustes (desactivacion logica).
+ * - Exige la contrasena actual (step-up: la baja es irreversible).
  * - usuarios.activo = 0 (nunca DELETE fisico)
+ * - Resuelve sus lineas abiertas como vendedor con la MISMA ruta del baneo
+ *   (`destinoPedidosVendedor`: cancela Pendiente + stock + reembolso + aviso;
+ *   'En camino' queda en revision del admin, DEC-004).
  * - Se vacia su carrito (dato transitorio)
  * - Si ademas es vendedor, sus productos se suspenden (RF54/RF74)
  * - Se conservan pedidos, calificaciones y reportes (historial intacto)
+ * - Todo en UNA sola transaccion.
  */
 export const eliminarCuentaComprador = async (req, res) => {
     const compradorId = req.userId;
+    const { password } = req.body ?? {};
 
     const conn = await pool.getConnection();
     try {
         await conn.beginTransaction();
 
-        // Verificar que la cuenta exista y este activa
+        // Verificar que la cuenta exista y este activa (FOR UPDATE: nadie mas
+        // la desactiva en paralelo mientras se resuelven sus pedidos).
         const [usuarios] = await conn.query(
-            "SELECT id, activo FROM usuarios WHERE id = ?",
+            "SELECT id, password, activo FROM usuarios WHERE id = ? FOR UPDATE",
             [compradorId]
         );
         if (usuarios.length === 0) {
@@ -483,6 +491,20 @@ export const eliminarCuentaComprador = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 error: { code: "NOT_FOUND", message: "Usuario no encontrado" }
+            });
+        }
+
+        // M-7: la baja exige la contrasena actual (step-up antes de una accion
+        // irreversible sobre la cuenta).
+        const passwordValida =
+            typeof password === "string" &&
+            password.length > 0 &&
+            (await bcrypt.compare(password, usuarios[0].password));
+        if (!passwordValida) {
+            await conn.rollback();
+            return res.status(403).json({
+                success: false,
+                error: { code: "FORBIDDEN", message: "Contraseña incorrecta" }
             });
         }
 
@@ -496,6 +518,9 @@ export const eliminarCuentaComprador = async (req, res) => {
             "UPDATE productos SET eliminado_por_admin = 1 WHERE vendedor_id = ? AND eliminado_por_admin = 0",
             [compradorId]
         );
+        // M-7: resolver las lineas abiertas del usuario como VENDEDOR reutilizando
+        // la ruta del baneo (cancela Pendiente + reembolsa + notifica al comprador).
+        const pedidos = await destinoPedidosVendedor(conn, compradorId);
         // Vaciar el carrito (dato transitorio, se puede borrar)
         await conn.query(
             "DELETE FROM carrito_items WHERE comprador_id = ?",
@@ -505,7 +530,7 @@ export const eliminarCuentaComprador = async (req, res) => {
         await conn.commit();
         return res.status(200).json({
             success: true,
-            data: { id: compradorId, estado: "desactivado" }
+            data: { id: compradorId, estado: "desactivado", pedidos }
         });
     } catch (error) {
         await conn.rollback();

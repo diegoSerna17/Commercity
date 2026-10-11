@@ -816,20 +816,26 @@ describe("DELETE /api/usuarios/cuenta (RF40 - comprador elimina su cuenta)", () 
     expect(res.status).toBe(401);
   });
 
-  it("desactiva la cuenta, suspende productos y vacia el carrito (200)", async () => {
+  it("desactiva la cuenta, suspende productos, resuelve pedidos y vacia el carrito (200)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT id, activo FROM usuarios"))
-        return [[{ id: 5, activo: 1 }], undefined];
+      if (sql.includes("SELECT id, password, activo FROM usuarios"))
+        return [[{ id: 5, password: "$2b$10$mock_hash", activo: 1 }], undefined];
       return [[], undefined];
     });
 
     const res = await request(app)
       .delete("/api/usuarios/cuenta")
-      .set("Authorization", `Bearer ${tokenCuenta}`);
+      .set("Authorization", `Bearer ${tokenCuenta}`)
+      .send({ password: "secreta123" });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data).toEqual({ id: 5, estado: "desactivado" });
+    expect(res.body.data).toMatchObject({ id: 5, estado: "desactivado" });
+    // M-7: se resuelven sus lineas abiertas como vendedor (sin lineas -> 0/0)
+    expect(res.body.data.pedidos).toEqual({ cancelados: 0, enRevision: 0 });
+
+    // M-7: step-up con la contrasena actual (hasheada, nunca en claro)
+    expect(bcrypt.compare).toHaveBeenCalledWith("secreta123", "$2b$10$mock_hash");
 
     // B-R6: nunca DELETE fisico del usuario
     expect(conn.query).not.toHaveBeenCalledWith(
@@ -848,7 +854,46 @@ describe("DELETE /api/usuarios/cuenta (RF40 - comprador elimina su cuenta)", () 
       expect.stringContaining("DELETE FROM carrito_items WHERE comprador_id = ?"),
       [5]
     );
+    // M-7: se reutiliza la ruta del baneo para las lineas abiertas como vendedor
+    expect(conn.query.mock.calls.some(([sql]) => String(sql).includes("FROM detalle_pedidos dp")))
+      .toBe(true);
     expect(conn.commit).toHaveBeenCalled();
+  });
+
+  it("M-7: rechaza la baja sin contrasena (403) y no muta nada", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT id, password, activo FROM usuarios"))
+        return [[{ id: 5, password: "$2b$10$mock_hash", activo: 1 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .delete("/api/usuarios/cuenta")
+      .set("Authorization", `Bearer ${tokenCuenta}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("FORBIDDEN");
+    expect(conn.rollback).toHaveBeenCalled();
+    expect(conn.query.mock.calls.some(([sql]) => String(sql).includes("UPDATE usuarios SET activo = 0")))
+      .toBe(false);
+  });
+
+  it("M-7: rechaza la baja con contrasena incorrecta (403)", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT id, password, activo FROM usuarios"))
+        return [[{ id: 5, password: "$2b$10$mock_hash", activo: 1 }], undefined];
+      return [[], undefined];
+    });
+    bcrypt.compare.mockResolvedValueOnce(false);
+
+    const res = await request(app)
+      .delete("/api/usuarios/cuenta")
+      .set("Authorization", `Bearer ${tokenCuenta}`)
+      .send({ password: "incorrecta" });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.message).toMatch(/Contraseña/i);
+    expect(conn.rollback).toHaveBeenCalled();
   });
 
   it("devuelve 404 si la cuenta no existe", async () => {

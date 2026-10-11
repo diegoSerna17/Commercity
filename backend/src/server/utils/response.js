@@ -28,6 +28,7 @@ export const errorResponse = (
         : statusCode === 403 ? "FORBIDDEN"
         : statusCode === 404 ? "NOT_FOUND"
         : statusCode === 400 ? "VALIDATION_ERROR"
+        : statusCode === 409 ? "CONFLICT"
         : "INTERNAL_ERROR";
 
     return res.status(statusCode).json({

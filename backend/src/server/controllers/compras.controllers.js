@@ -1,6 +1,10 @@
 import pool from "../config/db.js";
 import { round2 } from "../utils/finanzas.js";
-import { estadoPagoVendedorTrasCancelacion, importeReembolsoLinea } from "../utils/reembolsos.js";
+import {
+    estadoPagoVendedorTrasCancelacion,
+    importeReembolsoLinea,
+    reembolsarPago,
+} from "../utils/reembolsos.js";
 
 // ============================================================================
 // MODULO HISTORIAL DE COMPRAS (integrado desde AVANCES/SPRING 1/JARY)
@@ -197,21 +201,18 @@ export const cancelarPedidoComprador = async (req, res) => {
             "UPDATE productos SET stock = stock + ? WHERE id = ?",
             [linea.cantidad, linea.producto_id]
         );
-        // 4. S1 (mig 013): reembolso PROPORCIONAL por monto. El guard de estado
-        // evita mutar pagos 'Rechazado'/'Pendiente'; sobre pagos ya parcialmente
-        // reembolsados sigue acumulando.
+        // 4. S1 (mig 013) + A-2: reembolso PROPORCIONAL por monto con la regla
+        // unica de utils/reembolsos.js: el estado se evalua ANTES de incrementar
+        // el acumulado, con tolerancia de redondeo (+-0.01, B-10) y el acumulado
+        // se acota al monto pagado. El guard de estado evita mutar pagos
+        // 'Rechazado'/'Pendiente'; sin early-return, sobre un pago ya marcado
+        // 'Reembolsado' por error previo la acumulacion sigue siendo valida.
         const importeLinea = importeReembolsoLinea(linea.subtotal);
-        const [resultadoPago] = await conn.query(
-            `UPDATE pagos_simulados
-                SET monto_reembolsado = monto_reembolsado + ?,
-                    estado = IF(monto_reembolsado + ? >= monto, 'Reembolsado', 'Aprobado')
-              WHERE pedido_id = ? AND estado IN ('Aprobado', 'Reembolsado')`,
-            [importeLinea, importeLinea, linea.pedido_id]
+        const { actualizado: pagoReembolsado } = await reembolsarPago(
+            conn,
+            linea.pedido_id,
+            importeLinea
         );
-        // H2 (revision del lote): reportar SOLO lo que la BD realmente registro.
-        // Si el pago no estaba Aprobado/Reembolsado (affectedRows = 0) no hubo
-        // dinero que reembolsar: la respuesta lo hace explicito.
-        const pagoReembolsado = Number(resultadoPago.affectedRows) > 0;
         // 5. S1: estado de pago del vendedor de la linea, misma regla que RF35
         // (si ya se desembolso al vendedor se conserva; si no, 'Pendiente').
         await conn.query(

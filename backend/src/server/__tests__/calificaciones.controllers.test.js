@@ -87,7 +87,7 @@ describe("Calificacion de vendedor (RF107)", () => {
     expect(res.body.error.code).toBe("FORBIDDEN");
   });
 
-  it("pedido sin compra de ese vendedor -> 400", async () => {
+  it("pedido sin compra Entregado de ese vendedor -> 400", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
@@ -101,9 +101,40 @@ describe("Calificacion de vendedor (RF107)", () => {
       .send({ pedido_id: 5, vendedor_id: 99, estrellas: 4 });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    // M-5: la consulta exige una linea 'Entregado'
+    const consulta = pool.query.mock.calls.find(([sql]) => sql.includes("FROM detalle_pedidos"));
+    expect(consulta[0]).toContain("estado_envio = 'Entregado'");
   });
 
-  it("pedido ya calificado -> 400", async () => {
+  it("M-5: línea aún no Entregada (Pendiente/En camino) -> 400", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("FROM pedidos WHERE id")) return [[{ id: 6, comprador_id: 9 }], undefined];
+      if (sql.includes("FROM detalle_pedidos")) return [[], undefined]; // el WHERE no encontro Entregado
+      return [[], undefined];
+    });
+    const res = await request(app)
+      .post("/api/calificaciones/vendedor")
+      .set("Authorization", `Bearer ${tokenComprador}`)
+      .send({ pedido_id: 6, vendedor_id: 3, estrellas: 5 });
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toMatch(/Entregado/);
+  });
+
+  it("M-5: autocalificación (vendedor_id == calificador) -> 400", async () => {
+    const res = await request(app)
+      .post("/api/calificaciones/vendedor")
+      .set("Authorization", `Bearer ${tokenComprador}`) // id 9
+      .send({ pedido_id: 5, vendedor_id: 9, estrellas: 5 });
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toMatch(/ti mismo/i);
+    // No llega a consultar pedidos: la validacion es previa
+    const consulta = pool.query.mock.calls.find(([sql]) => sql.includes("FROM pedidos WHERE id"));
+    expect(consulta).toBeUndefined();
+  });
+
+  it("pedido ya calificado -> 409 CONFLICT", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
       if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
@@ -116,8 +147,30 @@ describe("Calificacion de vendedor (RF107)", () => {
       .post("/api/calificaciones/vendedor")
       .set("Authorization", `Bearer ${tokenComprador}`)
       .send({ pedido_id: 5, vendedor_id: 3, estrellas: 5 });
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("CONFLICT");
+  });
+
+  it("M-5: ER_DUP_ENTRY por carrera en el INSERT -> 409 (no 500)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("FROM pedidos WHERE id")) return [[{ id: 5, comprador_id: 9 }], undefined];
+      if (sql.includes("FROM detalle_pedidos")) return [[{ id: 1 }], undefined];
+      if (sql.includes("FROM calificaciones_vendedores")) return [[], undefined];
+      if (sql.includes("INSERT INTO calificaciones_vendedores")) {
+        const dup = new Error("Duplicate entry");
+        dup.code = "ER_DUP_ENTRY"; // error real de mysql2 ante el UNIQUE
+        throw dup;
+      }
+      return [[], undefined];
+    });
+    const res = await request(app)
+      .post("/api/calificaciones/vendedor")
+      .set("Authorization", `Bearer ${tokenComprador}`)
+      .send({ pedido_id: 5, vendedor_id: 3, estrellas: 5 });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("CONFLICT");
   });
 
   it("crea la calificacion (201) y parametriza el INSERT", async () => {

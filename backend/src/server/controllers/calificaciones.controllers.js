@@ -36,6 +36,11 @@ export const calificarVendedor = async (req, res, next) => {
 
     const { pedido_id, vendedor_id, estrellas, comentario } = parsed.data;
 
+    // M-5: un usuario no puede calificarse a si mismo.
+    if (Number(vendedor_id) === Number(compradorId)) {
+      return errorResponse(res, "No puedes calificarte a ti mismo", 400);
+    }
+
     // El pedido debe existir y pertenecer al comprador autenticado.
     const [pedidos] = await pool.query(
       "SELECT id, comprador_id FROM pedidos WHERE id = ?",
@@ -48,15 +53,17 @@ export const calificarVendedor = async (req, res, next) => {
       return errorResponse(res, "El pedido no pertenece al usuario autenticado", 403);
     }
 
-    // Debe existir una linea de compra real hacia ese vendedor (no cancelada).
+    // M-5: solo se califica una compra ya ENTREGADA de ese vendedor (el RF
+    // exige "despues de realizar una compra"; una linea Pendiente/En camino no
+    // lo es todavia).
     const [lineas] = await pool.query(
       `SELECT id FROM detalle_pedidos
-       WHERE pedido_id = ? AND vendedor_id = ? AND estado_envio <> 'Cancelado'
+       WHERE pedido_id = ? AND vendedor_id = ? AND estado_envio = 'Entregado'
        LIMIT 1`,
       [pedido_id, vendedor_id]
     );
     if (lineas.length === 0) {
-      return errorResponse(res, "No hay compra de este vendedor en el pedido indicado", 400);
+      return errorResponse(res, "Solo puedes calificar a un vendedor con una compra 'Entregado' en este pedido", 400);
     }
 
     // Una sola calificacion por pedido (UNIQUE uq_pedido_calificacion_vend).
@@ -65,15 +72,25 @@ export const calificarVendedor = async (req, res, next) => {
       [pedido_id]
     );
     if (existentes.length > 0) {
-      return errorResponse(res, "Este pedido ya fue calificado", 400);
+      return errorResponse(res, "Este pedido ya fue calificado", 409);
     }
 
-    const [result] = await pool.query(
-      `INSERT INTO calificaciones_vendedores
-       (pedido_id, comprador_id, vendedor_id, estrellas, comentario)
-       VALUES (?, ?, ?, ?, ?)`,
-      [pedido_id, compradorId, vendedor_id, estrellas, comentario || null]
-    );
+    let result;
+    try {
+      [result] = await pool.query(
+        `INSERT INTO calificaciones_vendedores
+         (pedido_id, comprador_id, vendedor_id, estrellas, comentario)
+         VALUES (?, ?, ?, ?, ?)`,
+        [pedido_id, compradorId, vendedor_id, estrellas, comentario || null]
+      );
+    } catch (error) {
+      // M-5: la carrera entre dos calificaciones del mismo pedido choca con el
+      // UNIQUE y MySQL responde ER_DUP_ENTRY; es un 409, no un 500.
+      if (error?.code === "ER_DUP_ENTRY") {
+        return errorResponse(res, "Este pedido ya fue calificado", 409);
+      }
+      throw error;
+    }
 
     return successResponse(
       res,
