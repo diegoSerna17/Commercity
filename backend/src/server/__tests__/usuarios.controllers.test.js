@@ -621,6 +621,29 @@ describe("POST /api/usuarios/recover (RF4 - anti-enumeracion)", () => {
     expect(updateCall).toBeTruthy();
   });
 
+  it("M-9: cooldown por usuario: con token reciente no reenvia correo (respuesta uniforme)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT id, email, activo FROM usuarios WHERE email"))
+        return [[{ id: 7, email: "existe@test.com", activo: 1 }], undefined];
+      if (sql.includes("UPDATE usuarios SET token_recuperacion"))
+        return [{ affectedRows: 0 }, undefined]; // emitido hace menos de 1 minuto
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .post("/api/usuarios/recover")
+      .send({ email: "existe@test.com" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    // El correo no se reenvia y la respuesta no filtra el motivo
+    expect(enviarCorreoRecuperacion).not.toHaveBeenCalled();
+    const updateCall = pool.query.mock.calls.find(([sql]) =>
+      sql.includes("UPDATE usuarios SET token_recuperacion"));
+    // La guarda del cooldown viaja en el WHERE del UPDATE (atomico)
+    expect(updateCall[0]).toContain("INTERVAL 4 MINUTE");
+  });
+
   it("devuelve 400 con email vacio (zod)", async () => {
     const res = await request(app)
       .post("/api/usuarios/recover")

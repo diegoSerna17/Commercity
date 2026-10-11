@@ -327,11 +327,21 @@ export const solicitarRecuperacion = async (req, res) => {
         const token = crypto.randomBytes(32).toString("hex");
         const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
-        // RF4: expira a los 5 minutos
-        await pool.query(
-            "UPDATE usuarios SET token_recuperacion = ?, token_recuperacion_expiracion = DATE_ADD(NOW(), INTERVAL 5 MINUTE) WHERE id = ?",
+        // RF4: expira a los 5 minutos.
+        // M-9: cooldown por usuario: el UPDATE solo aplica si no hay un token
+        // emitido en el ultimo minuto (expiracion a 5 min -> umbral 4 min). Con
+        // affectedRows 0 no se reenvia correo; la respuesta sigue siendo
+        // uniforme para no filtrar la existencia de la cuenta.
+        const [resultado] = await pool.query(
+            "UPDATE usuarios SET token_recuperacion = ?, token_recuperacion_expiracion = DATE_ADD(NOW(), INTERVAL 5 MINUTE) WHERE id = ? AND (token_recuperacion_expiracion IS NULL OR token_recuperacion_expiracion < DATE_ADD(NOW(), INTERVAL 4 MINUTE))",
             [tokenHash, usuario.id]
         );
+        if (Number(resultado?.affectedRows) === 0) {
+            return successResponse(
+                res,
+                "Si el correo existe, recibirás un enlace para restablecer tu contraseña."
+            );
+        }
 
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
         const resetUrl = `${frontendUrl}/restore?token=${token}`;
