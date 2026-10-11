@@ -10,7 +10,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "docs:api": "node scripts/gen-openapi.mjs",
-    "docs:entidades": "node scripts/gen-entidades.mjs"
+    "docs:entidades": "node scripts/gen-entidades.mjs",
+    "db:migrate": "node scripts/aplicar-migraciones.mjs"
   },
   "keywords": [],
   "author": "",

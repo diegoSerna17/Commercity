@@ -11,16 +11,57 @@
 --   * mensajes_chat(emisor_id, receptor_id) y (receptor_id, emisor_id): listado
 --     de conversaciones y conteo de no leidos sargables por direccion (RF105,
 --     ver chat.controllers.js tras el fix B2/R2).
+--
+-- Idempotente (TASK-7.4, auditoria 2026-10-11): cada ADD INDEX se ejecuta solo
+-- si el indice no existe (information_schema.STATISTICS), de modo que la
+-- migracion puede re-ejecutarse y la registra el ledger schema_migrations.
 -- EJECUTAR contra la BD real (commercity_v2). Verificacion sugerida:
 --   SHOW INDEX FROM detalle_pedidos; SHOW INDEX FROM mensajes_chat;
-ALTER TABLE detalle_pedidos
-  ADD INDEX idx_vendedor_estado (vendedor_id, estado_envio);
 
-ALTER TABLE mensajes_chat
-  ADD INDEX idx_chat_emisor (emisor_id, receptor_id);
+SET @idx := (
+    SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'detalle_pedidos'
+      AND INDEX_NAME = 'idx_vendedor_estado'
+);
+SET @ddl := IF(
+    @idx = 0,
+    'ALTER TABLE detalle_pedidos ADD INDEX idx_vendedor_estado (vendedor_id, estado_envio)',
+    'SELECT ''detalle_pedidos.idx_vendedor_estado ya existe; nada que hacer'' AS resultado'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE mensajes_chat
-  ADD INDEX idx_chat_receptor (receptor_id, emisor_id);
+SET @idx := (
+    SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'mensajes_chat'
+      AND INDEX_NAME = 'idx_chat_emisor'
+);
+SET @ddl := IF(
+    @idx = 0,
+    'ALTER TABLE mensajes_chat ADD INDEX idx_chat_emisor (emisor_id, receptor_id)',
+    'SELECT ''mensajes_chat.idx_chat_emisor ya existe; nada que hacer'' AS resultado'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @idx := (
+    SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'mensajes_chat'
+      AND INDEX_NAME = 'idx_chat_receptor'
+);
+SET @ddl := IF(
+    @idx = 0,
+    'ALTER TABLE mensajes_chat ADD INDEX idx_chat_receptor (receptor_id, emisor_id)',
+    'SELECT ''mensajes_chat.idx_chat_receptor ya existe; nada que hacer'' AS resultado'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Rollback:
 -- ALTER TABLE detalle_pedidos DROP INDEX idx_vendedor_estado;

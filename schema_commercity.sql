@@ -1,18 +1,58 @@
-CREATE DATABASE IF NOT EXISTS commercity_v2 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE commercity_v2;
+-- ============================================================
+-- ESQUEMA CommerCity - schema_commercity.sql
+-- Base de datos por defecto: commercity_dev (desarrollo local)
+--
+-- Uso (PowerShell):
+--   Get-Content .\schema_commercity.sql -Raw | mysql -u root -p --default-character-set=utf8mb4
+--
+-- GUARDA A-6 (auditoria 2026-10-11): este script DROPea las tablas del esquema
+-- en la base de datos objetivo. Si el objetivo es una de las bases COMPARTIDAS
+-- (commercity_v2 / commercycity_v2 / commercy_v2) aborta, salvo que la sesion
+-- declare la variable de forma explicita:
+--   "SET @permitir_destructivo = 1;" + (Get-Content .\schema_commercity.sql -Raw) | mysql -u root -p
+-- El nombre por defecto es commercity_dev: nunca apuntes este script a la BD del equipo.
+--
+-- DRIFT CONOCIDO con la BD compartida real (auditoria 2026-10-11, TASK-7.7):
+-- la BD real conserva objetos historicos que este esquema canonico ya no crea:
+--   * pedidos.estado_pedido (sin uso por el codigo; decision 2026-10-06: no migrar)
+--   * detalle_pedidos.imagen_url (M4 de la auditoria 2026-08-07)
+--   * producto_variantes (4 filas) y el indice FULLTEXT legado ft_nombre
+--   * tablas en desuso retiradas del esquema y del seed el 2026-10-11:
+--     etiquetas, producto_etiquetas y calificaciones_productos. Siguen en la BD
+--     real; su DROP es opcional y requiere aprobacion (SEC-003).
+--
+-- EVENTOS: los dos EVENT de este esquema requieren event_scheduler = ON en el
+-- servidor MySQL (ver README, seccion Base de datos).
+-- ============================================================
+
+CREATE DATABASE IF NOT EXISTS commercity_dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE commercity_dev;
+
+-- Guarda A-6: aborta (error 1146) si la BD objetivo es una base compartida y la
+-- sesion no declaro @permitir_destructivo = 1. El nombre de la tabla del error
+-- es el mensaje: __ABORTA_A6_BD_COMPARTIDA_SIN_PERMITIR_DESTRUCTIVO__.
+SET @bd_actual := DATABASE();
+SET @es_compartida := @bd_actual IN ('commercity_v2', 'commercycity_v2', 'commercy_v2');
+SET @permitido := IFNULL(@permitir_destructivo, 0);
+SET @sql_guarda := IF(
+    @es_compartida AND @permitido <> 1,
+    'SELECT 1 FROM __ABORTA_A6_BD_COMPARTIDA_SIN_PERMITIR_DESTRUCTIVO__',
+    'SELECT ''Guarda A-6 OK: base de desarrollo'' AS guarda'
+);
+PREPARE stmt_guarda FROM @sql_guarda;
+EXECUTE stmt_guarda;
+DEALLOCATE PREPARE stmt_guarda;
 
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS schema_migrations;
 DROP TABLE IF EXISTS reportes;
 DROP TABLE IF EXISTS notificaciones;
 DROP TABLE IF EXISTS mensajes_chat;
-DROP TABLE IF EXISTS calificaciones_productos;
 DROP TABLE IF EXISTS calificaciones_vendedores;
 DROP TABLE IF EXISTS pagos_simulados;
 DROP TABLE IF EXISTS detalle_pedidos;
 DROP TABLE IF EXISTS pedidos;
 DROP TABLE IF EXISTS carrito_items;
-DROP TABLE IF EXISTS producto_etiquetas;
-DROP TABLE IF EXISTS etiquetas;
 DROP TABLE IF EXISTS productos;
 DROP TABLE IF EXISTS categorias;
 DROP TABLE IF EXISTS datos_bancarios;
@@ -30,7 +70,7 @@ CREATE TABLE roles (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL UNIQUE, 
     descripcion VARCHAR(255) NULL
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -45,8 +85,10 @@ CREATE TABLE usuarios (
     -- RF4 (mig 010): expira a los 5 minutos. Se guarda el SHA-256 (H3 P2).
     token_recuperacion_expiracion DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    -- RF69-RF71 (M7): busqueda global admin (MATCH nombre_completo, email).
+    FULLTEXT KEY ft_usuario (nombre_completo, email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE usuario_roles (
     usuario_id INT NOT NULL,
@@ -54,7 +96,7 @@ CREATE TABLE usuario_roles (
     PRIMARY KEY (usuario_id, rol_id),
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE seguidores (
     seguidor_id INT NOT NULL, 
@@ -64,7 +106,7 @@ CREATE TABLE seguidores (
     FOREIGN KEY (seguidor_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (seguido_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     CONSTRAINT chk_no_seguirse_a_si_mismo CHECK (seguidor_id <> seguido_id)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
 -- MÓDULO 2: FINANZAS Y CUENTAS
@@ -73,18 +115,21 @@ CREATE TABLE seguidores (
 CREATE TABLE datos_bancarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT NOT NULL UNIQUE, 
-    titular_nombre VARCHAR(100) NOT NULL,
+    -- M-DB-1 (mig 017): titular_nombre y numero_cuenta se guardan CIFRADOS
+    -- (AES-256-GCM, formato iv:tag:dato en base64url); 255 cubre el ciphertext
+    -- de un nombre largo. banco se guarda en claro (100 = longitud de la BD real).
+    titular_nombre VARCHAR(255) NOT NULL,
     -- B1: el codigo (tienda/admin) lee e inserta `banco`; existia en BD real.
-    banco VARCHAR(50) NOT NULL,
+    banco VARCHAR(100) NOT NULL,
     tipo_cuenta VARCHAR(50) NOT NULL, 
     numero_cuenta VARCHAR(100) NOT NULL,
     es_commercity TINYINT(1) DEFAULT 0, 
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
--- MÓDULO 3: CATÁLOGO, PRODUCTOS Y ETIQUETAS
+-- MÓDULO 3: CATÁLOGO Y PRODUCTOS
 -- ==========================================
 
 CREATE TABLE categorias (
@@ -94,12 +139,7 @@ CREATE TABLE categorias (
     categoria_padre_id INT NULL, 
     activo TINYINT(1) DEFAULT 1,
     FOREIGN KEY (categoria_padre_id) REFERENCES categorias(id) ON DELETE SET NULL
-) ENGINE=InnoDB;
-
-CREATE TABLE etiquetas (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL UNIQUE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE productos (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -115,16 +155,13 @@ CREATE TABLE productos (
     fecha_publicacion DATETIME DEFAULT CURRENT_TIMESTAMP, 
     eliminado_por_admin TINYINT(1) DEFAULT 0, 
     FOREIGN KEY (vendedor_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE RESTRICT
-) ENGINE=InnoDB;
-
-CREATE TABLE producto_etiquetas (
-    producto_id INT NOT NULL,
-    etiqueta_id INT NOT NULL,
-    PRIMARY KEY (producto_id, etiqueta_id),
-    FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE,
-    FOREIGN KEY (etiqueta_id) REFERENCES etiquetas(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+    FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE RESTRICT,
+    -- RF69-RF71 (M7): busqueda global admin (MATCH nombre, descripcion).
+    FULLTEXT KEY ft_productos_busqueda (nombre, descripcion),
+    -- R3 (auditoria 2026-10-11, TASK-7.4): listado publico del catalogo filtra
+    -- por visibles (no eliminados) + estado + orden por fecha.
+    INDEX idx_productos_visibles (eliminado_por_admin, estado, fecha_publicacion)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
 -- MÓDULO 4: COMPRAS Y PAGOS SIMULADOS
@@ -141,7 +178,7 @@ CREATE TABLE carrito_items (
     UNIQUE KEY uq_comprador_producto (comprador_id, producto_id),
     FOREIGN KEY (comprador_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE pedidos (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -152,7 +189,7 @@ CREATE TABLE pedidos (
     -- en detalle_pedidos.estado_envio.
     fecha_pedido TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (comprador_id) REFERENCES usuarios(id) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- RESTAURADO: Tabla específica para gestionar la simulación del pago
 -- M8 (mig 008): incluye 'Reembolsado' y DEFAULT 'Pendiente' (RF74/RF135).
@@ -169,7 +206,7 @@ CREATE TABLE pagos_simulados (
     estado ENUM('Aprobado', 'Rechazado', 'Pendiente', 'Reembolsado') DEFAULT 'Pendiente',
     fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE detalle_pedidos (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -197,10 +234,10 @@ CREATE TABLE detalle_pedidos (
     FOREIGN KEY (vendedor_id) REFERENCES usuarios(id) ON DELETE RESTRICT,
     -- R3 (mig 014): historial de ventas del vendedor filtra vendedor + estado.
     INDEX idx_vendedor_estado (vendedor_id, estado_envio)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
--- MÓDULO 5: REPUTACIÓN (VENDEDOR Y PRODUCTO)
+-- MÓDULO 5: REPUTACIÓN (VENDEDOR)
 -- ==========================================
 
 CREATE TABLE calificaciones_vendedores (
@@ -214,23 +251,10 @@ CREATE TABLE calificaciones_vendedores (
     FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
     FOREIGN KEY (comprador_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (vendedor_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    UNIQUE KEY uq_pedido_calificacion_vend (pedido_id) 
-) ENGINE=InnoDB;
-
--- RESTAURADO: Tabla específica para calificar productos individualmente
-CREATE TABLE calificaciones_productos (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    pedido_id INT NOT NULL,
-    comprador_id INT NOT NULL,
-    producto_id INT NOT NULL,
-    estrellas TINYINT NOT NULL CHECK (estrellas BETWEEN 1 AND 5), 
-    comentario TEXT NULL,
-    fecha_calificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
-    FOREIGN KEY (comprador_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE,
-    UNIQUE KEY uq_pedido_producto_calif (pedido_id, producto_id)
-) ENGINE=InnoDB;
+    -- M-DB-5 (mig 018): un pedido multi-vendedor permite calificar a CADA
+    -- vendedor una vez. Antes UNIQUE (pedido_id) lo impedia.
+    UNIQUE KEY uq_pedido_vendedor_calif (pedido_id, vendedor_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
 -- MÓDULO 6: COMUNICACIÓN, NOTIFICACIONES Y MODERACIÓN
@@ -249,7 +273,7 @@ CREATE TABLE mensajes_chat (
     -- R3 (mig 014): conversaciones y no leidos sargables por direccion (RF105).
     INDEX idx_chat_emisor (emisor_id, receptor_id),
     INDEX idx_chat_receptor (receptor_id, emisor_id)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- RESTAURADO: Tabla notificaciones
 -- M1: tipo como VARCHAR(50) (el ENUM truncaba 'pedido enviado', etc.) y
@@ -262,14 +286,20 @@ CREATE TABLE notificaciones (
     estado VARCHAR(20) DEFAULT 'no leido', 
     url_redireccion VARCHAR(255) NULL, 
     fecha_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    -- R3 (auditoria 2026-10-11, TASK-7.4): conteo de no leidos por usuario.
+    INDEX idx_notificaciones_usuario_estado (usuario_id, estado)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- RESTAURADO: Tabla reportes
 -- B1: evidencia_url, estado_reporte y archivado (mig 011, borrado logico).
+-- TASK-7.7 (auditoria 2026-10-11): los reportes son historial de moderacion y
+-- NO se borran: el informante queda anonimizable (SET NULL) y los objetivos
+-- (producto/usuario) se protegen con RESTRICT (no se puede borrar la entidad
+-- reportada mientras exista el reporte).
 CREATE TABLE reportes (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    informante_id INT NOT NULL, 
+    informante_id INT NULL, 
     tipo_reporte ENUM('Producto', 'Usuario') NOT NULL,
     producto_id INT NULL, 
     usuario_reportado_id INT NULL, 
@@ -280,14 +310,14 @@ CREATE TABLE reportes (
     respuesta_admin TEXT NULL, 
     respondido_at DATETIME NULL,
     fecha_reporte TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (informante_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE,
-    FOREIGN KEY (usuario_reportado_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (informante_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+    FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE RESTRICT,
+    FOREIGN KEY (usuario_reportado_id) REFERENCES usuarios(id) ON DELETE RESTRICT,
     CONSTRAINT chk_target_reporte CHECK (
         (tipo_reporte = 'Producto' AND producto_id IS NOT NULL AND usuario_reportado_id IS NULL) OR
         (tipo_reporte = 'Usuario' AND usuario_reportado_id IS NOT NULL AND producto_id IS NULL)
     )
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- RF2 / mig 010: lista negra de JWT revocados en logout.
 CREATE TABLE IF NOT EXISTS tokens_invalidados (
@@ -295,7 +325,34 @@ CREATE TABLE IF NOT EXISTS tokens_invalidados (
     expira_en DATETIME NOT NULL,
     creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_tokens_invalidados_expiracion (expira_en)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- M-DB-3 (auditoria 2026-10-11, TASK-7.4): ledger de migraciones aplicadas.
+-- Lo llena backend/scripts/aplicar-migraciones.mjs (id = archivo, checksum SHA-256).
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    id VARCHAR(120) PRIMARY KEY,
+    aplicada_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    checksum CHAR(64) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- EVENTOS PROGRAMADOS (requieren event_scheduler = ON)
+-- ==========================================
+
+-- RF109: vaciar automaticamente los carritos sin actividad por 7 dias (mig 009).
+CREATE EVENT IF NOT EXISTS limpiar_carritos_inactivos
+ON SCHEDULE EVERY 1 DAY STARTS (TIMESTAMP(CURRENT_DATE) + INTERVAL 2 HOUR)
+ON COMPLETION PRESERVE
+DO DELETE FROM carrito_items
+   WHERE updated_at < NOW() - INTERVAL 7 DAY;
+
+-- M-DB-4 (auditoria 2026-10-11, TASK-7.4): purga de la lista negra de JWT
+-- vencidos (hoy crecia sin limite).
+CREATE EVENT IF NOT EXISTS purgar_tokens_invalidados
+ON SCHEDULE EVERY 1 DAY STARTS (TIMESTAMP(CURRENT_DATE) + INTERVAL 3 HOUR)
+ON COMPLETION PRESERVE
+DO DELETE FROM tokens_invalidados
+   WHERE expira_en < NOW();
 
 -- ==========================================
 -- INSERCIÓN DE DATOS SEMILLA (SEEDERS)

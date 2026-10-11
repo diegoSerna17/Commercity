@@ -15,16 +15,39 @@
 -- por HTTP. La eleccion es determinista por id del producto (id MOD n).
 --
 -- Aplicar: como usuario con permisos de escritura sobre la base de datos.
--- B3 (P2): todo en UNA transaccion (antes sin transaccion: riesgo de schema
--- parcial si fallaba a mitad).
+-- TASK-7.3 (auditoria 2026-10-11) — cambios de esta revision:
+--   * El respaldo se crea ANTES de START TRANSACTION: un CREATE TABLE ...
+--     AS SELECT dentro de la transaccion provoca commit implicito y rompia la
+--     atomicidad (M-DB-2).
+--   * El respaldo guarda tambien eliminado_por_admin para que el rollback
+--     restaure AMBOS campos por id explicito (antes solo revertia los Zz%).
+--   * El soft-delete por NOMBRE de productos de prueba se retiro de la
+--     migracion (no es seguro ejecutarlo en produccion): vive en el script
+--     manual documentado backend/scripts/limpiar-productos-prueba.sql.
+
+-- 0) Respaldo para rollback (id + imagen_url + eliminado_por_admin).
+--    Idempotente tambien con respaldos previos (que no traen la 3a columna).
+CREATE TABLE IF NOT EXISTS productos_imagenes_bkp_20260928 AS
+SELECT id, imagen_url, eliminado_por_admin FROM productos;
+
+SET @col_bkp := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'productos_imagenes_bkp_20260928'
+      AND COLUMN_NAME = 'eliminado_por_admin'
+);
+SET @ddl_bkp := IF(
+    @col_bkp = 0,
+    'ALTER TABLE productos_imagenes_bkp_20260928 ADD COLUMN eliminado_por_admin TINYINT(1) NULL',
+    'SELECT ''respaldo ya tiene eliminado_por_admin; nada que hacer'' AS resultado'
+);
+PREPARE stmt_bkp FROM @ddl_bkp;
+EXECUTE stmt_bkp;
+DEALLOCATE PREPARE stmt_bkp;
 
 START TRANSACTION;
 
--- 1) Respaldo para rollback (solo id + imagen_url; no modifica datos).
-CREATE TABLE IF NOT EXISTS productos_imagenes_bkp_20260928 AS
-SELECT id, imagen_url FROM productos;
-
--- 2) Normalizar las imagenes rotas o basura, por categoria (foto real).
+-- 1) Normalizar las imagenes rotas o basura, por categoria (foto real).
 --    (id MOD n) + 1 -> ELT es 1-indexado.
 
 -- Computación (5 fotos)
@@ -171,7 +194,7 @@ WHERE c.nombre = 'Videojuegos'
        OR p.imagen_url LIKE 'https://example.com/%'
        OR (p.imagen_url LIKE 'https://images.unsplash.com/%' AND p.imagen_url NOT LIKE '%?%'));
 
--- 3) Cualquier producto restante sin imagen (categoria sin fotos) -> picsum unico.
+-- 2) Cualquier producto restante sin imagen (categoria sin fotos) -> picsum unico.
 UPDATE productos
 SET imagen_url = CONCAT('https://picsum.photos/seed/commercity-', id, '/900/900')
 WHERE imagen_url IS NULL
@@ -179,27 +202,25 @@ WHERE imagen_url IS NULL
    OR imagen_url LIKE 'https://example.com/%'
    OR (imagen_url LIKE 'https://images.unsplash.com/%' AND imagen_url NOT LIKE '%?%');
 
--- 4) Limpieza (soft-delete reversible): productos generados por tests/runner.
-UPDATE productos
-SET eliminado_por_admin = 1
-WHERE eliminado_por_admin = 0
-  AND (nombre LIKE 'Zz%'
-       OR nombre LIKE 'Producto E2E%'
-       OR nombre LIKE 'Producto Prueba%'
-       OR nombre LIKE 'Producto de prueba%');
-
--- 5) Verificacion: deben quedar 0 filas con imagen invalida.
+-- 3) Verificacion: deben quedar 0 filas con imagen invalida.
 SELECT
   SUM(CASE WHEN imagen_url IS NULL OR TRIM(imagen_url) = '' THEN 1 ELSE 0 END) AS sin_imagen,
   SUM(CASE WHEN imagen_url LIKE 'https://example.com/%' THEN 1 ELSE 0 END) AS example_com,
-  SUM(CASE WHEN imagen_url LIKE 'https://images.unsplash.com/%' AND imagen_url NOT LIKE '%?%' THEN 1 ELSE 0 END) AS unsplash_rotas,
-  SUM(CASE WHEN eliminado_por_admin = 1 THEN 1 ELSE 0 END) AS eliminados
+  SUM(CASE WHEN imagen_url LIKE 'https://images.unsplash.com/%' AND imagen_url NOT LIKE '%?%' THEN 1 ELSE 0 END) AS unsplash_rotas
 FROM productos;
 
 COMMIT;
 
--- ROLLBACK (si se requiere revertir):
---   UPDATE productos p JOIN productos_imagenes_bkp_20260928 b ON b.id = p.id
---     SET p.imagen_url = b.imagen_url;
---   UPDATE productos SET eliminado_por_admin = 0 WHERE nombre LIKE 'Zz%';
+-- ROLLBACK COMPLETO POR ID EXPLICITO (TASK-7.3): restaura las filas respaldadas
+-- (todas las que la migracion pudo tocar) usando el id del respaldo; si el
+-- respaldo es anterior a TASK-7.3 no conoce eliminado_por_admin (NULL) y se
+-- conserva el valor actual.
+--   UPDATE productos p
+--     JOIN productos_imagenes_bkp_20260928 b ON b.id = p.id
+--     SET p.imagen_url = b.imagen_url,
+--         p.eliminado_por_admin = COALESCE(b.eliminado_por_admin, p.eliminado_por_admin);
 --   DROP TABLE productos_imagenes_bkp_20260928;
+--
+-- El soft-delete de productos de prueba (Zz*, Producto E2E/Prueba*) ya NO se
+-- ejecuta dentro de esta migracion: si se necesita, correr el script manual
+-- documentado backend/scripts/limpiar-productos-prueba.sql.
