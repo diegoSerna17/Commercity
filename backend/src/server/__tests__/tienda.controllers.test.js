@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
+import crypto from "node:crypto";
 import { encryptSensitive } from "../utils/crypto.js";
+import { CRYPTO_EFFECTIVE_KEY } from "../utils/config.js";
 
 // Mock del pool MySQL (sin BD real).
 vi.mock("mysql2/promise", () => {
@@ -44,13 +46,30 @@ const tokenComprador = jwt.sign({ id: 7, email: "comprador@test.com" , token_ver
 const filaBancaria = {
   id: 1,
   usuario_id: 3,
-  titular_nombre: encryptSensitive("Maria Fernanda Lopez"),
+  // M-10: v2 con AAD = usuario_id.
+  titular_nombre: encryptSensitive("Maria Fernanda Lopez", { aad: "3" }),
   banco: "Bancolombia",
   tipo_cuenta: "ahorros",
-  numero_cuenta: encryptSensitive("12345678901234"),
+  numero_cuenta: encryptSensitive("12345678901234", { aad: "3" }),
   es_commercity: 0,
   updated_at: "2026-08-08T12:00:00.000Z",
 };
+
+/**
+ * Cifra con el formato ANTERIOR a v2 (sha256(CRYPTO_EFFECTIVE_KEY), sin
+ * prefijo ni AAD): reproduce los registros que ya existen en BD.
+ */
+function cifrarLegado(texto) {
+  const clave = crypto.createHash("sha256").update(CRYPTO_EFFECTIVE_KEY).digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", clave, iv);
+  const data = Buffer.concat([cipher.update(texto, "utf8"), cipher.final()]);
+  return [
+    iv.toString("base64url"),
+    cipher.getAuthTag().toString("base64url"),
+    data.toString("base64url"),
+  ].join(":");
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -133,6 +152,39 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
     expect(datos.numero_cuenta_enmascarado).not.toBe("12345678901234");
     expect(datos.titular_nombre_enmascarado).toContain("Lopez");
     expect(datos.titular_nombre_enmascarado).not.toContain("Maria Fernanda");
+  });
+
+  it("M-10: re-cifra perezosamente un registro del formato anterior al leerlo", async () => {
+    const filaLegado = {
+      ...filaBancaria,
+      titular_nombre: cifrarLegado("Maria Fernanda Lopez"),
+      numero_cuenta: cifrarLegado("12345678901234"),
+    };
+    let updateParams = null;
+    pool.query.mockImplementation((sql, params) => {
+      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("FROM datos_bancarios")) return [[filaLegado], undefined];
+      if (sql.includes("UPDATE datos_bancarios") && sql.includes("SET titular_nombre")) {
+        updateParams = params;
+        return [{ affectedRows: 1 }, undefined];
+      }
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/tienda/mi-cuenta-bancaria")
+      .set("Authorization", `Bearer ${tokenVendedor}`);
+
+    expect(res.status).toBe(200);
+    // El dato se descifra con las claves historicas...
+    expect(res.body.data.datos.titular_nombre).toBe("Maria Fernanda Lopez");
+    expect(res.body.data.datos.numero_cuenta).toBe("12345678901234");
+    // ...y se persiste ya en v2 (con AAD) para la proxima rotacion de claves
+    expect(updateParams).toBeTruthy();
+    expect(updateParams[0].startsWith("v2:")).toBe(true);
+    expect(updateParams[1].startsWith("v2:")).toBe(true);
+    expect(updateParams[2]).toBe(1); // id de la fila
   });
 
   describe("POST /api/tienda/mi-cuenta-bancaria (upsert)", () => {

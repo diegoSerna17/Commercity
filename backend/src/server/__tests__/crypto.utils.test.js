@@ -5,6 +5,7 @@ import {
   decryptSensitive,
   maskBankAccount,
   maskFullName,
+  esCifradoV2,
 } from "../utils/crypto.js";
 
 /**
@@ -100,5 +101,49 @@ describe("utils/crypto.js (RNF11 - fix 3.2)", () => {
   it("enmascara el nombre del titular conservando la ultima palabra", () => {
     expect(maskFullName("Maria Fernanda Lopez")).toBe("M**** F******* Lopez");
     expect(maskFullName(null)).toBeNull();
+  });
+});
+
+describe("utils/crypto.js v2 (M-10/H10 - TASK-4.4)", () => {
+  it("el cifrado nuevo lleva el prefijo de version v2: y es detectado por esCifradoV2", () => {
+    const cifrado = encryptSensitive("Maria Lopez");
+    expect(cifrado.startsWith("v2:")).toBe(true);
+    expect(esCifradoV2(cifrado)).toBe(true);
+    // Los formatos anteriores (sin prefijo) no son v2
+    expect(esCifradoV2("aXY6dGFnOmRhdGE")).toBe(false);
+    expect(esCifradoV2(null)).toBe(false);
+  });
+
+  it("roundtrip v2 con AAD (usuario_id)", () => {
+    const cifrado = encryptSensitive("6030012345678", { aad: "42" });
+    expect(cifrado.startsWith("v2:")).toBe(true);
+    expect(decryptSensitive(cifrado, { aad: "42" })).toBe("6030012345678");
+    expect(decryptSensitive(cifrado, { aad: 42 })).toBe("6030012345678");
+  });
+
+  it("un AAD distinto no descifra el dato (anti-swap entre usuarios)", () => {
+    const cifrado = encryptSensitive("6030012345678", { aad: "42" });
+    // Otro usuario no puede descifrarlo ni aunque conozca la clave
+    expect(decryptSensitive(cifrado, { aad: "43" })).toBeNull();
+    // Sin AAD tampoco
+    expect(decryptSensitive(cifrado)).toBeNull();
+  });
+
+  it("roundtrip v2 sin AAD sigue funcionando", () => {
+    const cifrado = encryptSensitive("dato-sin-usuario");
+    expect(decryptSensitive(cifrado)).toBe("dato-sin-usuario");
+    // y no se descifra si se exige un AAD que no se uso al cifrar
+    expect(decryptSensitive(cifrado, { aad: "7" })).toBeNull();
+  });
+
+  it("encryptSensitive con entradas vacias devuelve null (aunque haya AAD)", () => {
+    expect(encryptSensitive(null, { aad: "1" })).toBeNull();
+    expect(encryptSensitive(undefined, { aad: "1" })).toBeNull();
+  });
+
+  it("un v2 corrupto devuelve null y deja log sin datos", () => {
+    const cifrado = encryptSensitive("secreto", { aad: "1" });
+    const corrupto = `${cifrado.slice(0, -4)}AAAA`;
+    expect(decryptSensitive(corrupto, { aad: "1" })).toBeNull();
   });
 });

@@ -3,70 +3,30 @@ import pool from "../../config/db.js";
 import { successResponse, errorResponse } from "../../utils/response.js";
 import { bancoSchema } from "../../schemas/cuentaBancaria.schema.js";
 import {
-  encryptSensitive,
-  decryptSensitive,
-  maskBankAccount,
-  maskFullName,
-} from "../../utils/crypto.js";
+  buscarCuentaCommercity,
+  recifrarCuentaBancariaSiEsLegado,
+  cifrarCampo,
+  buildPrivateRecord,
+  buildPublicRecord,
+} from "../../utils/cuentaBancaria.js";
 
 // ============================================================================
 // MODULO: CUENTA BANCARIA DE COMMERCITY (RF75/RF76)
 // ----------------------------------------------------------------------------
 // El administrador registra la cuenta bancaria de la plataforma (la que recibe
 // la comision del 10%). Se guarda con es_commercity = 1 y cifrado AES-256-GCM
-// (RNF11), reutilizando utils/crypto.js. Protegido por authRequired +
-// requireRoles(["administrador"]) a nivel de ruta.
+// (RNF11). Protegido por authRequired + requireRoles(["administrador"]).
+//
+// A3 (TASK-4.10): la lectura/escritura y el cifrado v2 con AAD viven en
+// utils/cuentaBancaria.js; M-10 dispara el re-cifrado perezoso al leer.
 // ============================================================================
-
-/** Busca la cuenta de Commercity (es_commercity = 1). */
-async function buscarCuentaCommercity() {
-  const [rows] = await pool.query(
-    `SELECT id, usuario_id, titular_nombre, banco, tipo_cuenta, numero_cuenta,
-            es_commercity, updated_at
-       FROM datos_bancarios
-      WHERE es_commercity = 1
-      ORDER BY id
-      LIMIT 1`
-  );
-  return rows[0] || null;
-}
-
-function buildRecord(row) {
-  return {
-    id: row.id,
-    usuario_id: row.usuario_id,
-    titular_nombre: decryptSensitive(row.titular_nombre),
-    banco: row.banco,
-    tipo_cuenta: row.tipo_cuenta,
-    numero_cuenta: decryptSensitive(row.numero_cuenta),
-    es_commercity: Boolean(row.es_commercity),
-    updated_at: row.updated_at || null,
-  };
-}
-
-function buildMaskedRecord(row) {
-  const rawNumero = decryptSensitive(row.numero_cuenta);
-  const rawTitular = decryptSensitive(row.titular_nombre);
-  return {
-    id: row.id,
-    usuario_id: row.usuario_id,
-    banco: row.banco,
-    tipo_cuenta: row.tipo_cuenta,
-    titular_nombre_enmascarado: maskFullName(rawTitular),
-    numero_cuenta_enmascarado: maskBankAccount(rawNumero),
-    ultimos4: rawNumero ? rawNumero.slice(-4) : null,
-    es_commercity: Boolean(row.es_commercity),
-    updated_at: row.updated_at || null,
-    tiene_datos_registrados: Boolean(rawNumero && rawTitular),
-  };
-}
 
 /**
  * GET /api/admin/mi-cuenta-bancaria - Datos completos de la cuenta de Commercity.
  */
 export const getMiCuentaBancaria = async (req, res, next) => {
   try {
-    const fila = await buscarCuentaCommercity();
+    const fila = await recifrarCuentaBancariaSiEsLegado(await buscarCuentaCommercity());
     if (!fila) {
       return successResponse(res, "Sin cuenta bancaria de Commercity registrada", {
         registrado: false,
@@ -75,7 +35,7 @@ export const getMiCuentaBancaria = async (req, res, next) => {
     }
     return successResponse(res, "Cuenta bancaria de Commercity obtenida", {
       registrado: true,
-      datos: buildRecord(fila),
+      datos: buildPrivateRecord(fila),
     });
   } catch (err) {
     next(err);
@@ -87,7 +47,7 @@ export const getMiCuentaBancaria = async (req, res, next) => {
  */
 export const getMiCuentaBancariaMasked = async (req, res, next) => {
   try {
-    const fila = await buscarCuentaCommercity();
+    const fila = await recifrarCuentaBancariaSiEsLegado(await buscarCuentaCommercity());
     if (!fila) {
       return successResponse(res, "Sin cuenta bancaria de Commercity registrada", {
         registrado: false,
@@ -96,7 +56,7 @@ export const getMiCuentaBancariaMasked = async (req, res, next) => {
     }
     return successResponse(res, "Cuenta bancaria de Commercity (enmascarada)", {
       registrado: true,
-      datos: buildMaskedRecord(fila),
+      datos: buildPublicRecord(fila),
     });
   } catch (err) {
     next(err);
@@ -113,8 +73,9 @@ export const upsertMiCuentaBancaria = async (req, res, next) => {
     const data = bancoSchema.parse(req.body);
     const usuarioId = req.userId;
 
-    const encryptedTitular = encryptSensitive(data.titular_nombre);
-    const encryptedNumero = encryptSensitive(data.numero_cuenta);
+    // M-10: v2 con AAD = usuario_id (el admin registrador).
+    const encryptedTitular = cifrarCampo(data.titular_nombre, usuarioId);
+    const encryptedNumero = cifrarCampo(data.numero_cuenta, usuarioId);
 
     await conn.beginTransaction();
     const [existing] = await conn.query(
@@ -146,7 +107,7 @@ export const upsertMiCuentaBancaria = async (req, res, next) => {
       existing.length === 0
         ? "Cuenta bancaria de Commercity registrada correctamente."
         : "Cuenta bancaria de Commercity actualizada correctamente.",
-      { registrado: true, es_actualizacion: existing.length > 0, datos: buildRecord(fila) },
+      { registrado: true, es_actualizacion: existing.length > 0, datos: buildPrivateRecord(fila) },
       existing.length === 0 ? 201 : 200
     );
   } catch (err) {
