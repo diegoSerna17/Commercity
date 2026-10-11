@@ -9,8 +9,8 @@ vi.mock("mysql2/promise", () => {
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -54,8 +54,8 @@ describe("GET /api/pedidos/resumen (RF113/RF114 + RF74)", () => {
 
   it("agrupa items por vendedor con desglose de IVA y 90/10", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       return [
@@ -80,8 +80,8 @@ describe("GET /api/pedidos/resumen (RF113/RF114 + RF74)", () => {
 
   it("RF74: excluye productos suspendidos o de vendedores inactivos", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       return [
@@ -104,7 +104,7 @@ describe("GET /api/pedidos/resumen (RF113/RF114 + RF74)", () => {
 
   it("devuelve 500 con error estandar si la BD falla", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       throw new Error("BD caida");
     });
 
@@ -135,7 +135,7 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
     conn.release.mockResolvedValue();
     // authRequired (middleware) consulta el pool: lista negra de tokens vacia.
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [[], undefined];
     });
     // Flujo feliz del controller: todas las consultas de negocio van por conn.
@@ -232,7 +232,7 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
 
   it("rechaza carrito vacio (400)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("FROM carrito_items")) return [[], undefined];
@@ -271,7 +271,7 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
 
   it("RF74: rechaza producto suspendido (409)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("FROM carrito_items")) {
@@ -291,7 +291,7 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
 
   it("rechaza stock insuficiente (409)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("FROM carrito_items")) {
@@ -336,7 +336,7 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
 
   it("hace rollback y responde 500 si la BD falla", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       throw new Error("DB boom");
@@ -354,7 +354,7 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
   // ── R1/H5: el batch de confirmarPago con carrito de N>1 lineas ──
   it("R1: carrito de 2 productos se procesa en sentencias batch (INSERT + CASE)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM carrito_items")) {
         return [[
           { producto_id: 1, cantidad: 1, nombre: "Televisor", precio: 1190000, descuento_porcentaje: 0, vendedor_id: 3, stock: 10 },
@@ -403,7 +403,7 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
 
   it("R1: producto ausente del batch FOR UPDATE reporta ESE producto con su mensaje RF74", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM carrito_items")) {
         return [[
           { producto_id: 1, cantidad: 1, nombre: "Televisor", precio: 1190000, descuento_porcentaje: 0, vendedor_id: 3, stock: 10 },
@@ -444,8 +444,8 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
     conn.rollback.mockResolvedValue();
     conn.release.mockResolvedValue();
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
@@ -463,7 +463,7 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
     // ownership: si estado != Cancelado, se consulta con vendedor_id = token.sub,
     // y un comprador normal no tendra lineas a su nombre en el pedido.
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -485,7 +485,7 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
 
   it("avanza UN nivel las lineas del vendedor autenticado (200)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -514,7 +514,7 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
 
   it("M-3: avanza solo las lineas vivas e ignora las 'Cancelado' (200)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
         return [[{ id: 5, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
@@ -546,7 +546,7 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
 
   it("rechaza saltar niveles (Pendiente -> Entregado) con 409", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -569,7 +569,7 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
 
   it("devuelve 404 si el vendedor no tiene envios en el pedido", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -609,9 +609,9 @@ describe("PATCH /api/pedidos/:id/estado = Cancelado (RF35 - cancelación por com
     conn.release.mockResolvedValue();
     // DEF-01: middleware auth debe verificar activo=1 para ambos tokens
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ?")) {
-        return [[{ activo: 1, token_version: 0 }], undefined];
+        return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       }
       return [[], undefined];
     });
@@ -626,7 +626,7 @@ describe("PATCH /api/pedidos/:id/estado = Cancelado (RF35 - cancelación por com
 
   it("rechaza con 404 uniforme si quien cancela NO es el comprador del pedido (M-15)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -649,7 +649,7 @@ describe("PATCH /api/pedidos/:id/estado = Cancelado (RF35 - cancelación por com
 
 it("rechaza (404) si detalle_id no pertenece al pedido", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -672,7 +672,7 @@ it("rechaza (404) si detalle_id no pertenece al pedido", async () => {
 
 it("rechaza (409) cancelar por detalle_id cuando la línea ya está Entregada", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -699,7 +699,7 @@ it("rechaza (409) cancelar por detalle_id cuando la línea ya está Entregada", 
 
 it("rechaza (409) cancelar por detalle_id una línea 'En camino' (M-2/DEC-003)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
         return [[{ id: 5, comprador_id: 7, fecha_pedido: new Date() }], undefined];
       }
@@ -726,7 +726,7 @@ it("rechaza (409) cancelar por detalle_id una línea 'En camino' (M-2/DEC-003)",
 
 it("cancelación por detalle_id OK (200): restituye stock, marca línea, notifica", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -795,7 +795,7 @@ it("cancelación por detalle_id OK (200): restituye stock, marca línea, notific
 
 it("cancelación general OK: solo 'Pendiente' se cancela; 'En camino' y 'Entregado' quedan en revisión (M-2/DEC-003)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -855,7 +855,7 @@ it("cancelación general OK: solo 'Pendiente' se cancela; 'En camino' y 'Entrega
 
 it("cancelación general de pedido TODO Entregado → 409 (ninguna línea cancelable)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -882,7 +882,7 @@ it("cancelación general de pedido TODO Entregado → 409 (ninguna línea cancel
 
   it("cancelación general TODO el pedido (sin líneas Entregadas) → estado_pago Reembolsado", async () => {
     conn.query.mockImplementation((sql) => {
-if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 178500, monto_reembolsado: 0 }], undefined];
       if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
         return [[{ id: 12, comprador_id: 7, fecha_pedido: new Date() }], undefined];
@@ -931,7 +931,7 @@ if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activ
 
     it("(a) cancelar línea NO desembolsada → estado_pago_vendedor = 'Pendiente'", async () => {
       conn.query.mockImplementation((sql) => {
-        if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+        if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
         // H2/S1: lectura del estado real del pago al inicio de la cancelacion
         if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
@@ -969,7 +969,7 @@ if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activ
 
     it("(b) cancelar línea YA desembolsada → permanece 'Desembolsado'", async () => {
       conn.query.mockImplementation((sql) => {
-        if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+        if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
         // H2/S1: lectura del estado real del pago al inicio de la cancelacion
         if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       // H2/S1: lectura del estado real del pago al inicio de la cancelacion
@@ -1012,7 +1012,7 @@ if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activ
 
     it("(c) cancelación total de líneas → pagos_simulados.estado = 'Reembolsado'", async () => {
       conn.query.mockImplementation((sql) => {
-        if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+        if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
         // H2/S1: lectura bloqueada del pago (estado + montos) al cancelar
         if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 357000, monto_reembolsado: 0 }], undefined];
         if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -1068,7 +1068,7 @@ if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activ
 
     it("(d) cancelación parcial → pagos_simulados.estado = 'Aprobado' y nunca 'Parcial'", async () => {
       conn.query.mockImplementation((sql) => {
-        if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+        if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
         // H2/S1: lectura bloqueada del pago (estado + montos) al cancelar
         if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
         if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
@@ -1119,7 +1119,7 @@ if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activ
 
     it("(e) pago NO aprobado ('Pendiente') → no se muta y se reporta su estado REAL (H2)", async () => {
       conn.query.mockImplementation((sql) => {
-        if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+        if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
         // H2: el pago del pedido 34 esta 'Pendiente' (como pedidos 5 y 7 del seed)
         if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Pendiente", monto: 178500, monto_reembolsado: 0 }], undefined];
         if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {

@@ -9,8 +9,8 @@ import express from "express";
 vi.mock("../config/db.js", () => {
     const queryInterna = vi.fn();
     const query = vi.fn((sql, ...resto) => {
-        if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
-            return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+        if (typeof sql === "string" && sql.includes("AS revocado")) {
+            return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
         }
         return queryInterna(sql, ...resto);
     });
@@ -86,7 +86,7 @@ describe("GET /api/historial/compras", () => {
 
     it("deberia devolver el historial del comprador agrupado por pedido (RF32) con campos RF31", async () => {
         pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") ? [[], undefined] : [filasMock]
+            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [filasMock]
         );
 
         const res = await request(app)
@@ -127,7 +127,7 @@ describe("GET /api/historial/compras", () => {
 
     it("deberia aplicar el filtro por estado cuando llega ?estado=", async () => {
         pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") ? [[], undefined] : [filasMock]
+            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [filasMock]
         );
 
         const res = await request(app)
@@ -143,7 +143,7 @@ describe("GET /api/historial/compras", () => {
 
     it("NO deberia filtrar si el estado no esta en la lista valida", async () => {
         pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") ? [[], undefined] : [filasMock]
+            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [filasMock]
         );
 
         await request(app)

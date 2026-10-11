@@ -10,8 +10,8 @@ import jwt from "jsonwebtoken";
 vi.mock("../config/db.js", () => {
     const queryInterna = vi.fn();
     const query = vi.fn((sql, ...resto) => {
-        if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
-            return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+        if (typeof sql === "string" && sql.includes("AS revocado")) {
+            return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
         }
         return queryInterna(sql, ...resto);
     });
@@ -55,7 +55,7 @@ describe("requireRoles (RBAC)", () => {
 
     it("deberia devolver 403 si el usuario no tiene el rol administrador", async () => {
         pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") ? [[], undefined] : [[{ nombre: "vendedor" }]]
+            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [[{ nombre: "vendedor" }]]
         );
 
         const res = await request(app)
@@ -69,7 +69,7 @@ describe("requireRoles (RBAC)", () => {
 
     it("deberia devolver 403 si el usuario no tiene roles asignados", async () => {
         pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") ? [[], undefined] : [[]]
+            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [[]]
         );
 
         const res = await request(app)
@@ -81,7 +81,7 @@ describe("requireRoles (RBAC)", () => {
 
     it("deberia permitir el acceso y consultar los roles del usuario autenticado", async () => {
         pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") ? [[], undefined] : [[{ nombre: "administrador" }]]
+            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [[{ nombre: "administrador" }]]
         );
 
         const res = await request(app)

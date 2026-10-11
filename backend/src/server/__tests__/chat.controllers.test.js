@@ -9,8 +9,8 @@ vi.mock("mysql2/promise", () => {
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -50,7 +50,7 @@ function sinComentariosSQL(sql) {
 // authRequired consulta la lista negra de tokens; no hay rol exigido.
 function mockAuth() {
     pool.query.mockImplementation((sql) => {
-        if (sql.includes("tokens_invalidados")) return [[], undefined];
+        if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
         return [[], undefined];
     });
 }
@@ -98,7 +98,7 @@ describe("Chat interno (RF101)", () => {
 
     it("POST /api/chat a usuario inexistente -> 404", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("SELECT id, activo FROM usuarios")) return [[], undefined];
             return [[], undefined];
         });
@@ -112,7 +112,7 @@ describe("Chat interno (RF101)", () => {
 
     it("POST /api/chat crea mensaje de texto (201)", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("SELECT id, activo FROM usuarios")) return [[{ id: 2, activo: 1 }], undefined];
             if (sql.includes("INSERT INTO mensajes_chat")) return [{ insertId: 900 }, undefined];
             return [[], undefined];
@@ -138,7 +138,7 @@ describe("Chat interno (RF101)", () => {
         // Sin la columna archivo_url en la BD real (schema de 6 columnas) no hay
         // donde persistir el adjunto: rechazo explicito, nunca datos perdidos.
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("SELECT id, activo FROM usuarios")) return [[{ id: 2, activo: 1 }], undefined];
             if (sql.includes("INSERT INTO mensajes_chat")) return [{ insertId: 901 }, undefined];
             return [[], undefined];
@@ -160,7 +160,7 @@ describe("Chat interno (RF101)", () => {
 
     it("POST /api/chat devuelve 500 si la BD falla", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("SELECT id, activo FROM usuarios")) return [[{ id: 2, activo: 1 }], undefined];
             throw new Error("BD caida");
         });
@@ -181,7 +181,7 @@ describe("Chat interno (RF101)", () => {
 
     it("GET /api/chat/conversaciones lista las conversaciones (200)", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("GROUP BY par")) {
                 return [[{
                     usuario_id: 2,
@@ -231,7 +231,7 @@ describe("Chat interno (RF101)", () => {
     // ========================== RECIBIR MENSAJES ============================
     it("GET /api/chat/mensajes/:usuarioId devuelve el historial paginado (200)", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("COUNT(*) AS total")) return [[{ total: 1 }], undefined];
             if (sql.includes("SELECT id, nombre_completo, foto_perfil FROM usuarios")) {
                 return [[{ id: 2, nombre_completo: "Carlos Vidal", foto_perfil: null }], undefined];
@@ -273,7 +273,7 @@ describe("Chat interno (RF101)", () => {
 
     it("GET /api/chat/mensajes/:usuarioId acepta pagina/por_pagina y tope 100 (200)", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("COUNT(*) AS total")) return [[{ total: 130 }], undefined];
             if (sql.includes("SELECT id, nombre_completo, foto_perfil FROM usuarios")) {
                 return [[{ id: 2, nombre_completo: "Carlos Vidal", foto_perfil: null }], undefined];
@@ -298,7 +298,7 @@ describe("Chat interno (RF101)", () => {
 
     it("GET /api/chat/mensajes/:usuarioId rechaza paginacion invalida (400)", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("SELECT id, nombre_completo, foto_perfil FROM usuarios")) {
                 return [[{ id: 2, nombre_completo: "Carlos Vidal", foto_perfil: null }], undefined];
             }
@@ -313,7 +313,7 @@ describe("Chat interno (RF101)", () => {
 
     it("GET /api/chat/mensajes/:usuarioId con usuario inexistente o inactivo -> 404 uniforme", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("SELECT id, nombre_completo, foto_perfil FROM usuarios")) return [[], undefined];
             return [[], undefined];
         });
@@ -327,7 +327,7 @@ describe("Chat interno (RF101)", () => {
     // ========================== MARCAR COMO LEIDO ===========================
     it("PATCH /api/chat/mensajes/:id/leido marca como leido (200)", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("UPDATE mensajes_chat")) return [{ affectedRows: 1 }, undefined];
             return [[], undefined];
         });

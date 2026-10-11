@@ -49,25 +49,21 @@ export const authRequired = async (req, res, next) => {
 
         // Fix 3.3: lista negra de tokens revocados en logout.
         const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-        const [bloqueados] = await pool.query(
-            "SELECT 1 FROM tokens_invalidados WHERE token_hash = ? AND expira_en > NOW()",
-            [tokenHash]
-        );
 
-        if (bloqueados.length > 0) {
-            return res.status(401).json({
-                success: false,
-                error: { code: "UNAUTHORIZED", message: "Token revocado. Inicia sesión de nuevo" }
-            });
-        }
-
-        // Fix DEF-01 (P1 seguridad): rechazar usuarios con activo = 0 (baneados /
-        // borrado lógico). Sin este check, un usuario desactivado conserva el
-        // acceso hasta que su JWT expira o es revocado explícitamente en logout.
-        // M-8: la misma consulta trae token_version (una sola lectura, TASK-4.11).
+        // TASK-4.11 (rendimiento): UNA sola consulta responde las tres preguntas
+        // por peticion autenticada: revocacion (lista negra), estado (activo) y
+        // version del token (M-8). Antes eran dos round-trips por request.
+        // Fix DEF-01: rechazar usuarios con activo = 0 (baneados / borrado logico).
         const [usuarioFila] = await pool.query(
-            "SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1",
-            [decoded.id]
+            `SELECT u.activo, u.token_version,
+                    EXISTS(
+                      SELECT 1 FROM tokens_invalidados t
+                       WHERE t.token_hash = ? AND t.expira_en > NOW()
+                    ) AS revocado
+               FROM usuarios u
+              WHERE u.id = ?
+              LIMIT 1`,
+            [tokenHash, decoded.id]
         );
         if (usuarioFila.length === 0 || Number(usuarioFila[0].activo) === 0) {
             return res.status(401).json({
@@ -76,6 +72,14 @@ export const authRequired = async (req, res, next) => {
                     code: "USER_DISABLED",
                     message: "Cuenta desactivada o baneada. Contacta al administrador."
                 }
+            });
+        }
+
+        // Fix 3.3: el token pudo revocarse en logout (lista negra).
+        if (Number(usuarioFila[0].revocado) === 1) {
+            return res.status(401).json({
+                success: false,
+                error: { code: "UNAUTHORIZED", message: "Token revocado. Inicia sesión de nuevo" }
             });
         }
 

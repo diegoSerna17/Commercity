@@ -49,11 +49,11 @@ beforeEach(() => {
     vi.clearAllMocks();
     // Estado por defecto: lista negra vacia y usuario existente y activo.
     pool.query.mockImplementation((sql) => {
-        if (typeof sql === "string" && sql.includes("tokens_invalidados")) {
+        if (typeof sql === "string" && sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) {
             return [[], undefined];
         }
-        if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios")) {
-            return [[{ activo: 1, token_version: 0 }], undefined];
+        if (typeof sql === "string" && sql.includes("AS revocado")) {
+            return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
         }
         return [[], undefined];
     });
@@ -80,14 +80,10 @@ describe("authRequired (JWT por header o cookie)", () => {
         expect(res.status).toBe(200);
         expect(res.body.data.userId).toBe(7);
         expect(res.body.data.userEmail).toBe("test@test.com");
-        // Consulta la lista negra y el estado del usuario (DEF-01).
+        // TASK-4.11: UNA consulta combina lista negra + activo + token_version.
         expect(pool.query).toHaveBeenCalledWith(
-            expect.stringContaining("FROM tokens_invalidados"),
-            [expect.any(String)]
-        );
-        expect(pool.query).toHaveBeenCalledWith(
-            expect.stringContaining("SELECT activo, token_version FROM usuarios"),
-            [7]
+            expect.stringContaining("AS revocado"),
+            [expect.any(String), 7]
         );
     });
 
@@ -101,8 +97,8 @@ describe("authRequired (JWT por header o cookie)", () => {
         expect(res.body.data.userId).toBe(7);
         // El flujo completo se ejecuta aunque no venga header Authorization.
         expect(pool.query).toHaveBeenCalledWith(
-            expect.stringContaining("FROM tokens_invalidados"),
-            [expect.any(String)]
+            expect.stringContaining("AS revocado"),
+            [expect.any(String), 7]
         );
     });
 
@@ -167,10 +163,10 @@ describe("authRequired (JWT por header o cookie)", () => {
         // El usuario subio de version (reset de contrasena / baneo / cierre de
         // sesiones): el token viejo (version 0) deja de servir.
         pool.query.mockImplementation((sql) => {
-            if (typeof sql === "string" && sql.includes("tokens_invalidados")) {
+            if (typeof sql === "string" && sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) {
                 return [[], undefined];
             }
-            if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios")) {
+            if (typeof sql === "string" && sql.includes("AS revocado")) {
                 return [[{ activo: 1, token_version: 1 }], undefined];
             }
             return [[], undefined];
@@ -189,10 +185,10 @@ describe("authRequired (JWT por header o cookie)", () => {
 
     it("responde 401 USER_DISABLED si el usuario esta desactivado (activo = 0)", async () => {
         pool.query.mockImplementation((sql) => {
-            if (typeof sql === "string" && sql.includes("tokens_invalidados")) {
+            if (typeof sql === "string" && sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) {
                 return [[], undefined];
             }
-            if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios")) {
+            if (typeof sql === "string" && sql.includes("AS revocado")) {
                 return [[{ activo: 0 }], undefined];
             }
             return [[], undefined];
@@ -208,20 +204,20 @@ describe("authRequired (JWT por header o cookie)", () => {
         expect(res.body.error.message).toBe(
             "Cuenta desactivada o baneada. Contacta al administrador."
         );
-        // La consulta de activo SI se ejecuta (devuelve activo=0); lo que
+        // La consulta combinada SI se ejecuta (devuelve activo=0); lo que
         // falla es la verificacion de estado, no la consulta.
         expect(pool.query).toHaveBeenCalledWith(
-            expect.stringContaining("SELECT activo, token_version FROM usuarios"),
-            [7]
+            expect.stringContaining("AS revocado"),
+            [expect.any(String), 7]
         );
     });
 
     it("responde 401 USER_DISABLED si el usuario ya no existe en la BD", async () => {
         pool.query.mockImplementation((sql) => {
-            if (typeof sql === "string" && sql.includes("tokens_invalidados")) {
+            if (typeof sql === "string" && sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) {
                 return [[], undefined];
             }
-            if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios")) {
+            if (typeof sql === "string" && sql.includes("AS revocado")) {
                 return [[], undefined]; // sin filas: usuario borrado/inexistente
             }
             return [[], undefined];
@@ -247,5 +243,19 @@ describe("authRequired (JWT por header o cookie)", () => {
         });
         // jwt.verify falla antes de consultar la BD (firma/expiracion primero).
         expect(pool.query).not.toHaveBeenCalled();
+    });
+
+    it("TASK-4.11: rechaza un token revocado en la lista negra (401)", async () => {
+        // La consulta combinada devuelve revocado = 1 (lo inserto un logout).
+        pool.query.mockImplementation(() => [[
+            { activo: 1, token_version: 0, revocado: 1 },
+        ], undefined]);
+
+        const res = await request(app)
+            .get("/protegido")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(401);
+        expect(res.body.error.message).toContain("revocado");
     });
 });

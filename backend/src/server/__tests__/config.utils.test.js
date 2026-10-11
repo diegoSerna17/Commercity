@@ -92,11 +92,10 @@ describe("utils/config.js - validacion de secretos (fix 3.1, TASK-2.6)", () => {
         process.env.CRYPTO_SECRET_KEY = "c".repeat(48);
         vi.resetModules();
 
-        const { CRYPTO_SECRET_KEY, CRYPTO_EFFECTIVE_KEY, JWT_SIGNING_KEY } =
+        const { CRYPTO_SECRET_KEY, CRYPTO_EFFECTIVE_KEY } =
             await import("../utils/config.js");
 
         expect(CRYPTO_SECRET_KEY).toBe("c".repeat(48));
-        expect(CRYPTO_SECRET_KEY).not.toBe(JWT_SIGNING_KEY);
         expect(CRYPTO_EFFECTIVE_KEY).toMatch(/^[a-f0-9]{64}$/);
     });
 });

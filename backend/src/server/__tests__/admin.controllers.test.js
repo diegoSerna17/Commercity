@@ -9,8 +9,8 @@ vi.mock("mysql2/promise", () => {
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -44,10 +44,10 @@ beforeEach(() => {
     vi.clearAllMocks();
     // Default: auth OK (blacklist vacia) + rol administrador + usuario activo
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       return [[], undefined];
     });
   });
@@ -60,8 +60,8 @@ describe("GET /api/admin/stats (RF55-RF59 + fix 4.5)", () => {
 
   it("rechaza a un comprador (403 - solo admin)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
     });
@@ -74,7 +74,7 @@ describe("GET /api/admin/stats (RF55-RF59 + fix 4.5)", () => {
 
   it("devuelve las estadisticas y excluye lineas canceladas de las comisiones", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("ur.usuario_id = ?")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("COUNT(DISTINCT ur.usuario_id)")) {
         return [[{ totalVendedores: 4, totalCompradores: 12, totalProductos: 20, totalComisiones: 500000 }], undefined];
@@ -98,8 +98,8 @@ describe("GET /api/admin/stats (RF55-RF59 + fix 4.5)", () => {
 describe("GET /api/admin/usuarios y productos (RF67/RF68)", () => {
   it("lista usuarios con rol y estado", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("GROUP BY u.id")) {
         return [[{ id: 2, nombre_completo: "Juan", email: "juan@test.com", activo: 1, roles: "vendedor" }], undefined];
@@ -118,8 +118,8 @@ describe("GET /api/admin/usuarios y productos (RF67/RF68)", () => {
 
   it("fix 4.4: lista TODOS los productos, incluidos los suspendidos", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("FROM productos p")) {
         return [
@@ -144,8 +144,8 @@ describe("GET /api/admin/usuarios y productos (RF67/RF68)", () => {
 
   it("fix 4.4: restaura un producto suspendido", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("UPDATE productos SET eliminado_por_admin = 0")) return [{ affectedRows: 1 }, undefined];
       return [[], undefined];
@@ -161,8 +161,8 @@ describe("GET /api/admin/usuarios y productos (RF67/RF68)", () => {
 
   it("suspende un producto con borrado logico (RF72)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("SET eliminado_por_admin = 1")) return [{ affectedRows: 1 }, undefined];
       return [[], undefined];
@@ -195,8 +195,8 @@ describe("PATCH /api/admin/usuarios/:id/estado (RF73/RF74 - baneo)", () => {
     conn.rollback.mockResolvedValue();
     conn.release.mockResolvedValue();
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       return [[], undefined];
     });
@@ -249,7 +249,7 @@ describe("PATCH /api/admin/usuarios/:id/estado (RF73/RF74 - baneo)", () => {
 
   it("M-11: no se puede banear a otro administrador (403)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("MAX(CASE WHEN r.nombre = 'administrador'")) return [[{ id: 2, es_admin: 1 }], undefined];
       if (sql.includes("COUNT(DISTINCT u.id) AS total")) return [[{ total: 2 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
@@ -268,7 +268,7 @@ describe("PATCH /api/admin/usuarios/:id/estado (RF73/RF74 - baneo)", () => {
 
   it("M-11: protege al ultimo administrador activo (403)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("MAX(CASE WHEN r.nombre = 'administrador'")) return [[{ id: 2, es_admin: 1 }], undefined];
       if (sql.includes("COUNT(DISTINCT u.id) AS total")) return [[{ total: 1 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
@@ -365,8 +365,8 @@ describe("PATCH /api/admin/usuarios/:id/estado (RF73/RF74 - baneo)", () => {
 
   it("devuelve 404 al reactivar un usuario inexistente", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("UPDATE usuarios SET activo = 1")) return [{ affectedRows: 0 }, undefined];
       return [[], undefined];
@@ -382,8 +382,8 @@ describe("PATCH /api/admin/usuarios/:id/estado (RF73/RF74 - baneo)", () => {
 
   it("reactiva sin restaurar productos suspendidos (RF74)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("UPDATE usuarios SET activo = 1")) return [{ affectedRows: 1 }, undefined];
       return [[], undefined];
@@ -434,8 +434,8 @@ describe("DELETE /api/admin/usuarios/:id (B-R4 - nunca borrado fisico)", () => {
     conn.rollback.mockResolvedValue();
     conn.release.mockResolvedValue();
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       return [[], undefined];
     });
@@ -466,8 +466,8 @@ describe("DELETE /api/admin/usuarios/:id (B-R4 - nunca borrado fisico)", () => {
 describe("Reportes admin (RF60-RF66 + fix 4.2)", () => {
   it("lista reportes mapeados", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("FROM reportes r")) {
         return [
@@ -491,8 +491,8 @@ describe("Reportes admin (RF60-RF66 + fix 4.2)", () => {
 
   it("A2: excluye archivados por defecto e incluye con ?incluir_archivados=1", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("FROM reportes r")) return [[], undefined];
       return [[], undefined];
@@ -516,8 +516,8 @@ describe("Reportes admin (RF60-RF66 + fix 4.2)", () => {
 
   it("fix 4.2: archiva el reporte (UPDATE archivado=1, nunca DELETE)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("UPDATE reportes SET archivado = 1")) return [{ affectedRows: 1 }, undefined];
       return [[], undefined];
@@ -538,8 +538,8 @@ describe("Reportes admin (RF60-RF66 + fix 4.2)", () => {
 
   it("resuelve un reporte pendiente con respuesta", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("SET estado_reporte = 'Resuelto'")) return [{ affectedRows: 1 }, undefined];
       return [[], undefined];
@@ -572,8 +572,8 @@ describe("Reportes admin (RF60-RF66 + fix 4.2)", () => {
 describe("GET /api/admin/busqueda (RF69-RF71)", () => {
   it("cae al fallback LIKE si no existe el indice FULLTEXT", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("MATCH(")) throw new Error("no index");
       if (sql.includes("u.nombre_completo LIKE ?")) {
@@ -596,8 +596,8 @@ describe("GET /api/admin/busqueda (RF69-RF71)", () => {
 
   it("busca solo productos con scope=producto", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("MATCH(")) throw new Error("no index");
       if (sql.includes("p.nombre LIKE ?")) return [[{ id: 1, nombre: "TV", precio: 1000000, vendedor: "A" }], undefined];
@@ -626,7 +626,7 @@ describe("GET /api/admin/busqueda (RF69-RF71)", () => {
 describe("Casos borde admin (cobertura de 404 y filtros)", () => {
   it("stats: 500 si la BD falla", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("ur.usuario_id = ?")) return [[{ nombre: "administrador" }], undefined];
       throw new Error("BD caida");
     });
@@ -639,8 +639,8 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
 
   it("getProductos aplica filtro q y soloActivos", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("FROM productos p")) {
         return [[{ id: 1, nombre: "TV", precio: 1000000, eliminado_por_admin: 0, vendedor: "A" }], undefined];
@@ -660,8 +660,8 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
 
   it("suspender producto inexistente -> 404", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("SET eliminado_por_admin = 1")) return [{ affectedRows: 0 }, undefined];
       return [[], undefined];
@@ -675,8 +675,8 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
 
   it("restaurar producto no suspendido -> 404", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("SET eliminado_por_admin = 0")) return [{ affectedRows: 0 }, undefined];
       return [[], undefined];
@@ -690,8 +690,8 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
 
   it("getUsuarios aplica filtro q", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("GROUP BY u.id")) {
         return [[{ id: 2, nombre_completo: "Juan", email: "juan@test.com", activo: 0, roles: "comprador" }], undefined];
@@ -709,8 +709,8 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
 
   it("getReporte inexistente -> 404", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       return [[], undefined];
     });
@@ -723,8 +723,8 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
 
   it("archivar reporte inexistente -> 404", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("archivado = 1")) return [{ affectedRows: 0 }, undefined];
       return [[], undefined];
@@ -738,8 +738,8 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
 
   it("resolver reporte ya resuelto -> 404", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("SET estado_reporte = 'Resuelto'")) return [{ affectedRows: 0 }, undefined];
       return [[], undefined];
@@ -754,8 +754,8 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
 
   it("lista reportes de tipo Usuario (mapeo alterno)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("FROM reportes r")) {
         return [
@@ -789,8 +789,8 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
 
   it("busca solo usuarios con scope=usuario", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("MATCH(")) throw new Error("no index");
       if (sql.includes("u.nombre_completo LIKE ?")) {
@@ -818,8 +818,8 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
     };
     pool.getConnection.mockResolvedValue(conn2);
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       return [[], undefined];
     });
@@ -843,8 +843,8 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
     };
     pool.getConnection.mockResolvedValue(conn3);
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       return [[], undefined];
     });
@@ -863,8 +863,8 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
 // controllers, limite de respuesta y IDs invalidos.
 describe("Reportes admin: filtros, errores e IDs (cobertura restante)", () => {
   const authOk = (sql) => {
-    if (sql.includes("tokens_invalidados")) return [[], undefined];
-    if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
+    if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+    if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
     if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
     return [[], undefined];
   };

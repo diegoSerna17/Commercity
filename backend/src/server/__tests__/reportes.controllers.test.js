@@ -9,8 +9,8 @@ vi.mock("mysql2/promise", () => {
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -42,7 +42,7 @@ const tokenComprador = jwt.sign({ id: 8, email: "camila.torres@commercity.com" ,
 // authRequired solo consulta la lista negra de tokens; no hay rol exigido.
 function mockAuth() {
   pool.query.mockImplementation((sql) => {
-    if (sql.includes("tokens_invalidados")) return [[], undefined];
+    if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
     return [[], undefined];
   });
 }
@@ -88,7 +88,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
   it("POST /api/reportes de producto inexistente -> 404", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM productos")) return [[], undefined];
       return [[], undefined];
     });
@@ -102,7 +102,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
   it("POST /api/reportes de producto crea con informante del JWT (201)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM productos")) return [[{ id: 1 }], undefined];
       if (sql.includes("INSERT INTO reportes")) return [{ insertId: 500 }, undefined];
       return [[], undefined];
@@ -136,7 +136,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
   it("POST /api/reportes de usuario inexistente -> 404", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM usuarios")) return [[], undefined];
       return [[], undefined];
     });
@@ -150,7 +150,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
   it("POST /api/reportes de usuario crea (201)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM usuarios")) return [[{ id: 2 }], undefined];
       if (sql.includes("INSERT INTO reportes")) return [{ insertId: 501 }, undefined];
       return [[], undefined];
@@ -170,7 +170,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
   it("POST /api/reportes con evidencia (multipart) guarda evidencia_url (201)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM productos")) return [[{ id: 1 }], undefined];
       if (sql.includes("INSERT INTO reportes")) return [{ insertId: 502 }, undefined];
       return [[], undefined];
@@ -191,7 +191,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
   it("M-14: deduplica un reporte abierto del mismo informante sobre el mismo objetivo (409)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM productos")) return [[{ id: 1 }], undefined];
       if (sql.includes("FROM reportes") && sql.includes("estado_reporte = 'Pendiente'")) {
         return [[{ id: 30 }], undefined]; // ya existe un reporte abierto
@@ -217,7 +217,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
   it("devuelve 500 si la BD falla al crear", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM productos")) return [[{ id: 1 }], undefined];
       throw new Error("BD caida");
     });
