@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Header from "../../components/globales/Header";
 import DetallePedidos from "./DetallePedidos";
 import {
@@ -95,15 +95,20 @@ export default function Pedidos() {
   const [error, setError] = useState("");
   const [pedidoSeleccionadoId, setPedidoSeleccionadoId] = useState(null);
   const [cambiandoId, setCambiandoId] = useState(null);
+  // RF119: descarta respuestas viejas si el filtro cambia mientras se carga.
+  const solicitudRef = useRef(0);
 
   /** Consulta GET /api/tienda/ventas del vendedor autenticado (RF119/RF120). */
   const cargarVentas = useCallback(async (filtroActual, numeroPagina) => {
+    const solicitud = solicitudRef.current + 1;
+    solicitudRef.current = solicitud;
     setCargando(true);
     try {
       const res = await listarVentas({
         estado: filtroActual?.valor,
         pagina: numeroPagina,
       });
+      if (solicitud !== solicitudRef.current) return;
       const data = res.data ?? {};
       const nuevas = (data.items ?? []).map(mapearVenta);
 
@@ -114,10 +119,11 @@ export default function Pedidos() {
       setTotalPaginas(data.total_paginas ?? 1);
       setError("");
     } catch (err) {
+      if (solicitud !== solicitudRef.current) return;
       if (numeroPagina === 1) setVentas([]);
       setError(err.message || "No se pudieron cargar tus pedidos");
     } finally {
-      setCargando(false);
+      if (solicitud === solicitudRef.current) setCargando(false);
     }
   }, []);
 

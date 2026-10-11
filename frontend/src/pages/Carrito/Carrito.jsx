@@ -151,7 +151,7 @@ export default function Carrito() {
         <Header showSearch={false} />
 
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 py-5 sm:py-6 md:py-8">
-          <div className="w-[450px] sm:w-[600px] lg:w-[700px] xl:w-[800px] max-w-[1000px] mx-auto">
+          <div className="w-full max-w-[450px] sm:max-w-[600px] lg:max-w-[700px] xl:max-w-[800px] mx-auto">
 
             <h1 className="font-sans font-extrabold text-2xl sm:text-3xl tracking-tight text-brand-orange mb-7">
               Carrito de Compras

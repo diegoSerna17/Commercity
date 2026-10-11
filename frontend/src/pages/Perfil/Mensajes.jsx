@@ -100,10 +100,11 @@ const Mensajes = () => {
 
           <div className="space-y-md">
             {conversaciones.map((conv) => (
-              <article
+              <button
+                type="button"
                 key={conv.usuario.id}
                 onClick={() => abrirChat(conv.usuario)}
-                className={`group flex items-center gap-md p-padding-md rounded-card-lg transition-all cursor-pointer ${
+                className={`group flex w-full items-center gap-md p-padding-md rounded-card-lg transition-all cursor-pointer text-left ${
                   conv.no_leidos > 0
                     ? "border border-brand-orange/40 bg-surface-container-low hover:bg-surface-container"
                     : "border border-transparent hover:border-surface-container hover:bg-surface-container-low"
@@ -130,7 +131,7 @@ const Mensajes = () => {
                     <p className="text-sm truncate pr-md text-brand-muted-text">{previewDe(conv)}</p>
                   </div>
                 </div>
-              </article>
+              </button>
             ))}
           </div>
         </div>

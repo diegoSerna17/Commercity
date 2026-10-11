@@ -1,53 +1,73 @@
-/**
- * Adapta la respuesta del backend (/api/productos y /api/productos/:id) a la
- * forma que consumen Inicio.jsx y FichaProducto.jsx.
- * Integrado desde Carlos Perea (2026-08-09) y ajustado a los nombres de
- * campos reales del backend central (snake_case en listado y detalle).
- */
-
-const avatarPorDefecto = (nombre) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    nombre || "Vendedor"
-  )}&background=1a1a26&color=fff&bold=true&size=80&rounded=true`;
+import { API_BASE_URL } from "../constants/config.js";
+import { resolverImagenRespaldoProducto } from "./productImageFallback.js";
 
 /**
- * @param {object} producto Producto tal cual lo devuelve el backend
- * @returns {object|null} Producto con la forma que espera la UI
+ * Utilidades compartidas de las tarjetas de producto (Inicio, PerfilPublico,
+ * Header y PerfilVendedor). Antes vivian duplicadas en cada pagina.
  */
-export function mapearProductoUI(producto) {
-  if (!producto) return null;
 
-  const vendedorId = producto.vendedor?.id ?? producto.vendedor_id;
-  const vendedorNombre =
-    producto.vendedor?.nombre ?? producto.vendedor ?? "Vendedor";
-  const vendedorAvatar =
-    producto.vendedor?.foto ?? producto.vendedor_foto ?? avatarPorDefecto(vendedorNombre);
+// JS Avatar local por defecto: sin depender de servicios de imagenes de terceros.
+export const AVATAR_POR_DEFECTO = `${import.meta.env.BASE_URL}avatar-placeholder.svg`;
 
+/**
+ * Resuelve una ruta de archivo del backend a una URL absoluta.
+ * @param {string|null|undefined} ruta Ruta relativa (/uploads/x.jpg) o URL absoluta
+ * @returns {string|null} URL lista para usar en un src, o null si no hay ruta
+ */
+export function resolverUrlArchivo(ruta) {
+  if (!ruta) return null;
+  if (/^https?:\/\//i.test(ruta)) return ruta;
+  return `${API_BASE_URL}${ruta}`;
+}
+
+/**
+ * Imagen del producto: usa la del backend o una foto real de respaldo acorde
+ * a la categoria del producto (estable por id).
+ * @param {string|null|undefined} imagenUrl
+ * @param {number|string} id
+ * @param {string|undefined} categoria
+ * @returns {string}
+ */
+export function resolverImagenProducto(imagenUrl, id, categoria) {
+  return resolverUrlArchivo(imagenUrl) ?? resolverImagenRespaldoProducto(categoria, id);
+}
+
+/**
+ * Traduce el producto de /api/productos al shape que consumen las tarjetas
+ * (misma forma que usa la pagina principal).
+ * @param {object} producto Producto crudo del backend
+ * @returns {object} Producto listo para la tarjeta
+ */
+export function mapearProducto(producto) {
   const descuento = Number(producto.descuento_porcentaje) || 0;
-  const precioBase = Number(producto.precio) || 0;
-  const precioFinal =
-    descuento > 0 ? Math.round(precioBase - (precioBase * descuento) / 100) : precioBase;
+  const precio = Number(producto.precio) || 0;
 
   return {
     id: producto.id,
     name: producto.nombre,
-    category: producto.categoria?.nombre ?? producto.categoria ?? "General",
-    description: producto.descripcion,
-    image: producto.imagen_url ?? producto.imagen,
-    imageAlt: producto.nombre,
-    precioBase,
-    price: precioFinal,
-    originalPrice: descuento > 0 ? precioBase : null,
+    category: producto.categoria,
+    // JS Los precios monetarios se muestran sin decimales (COP)
+    price: Math.round(precio),
+    precioBase: Math.round(precio),
     descuento,
     stock: Number(producto.stock) || 0,
-    // RF86: estado (Disponible/Agotado) tal cual lo calcula la BD segun el stock
-    estado: producto.estado,
+    image: resolverImagenProducto(producto.imagen, producto.id, producto.categoria),
+    imageAlt: producto.nombre,
+    description: producto.descripcion,
+    vendedorId: producto.vendedor_id,
+    vendedorNombre: producto.vendedor,
+    vendedorAvatar: producto.vendedor_foto || AVATAR_POR_DEFECTO,
     badge: descuento > 0 ? `-${descuento}%` : null,
     badgeBg: descuento > 0 ? "bg-figma-accent-blue" : null,
-    vendedorId,
-    vendedorNombre,
-    vendedorAvatar,
-    // RF49: calificacion del vendedor visible junto al producto
-    calificacionVendedor: producto.vendedor?.calificacion_promedio ?? null,
   };
+}
+
+/**
+ * Precio final con el descuento aplicado (misma formula del backend).
+ * @param {{price: number, precioBase: number, descuento: number}} producto
+ * @returns {number}
+ */
+export function calcularPrecioFinal(producto) {
+  if (!producto.descuento) return producto.price;
+  return Math.round(producto.precioBase - (producto.precioBase * producto.descuento) / 100);
 }

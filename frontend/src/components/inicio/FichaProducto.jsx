@@ -403,32 +403,37 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
       </div>
 
       {zoomAbierto && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Vista ampliada del producto"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setZoomAbierto(false);
-          }}
-        >
-          <button
-            type="button"
-            aria-label="Cerrar vista ampliada"
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4">
+          {/* Fondo clicable para cerrar la vista ampliada */}
+          <div
+            className="absolute inset-0"
+            role="presentation"
             onClick={() => setZoomAbierto(false)}
-            className="absolute right-4 top-4 z-[61] flex h-10 w-10 items-center justify-center rounded-full border border-figma-divider bg-input-bg text-on-surface transition hover:bg-surface-container"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <img
-            src={imagenUrl}
-            alt={product.imageAlt || product.name}
-            data-categoria={product.category}
-            data-product-id={product.id}
-            className="max-h-[90vh] max-w-full select-none object-contain"
-            onError={aplicarFallbackImagenProducto}
-            onLoad={replaceInvalidProductImage}
           />
+          <div
+            className="relative flex items-center justify-center"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Vista ampliada del producto"
+          >
+            <button
+              type="button"
+              aria-label="Cerrar vista ampliada"
+              onClick={() => setZoomAbierto(false)}
+              className="absolute right-4 top-4 z-[61] flex h-10 w-10 items-center justify-center rounded-full border border-figma-divider bg-input-bg text-on-surface transition hover:bg-surface-container"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img
+              src={imagenUrl}
+              alt={product.imageAlt || product.name}
+              data-categoria={product.category}
+              data-product-id={product.id}
+              className="max-h-[90vh] max-w-full select-none object-contain"
+              onError={aplicarFallbackImagenProducto}
+              onLoad={replaceInvalidProductImage}
+            />
+          </div>
         </div>
       )}
 

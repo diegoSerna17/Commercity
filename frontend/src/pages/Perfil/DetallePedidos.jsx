@@ -50,11 +50,13 @@ export default function DetallePedidos({ pedido, onClose }) {
   return (
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onClick={onClose}
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         className="bg-auth-card-bg rounded-hero shadow-2xl w-[400px] sm:w-[500px] max-h-[92vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 pt-6 pb-4">
           <div className="flex items-start justify-between gap-3">

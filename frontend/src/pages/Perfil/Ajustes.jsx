@@ -125,7 +125,10 @@ export default function Ajustes() {
       return;
     }
 
-    showToastDir("Direccion actualizada correctamente.");
+    // El backend aun no expone el guardado de direccion: no se simula exito.
+    showToastDir(
+      "La direccion aun no se guarda en tu cuenta: la indicas al confirmar el pago en el carrito."
+    );
   }
 
   function handleVendedor() {
@@ -438,7 +441,7 @@ export default function Ajustes() {
       </main>
 
       {/* --- BACKDROP Y CONTENEDOR DEL MODAL DE CAMBIO DE ROL --- */}
-      <div className={`fixed inset-0 items-center justify-center bg-black/70 px-6 sm:px-10 z-[999999] ${modalRol ? "flex" : "hidden"}`} onClick={(event) => { if (event.target === event.currentTarget) setModalRol(false); }}>
+      <div className={`fixed inset-0 items-center justify-center bg-black/70 px-6 sm:px-10 z-[999999] ${modalRol ? "flex" : "hidden"}`} role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setModalRol(false); }}>
         <div className="w-full max-w-lg rounded-hero border border-brand-orange bg-auth-card-bg p-6 sm:p-10 shadow-2xl overflow-y-auto max-h-[90vh]">
           <h4 className="text-headline-sm sm:text-headline-md font-bold text-on-surface mb-4">
             {rolDestino === "vendedor" ? "¿Cambiar a vendedor?" : "¿Cambiar a comprador?"}
@@ -468,7 +471,7 @@ export default function Ajustes() {
       </div>
 
       {/* --- BACKDROP Y CONTENEDOR DEL MODAL MODIFICADO --- */}
-      <div className={`fixed inset-0 items-center justify-center bg-black/70 px-6 sm:px-10 z-[999999] ${modalEliminar ? "flex" : "hidden"}`} onClick={(event) => { if (event.target === event.currentTarget) setModalEliminar(false); }}>
+      <div className={`fixed inset-0 items-center justify-center bg-black/70 px-6 sm:px-10 z-[999999] ${modalEliminar ? "flex" : "hidden"}`} role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setModalEliminar(false); }}>
         {/* Se cambió de max-w-2xl a max-w-4xl, y los paddings de p-8 sm:p-10 a p-10 sm:p-14 */}
         <div className="w-full max-w-lg sm:max-w-2xl md:max-w-4xl rounded-hero border border-report-red-bg bg-auth-card-bg p-6 sm:p-10 md:p-14 shadow-2xl overflow-y-auto max-h-[90vh]">
           <div className="mb-6 sm:mb-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">

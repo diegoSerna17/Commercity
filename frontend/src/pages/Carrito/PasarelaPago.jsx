@@ -139,7 +139,7 @@ export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
                 </p>
 
                 <div className="flex flex-col gap-1 mb-4">
-                  <label className="text-brand-muted-text text-sm">
+                  <label className="text-brand-muted-text text-sm" htmlFor="pago-numero-tarjeta">
                     Número de la tarjeta
                   </label>
                   <div className="relative">
@@ -147,6 +147,7 @@ export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
                       <IconoTarjeta />
                     </span>
                     <input
+                      id="pago-numero-tarjeta"
                       type="text"
                       inputMode="numeric"
                       placeholder="0000 0000 0000 0000"
@@ -159,7 +160,7 @@ export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-brand-muted-text text-sm">
+                  <label className="text-brand-muted-text text-sm" htmlFor="pago-nombre-tarjeta">
                     Nombre en la tarjeta
                   </label>
                   <div className="relative">
@@ -167,6 +168,7 @@ export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
                       <IconoUsuario />
                     </span>
                     <input
+                      id="pago-nombre-tarjeta"
                       type="text"
                       placeholder="NOMBRE APELLIDO"
                       value={nombreTarjeta}

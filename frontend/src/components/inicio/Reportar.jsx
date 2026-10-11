@@ -6,17 +6,23 @@ import { crearReporte } from "../../services/reportes.service.js";
 
 // Longitud maxima del motivo aceptada por el backend (POST /api/reportes).
 const MOTIVO_MAX = 2000;
+// Formatos y tamano que acepta la evidencia (backend/src/server/config/multer.js).
+const TIPOS_EVIDENCIA = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const EVIDENCIA_MAX_BYTES = 5 * 1024 * 1024;
 
 /**
  * Modal para reportar un producto del catalogo (RF62/RF63, RF79, RF101).
  * Recibe el producto reportado por prop y envia el reporte real a la API.
+ * El backend guarda una sola evidencia por reporte: si el usuario elige varias
+ * se limita a la primera y se le avisa.
  * @param {{producto?: {id: number|string, name?: string}, onClose?: Function}} props
  */
 export default function Reportar({ producto, onClose }) {
   const [descripcion, setDescripcion] = useState("");
-  const [archivos, setArchivos] = useState([]);
+  const [archivo, setArchivo] = useState(null);
   const [errorDescripcion, setErrorDescripcion] = useState("");
   const [errorEvidencia, setErrorEvidencia] = useState("");
+  const [avisoEvidencia, setAvisoEvidencia] = useState("");
   const [errorEnvio, setErrorEnvio] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [exitoEnvio, setExitoEnvio] = useState(false);
@@ -25,19 +31,30 @@ export default function Reportar({ producto, onClose }) {
 
   const fileInputRef = useRef(null);
 
-  function agregarArchivos(nuevosArchivos) {
-    setArchivos((prev) => {
-      const combinados = [...prev];
-      nuevosArchivos.forEach((nuevo) => {
-        const yaExiste = combinados.some(
-          (existente) =>
-            existente.name === nuevo.name && existente.size === nuevo.size
-        );
-        if (!yaExiste) combinados.push(nuevo);
-      });
-      return combinados;
-    });
+  function seleccionarArchivo(listaArchivos) {
+    const lista = Array.from(listaArchivos || []);
+    if (lista.length === 0) return;
+
+    if (lista.length > 1) {
+      setAvisoEvidencia("Solo se permite un archivo de evidencia; se usara el primero.");
+    } else {
+      setAvisoEvidencia("");
+    }
+
+    const candidato = lista[0];
+
+    if (!TIPOS_EVIDENCIA.includes(candidato.type)) {
+      setErrorEvidencia("Formato no permitido. Usa JPG, PNG, WEBP o GIF.");
+      return;
+    }
+
+    if (candidato.size > EVIDENCIA_MAX_BYTES) {
+      setErrorEvidencia("La evidencia no puede superar los 5 MB.");
+      return;
+    }
+
     setErrorEvidencia("");
+    setArchivo(candidato);
   }
 
   function manejarClickDropZone() {
@@ -45,14 +62,14 @@ export default function Reportar({ producto, onClose }) {
   }
 
   function manejarCambioInput(e) {
-    agregarArchivos(Array.from(e.target.files));
+    seleccionarArchivo(e.target.files);
     e.target.value = "";
   }
 
   function manejarDrop(e) {
     e.preventDefault();
     setArrastrando(false);
-    agregarArchivos(Array.from(e.dataTransfer.files));
+    seleccionarArchivo(e.dataTransfer.files);
   }
 
   async function manejarEnviar() {
@@ -73,7 +90,7 @@ export default function Reportar({ producto, onClose }) {
       setErrorDescripcion("");
     }
 
-    if (archivos.length === 0) {
+    if (!archivo) {
       setErrorEvidencia("Debes subir al menos un archivo de evidencia.");
       valido = false;
     } else {
@@ -99,12 +116,12 @@ export default function Reportar({ producto, onClose }) {
         tipo: "Producto",
         motivo,
         productoId: producto.id,
-        evidencia: archivos[0],
+        evidencia: archivo,
       });
 
       setExitoEnvio(true);
       setDescripcion("");
-      setArchivos([]);
+      setArchivo(null);
       setTimeout(() => {
         setExitoEnvio(false);
         onClose?.();
@@ -118,9 +135,10 @@ export default function Reportar({ producto, onClose }) {
 
   function manejarCancelar() {
     setDescripcion("");
-    setArchivos([]);
+    setArchivo(null);
     setErrorDescripcion("");
     setErrorEvidencia("");
+    setAvisoEvidencia("");
     setErrorEnvio("");
     onClose?.();
   }
@@ -129,6 +147,7 @@ export default function Reportar({ producto, onClose }) {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose?.();
       }}
@@ -157,7 +176,9 @@ export default function Reportar({ producto, onClose }) {
             Reportar producto
           </h2>
           <button
+            type="button"
             onClick={manejarCancelar}
+            aria-label="Cerrar"
             className="flex items-center justify-center rounded-full transition-colors p-1"
             style={{ color: "var(--color-brand-muted-text)" }}
           >
@@ -167,12 +188,13 @@ export default function Reportar({ producto, onClose }) {
 
         {/* MOTIVO */}
         <div>
-          <p
-            className="text-sm uppercase tracking-widest mb-2 font-extrabold"
+          <label
+            htmlFor="reportar-motivo"
+            className="block text-sm uppercase tracking-widest mb-2 font-extrabold"
             style={{ fontFamily: "var(--font-sans)", color: "var(--color-brand-muted-text)" }}
           >
             Motivo
-          </p>
+          </label>
           <div
             className="rounded-xl transition-all"
             style={{
@@ -183,6 +205,7 @@ export default function Reportar({ producto, onClose }) {
             }}
           >
             <textarea
+              id="reportar-motivo"
               rows={5}
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
@@ -208,7 +231,8 @@ export default function Reportar({ producto, onClose }) {
           >
             Evidencia
           </p>
-          <div
+          <button
+            type="button"
             onClick={manejarClickDropZone}
             onDragOver={(e) => {
               e.preventDefault();
@@ -216,7 +240,7 @@ export default function Reportar({ producto, onClose }) {
             }}
             onDragLeave={() => setArrastrando(false)}
             onDrop={manejarDrop}
-            className="rounded-xl h-36 flex flex-col items-center justify-center gap-2 cursor-pointer border-2 transition-all"
+            className="w-full rounded-xl h-36 flex flex-col items-center justify-center gap-2 cursor-pointer border-2 transition-all"
             style={{
               backgroundColor: "var(--color-input-bg)",
               borderColor: arrastrando ? "var(--color-brand-orange)" : "transparent",
@@ -231,25 +255,32 @@ export default function Reportar({ producto, onClose }) {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
-            <p className="font-medium text-sm text-center px-6" style={{ color: "var(--color-on-surface)" }}>
+            <span className="font-medium text-sm text-center px-6" style={{ color: "var(--color-on-surface)" }}>
               Haz click para subir tus archivos aquí
+            </span>
+            <span className="text-xs text-center px-6 truncate max-w-full" style={{ color: "var(--color-placeholder-gray-600)" }}>
+              {archivo?.name || "Sin archivos seleccionados"}
+            </span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            aria-label="Archivo de evidencia"
+            className="hidden"
+            onChange={manejarCambioInput}
+          />
+          {avisoEvidencia && (
+            <p className="text-xs mt-1" style={{ color: "var(--color-brand-muted-text)" }}>
+              {avisoEvidencia}
             </p>
-            <p className="text-xs text-center px-6 truncate max-w-full" style={{ color: "var(--color-placeholder-gray-600)" }}>
-              {archivos.map((f) => f.name).join(", ") || "Sin archivos seleccionados"}
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={manejarCambioInput}
-            />
-          </div>
+          )}
           {errorEvidencia && (
             <p className="text-xs mt-1" style={{ color: "var(--color-error)" }}>
               {errorEvidencia}

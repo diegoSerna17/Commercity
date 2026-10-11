@@ -5,18 +5,10 @@ import NotificacionesDropdown from "./NotificacionesDropdown";
 import { getCurrentUser } from "../../api/client.js";
 import { contarNoLeidas } from "../../services/notificaciones.service.js";
 import { listarProductos } from "../../services/productos.service.js";
-import { API_BASE_URL } from "../../constants/config.js";
-import { resolverImagenRespaldoProducto } from "../../utils/productImageFallback.js";
+import { resolverImagenProducto } from "../../utils/mapearProducto.js";
 
 function formatearPrecio(numero) {
   return `$${Math.round(numero).toLocaleString("es-CO")}`;
-}
-
-// JS Imagen de un resultado de busqueda: ruta del backend o foto de respaldo.
-function resolverImagenResultado(imagen, categoria, id) {
-  if (!imagen) return resolverImagenRespaldoProducto(categoria, id);
-  if (/^https?:\/\//i.test(imagen)) return imagen;
-  return `${API_BASE_URL}${imagen}`;
 }
 
 const Header = ({ title, showSearch = true, onSelectProduct }) => {
@@ -132,7 +124,6 @@ const Header = ({ title, showSearch = true, onSelectProduct }) => {
             <label htmlFor="mobile-search-input" className="sr-only">Buscar productos</label>
             <input
               id="mobile-search-input"
-              autoFocus
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               onKeyDown={(e) => {
@@ -220,7 +211,7 @@ const Header = ({ title, showSearch = true, onSelectProduct }) => {
                         className="flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors hover:bg-surface-container"
                       >
                         <img
-                          src={resolverImagenResultado(p.imagen, p.categoria, p.id)}
+                          src={resolverImagenProducto(p.imagen, p.id, p.categoria)}
                           alt={p.nombre}
                           className="w-11 h-11 rounded-lg object-cover bg-surface-container-high shrink-0"
                         />

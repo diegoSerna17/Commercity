@@ -172,31 +172,34 @@ export default function NotificacionesDropdown({ onChange }) {
           visibleNotifications.map((notif) => (
             <div
               key={notif.id}
-              onClick={() => handleNotificationClick(notif)}
-              className={`relative flex items-center justify-between px-5 py-3.5 border-b border-surface-container transition-colors cursor-pointer ${
+              className={`relative flex items-center justify-between px-5 py-3.5 border-b border-surface-container transition-colors ${
                 !notif.leida
                   ? "bg-brand-orange/10 hover:bg-brand-orange/15"
                   : "hover:bg-surface-container-high"
               }`}
             >
-              <div className="flex-1 min-w-0 pr-4">
-                <div className="flex items-center gap-2 mb-0.5">
+              <button
+                type="button"
+                onClick={() => handleNotificationClick(notif)}
+                className="flex-1 min-w-0 pr-4 text-left cursor-pointer"
+              >
+                <span className="flex items-center gap-2 mb-0.5">
                   {!notif.leida ? (
                     <span className="w-2 h-2 rounded-full bg-brand-orange shrink-0" />
                   ) : (
                     <CheckCheck className="w-3.5 h-3.5 shrink-0 text-brand-muted-text" />
                   )}
-                  <p className="font-sans text-body-xs leading-snug truncate text-on-surface font-medium">
+                  <span className="font-sans text-body-xs leading-snug truncate text-on-surface font-medium">
                     {notif.tipo || "Notificación"}
-                  </p>
-                </div>
-                <p className="font-sans text-body-xs leading-snug mb-0.5 truncate text-brand-muted-text">
+                  </span>
+                </span>
+                <span className="block font-sans text-body-xs leading-snug mb-0.5 truncate text-brand-muted-text">
                   {notif.descripcion}
-                </p>
-                <p className="font-sans text-[12px] leading-snug mt-1 text-brand-orange">
+                </span>
+                <span className="block font-sans text-[12px] leading-snug mt-1 text-brand-orange">
                   {tiempoRelativo(notif.fecha_hora)}
-                </p>
-              </div>
+                </span>
+              </button>
 
               <div className="flex items-center h-full">
                 <button

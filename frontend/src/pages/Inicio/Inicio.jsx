@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay, EffectFade } from "swiper/modules";
@@ -9,12 +9,14 @@ import Reportar from "../../components/inicio/Reportar";
 import { listarProductos } from "../../services/productos.service.js";
 import { agregarProducto } from "../../services/carrito.service.js";
 import { getCurrentUser } from "../../api/client.js";
-import { API_BASE_URL } from "../../constants/config.js";
 import {
   aplicarFallbackImagenProducto,
   replaceInvalidProductImage,
-  resolverImagenRespaldoProducto,
 } from "../../utils/productImageFallback.js";
+import {
+  calcularPrecioFinal,
+  mapearProducto,
+} from "../../utils/mapearProducto.js";
 
 import "swiper/css";
 import "swiper/css/pagination";
@@ -53,52 +55,6 @@ const heroSlides = [
 // JS Cantidad de productos que se piden por pagina a la API.
 const LIMITE_PRODUCTOS = 12;
 
-// JS El backend devuelve rutas relativas (/uploads/...); se resuelven contra la API.
-// Si el producto no trae imagen, se usa una foto real acorde a su categoria.
-function resolverImagen(imagen, categoria, id) {
-  if (!imagen) return resolverImagenRespaldoProducto(categoria, id);
-  if (/^https?:\/\//i.test(imagen)) return imagen;
-  return `${API_BASE_URL}${imagen}`;
-}
-
-// JS Avatar por defecto cuando el vendedor no tiene foto de perfil.
-function resolverAvatar(vendedor) {
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    vendedor || "Vendedor"
-  )}&background=1a1a26&color=fff&bold=true&size=80&rounded=true`;
-}
-
-// JS Traduce el producto de la API al shape que consumen la tarjeta y FichaProducto.
-function mapearProducto(producto) {
-  const descuento = Number(producto.descuento_porcentaje) || 0;
-  const precio = Number(producto.precio) || 0;
-
-  return {
-    id: producto.id,
-    name: producto.nombre,
-    category: producto.categoria,
-    // JS Los precios monetarios se muestran sin decimales (COP)
-    price: Math.round(precio),
-    precioBase: Math.round(precio),
-    descuento,
-    stock: Number(producto.stock) || 0,
-    image: resolverImagen(producto.imagen, producto.categoria, producto.id),
-    imageAlt: producto.nombre,
-    description: producto.descripcion,
-    vendedorId: producto.vendedor_id,
-    vendedorNombre: producto.vendedor,
-    vendedorAvatar: producto.vendedor_foto || resolverAvatar(producto.vendedor),
-    badge: descuento > 0 ? `-${descuento}%` : null,
-    badgeBg: descuento > 0 ? "bg-figma-accent-blue" : null,
-  };
-}
-
-// JS Precio final con el descuento aplicado (misma formula del backend).
-function calcularPrecioFinal(producto) {
-  if (!producto.descuento) return producto.price;
-  return Math.round(producto.precioBase - (producto.precioBase * producto.descuento) / 100);
-}
-
 const Hero = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -119,6 +75,8 @@ const Hero = () => {
   const [cargando, setCargando] = useState(true);
   const [cargandoMas, setCargandoMas] = useState(false);
   const [error, setError] = useState("");
+  // RF87: descarta respuestas viejas si los filtros cambian mientras se carga.
+  const solicitudRef = useRef(0);
 
   // RF104: persiste el producto en el carrito real del comprador autenticado.
   async function manejarAgregarCarrito(product, cantidad) {
@@ -148,6 +106,8 @@ const Hero = () => {
 
   // JS Consulta el catalogo paginado contra GET /api/productos
   const cargarProductos = useCallback(async (numeroPagina) => {
+    const solicitud = solicitudRef.current + 1;
+    solicitudRef.current = solicitud;
     const primeraCarga = numeroPagina === 1;
     if (primeraCarga) setCargando(true);
     else setCargandoMas(true);
@@ -160,6 +120,7 @@ const Hero = () => {
         nombre: busqueda,
         categoria,
       });
+      if (solicitud !== solicitudRef.current) return;
       const data = res.data || {};
       const nuevos = (data.productos || []).map(mapearProducto);
 
@@ -169,6 +130,7 @@ const Hero = () => {
       setTotalProductos(data.totalProductos ?? nuevos.length);
       setHayPaginaSiguiente(Boolean(data.hayPaginaSiguiente));
     } catch (err) {
+      if (solicitud !== solicitudRef.current) return;
       // Sin status significa que la peticion no llego al servidor
       setError(
         err.status
@@ -177,8 +139,10 @@ const Hero = () => {
       );
       if (primeraCarga) setProductos([]);
     } finally {
-      setCargando(false);
-      setCargandoMas(false);
+      if (solicitud === solicitudRef.current) {
+        setCargando(false);
+        setCargandoMas(false);
+      }
     }
   }, [busqueda, categoria]);
 

@@ -140,6 +140,7 @@ export default function AjustesAdministrador({ onClose }) {
     <div
       className="fixed inset-0 flex items-center justify-center p-4 z-50"
       style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose?.();
       }}

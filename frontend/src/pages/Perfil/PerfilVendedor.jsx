@@ -4,8 +4,11 @@ import Header from "../../components/globales/Header";
 import AgregarProducto from "../../components/perfil/AgregarProducto";
 import SeguidoresModal from "../../components/perfil/SeguidoresModal";
 import { getCurrentUser } from "../../api/client.js";
-import { API_BASE_URL } from "../../constants/config.js";
-import { resolverImagenRespaldoProducto } from "../../utils/productImageFallback.js";
+import {
+  AVATAR_POR_DEFECTO,
+  resolverImagenProducto,
+  resolverUrlArchivo,
+} from "../../utils/mapearProducto.js";
 import {
   actualizarProducto,
   crearProducto,
@@ -18,14 +21,9 @@ import {
 
 const BIO_MAX_LENGTH = 180;
 
-// JS Avatar de respaldo cuando el usuario no tiene foto de perfil.
-const AVATAR_FALLBACK = "https://picsum.photos/seed/avatar1/400/400";
-
 // JS Color de fondo de las iniciales en las listas de seguidores.
 const AVATAR_COLOR = "#32324d";
 
-const STAR_PATH =
-  "M2.86875 14.25L4.0875 8.98125L0 5.4375L5.4 4.96875L7.5 0L9.6 4.96875L15 5.4375L10.9125 8.98125L12.1313 14.25L7.5 11.4563L2.86875 14.25Z";
 const PENCIL_PATH =
   "M1.66667 13.3333H2.85417L11 5.1875L9.8125 4L1.66667 12.1458V13.3333ZM0 15V11.4583L11 0.479167C11.1667 0.326389 11.3507 0.208333 11.5521 0.125C11.7535 0.0416667 11.9653 0 12.1875 0C12.4097 0 12.625 0.0416667 12.8333 0.125C13.0417 0.208333 13.2222 0.333333 13.375 0.5L14.5208 1.66667C14.6875 1.81944 14.809 2 14.8854 2.20833C14.9618 2.41667 15 2.625 15 2.83333C15 3.05556 14.9618 3.26736 14.8854 3.46875C14.809 3.67014 14.6875 3.85417 14.5208 4.02083L3.54167 15H0ZM13.3333 2.83333L12.1667 1.66667L13.3333 2.83333ZM10.3958 4.60417L9.8125 4L11 5.1875L10.3958 4.60417Z";
 
@@ -34,29 +32,6 @@ const TABS = [
   { id: "favoritos", label: "Favoritos" },
   { id: "resenas", label: "Reseñas" },
 ];
-
-/**
- * Resuelve una ruta de archivo del backend a una URL absoluta.
- * @param {string|null|undefined} ruta Ruta relativa (/uploads/x.jpg) o URL absoluta
- * @returns {string|null} URL lista para usar en un src, o null si no hay ruta
- */
-function resolverUrlArchivo(ruta) {
-  if (!ruta) return null;
-  if (/^https?:\/\//i.test(ruta)) return ruta;
-  return `${API_BASE_URL}${ruta}`;
-}
-
-/**
- * Imagen del producto: usa la del backend o una foto real de respaldo acorde
- * a la categoria del producto (estable por id).
- * @param {string|null|undefined} imagenUrl
- * @param {number|string} id
- * @param {string|undefined} categoria
- * @returns {string}
- */
-function resolverImagenProducto(imagenUrl, id, categoria) {
-  return resolverUrlArchivo(imagenUrl) ?? resolverImagenRespaldoProducto(categoria, id);
-}
 
 /**
  * Formatea un valor monetario en pesos sin decimales.
@@ -125,16 +100,13 @@ export default function PerfilVendedor() {
   const [seguidores, setSeguidores] = useState([]);
   const [siguiendo, setSiguiendo] = useState([]);
   const [activeTab, setActiveTab] = useState("mis-productos");
-  const [sellerRatingSum, setSellerRatingSum] = useState(0);
-  const [sellerRatingCount, setSellerRatingCount] = useState(0);
-  const [sellerHover, setSellerHover] = useState(0);
   const [bioText, setBioText] = useState(
     'Me gusta encontrar productos de buena calidad y apoyar tiendas con excelente atención. Siempre busco compras con buenas recomendaciones."'
   );
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState("");
   const [avatarSrc, setAvatarSrc] = useState(
-    () => resolverUrlArchivo(currentUser?.foto_perfil) ?? AVATAR_FALLBACK
+    () => resolverUrlArchivo(currentUser?.foto_perfil) ?? AVATAR_POR_DEFECTO
   );
   const [avatarError, setAvatarError] = useState(false);
   const [brokenImages, setBrokenImages] = useState({});
@@ -195,17 +167,7 @@ export default function PerfilVendedor() {
     };
   }, []);
 
-  const sellerAverage =
-    sellerRatingCount === 0 ? 5 : sellerRatingSum / sellerRatingCount;
-  const sellerDisplay =
-    sellerHover > 0 ? sellerHover : Math.round(sellerAverage);
   const isMisProductos = activeTab === "mis-productos";
-
-  const setSellerRating = (rating) => {
-    setSellerRatingSum((p) => p + rating);
-    setSellerRatingCount((p) => p + 1);
-    setSellerHover(0);
-  };
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
@@ -395,44 +357,7 @@ export default function PerfilVendedor() {
                     {nombrePerfil}
                   </h1>
 
-                  <div className="flex items-center gap-[6px]">
-                    {[1, 2, 3, 4, 5].map((i) => {
-                      const filled = i <= sellerDisplay;
-                      return (
-                        <button
-                          key={i}
-                          className="flex-shrink-0 transition-all duration-150 hover:scale-125 cursor-pointer"
-                          style={{ width: "18px", height: "17px" }}
-                          onClick={() => setSellerRating(i)}
-                          onMouseEnter={() => setSellerHover(i)}
-                          onMouseLeave={() => setSellerHover(0)}
-                        >
-                          <svg
-                            viewBox="0 0 15 14.25"
-                            fill={
-                              filled
-                                ? "var(--color-brand-orange)"
-                                : "var(--color-surface-container-high)"
-                            }
-                          >
-                            <path d={STAR_PATH} />
-                          </svg>
-                        </button>
-                      );
-                    })}
-                    <span
-                      className="ml-2 font-medium"
-                      style={{
-                        fontFamily: "var(--font-sans)",
-                        fontWeight: 600,
-                        fontSize: "13px",
-                        lineHeight: "16px",
-                        color: "var(--color-brand-muted-text)",
-                      }}
-                    >
-                      {sellerAverage.toFixed(1)}
-                    </span>
-                  </div>
+                  {/* Sin rating: el backend no expone un promedio real que este perfil pueda mostrar (RF107). */}
                 </div>
 
                 <div className="flex items-center gap-3 flex-wrap">

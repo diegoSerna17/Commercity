@@ -31,6 +31,7 @@ import {
   clearCurrentUser,
 } from "../../api/client.js";
 import { cerrarSesion } from "../../services/usuarios.service.js";
+import { AVATAR_POR_DEFECTO } from "../../utils/mapearProducto.js";
 
 // JS Configuracion de secciones de navegacion con nombre, icono y ruta.
 // M-22: los items con `roles` solo se muestran a esos roles.
@@ -169,7 +170,7 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
             <img
               alt="Usuario"
               className="w-full h-full object-cover"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqMhoV6Qxd6R46I1ZtAFlf5n_DO_I13Qm9yS5Vf_rKjen_gSD4D1eGs_IGsY9mYZicvUnBWImsdYyPEJJxxwSAuS694ltHi4ESaDFRk1CRgTTI3vp68l_W_dEJa-EVHsN3rm41cm3nqymh-KPqn_UMthgkmjFf1_p430Ewa8M_OCwbYgz_0Z7Dayu6Afj_13iTxnn1B7NKHy-nPa3ssguZioMGoR67bc1IE8JHHoPgwBwaaDagvUGxDojSh8e0QMhlC_nzp3n8og"
+              src={AVATAR_POR_DEFECTO}
             />
           </div>
           <div className="flex-grow min-w-0">
