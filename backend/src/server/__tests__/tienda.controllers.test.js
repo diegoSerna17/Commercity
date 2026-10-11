@@ -6,12 +6,12 @@ import { encryptSensitive } from "../utils/crypto.js";
 // Mock del pool MySQL (sin BD real).
 vi.mock("mysql2/promise", () => {
   // query envoltorio: responde de forma transparente la consulta que authRequired
-  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // hace por DEF-01 ("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1") y delega
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1 }], undefined]);
+    if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -32,15 +32,13 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto_test";
 const { __pool: pool } = await import("mysql2/promise");
 const { default: app } = await import("../app.js");
 
-const tokenVendedor = jwt.sign(
-  { id: 3, email: "vendedor@test.com" },
+const tokenVendedor = jwt.sign({ id: 3, email: "vendedor@test.com" , token_version: 0},
   process.env.JWT_SECRET,
-  { expiresIn: "1h" }
+  { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
-const tokenComprador = jwt.sign(
-  { id: 7, email: "comprador@test.com" },
+const tokenComprador = jwt.sign({ id: 7, email: "comprador@test.com" , token_version: 0},
   process.env.JWT_SECRET,
-  { expiresIn: "1h" }
+  { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
 
 const filaBancaria = {

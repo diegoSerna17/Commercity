@@ -72,6 +72,14 @@ function derivarClaveProposito(secreto, proposito) {
 /** Clave efectiva de firma JWT (dominio "jwt"). */
 export const JWT_SIGNING_KEY = derivarClaveProposito(JWT_SECRET, "jwt");
 
+/**
+ * B-4 (TASK-4.3): emisor y audiencia fijos del JWT. Se firman SIEMPRE y se
+ * verifican SIEMPRE, de modo que un token emitido para otro servicio (u otro
+ * entorno) con el mismo secreto no sea aceptado aqui.
+ */
+export const JWT_ISSUER = process.env.JWT_ISSUER || "commercity-api";
+export const JWT_AUDIENCE = process.env.JWT_AUDIENCE || "commercity-clients";
+
 if (process.env.NODE_ENV === "production") {
     const claveCrypto = process.env.CRYPTO_SECRET_KEY;
     if (!claveCrypto) {

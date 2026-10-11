@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import pool from "../config/db.js";
 import pkg from "../../../package.json" with { type: "json" };
-import { JWT_SECRET } from "../utils/config.js";
+import { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } from "../utils/config.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { enviarCorreoRecuperacion } from "../utils/mailer.js";
 import { destinoPedidosVendedor } from "./admin/pedidos.controllers.js";
@@ -101,10 +101,16 @@ export const register = async (req, res) => {
             await connection.commit();
 
             // Fix 3.1: secreto validado, nunca un fallback hardcodeado.
+            // M-8/B-4: HS256 + iss/aud + token_version (usuario nuevo -> 0).
             const token = jwt.sign(
-                { id: usuarioId, email },
+                { id: usuarioId, email, token_version: 0 },
                 JWT_SECRET,
-                { expiresIn: "7d" }
+                {
+                    algorithm: "HS256",
+                    expiresIn: "7d",
+                    issuer: JWT_ISSUER,
+                    audience: JWT_AUDIENCE,
+                }
             );
 
             emitirCookieSesion(res, token);
@@ -139,7 +145,8 @@ export const login = async (req, res) => {
 
     try {
         const [usuarios] = await pool.query(
-            `SELECT u.id, u.email, u.password, u.nombre_completo, u.foto_perfil, u.activo
+            `SELECT u.id, u.email, u.password, u.nombre_completo, u.foto_perfil, u.activo,
+                    u.token_version
              FROM usuarios u WHERE u.email = ?`,
             [email]
         );
@@ -167,10 +174,16 @@ export const login = async (req, res) => {
         );
 
         // Fix 3.1: secreto validado, nunca un fallback hardcodeado.
+        // M-8/B-4: HS256 + iss/aud + token_version vigente del usuario.
         const token = jwt.sign(
-            { id: usuario.id, email: usuario.email },
+            { id: usuario.id, email: usuario.email, token_version: Number(usuario.token_version || 0) },
             JWT_SECRET,
-            { expiresIn: "7d" }
+            {
+                algorithm: "HS256",
+                expiresIn: "7d",
+                issuer: JWT_ISSUER,
+                audience: JWT_AUDIENCE,
+            }
         );
 
         emitirCookieSesion(res, token);
@@ -191,9 +204,8 @@ export const login = async (req, res) => {
 };
 
 // ========================= LOGOUT (RF2) =========================
-// Fix 3.3: revoca el JWT en la lista negra tokens_invalidados (la ruta exige
-// token via authRequired). INSERT IGNORE hace idempotente un doble logout.
-export const logout = async (req, res) => {
+/** Extrae el JWT de la peticion: header Bearer o cookie httpOnly. */
+function tokenDeLaPeticion(req) {
     let token = (req.headers.authorization || "").replace("Bearer ", "");
     if (!token && req.headers.cookie) {
         const m = String(req.headers.cookie).match(/(?:^|;\s*)token=([^;]+)/);
@@ -201,16 +213,45 @@ export const logout = async (req, res) => {
             try { token = decodeURIComponent(m[1]); } catch { token = m[1]; }
         }
     }
-    if (token) {
-        const hash = crypto.createHash("sha256").update(token).digest("hex");
-        await pool.query(
-            "INSERT IGNORE INTO tokens_invalidados (token_hash, expira_en) VALUES (?, DATE_ADD(NOW(), INTERVAL 7 DAY))",
-            [hash]
-        );
-    }
+    return token;
+}
+
+/** Revoca un token en la lista negra (idempotente via INSERT IGNORE). */
+async function revocarToken(token) {
+    if (!token) return;
+    const hash = crypto.createHash("sha256").update(token).digest("hex");
+    await pool.query(
+        "INSERT IGNORE INTO tokens_invalidados (token_hash, expira_en) VALUES (?, DATE_ADD(NOW(), INTERVAL 7 DAY))",
+        [hash]
+    );
+}
+
+// Fix 3.3: revoca el JWT en la lista negra tokens_invalidados (la ruta exige
+// token via authRequired). INSERT IGNORE hace idempotente un doble logout.
+export const logout = async (req, res) => {
+    await revocarToken(tokenDeLaPeticion(req));
     // F4: limpia la cookie httpOnly en el logout.
     res.clearCookie("token", { httpOnly: true, sameSite: "lax", path: "/" });
     return successResponse(res, "Sesión cerrada correctamente");
+};
+
+// ============ CERRAR TODAS LAS SESIONES (M-8/TASK-4.3) ==========
+// Incrementa token_version: TODOS los JWT emitidos antes (Bearer o cookie)
+// quedan invalidos. Ademas revoca el token actual en la lista negra y limpia
+// la cookie del navegador.
+export const cerrarTodasLasSesiones = async (req, res) => {
+    try {
+        await pool.query(
+            "UPDATE usuarios SET token_version = token_version + 1 WHERE id = ?",
+            [req.userId]
+        );
+        await revocarToken(tokenDeLaPeticion(req));
+        res.clearCookie("token", { httpOnly: true, sameSite: "lax", path: "/" });
+        return successResponse(res, "Todas las sesiones fueron cerradas");
+    } catch (error) {
+        console.error("Error en cerrarTodasLasSesiones:", error);
+        return errorResponse(res, "Error interno del servidor", 500);
+    }
 };
 
 // ===================== PERFIL (autenticado) =====================
@@ -381,9 +422,11 @@ export const restablecerPassword = async (req, res) => {
 
         const passwordHash = await bcrypt.hash(password, 10);
 
-        // Actualizar contraseña y limpiar token (el link muere: un solo uso)
+        // Actualizar contraseña y limpiar token (el link muere: un solo uso).
+        // M-8: el reset incrementa token_version y sella password_changed_at:
+        // todas las sesiones emitidas antes quedan invalidas de inmediato.
         await pool.query(
-            "UPDATE usuarios SET password = ?, token_recuperacion = NULL, token_recuperacion_expiracion = NULL WHERE id = ?",
+            "UPDATE usuarios SET password = ?, token_version = token_version + 1, password_changed_at = NOW(), token_recuperacion = NULL, token_recuperacion_expiracion = NULL WHERE id = ?",
             [passwordHash, usuario.id]
         );
 
@@ -518,9 +561,10 @@ export const eliminarCuentaComprador = async (req, res) => {
             });
         }
 
-        // Desactivacion logica de la cuenta
+        // Desactivacion logica de la cuenta. M-8: incrementa token_version
+        // (todas las sesiones del usuario quedan invalidas al instante).
         await conn.query(
-            "UPDATE usuarios SET activo = 0 WHERE id = ?",
+            "UPDATE usuarios SET activo = 0, token_version = token_version + 1 WHERE id = ?",
             [compradorId]
         );
         // Suspender sus productos publicados si es vendedor (RF54/RF74)

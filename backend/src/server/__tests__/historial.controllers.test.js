@@ -4,13 +4,13 @@ import express from "express";
 
 // Mock del pool para no depender de la BD real.
 // La query es un envoltorio: responde la consulta que authRequired hace por DEF-01
-// ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega el resto a la
+// ("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1") y delega el resto a la
 // query interna que configura cada test.
 vi.mock("../config/db.js", () => {
     const queryInterna = vi.fn();
     const query = vi.fn((sql, ...resto) => {
-        if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
-            return Promise.resolve([[{ activo: 1 }], undefined]);
+        if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
+            return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
         }
         return queryInterna(sql, ...resto);
     });
@@ -31,7 +31,7 @@ const app = express();
 app.use(express.json());
 app.use("/api/historial", historialRouter);
 
-const tokenValido = jwt.sign({ id: 7, email: "test@test.com" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+const tokenValido = jwt.sign({ id: 7, email: "test@test.com" , token_version: 0}, process.env.JWT_SECRET, { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" });
 
 const filasMock = [
     {
@@ -75,11 +75,12 @@ describe("GET /api/historial/compras", () => {
         expect(res.body.success).toBe(false);
     });
 
-    it("deberia devolver 403 con token invalido", async () => {
+    it("deberia devolver 401 con token invalido (M-8: 401 unificado)", async () => {
         const res = await request(app)
             .get("/api/historial/compras")
             .set("Authorization", "Bearer token_falso_123");
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(401);
+        expect(res.body.error.code).toBe("UNAUTHORIZED");
         expect(res.body.success).toBe(false);
     });
 

@@ -33,18 +33,16 @@ app.get("/protegido", authRequired, (req, res) => {
     res.json({ success: true, data: { userId: req.userId, userEmail: req.userEmail } });
 });
 
-const tokenValido = jwt.sign(
-    { id: 7, email: "test@test.com" },
+const tokenValido = jwt.sign({ id: 7, email: "test@test.com" , token_version: 0},
     SECRETO,
-    { expiresIn: "1h" }
+    { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
 
 // JWT realmente vencido: jsonwebtoken acepta expiresIn numerico (segundos),
 // por eso -60 deja exp = ahora - 60 s y verify lanza TokenExpiredError.
-const tokenExpirado = jwt.sign(
-    { id: 7, email: "test@test.com" },
+const tokenExpirado = jwt.sign({ id: 7, email: "test@test.com" , token_version: 0},
     SECRETO,
-    { expiresIn: -60 }
+    { issuer: "commercity-api", audience: "commercity-clients", expiresIn: -60 }
 );
 
 beforeEach(() => {
@@ -54,8 +52,8 @@ beforeEach(() => {
         if (typeof sql === "string" && sql.includes("tokens_invalidados")) {
             return [[], undefined];
         }
-        if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios")) {
-            return [[{ activo: 1 }], undefined];
+        if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios")) {
+            return [[{ activo: 1, token_version: 0 }], undefined];
         }
         return [[], undefined];
     });
@@ -88,7 +86,7 @@ describe("authRequired (JWT por header o cookie)", () => {
             [expect.any(String)]
         );
         expect(pool.query).toHaveBeenCalledWith(
-            expect.stringContaining("SELECT activo FROM usuarios"),
+            expect.stringContaining("SELECT activo, token_version FROM usuarios"),
             [7]
         );
     });
@@ -108,19 +106,85 @@ describe("authRequired (JWT por header o cookie)", () => {
         );
     });
 
-    it("usa el valor crudo de la cookie si el percent-encoding es invalido (403)", async () => {
+    it("M-8: token invalido responde 401 uniforme (no 403) con el valor crudo de la cookie", async () => {
         // decodeURIComponent("abc%ZZ") lanza URIError -> fallback al valor crudo,
-        // que no es un JWT valido y cae en JsonWebTokenError (403).
+        // que no es un JWT valido y cae en JsonWebTokenError (401, no 403).
         const res = await request(app)
             .get("/protegido")
             .set("Cookie", "token=abc%ZZ");
 
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(401);
         expect(res.body).toEqual({
             success: false,
-            error: { code: "FORBIDDEN", message: "Token inválido" },
+            error: { code: "UNAUTHORIZED", message: "Token inválido" },
         });
         expect(pool.query).not.toHaveBeenCalled();
+    });
+
+    it("M-8: rechaza un token con firma manipulada (401)", async () => {
+        const manipulados = tokenValido.slice(0, -3) + "abc";
+        const res = await request(app)
+            .get("/protegido")
+            .set("Authorization", `Bearer ${manipulados}`);
+
+        expect(res.status).toBe(401);
+        expect(res.body.error.code).toBe("UNAUTHORIZED");
+        expect(pool.query).not.toHaveBeenCalled();
+    });
+
+    it("M-8/B-4: rechaza alg:none (401, algorithms fijo HS256)", async () => {
+        // Token sin firma con alg none: jwt.verify debe rechazarlo.
+        const header = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
+        const payload = Buffer.from(JSON.stringify({
+            id: 7, email: "test@test.com", token_version: 0,
+            iss: "commercity-api", aud: "commercity-clients",
+        })).toString("base64url");
+        const res = await request(app)
+            .get("/protegido")
+            .set("Authorization", `Bearer ${header}.${payload}.`);
+
+        expect(res.status).toBe(401);
+        expect(res.body.error.message).toBe("Token inválido");
+        expect(pool.query).not.toHaveBeenCalled();
+    });
+
+    it("M-8/B-4: rechaza un token con otro issuer/audience (401)", async () => {
+        const tokenOtroEmisor = jwt.sign(
+            { id: 7, email: "test@test.com", token_version: 0 },
+            SECRETO,
+            { issuer: "otro-servicio", audience: "commercity-clients", expiresIn: "1h" }
+        );
+        const res = await request(app)
+            .get("/protegido")
+            .set("Authorization", `Bearer ${tokenOtroEmisor}`);
+
+        expect(res.status).toBe(401);
+        expect(res.body.error.code).toBe("UNAUTHORIZED");
+        expect(pool.query).not.toHaveBeenCalled();
+    });
+
+    it("M-8: rechaza el token si su token_version ya no coincide con la BD (401)", async () => {
+        // El usuario subio de version (reset de contrasena / baneo / cierre de
+        // sesiones): el token viejo (version 0) deja de servir.
+        pool.query.mockImplementation((sql) => {
+            if (typeof sql === "string" && sql.includes("tokens_invalidados")) {
+                return [[], undefined];
+            }
+            if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios")) {
+                return [[{ activo: 1, token_version: 1 }], undefined];
+            }
+            return [[], undefined];
+        });
+
+        const res = await request(app)
+            .get("/protegido")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(401);
+        expect(res.body).toEqual({
+            success: false,
+            error: { code: "UNAUTHORIZED", message: "Sesión expirada. Inicia sesión de nuevo" },
+        });
     });
 
     it("responde 401 USER_DISABLED si el usuario esta desactivado (activo = 0)", async () => {
@@ -128,7 +192,7 @@ describe("authRequired (JWT por header o cookie)", () => {
             if (typeof sql === "string" && sql.includes("tokens_invalidados")) {
                 return [[], undefined];
             }
-            if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios")) {
+            if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios")) {
                 return [[{ activo: 0 }], undefined];
             }
             return [[], undefined];
@@ -147,7 +211,7 @@ describe("authRequired (JWT por header o cookie)", () => {
         // La consulta de activo SI se ejecuta (devuelve activo=0); lo que
         // falla es la verificacion de estado, no la consulta.
         expect(pool.query).toHaveBeenCalledWith(
-            expect.stringContaining("SELECT activo FROM usuarios"),
+            expect.stringContaining("SELECT activo, token_version FROM usuarios"),
             [7]
         );
     });
@@ -157,7 +221,7 @@ describe("authRequired (JWT por header o cookie)", () => {
             if (typeof sql === "string" && sql.includes("tokens_invalidados")) {
                 return [[], undefined];
             }
-            if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios")) {
+            if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios")) {
                 return [[], undefined]; // sin filas: usuario borrado/inexistente
             }
             return [[], undefined];

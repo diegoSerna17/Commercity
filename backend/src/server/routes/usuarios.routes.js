@@ -6,6 +6,7 @@ import {
     register,
     login,
     logout,
+    cerrarTodasLasSesiones,
     getPerfil,
     cambiarRol,
     solicitarRecuperacion,
@@ -48,6 +49,8 @@ router.post("/reset-password", validate(resetSchema), restablecerPassword);
 // ===== Rutas protegidas (requieren Bearer Token) =====
 // Fix 3.3: logout exige token para poder revocarlo (RF2)
 router.post("/logout", authRequired, logout);
+// M-8: cierra TODAS las sesiones (incrementa token_version).
+router.post("/logout-todas", authRequired, cerrarTodasLasSesiones);
 router.get("/me", authRequired, getPerfil);
 router.patch("/me", authRequired, actualizarPerfil);
 router.patch("/me/rol", authRequired, validate(cambiarRolSchema), cambiarRol);

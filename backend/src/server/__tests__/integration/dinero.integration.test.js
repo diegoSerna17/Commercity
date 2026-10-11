@@ -48,7 +48,7 @@ describe.skipIf(!habilitado)("integracion MySQL real: dinero y concurrencia", ()
   const pedidoIds = [];
 
   const tokenDe = (id, email) =>
-    jwt.sign({ id, email }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    jwt.sign({ id, email , token_version: 0}, process.env.JWT_SECRET, { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" });
 
   const crearUsuario = async (etiqueta) => {
     const email = `${marca}_${etiqueta}@test.local`;

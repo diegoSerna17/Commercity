@@ -38,7 +38,7 @@ async function aplicarBaneo(conn, id) {
     [id]
   );
   const [result] = await conn.query(
-    "UPDATE usuarios SET activo = 0 WHERE id = ?",
+    "UPDATE usuarios SET activo = 0, token_version = token_version + 1 WHERE id = ?",
     [id]
   );
   if (result.affectedRows === 0) throw new Error("USUARIO_NO_ENCONTRADO");

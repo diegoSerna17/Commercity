@@ -17,8 +17,10 @@ const errores = [];
 if (doc.openapi !== "3.1.0") errores.push(`openapi debe ser 3.1.0 (es ${doc.openapi})`);
 const numPaths = Object.keys(doc.paths).length;
 const numOps = Object.values(doc.paths).reduce((n, item) => n + Object.keys(item).length, 0);
-if (operaciones.length !== 72) errores.push(`el registro debe tener 72 operaciones (tiene ${operaciones.length})`);
-if (numOps !== 72) errores.push(`el documento debe tener 72 operaciones (tiene ${numOps}, ${numPaths} paths)`);
+// Actualizar SOLO al agregar/quitar rutas de forma intencional (guard anti-drift).
+const OPERACIONES_ESPERADAS = 73; // + logout-todas (TASK-4.3, M-8)
+if (operaciones.length !== OPERACIONES_ESPERADAS) errores.push(`el registro debe tener ${OPERACIONES_ESPERADAS} operaciones (tiene ${operaciones.length})`);
+if (numOps !== OPERACIONES_ESPERADAS) errores.push(`el documento debe tener ${OPERACIONES_ESPERADAS} operaciones (tiene ${numOps}, ${numPaths} paths)`);
 const ids = new Set();
 for (const op of operaciones) {
   if (!op.operationId || !op.summary || !op.responses || Object.keys(op.responses).length === 0) {

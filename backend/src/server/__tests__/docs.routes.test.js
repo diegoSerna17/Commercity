@@ -5,13 +5,13 @@ import app from "../app.js";
 // Rutas de documentacion OpenAPI (Fase 3 docs-api): no tocan la BD,
 // solo leen docs/api/ del disco. Gate DOCS_ENABLED (on fuera de produccion).
 describe("Documentacion OpenAPI (/api/openapi.json y /api/docs)", () => {
-  it("sirve el documento OpenAPI 3.1 con las 72 operaciones", async () => {
+  it("sirve el documento OpenAPI 3.1 con las 73 operaciones", async () => {
     const res = await request(app).get("/api/openapi.json");
     expect(res.status).toBe(200);
     expect(res.body.openapi).toBe("3.1.0");
     expect(res.body.info.title).toBe("CommerCity API");
     const numOps = Object.values(res.body.paths).reduce((n, item) => n + Object.keys(item).length, 0);
-    expect(numOps).toBe(72);
+    expect(numOps).toBe(73);
   });
 
   it("login es publico y /me exige bearer (seguridad por operacion)", async () => {

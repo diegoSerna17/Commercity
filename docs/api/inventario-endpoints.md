@@ -4,6 +4,11 @@
 > Fuente: lectura directa de `backend/src/server/routes/*.js`, `backend/src/server/app.js` (montajes) y `backend/src/server/controllers/**`.
 > Fecha: 2026-10-08 · Rama: `feature/docs-api-zod-openapi` · Backend: Express 5 + Zod 4.6.5.
 > Total: **72 endpoints** en 13 routers.
+>
+> Addendum TASK-4.3 (M-8, rama `fix/aud-p1-backend`): se agrega
+> `POST /api/usuarios/logout-todas` (Bearer; cierra todas las sesiones
+> incrementando `token_version`). Total vigente: **73 endpoints**; aparece en
+> `openapi.json`/`entidades.md` regenerados.
 
 Leyenda de estado Zod:
 

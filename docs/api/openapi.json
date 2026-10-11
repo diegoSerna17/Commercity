@@ -486,6 +486,43 @@
         ]
       }
     },
+    "/api/usuarios/logout-todas": {
+      "post": {
+        "operationId": "cerrarTodasLasSesiones",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Cerrar todas mis sesiones",
+        "description": "Incrementa token_version: invalida todos los JWT emitidos antes (M-8). Exige token.",
+        "responses": {
+          "200": {
+            "description": "Todas las sesiones fueron cerradas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/usuarios/me": {
       "get": {
         "operationId": "obtenerMiPerfil",

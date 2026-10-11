@@ -7,12 +7,12 @@ import { enviarCorreoRecuperacion } from "../utils/mailer.js";
 // Mock de mysql2/promise: createPool devuelve un pool simulado (sin BD real).
 vi.mock("mysql2/promise", () => {
   // query envoltorio: responde de forma transparente la consulta que authRequired
-  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // hace por DEF-01 ("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1") y delega
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1 }], undefined]);
+    if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -53,10 +53,9 @@ const { default: app } = await import("../app.js");
 const { adminGetDatos } = await import("../controllers/usuarios.controllers.js");
 
 // Token compartido para las rutas protegidas del modulo de autenticacion.
-const token = jwt.sign(
-  { id: 7, email: "test@test.com" },
+const token = jwt.sign({ id: 7, email: "test@test.com" , token_version: 0},
   process.env.JWT_SECRET,
-  { expiresIn: "1h" }
+  { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
 
 beforeEach(() => {
@@ -297,6 +296,26 @@ describe("POST /api/usuarios/login (RF2 - fix 3.1)", () => {
     expect(res.body.data.user.roles).toEqual(["comprador"]);
   });
 
+  it("M-8/B-4: el token de login lleva token_version y iss/aud (revocable)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("FROM usuarios u WHERE u.email"))
+        return [[{ id: 7, email: "compra@test.com", password: "$2b$10$x", nombre_completo: "Comprador", foto_perfil: null, activo: 1, token_version: 3 }], undefined];
+      if (sql.includes("FROM roles r"))
+        return [[{ nombre: "comprador" }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .post("/api/usuarios/login")
+      .send({ email: "compra@test.com", password: "SuperPass123" });
+
+    expect(res.status).toBe(200);
+    const payload = jwt.decode(res.body.data.token);
+    expect(payload.token_version).toBe(3);
+    expect(payload.iss).toBe("commercity-api");
+    expect(payload.aud).toBe("commercity-clients");
+  });
+
   it("rechaza email inexistente (401)", async () => {
     pool.query.mockResolvedValue([[], undefined]);
 
@@ -357,13 +376,14 @@ describe("GET /api/usuarios/me (protegido)", () => {
     expect(res.body.success).toBe(false);
   });
 
-  it("rechaza token invalido (403)", async () => {
+  it("rechaza token invalido (401 unificado, M-8)", async () => {
     const res = await request(app)
       .get("/api/usuarios/me")
       .set("Authorization", "Bearer token_falso_123456");
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe("UNAUTHORIZED");
   });
 
   it("devuelve el perfil del usuario autenticado con roles", async () => {
@@ -445,6 +465,36 @@ describe("POST /api/usuarios/logout (RF2 - fix 3.3 revocacion de token)", () => 
 
     expect(res.status).toBe(401);
     expect(res.body.error.message).toContain("revocado");
+  });
+});
+
+describe("POST /api/usuarios/logout-todas (M-8 - cerrar todas las sesiones)", () => {
+  it("rechaza sin token (401)", async () => {
+    const res = await request(app).post("/api/usuarios/logout-todas");
+    expect(res.status).toBe(401);
+  });
+
+  it("incrementa token_version, revoca el token actual y limpia la cookie (200)", async () => {
+    pool.query.mockResolvedValue([[], undefined]);
+
+    const res = await request(app)
+      .post("/api/usuarios/logout-todas")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    // M-8: todos los JWT emitidos antes quedan invalidos
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE usuarios SET token_version = token_version + 1 WHERE id = ?"),
+      [7]
+    );
+    // Ademas revoca el token actual en la lista negra y limpia la cookie
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT IGNORE INTO tokens_invalidados"),
+      [expect.any(String)]
+    );
+    const cookies = res.headers["set-cookie"] || [];
+    expect(cookies.some((c) => c.startsWith("token=;"))).toBe(true);
   });
 });
 
@@ -712,6 +762,9 @@ describe("POST /api/usuarios/reset-password (RF4 - token de un solo uso)", () =>
     const updateCall = pool.query.mock.calls.find(([sql]) =>
       sql.includes("token_recuperacion = NULL"));
     expect(updateCall).toBeTruthy();
+    // M-8: el reset revoca todas las sesiones previas (sube token_version)
+    expect(updateCall[0]).toContain("token_version = token_version + 1");
+    expect(updateCall[0]).toContain("password_changed_at = NOW()");
   });
 
   it("rechaza contrasena corta (400 - zod)", async () => {
@@ -816,10 +869,9 @@ describe("DELETE /api/usuarios/cuenta (RF40 - comprador elimina su cuenta)", () 
     rollback: vi.fn(),
     release: vi.fn(),
   };
-  const tokenCuenta = jwt.sign(
-    { id: 5, email: "comprador@test.com" },
+  const tokenCuenta = jwt.sign({ id: 5, email: "comprador@test.com" , token_version: 0},
     process.env.JWT_SECRET,
-    { expiresIn: "1h" }
+    { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
   );
 
   beforeEach(() => {
@@ -866,7 +918,7 @@ describe("DELETE /api/usuarios/cuenta (RF40 - comprador elimina su cuenta)", () 
       expect.anything()
     );
     expect(conn.query).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE usuarios SET activo = 0 WHERE id = ?"),
+      expect.stringContaining("UPDATE usuarios SET activo = 0, token_version = token_version + 1 WHERE id = ?"),
       [5]
     );
     expect(conn.query).toHaveBeenCalledWith(

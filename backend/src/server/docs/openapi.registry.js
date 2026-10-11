@@ -162,6 +162,13 @@ export const operaciones = [
     responses: ok("Sesion cerrada.", { ...R401 }),
   },
   {
+    method: "post", path: "/api/usuarios/logout-todas", operationId: "cerrarTodasLasSesiones", tag: "Usuarios",
+    summary: "Cerrar todas mis sesiones",
+    description: "Incrementa token_version: invalida todos los JWT emitidos antes (M-8). Exige token.",
+    auth: true,
+    responses: ok("Todas las sesiones fueron cerradas.", { ...R401 }),
+  },
+  {
     method: "get", path: "/api/usuarios/me", operationId: "obtenerMiPerfil", tag: "Usuarios",
     summary: "Obtener mi perfil",
     description: "Perfil del usuario autenticado.",

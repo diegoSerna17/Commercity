@@ -5,12 +5,12 @@ import jwt from "jsonwebtoken";
 // Mock del pool MySQL (sin BD real).
 vi.mock("mysql2/promise", () => {
   // query envoltorio: responde de forma transparente la consulta que authRequired
-  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // hace por DEF-01 ("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1") y delega
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1 }], undefined]);
+    if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -32,15 +32,13 @@ process.env.CRYPTO_SECRET_KEY = process.env.CRYPTO_SECRET_KEY || "clave_test_cif
 const { __pool: pool } = await import("mysql2/promise");
 const { default: app } = await import("../app.js");
 
-const tokenAdmin = jwt.sign(
-  { id: 471, email: "admin01@commercity.com" },
+const tokenAdmin = jwt.sign({ id: 471, email: "admin01@commercity.com" , token_version: 0},
   process.env.JWT_SECRET,
-  { expiresIn: "1h" }
+  { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
-const tokenVendedor = jwt.sign(
-  { id: 2, email: "juan.giraldo@commercity.com" },
+const tokenVendedor = jwt.sign({ id: 2, email: "juan.giraldo@commercity.com" , token_version: 0},
   process.env.JWT_SECRET,
-  { expiresIn: "1h" }
+  { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
 
 // Fila cifrada simulada de datos_bancarios (iv:tag:data base64url)
@@ -61,7 +59,7 @@ beforeEach(() => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
-      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("SELECT activo, token_version FROM usuarios")) return [[{ activo: 1, token_version: 0 }], undefined];
       return [[], undefined];
     });
     // getConnection para upsert
