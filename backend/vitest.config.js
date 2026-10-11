@@ -13,6 +13,9 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/server/**/*.js"],
+      // El entrypoint (app.listen) no se ejerce en las pruebas: el arranque y
+      // toda la app viven en app.js (100% cubierto).
+      exclude: ["src/server/server.js"],
       thresholds: {
         lines: 60,
         functions: 60,

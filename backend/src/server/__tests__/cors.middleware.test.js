@@ -36,6 +36,7 @@ afterEach(() => {
   delete process.env.DB_USER;
   delete process.env.DB_PASSWORD;
   delete process.env.ALLOW_DESKTOP_ORIGINS;
+  delete process.env.TRUST_PROXY;
   process.env.FRONTEND_URL = "http://localhost:5173";
   vi.resetModules();
 });
@@ -110,6 +111,14 @@ describe("CORS (origenes permitidos: frontend web + WebView Capacitor)", () => {
       .toBe("https://commercity.example");
     expect((await preflight("https://admin.commercity.example", appProd)).headers["access-control-allow-origin"])
       .toBe("https://admin.commercity.example");
+  });
+
+  it("M-9/H7: TRUST_PROXY por env configura el trust proxy de Express", async () => {
+    process.env.TRUST_PROXY = "1";
+    vi.resetModules();
+    const { default: appTrust } = await import("../app.js");
+
+    expect(appTrust.get("trust proxy")).toBe(1);
   });
 
   it("no refleja un origen desconocido (https://malicioso.com)", async () => {

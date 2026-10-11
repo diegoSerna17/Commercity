@@ -98,4 +98,17 @@ describe("utils/config.js - validacion de secretos (fix 3.1, TASK-2.6)", () => {
         expect(CRYPTO_SECRET_KEY).toBe("c".repeat(48));
         expect(CRYPTO_EFFECTIVE_KEY).toMatch(/^[a-f0-9]{64}$/);
     });
+
+    it("en produccion rechaza una CRYPTO_SECRET_KEY de ejemplo o corta (exit 1)", async () => {
+        const { exitSpy, errorSpy } = mockFatal();
+        process.env.NODE_ENV = "production";
+        process.env.JWT_SECRET = "j".repeat(48);
+        process.env.CRYPTO_SECRET_KEY = "changeme";
+        vi.resetModules();
+
+        await import("../utils/config.js");
+
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("CRYPTO_SECRET_KEY"));
+        expect(exitSpy).toHaveBeenCalledWith(1);
+    });
 });
