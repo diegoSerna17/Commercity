@@ -311,7 +311,7 @@ export const operaciones = [
   {
     method: "get", path: "/api/tienda/mi-cuenta-bancaria", operationId: "obtenerMiCuentaBancaria", tag: "Tienda",
     summary: "Ver mi cuenta bancaria",
-    description: "Cuenta bancaria del vendedor (datos sensibles, RNF11 cifrado).",
+    description: "Cuenta bancaria del vendedor ENMASCARADA por defecto (B-5: nunca el numero completo).",
     auth: true, roles: ["vendedor"],
     responses: ok("Cuenta bancaria.", { ...R401, ...R403, ...R404 }),
   },
@@ -325,14 +325,14 @@ export const operaciones = [
   {
     method: "post", path: "/api/tienda/mi-cuenta-bancaria", operationId: "crearMiCuentaBancaria", tag: "Tienda",
     summary: "Crear mi cuenta bancaria",
-    description: "Alta de cuenta bancaria del vendedor (RNF9/RNF11).",
+    description: "Alta de cuenta bancaria del vendedor (RNF9/RNF11). La respuesta va enmascarada (B-5).",
     auth: true, roles: ["vendedor"], body: upsertCuentaBancariaSchema,
     responses: creado("Cuenta bancaria creada.", { ...R400, ...R401, ...R403 }),
   },
   {
     method: "put", path: "/api/tienda/mi-cuenta-bancaria", operationId: "actualizarMiCuentaBancaria", tag: "Tienda",
     summary: "Actualizar mi cuenta bancaria",
-    description: "Actualiza la cuenta bancaria del vendedor.",
+    description: "Actualiza la cuenta bancaria del vendedor. La respuesta va enmascarada (B-5).",
     auth: true, roles: ["vendedor"], body: upsertCuentaBancariaSchema,
     responses: ok("Cuenta bancaria actualizada.", { ...R400, ...R401, ...R403 }),
   },

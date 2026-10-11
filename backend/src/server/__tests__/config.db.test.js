@@ -49,24 +49,29 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("config/db.js - credenciales y defaults de conexion (H5)", () => {
-  it("produccion con credenciales por defecto: FATAL, exit 1 y advierte", async () => {
+describe("config/db.js - credenciales y defaults de conexion (H5/H9)", () => {
+  it("produccion con credenciales por defecto: FATAL y exit 1", async () => {
     const spies = espiarSalida();
     await importarDb({ NODE_ENV: "production", DB_USER: "", DB_PASSWORD: "" });
 
     expect(spies.error).toHaveBeenCalledWith(expect.stringContaining("FATAL"));
     expect(spies.exit).toHaveBeenCalledWith(1);
-    // La segunda condicion (NODE_ENV !== 'test') tambien aplica en produccion
-    expect(spies.warn).toHaveBeenCalledWith(expect.stringContaining("credenciales por defecto"));
   });
 
-  it("desarrollo con credenciales por defecto: solo advierte, no sale", async () => {
+  it("H9: desarrollo con credenciales por defecto: FATAL y exit 1 (ya no solo advierte)", async () => {
     const spies = espiarSalida();
     await importarDb({ NODE_ENV: "development", DB_USER: "", DB_PASSWORD: "" });
 
-    expect(spies.warn).toHaveBeenCalledWith(expect.stringContaining("credenciales por defecto"));
-    expect(spies.error).not.toHaveBeenCalled();
-    expect(spies.exit).not.toHaveBeenCalled();
+    expect(spies.error).toHaveBeenCalledWith(expect.stringContaining("FATAL"));
+    expect(spies.exit).toHaveBeenCalledWith(1);
+  });
+
+  it("H9: sin NODE_ENV definido con credenciales por defecto: FATAL y exit 1", async () => {
+    const spies = espiarSalida();
+    await importarDb({ NODE_ENV: "", DB_USER: "", DB_PASSWORD: "" });
+
+    expect(spies.error).toHaveBeenCalledWith(expect.stringContaining("FATAL"));
+    expect(spies.exit).toHaveBeenCalledWith(1);
   });
 
   it("test con credenciales por defecto: sin advertencia ni exit", async () => {

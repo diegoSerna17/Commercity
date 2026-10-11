@@ -8,11 +8,11 @@ import {
   buscarCuentaBancaria,
   recifrarCuentaBancariaSiEsLegado,
   cifrarCampo,
-  buildPrivateRecord,
   buildPublicRecord,
   validarCuentaBancaria,
 } from "../utils/cuentaBancaria.js";
 import { registrarAuditoria, ACCIONES } from "../utils/auditoria.js";
+import { escapeLike } from "../utils/sql.js";
 
 // ============================================================================
 // MODULO TIENDA DEL VENDEDOR (integrado desde AVANCES/SPRING 1/ERICK/TIENDA)
@@ -32,7 +32,7 @@ const ESTADOS_VENTA = ["Pendiente", "En camino", "Entregado", "Cancelado"];
 // (A3/TASK-4.10); el re-cifrado perezoso (M-10) se dispara en cada lectura.
 // ─────────────────────────────────────────────────────────────
 
-/** GET /api/tienda/mi-cuenta-bancaria (datos completos, solo el vendedor) */
+/** GET /api/tienda/mi-cuenta-bancaria (vista enmascarada, B-5) */
 export const getMiCuentaBancaria = async (req, res, next) => {
   try {
     let fila = await buscarCuentaBancaria(req.userId);
@@ -40,7 +40,9 @@ export const getMiCuentaBancaria = async (req, res, next) => {
     if (!fila) {
       return successResponse(res, "Sin datos bancarios registrados", { registrado: false, datos: null });
     }
-    return successResponse(res, "Cuenta bancaria obtenida", { registrado: true, datos: buildPrivateRecord(fila) });
+    // B-5 (TASK-4.9): el numero completo JAMAS se devuelve por defecto; la
+    // respuesta expone solo la version enmascarada y los ultimos 4 digitos.
+    return successResponse(res, "Cuenta bancaria obtenida (enmascarada)", { registrado: true, datos: buildPublicRecord(fila) });
   } catch (err) {
     next(err);
   }
@@ -113,7 +115,8 @@ export const upsertMiCuentaBancaria = async (req, res, next) => {
     return successResponse(
       res,
       existing.length === 0 ? "Cuenta bancaria registrada correctamente." : "Cuenta bancaria actualizada correctamente.",
-      { registrado: true, es_actualizacion: existing.length > 0, datos: buildPrivateRecord(fila) },
+      // B-5: la respuesta del upsert tambien va enmascarada.
+      { registrado: true, es_actualizacion: existing.length > 0, datos: buildPublicRecord(fila) },
       existing.length === 0 ? 201 : 200
     );
   } catch (err) {
@@ -164,7 +167,8 @@ export const getHistorialVentas = async (req, res, next) => {
       params.push(String(fecha_hasta));
     }
     if (q && String(q).trim()) {
-      const like = "%" + String(q).trim() + "%";
+      // B-8: los comodines del usuario se escapan (busqueda literal).
+      const like = escapeLike(String(q).trim());
       where.push("(pr.nombre LIKE ? OR uc.nombre_completo LIKE ? OR ps.referencia_pago LIKE ?)");
       params.push(like, like, like);
     }
@@ -190,7 +194,7 @@ export const getHistorialVentas = async (req, res, next) => {
          pr.nombre AS nombre_producto, pr.imagen_url AS url_imagen,
          dp.cantidad, dp.precio_unitario_historico AS valor_unitario,
          dp.subtotal AS valor_subtotal, dp.monto_vendedor, dp.monto_comision,
-         uc.nombre_completo AS nombre_comprador, uc.email AS email_comprador,
+         uc.nombre_completo AS nombre_comprador,
          dp.estado_envio, p.fecha_pedido, p.direccion_envio
        ` + fromJoin + `
        ORDER BY p.fecha_pedido DESC, dp.id DESC

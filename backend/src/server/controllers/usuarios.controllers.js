@@ -59,7 +59,9 @@ function emitirCookieSesion(res, token) {
 
 // ============================ REGISTRO ============================
 export const register = async (req, res) => {
-    const { email, password, nombre_completo } = req.body;
+    // TASK-4.9: body puede faltar; el contrato Zod ya lo rechaza aguas arriba,
+    // pero la desestructuracion no debe romper con 500.
+    const { email, password, nombre_completo } = req.body ?? {};
 
     try {
         // M-15 (TASK-4.7): respuesta UNIFORME. Si el email ya existe NO se
@@ -154,14 +156,19 @@ export const register = async (req, res) => {
                 user: { email, nombre_completo: nombre_completo || null, roles: [] },
             }, 201);
         }
-        console.error("Error en register:", error);
+        console.error("Error en register:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
+// H5/H8 (TASK-4.8): hash bcrypt ficticio para igualar el TIEMPO de login entre
+// una cuenta existente y una inexistente (anti-enumeracion por timing). No
+// corresponde a ninguna contrasena real (se genero de un valor aleatorio).
+const HASH_FICTICIO = "$2b$10$f3bObWmLFI8EVveYGbAXP.4MwdtHCDDHnbQFA4.jGDg5c5RIg5IYS";
+
 // ============================= LOGIN =============================
 export const login = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password } = req.body ?? {};
 
     try {
         const [usuarios] = await pool.query(
@@ -170,18 +177,18 @@ export const login = async (req, res) => {
              FROM usuarios u WHERE u.email = ?`,
             [email]
         );
+
+        // H5: mismo trabajo criptografico exista o no la cuenta.
         if (usuarios.length === 0) {
+            await bcrypt.compare(password ?? "", HASH_FICTICIO);
             return errorResponse(res, "Credenciales inválidas", 401);
         }
 
         const usuario = usuarios[0];
-        // H5 anti-enumeracion: mensaje uniforme tambien para inactivos.
-        if (!usuario.activo) {
-            return errorResponse(res, "Credenciales inválidas", 401);
-        }
-
-        const passwordValido = await bcrypt.compare(password, usuario.password);
-        if (!passwordValido) {
+        const passwordValido = await bcrypt.compare(password ?? "", usuario.password);
+        // H5 anti-enumeracion: mensaje uniforme tambien para inactivos y el
+        // chequeo de estado va DESPUES del compare (mismo tiempo).
+        if (!usuario.activo || !passwordValido) {
             return errorResponse(res, "Credenciales inválidas", 401);
         }
 
@@ -218,7 +225,7 @@ export const login = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error("Error en login:", error);
+        console.error("Error en login:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
@@ -269,7 +276,7 @@ export const cerrarTodasLasSesiones = async (req, res) => {
         res.clearCookie("token", { httpOnly: true, sameSite: "lax", path: "/" });
         return successResponse(res, "Todas las sesiones fueron cerradas");
     } catch (error) {
-        console.error("Error en cerrarTodasLasSesiones:", error);
+        console.error("Error en cerrarTodasLasSesiones:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
@@ -299,14 +306,14 @@ export const getPerfil = async (req, res) => {
             roles: roles.map(r => r.nombre)
         });
     } catch (error) {
-        console.error("Error en getPerfil:", error);
+        console.error("Error en getPerfil:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
 // ============ CAMBIAR ROL (comprador <-> vendedor) =============
 export const cambiarRol = async (req, res) => {
-    const { rol } = req.body;
+    const { rol } = req.body ?? {};
 
     try {
         const rolesValidos = ["comprador", "vendedor"];
@@ -358,14 +365,14 @@ export const cambiarRol = async (req, res) => {
             roles: [rol]
         });
     } catch (error) {
-        console.error("Error en cambiarRol:", error);
+        console.error("Error en cambiarRol:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
 // ================ SOLICITAR RECUPERACION (RF4) =================
 export const solicitarRecuperacion = async (req, res) => {
-    const { email } = req.body;
+    const { email } = req.body ?? {};
 
     try {
         const [usuarios] = await pool.query(
@@ -414,45 +421,38 @@ export const solicitarRecuperacion = async (req, res) => {
             "Si el correo existe, recibirás un enlace para restablecer tu contraseña."
         );
     } catch (error) {
-        console.error("Error en solicitarRecuperacion:", error);
+        console.error("Error en solicitarRecuperacion:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
 // ================ RESTABLECER CONTRASEÑA (RF4) =================
 export const restablecerPassword = async (req, res) => {
-    const { token, password } = req.body;
+    const { token, password } = req.body ?? {};
 
     try {
         // H3: se compara el hash (el token en claro jamas se guardo).
         const tokenHash = typeof token === "string"
             ? crypto.createHash("sha256").update(token).digest("hex")
             : "";
-        // Token de un solo uso y no expirado (RF4: 5 minutos)
-        const [usuarios] = await pool.query(
-            "SELECT id, email FROM usuarios WHERE token_recuperacion = ? AND token_recuperacion_expiracion > NOW()",
-            [tokenHash]
-        );
-
-        if (usuarios.length === 0) {
-            return errorResponse(res, "El enlace es inválido o ya fue utilizado", 400);
-        }
-
-        const usuario = usuarios[0];
 
         const passwordHash = await bcrypt.hash(password, 10);
 
-        // Actualizar contraseña y limpiar token (el link muere: un solo uso).
-        // M-8: el reset incrementa token_version y sella password_changed_at:
-        // todas las sesiones emitidas antes quedan invalidas de inmediato.
-        await pool.query(
-            "UPDATE usuarios SET password = ?, token_version = token_version + 1, password_changed_at = NOW(), token_recuperacion = NULL, token_recuperacion_expiracion = NULL WHERE id = ?",
-            [passwordHash, usuario.id]
+        // B-* (TASK-4.9) + M-8: reset ATOMICO de un solo uso: la guarda del
+        // token vigente viaja en el WHERE, de modo que dos peticiones
+        // simultaneas no pueden reutilizarlo (affectedRows 0 = ya usado o
+        // expirado). Ademas revoca todas las sesiones previas.
+        const [resultado] = await pool.query(
+            "UPDATE usuarios SET password = ?, token_version = token_version + 1, password_changed_at = NOW(), token_recuperacion = NULL, token_recuperacion_expiracion = NULL WHERE token_recuperacion = ? AND token_recuperacion_expiracion > NOW()",
+            [passwordHash, tokenHash]
         );
+        if (Number(resultado?.affectedRows) === 0) {
+            return errorResponse(res, "El enlace es inválido o ya fue utilizado", 400);
+        }
 
         return successResponse(res, "Contraseña restablecida correctamente. Ya puedes iniciar sesión.");
     } catch (error) {
-        console.error("Error en restablecerPassword:", error);
+        console.error("Error en restablecerPassword:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
@@ -466,7 +466,7 @@ export const adminGetDatos = async (req, res) => {
             roles: req.userRoles,
         });
     } catch (error) {
-        console.error("Error en adminGetDatos:", error);
+        console.error("Error en adminGetDatos:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };

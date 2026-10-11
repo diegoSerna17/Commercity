@@ -12,8 +12,8 @@ vi.mock("mysql2/promise", () => {
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -75,7 +75,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Default: auth OK (blacklist vacia) + rol vendedor
   pool.query.mockImplementation((sql) => {
-    if (sql.includes("tokens_invalidados")) return [[], undefined];
+    if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
     if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
     return [[], undefined];
   });
@@ -89,7 +89,7 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
 
   it("rechaza a un comprador (403 - solo vendedor)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
     });
@@ -102,7 +102,7 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
 
   it("devuelve registrado=false cuando no hay datos", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       return [[], undefined]; // datos_bancarios sin filas
     });
@@ -117,7 +117,7 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
 
   it("descifra y devuelve los datos privados del vendedor", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
       return [[], undefined];
@@ -129,13 +129,18 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.registrado).toBe(true);
-    expect(res.body.data.datos.titular_nombre).toBe("Maria Fernanda Lopez");
-    expect(res.body.data.datos.numero_cuenta).toBe("12345678901234");
+    // B-5: por defecto la respuesta va ENMASCARADA (nunca el numero completo)
+    const datos = res.body.data.datos;
+    expect(datos.numero_cuenta_enmascarado).toContain("1234");
+    expect(datos.numero_cuenta).toBeUndefined();
+    expect(datos.titular_nombre_enmascarado).toContain("Lopez");
+    expect(JSON.stringify(res.body)).not.toContain("12345678901234");
+    expect(JSON.stringify(res.body)).not.toContain("Maria Fernanda");
   });
 
   it("devuelve los datos enmascarados (RF122)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
       return [[], undefined];
@@ -162,7 +167,7 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
     };
     let updateParams = null;
     pool.query.mockImplementation((sql, params) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("FROM datos_bancarios")) return [[filaLegado], undefined];
       if (sql.includes("UPDATE datos_bancarios") && sql.includes("SET titular_nombre")) {
@@ -177,10 +182,10 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
       .set("Authorization", `Bearer ${tokenVendedor}`);
 
     expect(res.status).toBe(200);
-    // El dato se descifra con las claves historicas...
-    expect(res.body.data.datos.titular_nombre).toBe("Maria Fernanda Lopez");
-    expect(res.body.data.datos.numero_cuenta).toBe("12345678901234");
-    // ...y se persiste ya en v2 (con AAD) para la proxima rotacion de claves
+    // B-5: la respuesta va enmascarada aunque el descifrado interno funcione...
+    expect(res.body.data.datos.titular_nombre_enmascarado).toContain("Lopez");
+    expect(JSON.stringify(res.body)).not.toContain("Maria Fernanda Lopez");
+    // ...y el re-cifrado se persiste ya en v2 (con AAD) para la proxima rotacion
     expect(updateParams).toBeTruthy();
     expect(updateParams[0].startsWith("v2:")).toBe(true);
     expect(updateParams[1].startsWith("v2:")).toBe(true);
@@ -204,7 +209,7 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
       conn.rollback.mockResolvedValue();
       conn.release.mockResolvedValue();
       pool.query.mockImplementation((sql) => {
-        if (sql.includes("tokens_invalidados")) return [[], undefined];
+        if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
         if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
         if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
         return [[], undefined];
@@ -295,7 +300,7 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
 
   it("GET /api/tienda/ventas usa el vendedor del token y filtra por estado_envio", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT COUNT(*)")) return [[{ total: 1 }], undefined];
       if (sql.includes("SUM(dp.subtotal)")) return [[{ total_ventas: 1, total_bruto: 2000000, total_neto_vendedor: 1800000, total_comision_plataforma: 200000 }], undefined];
@@ -325,7 +330,7 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
 
   it("R2: la paginacion fuerza enteros y usa placeholders LIMIT ? OFFSET ?", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT COUNT(*)")) return [[{ total: 0 }], undefined];
       if (sql.includes("SUM(dp.subtotal)")) return [[{ total_ventas: 0, total_bruto: 0, total_neto_vendedor: 0, total_comision_plataforma: 0 }], undefined];
@@ -350,7 +355,7 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
 
   it("GET /api/tienda/ventas aplica filtros por fecha y busqueda", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT COUNT(*)")) return [[{ total: 1 }], undefined];
       if (sql.includes("SUM(dp.subtotal)")) return [[{ total_ventas: 1, total_bruto: 2000000, total_neto_vendedor: 1800000, total_comision_plataforma: 200000 }], undefined];
@@ -370,7 +375,7 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
 
   it("GET /api/tienda/ingresos devuelve el resumen 90/10 sin datos bancarios", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT COUNT(*)")) return [[{ total: 1 }], undefined];
       if (sql.includes("COUNT(dp.id) AS total_transacciones")) return [[{ total_transacciones: 1, total_bruto: 2000000, total_neto_vendedor: 1800000, total_comision_plataforma: 200000 }], undefined];
@@ -391,7 +396,7 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
 
   it("GET /api/tienda/ingresos agrupa por dia cuando agrupar_por=dia", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT COUNT(*)")) return [[{ total: 1 }], undefined];
       if (sql.includes("COUNT(dp.id) AS total_transacciones")) return [[{ total_transacciones: 1, total_bruto: 2000000, total_neto_vendedor: 1800000, total_comision_plataforma: 200000 }], undefined];
@@ -410,7 +415,7 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
 
   it("GET /api/tienda/dashboard/stats devuelve tarjetas, por estado y ultimos 6 meses", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("COUNT(DISTINCT p.id) AS total_ventas")) {
         return [[{ total_ventas: 4, total_bruto: 8000000, total_neto_vendedor: 7200000, total_comision: 800000, unidades_vendidas: 5 }], undefined];
@@ -460,7 +465,7 @@ describe("Validacion de Mi Tienda (RF130-RF139)", () => {
 
   it("rechaza a un comprador (403 - solo vendedor)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
     });
@@ -473,7 +478,7 @@ describe("Validacion de Mi Tienda (RF130-RF139)", () => {
 
   it("vendedor autenticado obtiene 200 con cuenta completa y 90/10 valido", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
       if (sql.includes("estado_envio = 'Cancelado'")) return [[], undefined];
@@ -505,7 +510,7 @@ describe("Validacion de Mi Tienda (RF130-RF139)", () => {
 
   it("detecta vendedor sin cuenta bancaria registrada (RF131)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       return [[], undefined];
     });
@@ -523,7 +528,7 @@ describe("Validacion de Mi Tienda (RF130-RF139)", () => {
 
   it("detecta lineas incoherentes en el flujo 90/10 con tolerancia de 1 centavo (RF136/RF139)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
       if (sql.includes("estado_envio = 'Cancelado'")) return [[], undefined];
@@ -546,7 +551,7 @@ describe("Validacion de Mi Tienda (RF130-RF139)", () => {
 
   it("advierte cuando hay lineas canceladas sin pago Reembolsado (RF35/RF137, reembolso)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
       if (sql.includes("estado_envio = 'Cancelado'")) return [[filaDevolucion], undefined];

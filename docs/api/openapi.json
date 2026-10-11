@@ -803,6 +803,17 @@
               "description": "Filtro por vendedor",
               "type": "string"
             }
+          },
+          {
+            "name": "vendedor_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Filtro por id de vendedor",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
           }
         ]
       },
@@ -1706,7 +1717,7 @@
           "Tienda"
         ],
         "summary": "Ver mi cuenta bancaria",
-        "description": "Cuenta bancaria del vendedor (datos sensibles, RNF11 cifrado).",
+        "description": "Cuenta bancaria del vendedor ENMASCARADA por defecto (B-5: nunca el numero completo).",
         "responses": {
           "200": {
             "description": "Cuenta bancaria.",
@@ -1764,7 +1775,7 @@
           "Tienda"
         ],
         "summary": "Crear mi cuenta bancaria",
-        "description": "Alta de cuenta bancaria del vendedor (RNF9/RNF11).",
+        "description": "Alta de cuenta bancaria del vendedor (RNF9/RNF11). La respuesta va enmascarada (B-5).",
         "responses": {
           "201": {
             "description": "Cuenta bancaria creada.",
@@ -1832,7 +1843,7 @@
           "Tienda"
         ],
         "summary": "Actualizar mi cuenta bancaria",
-        "description": "Actualiza la cuenta bancaria del vendedor.",
+        "description": "Actualiza la cuenta bancaria del vendedor. La respuesta va enmascarada (B-5).",
         "responses": {
           "200": {
             "description": "Cuenta bancaria actualizada.",
@@ -4126,6 +4137,17 @@
               "minimum": 1,
               "maximum": 50
             }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Pagina, base 1 (default 1)",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
           }
         ]
       },
@@ -4743,7 +4765,7 @@
                 "pattern": "\\d"
               }
             ],
-            "description": "Contraseña: minimo 8 caracteres, con letra y numero",
+            "description": "Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes)",
             "title": "Password"
           },
           "nombre_completo": {
@@ -4791,7 +4813,7 @@
                 "pattern": "\\d"
               }
             ],
-            "description": "Contraseña: minimo 8 caracteres, con letra y numero",
+            "description": "Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes)",
             "title": "Password"
           }
         },
@@ -4854,7 +4876,7 @@
                 "pattern": "\\d"
               }
             ],
-            "description": "Contraseña: minimo 8 caracteres, con letra y numero",
+            "description": "Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes)",
             "title": "Password"
           }
         },
@@ -4946,6 +4968,12 @@
           "vendedor": {
             "description": "Filtro por vendedor",
             "type": "string"
+          },
+          "vendedor_id": {
+            "description": "Filtro por id de vendedor",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           }
         },
         "title": "CatalogoQuery",
@@ -5853,14 +5881,21 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 50
+          },
+          "pagina": {
+            "description": "Pagina, base 1 (default 1)",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
           }
         },
         "title": "ListarNotificacionesQuery",
-        "description": "Query de GET /api/notificaciones/ (tipo y limite opcionales)",
+        "description": "Query de GET /api/notificaciones/ (tipo, limite y pagina opcionales)",
         "examples": [
           {
             "tipo": "mensajes",
-            "limite": 20
+            "limite": 20,
+            "pagina": 1
           }
         ]
       },

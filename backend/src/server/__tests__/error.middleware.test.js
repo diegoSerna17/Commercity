@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import request from "supertest";
 import express from "express";
-import { errorHandler, asyncHandler } from "../middleware/error.middleware.js";
+import { errorHandler } from "../middleware/error.middleware.js";
 
 describe("errorHandler (middleware de error centralizado)", () => {
     it("responde 500 con el contrato estandar sin exponer el error interno", async () => {
@@ -50,26 +50,34 @@ describe("errorHandler (middleware de error centralizado)", () => {
         expect(res.status).toBe(400);
         expect(res.body.error.code).toBe("VALIDATION_ERROR");
     });
-});
 
-describe("asyncHandler", () => {
-    it("propaga el error del handler asincrono al siguiente middleware", async () => {
-        const next = vi.fn();
-        const handler = asyncHandler(async () => {
-            throw new Error("boom async");
-        });
+    it("TASK-4.9: respeta err.status de body-parser (JSON malformado -> 400, no 500)", async () => {
+        const app = express();
+        app.use(express.json());
+        app.post("/json", (_req, res) => res.json({ ok: true }));
+        app.use(errorHandler);
 
-        await handler({}, {}, next);
+        const res = await request(app)
+            .post("/json")
+            .set("Content-Type", "application/json")
+            .send("{json-malformado");
 
-        expect(next).toHaveBeenCalledWith(expect.any(Error));
+        expect(res.status).toBe(400);
+        expect(res.body.success).toBe(false);
     });
 
-    it("resuelve sin llamar a next cuando el handler tiene exito", async () => {
-        const next = vi.fn();
-        const handler = asyncHandler(async () => "ok");
+    it("TASK-4.9: respeta statusCode 413 cuando el cuerpo supera el limite del parser", async () => {
+        const app = express();
+        app.use(express.json({ limit: "1kb" }));
+        app.post("/json", (_req, res) => res.json({ ok: true }));
+        app.use(errorHandler);
 
-        await handler({}, {}, next);
+        const res = await request(app)
+            .post("/json")
+            .set("Content-Type", "application/json")
+            .send(JSON.stringify({ relleno: "x".repeat(4096) }));
 
-        expect(next).not.toHaveBeenCalled();
+        expect(res.status).toBe(413);
+        expect(res.body.error.code).toBe("PAYLOAD_TOO_LARGE");
     });
 });

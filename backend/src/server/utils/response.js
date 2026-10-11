@@ -29,6 +29,7 @@ export const errorResponse = (
         : statusCode === 404 ? "NOT_FOUND"
         : statusCode === 400 ? "VALIDATION_ERROR"
         : statusCode === 409 ? "CONFLICT"
+        : statusCode === 413 ? "PAYLOAD_TOO_LARGE"
         : "INTERNAL_ERROR";
 
     return res.status(statusCode).json({

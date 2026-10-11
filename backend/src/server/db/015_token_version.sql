@@ -44,3 +44,20 @@ SET @sql := IF(
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
+
+-- B-* (TASK-4.9): indice para el reset atomico por token_recuperacion
+-- (UPDATE ... WHERE token_recuperacion = ? AND expiracion > NOW()).
+SET @existe_indice_token := (
+  SELECT COUNT(*) FROM information_schema.STATISTICS
+   WHERE TABLE_SCHEMA = @db_actual
+     AND TABLE_NAME = 'usuarios'
+     AND INDEX_NAME = 'idx_usuarios_token_recuperacion'
+);
+SET @sql := IF(
+  @existe_indice_token = 0,
+  'ALTER TABLE usuarios ADD INDEX idx_usuarios_token_recuperacion (token_recuperacion)',
+  'SELECT ''idx_usuarios_token_recuperacion ya existe'' AS aviso'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

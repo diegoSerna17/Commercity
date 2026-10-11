@@ -57,7 +57,7 @@ export async function agregarProducto(req, res) {
     // H1 (P0): el comprador se deriva del JWT (req.userId). Se ignora
     // cualquier comprador_id enviado por el cliente para cerrar el IDOR.
     const compradorId = Number(req.userId);
-    const { producto_id: productoId, cantidad = 1 } = req.body;
+    const { producto_id: productoId, cantidad = 1 } = req.body ?? {};
 
     if (
       !esEnteroPositivo(compradorId) ||
@@ -102,7 +102,12 @@ export async function agregarProducto(req, res) {
       [compradorId, productoId]
     );
 
-    const cantidadAcumulada = existentes.length > 0 ? existentes[0].cantidad + cantidad : cantidad;
+    // B-9 (TASK-4.9): coercion numerica ANTES de sumar; un body con "3" no debe
+    // concatenar strings ("83") ni romper la comparacion con el stock.
+    const cantidadNumerica = Number(cantidad);
+    const cantidadAcumulada = existentes.length > 0
+      ? Number(existentes[0].cantidad) + cantidadNumerica
+      : cantidadNumerica;
     if (cantidadAcumulada > stock) {
       await conexion.rollback();
       return res.status(400).json({
@@ -115,7 +120,7 @@ export async function agregarProducto(req, res) {
       `INSERT INTO carrito_items (comprador_id, producto_id, cantidad)
        VALUES (?, ?, ?)
        ON DUPLICATE KEY UPDATE cantidad = cantidad + VALUES(cantidad)`,
-      [compradorId, productoId, cantidad]
+      [compradorId, productoId, cantidadNumerica]
     );
 
     await conexion.commit();
@@ -186,7 +191,7 @@ export async function modificarCantidad(req, res) {
     // H1 (P0): comprador desde JWT, nunca de query.
     const compradorId = Number(req.userId);
     const productoId = Number(req.params.productoId);
-    const { cantidad } = req.body;
+    const { cantidad } = req.body ?? {};
 
     if (
       !esEnteroPositivo(compradorId) ||
@@ -207,7 +212,9 @@ export async function modificarCantidad(req, res) {
       });
     }
 
-    if (cantidad > producto.stock) {
+    // B-9: coercion numerica antes de comparar/actualizar.
+    const cantidadNumerica = Number(cantidad);
+    if (cantidadNumerica > producto.stock) {
       return res.status(400).json({
         success: false,
         error: { code: "INSUFFICIENT_STOCK", message: `Stock insuficiente. Disponible: ${producto.stock}` },
@@ -231,7 +238,7 @@ export async function modificarCantidad(req, res) {
 
     await conexion.query(
       "UPDATE carrito_items SET cantidad = ? WHERE comprador_id = ? AND producto_id = ?",
-      [cantidad, compradorId, productoId]
+      [cantidadNumerica, compradorId, productoId]
     );
 
     await conexion.commit();

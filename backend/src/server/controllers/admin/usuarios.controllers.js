@@ -111,7 +111,7 @@ export const desactivarUsuario = async (id) => {
 export const cambiarEstadoUsuario = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const { estado } = req.body;
+    const { estado } = req.body ?? {};
     if (!validarId(id)) return errorResponse(res, "ID inválido", 400);
     if (!["activo", "baneado"].includes(estado))
       return errorResponse(res, "Estado inválido (activo|baneado)", 400);

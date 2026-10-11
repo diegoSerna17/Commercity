@@ -1,5 +1,6 @@
 import pool from "../config/db.js";
 import { borrarArchivoSubido, borrarUploadPorUrl } from "../config/multer.js";
+import { escapeLike } from "../utils/sql.js";
 
 /**
  * Panel Principal (RF87-RF94): catalogo de productos con busqueda, filtros
@@ -25,19 +26,33 @@ export const getProductos = async (req, res) => {
     const condiciones = [];
     const valores = [];
 
+    // M-20 (TASK-5.4): filtro exacto por vendedor para el perfil publico.
+    if (req.query.vendedor_id !== undefined) {
+      const vendedorId = Number(req.query.vendedor_id);
+      if (!Number.isInteger(vendedorId) || vendedorId <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: { code: "VALIDATION_ERROR", message: "vendedor_id debe ser un entero positivo" },
+        });
+      }
+      condiciones.push("p.vendedor_id = ?");
+      valores.push(vendedorId);
+    }
+
+    // B-8 (TASK-4.9): comodines del usuario escapados (busqueda literal).
     if (nombre.trim() !== "") {
       condiciones.push("p.nombre LIKE ?");
-      valores.push(`%${nombre}%`);
+      valores.push(escapeLike(nombre));
     }
 
     if (categoria.trim() !== "") {
       condiciones.push("c.nombre LIKE ?");
-      valores.push(`%${categoria}%`);
+      valores.push(escapeLike(categoria));
     }
 
     if (vendedor.trim() !== "") {
       condiciones.push("v.nombre_completo LIKE ?");
-      valores.push(`%${vendedor}%`);
+      valores.push(escapeLike(vendedor));
     }
 
     const where = condiciones.length
@@ -410,7 +425,8 @@ function validarRangosProducto({ precio, stock, descuento }) {
  */
 export const crearProductoVendedor = async (req, res) => {
   try {
-    const { nombre, descripcion, precio, stock, descuento, categoria } = req.body;
+    // TASK-4.9: el multipart puede no traer campos; no romper con 500.
+    const { nombre, descripcion, precio, stock, descuento, categoria } = req.body ?? {};
 
     if (!nombre || !descripcion || !categoria) {
       // TASK-4.6: la imagen ya quedo en disco; sin producto no debe quedar huerfana.
@@ -511,7 +527,7 @@ export const editarProductoVendedor = async (req, res) => {
     }
 
     const producto = productoExistente[0];
-    const { nombre, descripcion, precio, stock, descuento, categoria } = req.body;
+    const { nombre, descripcion, precio, stock, descuento, categoria } = req.body ?? {};
 
     // S3 (RF81-RF90): mismos rangos que la creacion, antes de tocar la BD.
     // Los campos son opcionales: si no viene uno se conserva el valor actual.

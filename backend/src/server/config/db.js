@@ -6,19 +6,18 @@ dotenv.config();
 /**
  * Pool de conexiones MySQL para el backend de CommerCity.
  * Las credenciales se leen de variables de entorno (ver .env.example).
- * H5 (P2): los defaults (root sin clave, localhost) solo son para dev/test.
- * En produccion se exige DB_USER/DB_PASSWORD explicitos y se advierte si se
- * usan los valores por defecto.
+ * H5 (P2): los defaults (root sin clave, localhost) solo son para test.
+ * H9 (TASK-4.8): las credenciales por defecto NO se aceptan en ningun entorno
+ * real: el proceso aborta fuera de NODE_ENV=test (antes solo en produccion).
  */
 const usandoDefaultsInseguros =
   (!process.env.DB_USER || process.env.DB_USER === "root") &&
   !process.env.DB_PASSWORD;
-if (usandoDefaultsInseguros && process.env.NODE_ENV === "production") {
-  console.error("FATAL: en produccion defina DB_USER y DB_PASSWORD (sin defaults root).");
-  process.exit(1);
-}
 if (usandoDefaultsInseguros && process.env.NODE_ENV !== "test") {
-  console.warn("[WARN] BD con credenciales por defecto (root sin clave): solo apto para desarrollo local.");
+  console.error(
+    "FATAL: defina DB_USER y DB_PASSWORD propios (no se permiten los defaults root/sin clave fuera de test)."
+  );
+  process.exit(1);
 }
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",

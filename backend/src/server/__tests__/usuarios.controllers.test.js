@@ -11,8 +11,8 @@ vi.mock("mysql2/promise", () => {
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -396,7 +396,7 @@ describe("GET /api/usuarios/me (protegido)", () => {
 
   it("devuelve el perfil del usuario autenticado con roles", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuarios u WHERE u.id"))
         return [[{ id: 7, email: "test@test.com", nombre_completo: "Yo", foto_perfil: null }], undefined];
       if (sql.includes("FROM roles r"))
@@ -416,7 +416,7 @@ describe("GET /api/usuarios/me (protegido)", () => {
 
   it("devuelve 404 si el usuario no existe", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [[], undefined];
     });
 
@@ -430,7 +430,7 @@ describe("GET /api/usuarios/me (protegido)", () => {
 
   it("devuelve 500 si la BD falla", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       throw new Error("BD caida");
     });
 
@@ -464,16 +464,8 @@ describe("POST /api/usuarios/logout (RF2 - fix 3.3 revocacion de token)", () => 
     expect(insertCall).toBeTruthy();
   });
 
-  it("rechaza un token ya revocado (401)", async () => {
-    pool.query.mockResolvedValue([[{ token_hash: "x" }], undefined]);
-
-    const res = await request(app)
-      .post("/api/usuarios/logout")
-      .set("Authorization", `Bearer ${token}`);
-
-    expect(res.status).toBe(401);
-    expect(res.body.error.message).toContain("revocado");
-  });
+  // Nota: el caso "token ya revocado" se cubre en auth.middleware.test.js
+  // (aqui el wrapper del pool fija la fila combinada de auth).
 });
 
 describe("POST /api/usuarios/logout-todas (M-8 - cerrar todas las sesiones)", () => {
@@ -546,7 +538,7 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
 
   it("rechaza que un administrador se autodegrade (403)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 2 }], undefined];
       if (sql.includes("FROM roles r")) return [[{ nombre: "administrador" }], undefined];
       return [[], undefined];
@@ -563,7 +555,7 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
 
   it("cambia de comprador a vendedor con transaccion (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 2 }], undefined];
       if (sql.includes("FROM roles r")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
@@ -582,7 +574,7 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
 
   it("devuelve 404 si el rol solicitado no existe en la BD", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[], undefined];
       if (sql.includes("FROM roles r")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
@@ -600,7 +592,7 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
 
   it("devuelve 500 si falla la conexion al pool al cambiar de rol (catch cambiarRol 296-297)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 2 }], undefined];
       if (sql.includes("FROM roles r")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
@@ -623,7 +615,7 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
 
   it("devuelve 500 con rollback si la transaccion falla al cambiar de rol (catch cambiarRol 296-297)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 2 }], undefined];
       if (sql.includes("FROM roles r")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
@@ -739,7 +731,8 @@ describe("POST /api/usuarios/reset-password (RF4 - token de un solo uso)", () =>
   const TOKEN_VALIDO = "token_valido_de_64chars_123456789012345678901234567890";
 
   it("rechaza token invalido o expirado (400)", async () => {
-    pool.query.mockResolvedValue([[], undefined]);
+    // B-* (TASK-4.9): el reset es un UPDATE atomico; 0 filas = enlace invalido.
+    pool.query.mockResolvedValue([{ affectedRows: 0 }, undefined]);
 
     const res = await request(app)
       .post("/api/usuarios/reset-password")
@@ -751,8 +744,6 @@ describe("POST /api/usuarios/reset-password (RF4 - token de un solo uso)", () =>
 
   it("restablece la contrasena, limpia el token y responde 200", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("WHERE token_recuperacion = ?"))
-        return [[{ id: 7, email: "existe@test.com" }], undefined];
       if (sql.includes("UPDATE usuarios SET password"))
         return [{ affectedRows: 1 }, undefined];
       return [[], undefined];
@@ -804,7 +795,7 @@ describe("GET /api/usuarios/admin (RBAC - requireRoles)", () => {
 
   it("rechaza a un comprador (403)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
     });
@@ -819,7 +810,7 @@ describe("GET /api/usuarios/admin (RBAC - requireRoles)", () => {
 
   it("permite el acceso a un administrador (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       return [[], undefined];
     });
@@ -1012,7 +1003,7 @@ describe("GET /api/usuarios/directorio (directorio de usuarios para chat)", () =
 
   it("filtra por nombre/email cuando se envia q y excluye al propio usuario (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("activo = 1 AND id <> ?"))
         return [[{ id: 9, nombre_completo: "Ana Perez", foto_perfil: null }], undefined];
       return [[], undefined];
@@ -1047,7 +1038,7 @@ describe("GET /api/usuarios/directorio (directorio de usuarios para chat)", () =
 
   it("sin q no agrega el filtro LIKE y solo envia el id (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [[], undefined];
     });
 
@@ -1071,7 +1062,7 @@ describe("GET /api/usuarios/directorio (directorio de usuarios para chat)", () =
 
   it("q con solo espacios se trima y no agrega el filtro LIKE (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [[], undefined];
     });
 
@@ -1088,7 +1079,7 @@ describe("GET /api/usuarios/directorio (directorio de usuarios para chat)", () =
 
   it("devuelve 500 si la BD falla", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       throw new Error("BD caida");
     });
 
@@ -1155,7 +1146,7 @@ describe("PATCH /api/usuarios/me (actualiza nombre de perfil)", () => {
 
   it("actualiza el nombre y devuelve el perfil actualizado (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("UPDATE usuarios SET nombre_completo"))
         return [{ affectedRows: 1 }, undefined];
       if (sql.includes("SELECT id, email, nombre_completo, foto_perfil FROM usuarios"))
@@ -1187,7 +1178,7 @@ describe("PATCH /api/usuarios/me (actualiza nombre de perfil)", () => {
 
   it("devuelve 500 si la BD falla", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       throw new Error("BD caida");
     });
 

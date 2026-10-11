@@ -9,9 +9,12 @@ vi.mock("mysql2/promise", () => ({
 
 // M-9/H7: los rate limits con `skip` se desactivan en NODE_ENV=test, asi que
 // este archivo los ejercita con NODE_ENV=development sobre una instancia fresca
-// de app.js. El JWT_SECRET debe ser largo (fuera de test se valida >= 32).
+// de app.js. El JWT_SECRET debe ser largo (fuera de test se valida >= 32) y las
+// credenciales de BD explicitas (H9 aborta con los defaults fuera de test).
 process.env.NODE_ENV = "development";
 process.env.JWT_SECRET = "jwt-secret-de-pruebas-rate-limit-000000000000";
+process.env.DB_USER = "rate_limit_user";
+process.env.DB_PASSWORD = "clave-local-rate-limit";
 
 const { default: app } = await import("../app.js");
 

@@ -9,8 +9,8 @@ vi.mock("mysql2/promise", () => {
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -39,7 +39,7 @@ const token = jwt.sign({ id: 8, email: "camila.torres@commercity.com" , token_ve
 // authRequired solo consulta la lista negra de tokens.
 function mockAuth() {
   pool.query.mockImplementation((sql) => {
-    if (sql.includes("tokens_invalidados")) return [[], undefined];
+    if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
     return [[], undefined];
   });
 }
@@ -96,7 +96,7 @@ describe("Notificaciones (RF99-RF104) - autenticacion (401)", () => {
 describe("GET /api/notificaciones (RF100/RF101) - listado", () => {
   it("lista las notificaciones del usuario con shape RF101 (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [
         [
           filaNotificacion({ id: 3, tipo: "en camino", descripcion: "Tu pedido #5 está en camino." }),
@@ -130,7 +130,7 @@ describe("GET /api/notificaciones (RF100/RF101) - listado", () => {
 
   it("aplica filtro por tipo en la consulta (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [[filaNotificacion({ tipo: "reporte" })], undefined];
     });
 
@@ -140,11 +140,11 @@ describe("GET /api/notificaciones (RF100/RF101) - listado", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.notificaciones).toHaveLength(1);
-    // la query debe filtrar por tipo y por usuario
-    const llamada = pool.query.mock.calls.find(([sql]) => sql.includes("FROM notificaciones"));
-    expect(llamada[0]).toContain("usuario_id = ?");
-    expect(llamada[0]).toContain("tipo = ?");
-    expect(llamada[1]).toEqual([8, "reporte", 50]);
+    // B-7: la pagina filtra por usuario+tipo y usa LIMIT/OFFSET parametrizados
+    const llamadaListado = pool.query.mock.calls.find(([sql]) => sql.includes("LIMIT ? OFFSET ?"));
+    expect(llamadaListado[0]).toContain("usuario_id = ?");
+    expect(llamadaListado[0]).toContain("tipo = ?");
+    expect(llamadaListado[1]).toEqual([8, "reporte", 50, 0]);
   });
 
   it("rechaza tipo de filtro invalido (400)", async () => {
@@ -169,7 +169,7 @@ describe("GET /api/notificaciones (RF100/RF101) - listado", () => {
     const hace30Min = new Date(Date.now() - 30 * 60 * 1000);
     const fechaFutura = new Date(Date.now() + 5 * 60 * 1000);
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [
         [
           filaNotificacion({ id: 4, fecha_hora: hace3Dias }),
@@ -194,7 +194,7 @@ describe("GET /api/notificaciones (RF100/RF101) - listado", () => {
 
   it("devuelve 500 estandar si la BD falla", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       throw new Error("BD caida");
     });
 
@@ -209,7 +209,7 @@ describe("GET /api/notificaciones (RF100/RF101) - listado", () => {
 describe("GET /api/notificaciones/no-leidas (RF104) - indicador", () => {
   it("devuelve el total de no leidas del usuario (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [[{ total: 7 }], undefined];
     });
 
@@ -223,7 +223,7 @@ describe("GET /api/notificaciones/no-leidas (RF104) - indicador", () => {
 
   it("devuelve 0 cuando no hay no leidas", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [[{ total: 0 }], undefined];
     });
 
@@ -245,7 +245,7 @@ describe("GET /api/notificaciones/no-leidas (RF104) - indicador", () => {
 
   it("devuelve 500 estandar si la BD falla", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       throw new Error("BD caida");
     });
 
@@ -260,7 +260,7 @@ describe("GET /api/notificaciones/no-leidas (RF104) - indicador", () => {
 describe("Marcar como leida", () => {
   it("PATCH /api/notificaciones/1/leida marca la notificacion (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [{ affectedRows: 1 }, undefined];
     });
 
@@ -277,7 +277,7 @@ describe("Marcar como leida", () => {
 
   it("PATCH devuelve 404 si no existe o no pertenece al usuario", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [{ affectedRows: 0 }, undefined];
     });
 
@@ -297,7 +297,7 @@ describe("Marcar como leida", () => {
 
   it("PATCH /api/notificaciones/leidas marca todas (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [{ affectedRows: 5 }, undefined];
     });
 
@@ -315,7 +315,7 @@ describe("Marcar como leida", () => {
 describe("Eliminar notificaciones (RF102)", () => {
   it("DELETE /api/notificaciones/1 elimina una notificacion (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [{ affectedRows: 1 }, undefined];
     });
 
@@ -332,7 +332,7 @@ describe("Eliminar notificaciones (RF102)", () => {
 
   it("DELETE devuelve 404 si no existe o no pertenece al usuario", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [{ affectedRows: 0 }, undefined];
     });
 
@@ -344,7 +344,7 @@ describe("Eliminar notificaciones (RF102)", () => {
 
   it("DELETE /api/notificaciones limpia todas (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [{ affectedRows: 12 }, undefined];
     });
 
@@ -415,7 +415,7 @@ describe("Registro por eventos (RF101/RF103)", () => {
     pool.getConnection.mockResolvedValue(conn);
     // requireRoles (vendedor): el middleware consulta usuario_roles por el pool.
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       return [[], undefined];
     });
@@ -485,7 +485,7 @@ describe("Registro por eventos (RF101/RF103)", () => {
     });
     pool.getConnection.mockResolvedValue(conn);
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       return [[], undefined];
     });

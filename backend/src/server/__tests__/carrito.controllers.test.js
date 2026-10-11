@@ -8,11 +8,11 @@ vi.mock("mysql2/promise", () => {
   // hace (lista negra + DEF-01 activo) y delega el resto a la query interna.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("tokens_invalidados")) {
+    if (typeof sql === "string" && sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) {
       return Promise.resolve([[], undefined]);
     }
-    if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -49,8 +49,8 @@ const auth1 = { Authorization: `Bearer ${tokenUser1}` };
 // Helpers de simulacion de BD
 function productoInexistente() {
   pool.query.mockImplementation((sql) => {
-    if (typeof sql === "string" && (sql.includes("tokens_invalidados") || sql.includes("SELECT activo, token_version FROM usuarios"))) {
-      return sql.includes("tokens_invalidados") ? Promise.resolve([[], undefined]) : Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (typeof sql === "string" && (sql.includes("tokens_invalidados") && !sql.includes("AS revocado") || sql.includes("AS revocado"))) {
+      return sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? Promise.resolve([[], undefined]) : Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     if (sql.includes("SELECT stock")) return Promise.resolve([[], undefined]);
     return Promise.resolve([[], undefined]);
@@ -60,8 +60,8 @@ function productoInexistente() {
 // Configura el flujo completo de POST: stock, comprador activo y item existente en el carrito
 function setupAgregar({ stock, compradorActivo: activo, itemExistente }) {
   pool.query.mockImplementation((sql) => {
-    if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
-    if (sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return Promise.resolve([[], undefined]);
+    if (sql.includes("AS revocado")) return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     if (sql.includes("SELECT stock")) return Promise.resolve([stock ? [{ stock, vendedor_id: 2 }] : []]);
     if (sql.includes("SELECT 1 FROM usuarios")) return Promise.resolve([activo ? [{}] : []]);
     return Promise.resolve([[], undefined]);
@@ -74,8 +74,8 @@ function setupAgregar({ stock, compradorActivo: activo, itemExistente }) {
 
 function soloStock(stock) {
   pool.query.mockImplementation((sql) => {
-    if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
-    if (sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return Promise.resolve([[], undefined]);
+    if (sql.includes("AS revocado")) return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     if (sql.includes("SELECT stock")) return Promise.resolve([[{ stock, vendedor_id: 2 }]]);
     return Promise.resolve([[], undefined]);
   });
@@ -83,8 +83,8 @@ function soloStock(stock) {
 
 function listarItemsMock(items) {
   pool.query.mockImplementation((sql) => {
-    if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
-    if (sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return Promise.resolve([[], undefined]);
+    if (sql.includes("AS revocado")) return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     if (sql.includes("FROM carrito_items")) return Promise.resolve([items, undefined]);
     return Promise.resolve([[], undefined]);
   });
@@ -146,8 +146,8 @@ describe("POST /api/carrito (agregarProducto)", () => {
 
   it("M-4/DEC-002: rechaza agregar un producto propio (autocompra) -> 400", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
-      if (sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return Promise.resolve([[], undefined]);
+      if (sql.includes("AS revocado")) return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
       // vendedor_id 1 = el propio comprador del JWT
       if (sql.includes("SELECT stock")) return Promise.resolve([[{ stock: 10, vendedor_id: 1 }]]);
       return Promise.resolve([[], undefined]);
@@ -219,8 +219,8 @@ describe("POST /api/carrito (agregarProducto)", () => {
 
   it("maneja errores internos -> 500 SERVER_ERROR", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
-      if (sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return Promise.resolve([[], undefined]);
+      if (sql.includes("AS revocado")) return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
       return Promise.reject(new Error("boom"));
     });
     const res = await request(app)
@@ -365,8 +365,8 @@ describe("DELETE /api/carrito/:productoId (eliminarProducto)", () => {
 
   it("valida parametros -> 400", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return Promise.resolve([[], undefined]);
+      if (sql.includes("AS revocado")) return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
       return Promise.resolve([[], undefined]);
     });
     const res = await request(app).delete("/api/carrito/abc").set(auth1);
@@ -376,8 +376,8 @@ describe("DELETE /api/carrito/:productoId (eliminarProducto)", () => {
 
   it("devuelve 404 si el item no esta en el carrito", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return Promise.resolve([[], undefined]);
+      if (sql.includes("AS revocado")) return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
       return Promise.resolve([{ affectedRows: 0 }, undefined]);
     });
     const res = await request(app).delete("/api/carrito/1").set(auth1);
@@ -387,8 +387,8 @@ describe("DELETE /api/carrito/:productoId (eliminarProducto)", () => {
 
   it("elimina el producto del carrito -> 200", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return Promise.resolve([[], undefined]);
+      if (sql.includes("AS revocado")) return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
       return Promise.resolve([{ affectedRows: 1 }, undefined]);
     });
     const res = await request(app).delete("/api/carrito/1").set(auth1);
@@ -398,8 +398,8 @@ describe("DELETE /api/carrito/:productoId (eliminarProducto)", () => {
 
   it("borra solo del carrito del JWT (regresion IDOR H1)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return Promise.resolve([[], undefined]);
-      if (sql.includes("SELECT activo, token_version FROM usuarios")) return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return Promise.resolve([[], undefined]);
+      if (sql.includes("AS revocado")) return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
       return Promise.resolve([{ affectedRows: 1 }, undefined]);
     });
     pool.query.mockClear();

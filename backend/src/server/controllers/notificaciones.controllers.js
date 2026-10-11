@@ -1,6 +1,6 @@
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-import { validarId } from "./admin/admin.utils.js";
+import { validarId } from "../utils/ids.js";
 
 const TIPOS_VALIDOS = [
     "compra",
@@ -52,15 +52,32 @@ export const listarNotificaciones = async (req, res, next) => {
             }
             limite = n;
         }
-        params.push(limite);
+
+        // B-7 (TASK-4.9): paginacion del listado (la respuesta suma campos, sin
+        // cambiar el contrato existente { total, notificaciones }).
+        let pagina = 1;
+        if (req.query.pagina !== undefined) {
+            const p = Number(req.query.pagina);
+            if (!Number.isInteger(p) || p < 1) {
+                return errorResponse(res, "La página debe ser un entero positivo", 400);
+            }
+            pagina = p;
+        }
+        const offset = (pagina - 1) * limite;
+
+        const [totalRows] = await pool.query(
+            `SELECT COUNT(*) AS total FROM notificaciones WHERE ${condiciones.join(" AND ")}`,
+            params
+        );
+        const totalRegistros = Number(totalRows[0]?.total || 0);
 
         const [rows] = await pool.query(
             `SELECT id, tipo, descripcion, estado, url_redireccion, fecha_hora
              FROM notificaciones
              WHERE ${condiciones.join(" AND ")}
              ORDER BY fecha_hora DESC, id DESC
-             LIMIT ?`,
-            params
+             LIMIT ? OFFSET ?`,
+            [...params, limite, offset]
         );
 
         const notificaciones = rows.map((n) => ({
@@ -76,6 +93,11 @@ export const listarNotificaciones = async (req, res, next) => {
         return successResponse(res, "Notificaciones obtenidas", {
             total: notificaciones.length,
             notificaciones,
+            pagina,
+            por_pagina: limite,
+            total_registros: totalRegistros,
+            total_paginas: Math.max(1, Math.ceil(totalRegistros / limite)),
+            hay_mas: pagina * limite < totalRegistros,
         });
     } catch (err) {
         next(err);

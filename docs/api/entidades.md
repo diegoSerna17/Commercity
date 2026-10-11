@@ -170,7 +170,7 @@
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
 | `email` | string (email) | si | Correo del usuario |
-| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero |
+| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes) |
 
 **Ejemplo:**
 
@@ -210,7 +210,7 @@
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
 | `email` | string (email) | si | Correo del usuario |
-| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero |
+| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes) |
 | `nombre_completo` | string [longitud >= 2] | no | Nombre completo (opcional, min 2) |
 
 **Ejemplo:**
@@ -233,7 +233,7 @@
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
 | `token` | string [longitud >= 10] | si | Token de restablecimiento recibido por correo |
-| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero |
+| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes) |
 
 **Ejemplo:**
 
@@ -348,6 +348,7 @@
 | `nombre` | string | no | Filtro por nombre |
 | `categoria` | string | no | Filtro por categoria |
 | `vendedor` | string | no | Filtro por vendedor |
+| `vendedor_id` | integer [max 9007199254740991, > 0] | no | Filtro por id de vendedor |
 
 **Ejemplo:**
 
@@ -707,7 +708,7 @@
 
 ## ListarNotificacionesQuery (`ListarNotificacionesQuery`)
 
-> Query de GET /api/notificaciones/ (tipo y limite opcionales)
+> Query de GET /api/notificaciones/ (tipo, limite y pagina opcionales)
 
 - **Fuente:** `backend/src/server/schemas/notificaciones.schema.js`
 - **Usado en:** `GET /api/notificaciones/`
@@ -716,13 +717,15 @@
 |---|---|---|---|
 | `tipo` | enum: "compra" \| "pedido enviado" \| "en camino" \| "entregado" \| "devolucion" \| "mensajes" \| "reporte" | no | Filtra por tipo de notificacion |
 | `limite` | integer [min 1, max 50] | no | Maximo de registros (default 50) |
+| `pagina` | integer [min 1, max 9007199254740991] | no | Pagina, base 1 (default 1) |
 
 **Ejemplo:**
 
 ```json
 {
   "tipo": "mensajes",
-  "limite": 20
+  "limite": 20,
+  "pagina": 1
 }
 ```
 

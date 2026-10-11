@@ -9,8 +9,8 @@ vi.mock("mysql2/promise", () => {
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1, token_version: 0 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -50,7 +50,7 @@ const tokenComprador = jwt.sign({ id: 8, email: "camila.torres@commercity.com" ,
 
 function mockAuth(rol = "vendedor") {
   pool.query.mockImplementation((sql) => {
-    if (sql.includes("tokens_invalidados")) return [[], undefined];
+    if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
     if (sql.includes("FROM usuario_roles")) return [[{ nombre: rol }], undefined];
     return [[], undefined];
   });
@@ -81,7 +81,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
   it("POST /api/productos crea con el vendedor del JWT (201) - Fix 4.1", async () => {
     // auth OK + categoria existente + insert producto
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id FROM categorias")) return [[{ id: 5 }], undefined];
       if (sql.includes("INSERT INTO productos")) return [{ insertId: 999 }, undefined];
@@ -269,7 +269,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
     expect(resCrear.body.error.code).toBe("VALIDATION_ERROR");
 
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
@@ -290,7 +290,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id con precio invalido en la edicion -> 400", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
@@ -313,7 +313,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id con stock negativo o decimal -> 400", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
@@ -341,7 +341,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id con descuento fuera de rango -> 400", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
@@ -362,7 +362,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id con rangos validos sigue funcionando (regresion campos opcionales)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
@@ -384,7 +384,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id edita SOLO si el producto es del vendedor (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
@@ -409,7 +409,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id de otro vendedor o inexistente -> 404", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       return [[], undefined]; // el SELECT de propiedad no devuelve filas
     });
@@ -434,7 +434,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("GET /api/productos/mis-productos lista solo los del vendedor (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("WHERE p.vendedor_id = ?")) {
         return [
@@ -479,7 +479,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("POST /api/productos crea categoria nueva automaticamente (INSERT categorias)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id FROM categorias")) return [[], undefined]; // no existe
       if (sql.includes("INSERT INTO categorias")) return [{ insertId: 77 }, undefined];
@@ -504,7 +504,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id con imagen nueva usa el nuevo archivo", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [
