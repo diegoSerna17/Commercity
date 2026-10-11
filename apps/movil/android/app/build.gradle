@@ -1,5 +1,31 @@
 apply plugin: 'com.android.application'
 
+// A-4: la firma release NO lleva credenciales en el repo. Se leen de
+// (1) apps/movil/android/keystore.properties local (no versionado),
+// (2) variables de entorno COMMERCITY_KEYSTORE_* o
+// (3) propiedades de gradle.properties (proyecto u ~/.gradle).
+def keystoreProps = new Properties()
+def keystorePropsFile = rootProject.file('keystore.properties')
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
+def valorFirma = { String clave, String env ->
+    def v = keystoreProps.getProperty(clave)
+    if (v == null || v.trim().isEmpty()) v = System.getenv(env)
+    if (v == null || v.trim().isEmpty()) v = project.findProperty(clave)
+    return (v == null || v.trim().isEmpty()) ? null : v.trim()
+}
+
+def firmaRelease = [
+    storeFile:     valorFirma('storeFile',     'COMMERCITY_KEYSTORE_FILE'),
+    storePassword: valorFirma('storePassword', 'COMMERCITY_KEYSTORE_PASSWORD'),
+    keyAlias:      valorFirma('keyAlias',      'COMMERCITY_KEY_ALIAS'),
+    keyPassword:   valorFirma('keyPassword',   'COMMERCITY_KEY_PASSWORD'),
+]
+def firmaCompleta = firmaRelease.values().every { it != null }
+def firmaFaltantes = firmaRelease.findAll { k, v -> v == null }.keySet().join(', ')
+
 android {
     namespace = "com.commercity.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,17 +42,34 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file('commercity.keystore')
-            storePassword 'commercity123'
-            keyAlias 'commercity-alias'
-            keyPassword 'commercity123'
+            if (firmaCompleta) {
+                storeFile file(firmaRelease.storeFile)
+                storePassword firmaRelease.storePassword
+                keyAlias firmaRelease.keyAlias
+                keyPassword firmaRelease.keyPassword
+            }
         }
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            if (firmaCompleta) signingConfig signingConfigs.release
+        }
+    }
+}
+
+// A-4: sin credenciales, cualquier tarea de release falla con un mensaje claro
+// (los builds debug siguen funcionando con la firma de depuracion).
+if (!firmaCompleta) {
+    gradle.taskGraph.whenReady { graph ->
+        def pideRelease = graph.allTasks.any { t -> t.name.toLowerCase().contains('release') }
+        if (pideRelease) {
+            throw new GradleException(
+                "Firma Android incompleta: faltan [${firmaFaltantes}]. Define storeFile/storePassword/keyAlias/keyPassword " +
+                "en apps/movil/android/keystore.properties (local, NO versionado) o en las variables de entorno " +
+                "COMMERCITY_KEYSTORE_FILE / COMMERCITY_KEYSTORE_PASSWORD / COMMERCITY_KEY_ALIAS / COMMERCITY_KEY_PASSWORD."
+            )
         }
     }
 }

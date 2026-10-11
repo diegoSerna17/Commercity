@@ -14,8 +14,8 @@
   --sidebar-w: 220px;
   --titlebar-h: 0px;
   --bnav-h: 68px;
-  --font: 'Sora', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
+  --font: 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Segoe UI', system-ui, sans-serif;
   --radius: 14px;
   --radius-sm: 10px;
   --shadow: 0 4px 24px rgba(0,0,0,0.4);

@@ -264,12 +264,12 @@ function renderCart() {
       <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 8px">
         <span style="font-size:9px;font-weight:700;color:var(--text2);letter-spacing:.06em;text-transform:uppercase">CANTIDAD</span>
         <div class="cart-qty">
-          <button onclick="cartQty(${idx}, -1)">−</button>
+          <button data-action="cart-qty" data-idx="${idx}" data-arg="-1">−</button>
           <span>${item.qty}</span>
-          <button onclick="cartQty(${idx}, 1)">+</button>
+          <button data-action="cart-qty" data-idx="${idx}" data-arg="1">+</button>
         </div>
       </div>
-      <button class="cart-del" onclick="cartRemove(${idx})" title="Eliminar">
+      <button class="cart-del" data-action="cart-remove" data-idx="${idx}" title="Eliminar">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
           <path d="M3 5h14M8 5V3h4v2M6 5l1 12h6l1-12"/>
         </svg>
@@ -528,7 +528,7 @@ async function doRegistro() {
   const esVend      = document.getElementById('reg-vendedor').checked;
 
   if (!email || !email.includes('@')) { showAuthError('reg-error', 'Ingresa un correo electrónico válido.'); return; }
-  if (pass.length < 4) { showAuthError('reg-error', 'La contraseña debe tener al menos 4 caracteres.'); return; }
+  if (pass.length < 8) { showAuthError('reg-error', 'La contraseña debe tener al menos 8 caracteres.'); return; }
   if (pass !== confirm) { showAuthError('reg-error', 'Las contraseñas no coinciden.'); return; }
   hideAuthError('reg-error');
 
@@ -780,7 +780,7 @@ function openReporte(key) {
   document.getElementById('rp-estado').className       = `badge ${r.estadoCls}`;
   document.getElementById('rp-fecha').textContent      = r.fecha;
   document.getElementById('rp-evidencias').innerHTML   = r.evidencias
-    .map(s => `<div class="rp-ev-thumb"><img src="${s}" alt=""/></div>`).join('');
+    .map(s => `<div class="rp-ev-thumb"><img src="${escHtml(imgSrcSafe(s))}" alt=""/></div>`).join('');
 
   const respBox = document.getElementById('rp-respuesta-box');
   const respTxt = document.getElementById('rp-respuesta-txt');
@@ -935,7 +935,7 @@ async function cargarConversaciones() {
     const u = _usuariosChat[Number(uid)] || { id: Number(uid), nombre: 'Usuario', foto: '' };
     const nombre = u.nombre || 'Usuario';
     const sinLeer = Number(noLeidos) || 0;
-    return `<div class="msg-row ${sinLeer ? 'unread' : ''}" onclick="openChatPorId(${u.id})">
+    return `<div class="msg-row ${sinLeer ? 'unread' : ''}" data-action="chat-abrir" data-id="${u.id}">
       <div class="msg-av">${u.foto ? `<img src="${escHtml(u.foto)}" alt=""/>` : escHtml(nombre[0].toUpperCase())}</div>
       <div class="msg-info"><div class="msg-name">${escHtml(nombre)}</div><div class="msg-preview">${escHtml(preview)}</div></div>
       <div class="msg-meta">${hora ? `<span class="msg-time-lbl">${escHtml(hora)}</span>` : ''}${sinLeer ? `<span class="msg-unread-dot">${sinLeer}</span>` : ''}</div>
@@ -1105,6 +1105,121 @@ document.addEventListener('keydown', e => {
 });
 
 // ════════════════════════════════════════════════════════════
+// DELEGACIÓN DE EVENTOS
+// La CSP es `script-src 'self'`: los handlers inline (onclick...)
+// están prohibidos, así que todo botón/enlace declara data-action
+// (y data-arg/data-id cuando aplica) y se despacha aquí.
+// ════════════════════════════════════════════════════════════
+
+const ACCIONES_CLICK = {
+  'win-minimize':        () => { window.electron && window.electron.minimize(); },
+  'win-maximize':        () => { window.electron && window.electron.maximize(); },
+  'win-close':           () => { window.electron && window.electron.close(); },
+  'navigate':            el => navigate(el.dataset.arg),
+  'toggle-pass':         el => togglePass(el.dataset.arg),
+  'do-login':            () => doLogin(),
+  'do-registro':         () => doRegistro(),
+  'do-logout':           () => doLogout(),
+  'do-recuperar':        () => doRecuperar(),
+  'do-restablecer':      () => doRestablecer(),
+  'toggle-notif':        () => toggleNotif(),
+  'clear-all-notifs':    () => clearAllNotifs(),
+  'close-prod-direct':   () => closeProdDirect(),
+  'open-reportar-producto': () => openReportarProducto(),
+  'change-qty':          el => changeQty(Number(el.dataset.arg) || 0),
+  'cart-qty':            el => cartQty(Number(el.dataset.idx), Number(el.dataset.arg) || 0),
+  'cart-remove':         el => cartRemove(Number(el.dataset.idx)),
+  'add-to-cart-and-close': () => addToCartAndClose(),
+  'open-seguidores':     el => openSeguidores(el.dataset.arg),
+  'toggle-bio-edit':     el => toggleBioEdit(el.dataset.arg),
+  'guardar-bio':         el => guardarBio(el.dataset.arg),
+  'open-mensajes':       () => openMensajes(),
+  'overlay-open':        el => document.getElementById(el.dataset.arg)?.classList.add('show'),
+  'overlay-hide':        el => document.getElementById(el.dataset.arg)?.classList.remove('show'),
+  'overlay-cerrar':      el => document.getElementById(el.dataset.overlay)?.classList.remove('show'),
+  'file-click':          (el, e) => { const inp = document.getElementById(el.dataset.arg); if (inp && e.target !== inp) inp.click(); },
+  'child-file-click':    (el, e) => { const inp = el.querySelector('input'); if (inp && e.target !== inp) inp.click(); },
+  'handle-add-product':  () => handleAddProduct(),
+  'guardar-cuenta-bancaria': () => guardarCuentaBancaria(),
+  'guardar-cuenta-admin':    () => guardarCuentaAdmin(),
+  'abrir-pago':          () => abrirPago(),
+  'cerrar-pago':         () => cerrarPago(),
+  'confirmar-pago':      () => confirmarPago(),
+  'rate-seller':         el => rateSeller(Number(el.dataset.arg) || 0),
+  'descargar-comprobante': () => descargarComprobante(),
+  'volver-al-inicio':    () => volverAlInicio(),
+  'filtro-historial':    el => filtroHistorial(el.dataset.arg, el),
+  'filtro-pedido':       el => filtroPedido(el.dataset.arg, el),
+  'close-detalle':       () => closeDetalle(),
+  'close-reporte':       () => closeReporte(),
+  'close-seguidores':    () => closeSeguidores(),
+  'close-reportar-producto': () => closeReportarProducto(),
+  'guardar-perfil':      () => guardarPerfil(),
+  'guardar-direccion':   () => guardarDireccion(),
+  'convertir-a-vendedor': () => convertirAVendedor(),
+  'eliminar-cuenta':     () => eliminarCuenta(),
+  'chat-demo':           el => { try { openChat(...JSON.parse(el.dataset.arg || '[]')); } catch (err) {} },
+  'send-msg':            () => sendMsg(),
+  'open-reporte':        el => openReporte(el.dataset.arg),
+  'admin-responder-reporte': () => adminResponderReporte(),
+  'admin-accion-reporte':    el => adminAccionReporte(el.dataset.arg),
+  'enviar-reporte':      () => enviarReporte(),
+  // Tablas vivas (admin, historial, pedidos, tienda, feed)
+  'admin-user-estado':   el => adminCambiarEstadoUsuario(el.dataset.id, el.dataset.estado),
+  'admin-user-eliminar': el => adminEliminarUsuarioAccion(el.dataset.id),
+  'admin-prod-eliminar': el => adminEliminarProductoAccion(el.dataset.id),
+  'admin-prod-restaurar': el => adminRestaurarProductoAccion(el.dataset.id),
+  'historial-ver':       el => verDetalleHistorial(el.dataset.id),
+  'historial-cancelar':  el => cancelarPedidoComprador(el.dataset.id),
+  'chat-abrir':          el => openChatPorId(Number(el.dataset.id)),
+  'notif-abrir':         el => clickNotif(Number(el.dataset.id)),
+  'notif-borrar':        (el, e) => { e.stopPropagation(); deleteNotif(Number(el.dataset.id)); },
+  'pedido-detalle':      el => openDetallePedido(el.dataset.id),
+  'producto-editar':     el => handleEditProduct(el.dataset.id),
+  'producto-abrir':      el => openProd(el.dataset.key),
+};
+
+const ACCIONES_CHANGE = {
+  'filtrar-categoria':   el => filtrarPorCategoria(el.value),
+  'cambiar-foto':        (el, e) => cambiarFotoPerfil(e, el.dataset.arg),
+  'handle-evidencia':    (el, e) => handleEvidenciaUpload(e),
+  'pedido-estado':       el => updatePedidoEstado(el.dataset.id, el.value),
+};
+
+const ACCIONES_INPUT = {
+  'format-card-number':  el => formatCardNumber(el),
+  'filtrar-productos':   () => filtrarProductos(),
+};
+
+const ACCIONES_KEYDOWN = {
+  'admin-buscar':        el => adminBuscar(el.value),
+};
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-action]');
+  if (el) {
+    const fn = ACCIONES_CLICK[el.dataset.action];
+    if (typeof fn === 'function') { fn(el, e); return; }
+  }
+  const auto = e.target.closest('[data-self-close]');
+  if (auto && e.target === auto) auto.classList.remove('show');
+});
+
+document.addEventListener('change', e => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const fn = ACCIONES_CHANGE[el.dataset.action];
+  if (typeof fn === 'function') fn(el, e);
+});
+
+document.addEventListener('keydown', e => {
+  const el = e.target.closest ? e.target.closest('[data-action]') : null;
+  if (!el || e.key !== 'Enter') return;
+  const fn = ACCIONES_KEYDOWN[el.dataset.action];
+  if (typeof fn === 'function') fn(el, e);
+});
+
+// ════════════════════════════════════════════════════════════
 // RF3/4 — Recuperar y restablecer contraseña
 // ════════════════════════════════════════════════════════════
 
@@ -1120,9 +1235,10 @@ async function doRecuperar() {
   }
   try {
     const body = await api.recover(email);
-    // En desarrollo la API puede devolver el token de reseteo en data.
+    // El backend solo devuelve el token de reseteo en desarrollo; se conserva
+    // en memoria para el flujo inmediato y NUNCA se persiste (Info auditoria).
+    try { localStorage.removeItem('commercity_recovery'); } catch (e) {}
     recoveryToken = (body && body.data && (body.data.token || body.data.reset_token)) || null;
-    if (recoveryToken) { try { localStorage.setItem('commercity_recovery', recoveryToken); } catch (e) {} }
   } catch (e) {
     if (errEl) { errEl.textContent = (e && e.message) || 'No se pudo iniciar la recuperación.'; errEl.style.display = 'block'; } return;
   }
@@ -1148,9 +1264,9 @@ async function doRestablecer() {
   const p1    = document.getElementById('reset-p1')?.value;
   const p2    = document.getElementById('reset-p2')?.value;
   const errEl = document.getElementById('reset-error');
-  if (!p1 || p1.length < 6) { if (errEl) { errEl.textContent='La contraseña debe tener al menos 6 caracteres.'; errEl.style.display='block'; } return; }
+  if (!p1 || p1.length < 8) { if (errEl) { errEl.textContent='La contraseña debe tener al menos 8 caracteres.'; errEl.style.display='block'; } return; }
   if (p1 !== p2)             { if (errEl) { errEl.textContent='Las contraseñas no coinciden.'; errEl.style.display='block'; } return; }
-  const token = recoveryToken || (() => { try { return localStorage.getItem('commercity_recovery'); } catch (e) { return null; } })();
+  const token = recoveryToken;
   if (!token) { if (errEl) { errEl.textContent='Sesión de recuperación expirada. Solicita un nuevo correo.'; errEl.style.display='block'; } return; }
   try {
     await api.resetPassword(token, p1);
@@ -1281,7 +1397,7 @@ function renderHistorial() {
     
     // RF35: Botón Cancelar solo visible cuando el estado es 'Pendiente'
     const cancelBtn = h.estado === 'Pendiente'
-      ? `<button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.3);padding:4px 8px;font-size:11px" onclick="cancelarPedidoComprador('${hId}')" title="Cancelar pedido y recibir devolución">Cancelar</button>`
+      ? `<button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.3);padding:4px 8px;font-size:11px" data-action="historial-cancelar" data-id="${hId}" title="Cancelar pedido y recibir devolución">Cancelar</button>`
       : '';
 
     return `<tr>
@@ -1296,7 +1412,7 @@ function renderHistorial() {
       <td style="font-weight:700">${fmtCOP(total)}</td>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
-          <button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px" onclick="verDetalleHistorial('${hId}')">Ver</button>
+          <button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px" data-action="historial-ver" data-id="${hId}">Ver</button>
           ${cancelBtn}
         </div>
       </td>
@@ -1324,12 +1440,12 @@ function verDetalleHistorial(id) {
   if (!body) return;
   body.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Pedido</div><div style="font-size:13px;font-weight:600">${h.id}</div></div>
-      <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Estado</div><span class="badge ${cls}">${h.estado}</span></div>
-      <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Vendedor</div><div style="font-size:13px">${h.vendedor}</div></div>
-      <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Fecha</div><div style="font-size:13px;color:var(--text2)">${h.fecha}</div></div>
-      <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Dirección</div><div style="font-size:13px;color:var(--text2)">${h.dir}</div></div>
-      <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Producto</div><div style="font-size:13px;font-weight:600">${h.producto} × ${h.qty}</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Pedido</div><div style="font-size:13px;font-weight:600">${escHtml(h.id)}</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Estado</div><span class="badge ${cls}">${escHtml(h.estado)}</span></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Vendedor</div><div style="font-size:13px">${escHtml(h.vendedor)}</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Fecha</div><div style="font-size:13px;color:var(--text2)">${escHtml(h.fecha)}</div></div>
+      <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Dirección</div><div style="font-size:13px;color:var(--text2)">${escHtml(h.dir)}</div></div>
+      <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Producto</div><div style="font-size:13px;font-weight:600">${escHtml(h.producto)} × ${Number(h.qty) || 0}</div></div>
     </div>
     <div style="background:var(--bg3);border-radius:12px;padding:14px 16px">
       <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><span style="color:var(--text2)">Subtotal</span><span>${fmtCOP(subtotal)}</span></div>
@@ -1341,14 +1457,14 @@ function verDetalleHistorial(id) {
   if (actions) {
     if (h.estado === 'Pendiente') {
       actions.innerHTML = `
-        <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.3);padding:10px;font-weight:700;font-size:13px" onclick="cancelarPedidoComprador('${h.id}')">
+        <button class="btn btn-sm" data-action="historial-cancelar" data-id="${escHtml(h.id)}" style="background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.3);padding:10px;font-weight:700;font-size:13px">
           ✕ Cancelar Pedido y Solicitar Devolución
         </button>
-        <button class="btn btn-ghost btn-full" onclick="document.getElementById('hist-detalle-overlay').classList.remove('show')">Cerrar</button>
+        <button class="btn btn-ghost btn-full" data-action="overlay-cerrar" data-overlay="hist-detalle-overlay">Cerrar</button>
       `;
     } else {
       actions.innerHTML = `
-        <button class="btn btn-ghost btn-full" onclick="document.getElementById('hist-detalle-overlay').classList.remove('show')">Cerrar</button>
+        <button class="btn btn-ghost btn-full" data-action="overlay-cerrar" data-overlay="hist-detalle-overlay">Cerrar</button>
       `;
     }
   }
@@ -1664,8 +1780,8 @@ async function cargarAdminTablas() {
           <td><span class="role-badge role-${escHtml((u.rol || 'comprador').toLowerCase())}">${escHtml(u.rol || 'Comprador')}</span></td>
           <td><span class="${activo ? 'status-active' : 'status-banned'}">${activo ? 'Activo' : 'Baneado'}</span></td>
           <td><div class="admin-btn-row">
-            <button class="btn ${activo ? 'btn-ghost' : 'btn-orange'} btn-sm" style="padding:4px 10px;font-size:11px" onclick="adminCambiarEstadoUsuario('${u.id}','${activo ? 'baneado' : 'activo'}')">${activo ? 'Banear' : 'Activar'}</button>
-            <button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)" onclick="adminEliminarUsuarioAccion('${u.id}')">Eliminar</button>
+            <button class="btn ${activo ? 'btn-ghost' : 'btn-orange'} btn-sm" style="padding:4px 10px;font-size:11px" data-action="admin-user-estado" data-id="${escHtml(u.id)}" data-estado="${activo ? 'baneado' : 'activo'}">${activo ? 'Banear' : 'Activar'}</button>
+            <button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)" data-action="admin-user-eliminar" data-id="${escHtml(u.id)}">Eliminar</button>
           </div></td>
         </tr>`;
       }).join('');
@@ -1679,8 +1795,8 @@ async function cargarAdminTablas() {
         <td><div style="font-size:12px;font-weight:600">${escHtml(p.nombre || '—')}</div><div style="font-size:11px;color:var(--text2)">${p.precio != null ? fmtCOP(Number(p.precio)) : ''}</div></td>
         <td style="font-size:12px;color:var(--text2)">${escHtml(p.vendedor || '')}</td>
         <td><div style="display:flex;gap:6px">
-          <button class="btn btn-sm" style="padding:4px 8px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)" onclick="adminEliminarProductoAccion('${p.id}')">🗑</button>
-          ${p.eliminado ? `<button class="btn btn-orange btn-sm" style="padding:4px 8px;font-size:11px" onclick="adminRestaurarProductoAccion('${p.id}')">Restaurar</button>` : ''}
+          <button class="btn btn-sm" style="padding:4px 8px;font-size:11px;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)" data-action="admin-prod-eliminar" data-id="${escHtml(p.id)}">🗑</button>
+          ${p.eliminado ? `<button class="btn btn-orange btn-sm" style="padding:4px 8px;font-size:11px" data-action="admin-prod-restaurar" data-id="${escHtml(p.id)}">Restaurar</button>` : ''}
         </div></td>
       </tr>`).join('');
     }
@@ -1855,7 +1971,7 @@ function renderAdminReportesTable() {
             <td style="font-size:12px">${escHtml(r.reportado)}</td>
             <td style="font-size:11px;color:var(--text2)">${escHtml(r.fecha)}</td>
             <td><span class="badge ${r.estadoCls}" style="font-size:10px">${r.estado}</span></td>
-            <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte('${key}')">${r.estado === 'Pendiente' ? 'Responder' : 'Ver'}</button></td>
+            <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" data-action="open-reporte" data-arg="${escHtml(key)}">${r.estado === 'Pendiente' ? 'Responder' : 'Ver'}</button></td>
           </tr>
         `;
       }).join('');
@@ -2045,15 +2161,14 @@ function renderNotifPanel() {
     return;
   }
   list.innerHTML = notifications.map(n => `
-    <div class="notif-item" style="${!n.read?'background:rgba(239,153,24,.05)':''}" onclick="clickNotif(${n.id})">
+    <div class="notif-item" style="${!n.read?'background:rgba(239,153,24,.05)':''}" data-action="notif-abrir" data-id="${n.id}">
       <div class="notif-icon">${escHtml(n.tipo)}</div>
       <div style="flex:1;min-width:0">
         <div class="notif-text">${escHtml(n.desc)}</div>
         <div class="notif-time">${escHtml(n.time)}</div>
       </div>
-      <button onclick="event.stopPropagation();deleteNotif(${n.id})"
-        style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 6px;border-radius:4px;transition:color .12s"
-        onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">✕</button>
+      <button class="notif-x" data-action="notif-borrar" data-id="${n.id}"
+        style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 6px;border-radius:4px;transition:color .12s">✕</button>
     </div>`).join('');
 }
 
@@ -2323,7 +2438,7 @@ async function renderTiendaStats() {
           <td>${fmtCOP(bruto)}</td>
           <td style="color:var(--red);font-size:11px">${fmtCOP(com)}</td>
           <td style="color:var(--green);font-weight:700">${fmtCOP(neto)}</td>
-          <td><span class="badge ${cls}">${est}</span></td>
+          <td><span class="badge ${cls}">${escHtml(est)}</span></td>
         </tr>`;
       }).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text2)">No hay ventas registradas</td></tr>';
     }
@@ -2401,11 +2516,11 @@ async function renderPedidos() {
       <td style="font-weight:600">${fmtCOP(p.precio*p.qty)}</td>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
-          <select onchange="updatePedidoEstado('${escHtml(p.id)}',this.value)"
+          <select data-action="pedido-estado" data-id="${escHtml(p.id)}"
             style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:11px;color:var(--text);font-family:var(--ui);cursor:pointer;outline:none">
             ${opciones}
           </select>
-          <button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px" onclick="openDetallePedido('${escHtml(p.id)}')">Detalle</button>
+          <button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px" data-action="pedido-detalle" data-id="${escHtml(p.id)}">Detalle</button>
         </div>
       </td>
     </tr>`;
@@ -2476,7 +2591,7 @@ function openDetallePedido(id) {
       <span class="detalle-total-lbl">Precio total del pedido</span>
       <span class="detalle-total-val">${fmtCOP(total)}</span>
     </div>
-    <button class="btn btn-ghost btn-full" onclick="closeDetalle()">Cerrar</button>
+    <button class="btn btn-ghost btn-full" data-action="close-detalle">Cerrar</button>
   `;
   overlay.classList.add('show');
 }
@@ -2554,7 +2669,7 @@ async function cargarMisProductos() {
       const final = descPct > 0 ? Math.round(precioNum * (1 - descPct / 100)) : precioNum;
       return `<div class="feed-card">
         ${img ? `<img src="${escHtml(imgSrcSafe(img))}" alt=""/>` : ''}
-        <div class="feed-edit-btn" onclick="handleEditProduct('${p.id}')">✏</div>
+        <div class="feed-edit-btn" data-action="producto-editar" data-id="${escHtml(p.id)}">✏</div>
         <div class="feed-card-body"><div class="feed-card-name">${escHtml(p.nombre || 'Producto')}</div>
         ${descPct > 0 ? `<div class="feed-card-old">${fmtCOP(precioNum)}</div>` : ''}
         <div class="feed-card-price">${fmtCOP(final)}</div></div>
@@ -2698,7 +2813,7 @@ function renderProductsHome(customList = null) {
     const agotadoLabel = isAgotado ? `<span class="prod-badge" style="background:var(--red);color:#fff">AGOTADO</span>` : '';
     
     return `
-      <div class="prod-card" onclick="openProd('${p.key}')" style="${isAgotado ? 'opacity: 0.75;' : ''}">
+      <div class="prod-card" data-action="producto-abrir" data-key="${escHtml(p.key)}" style="${isAgotado ? 'opacity: 0.75;' : ''}">
         <div class="prod-img">
           <img src="${escHtml(imgSrcSafe(p.img))}" alt=""/>
           ${discountHtml}
@@ -2804,4 +2919,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 document.addEventListener('input', e => {
   if (e.target.id === 'reset-p1') checkPasswordStrength(e.target.value);
+  const el = e.target.closest ? e.target.closest('[data-action]') : null;
+  if (!el) return;
+  const fn = ACCIONES_INPUT[el.dataset.action];
+  if (typeof fn === 'function') fn(el, e);
 });

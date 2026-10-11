@@ -6,9 +6,6 @@ let currentAdminTarget = null;
    COMMERCITY — app.js (Complete Rewrite)
    ========================================================= */
 
-let ipcRenderer;
-try { ipcRenderer = require('electron').ipcRenderer; } catch(e) {}
-
 const AUTH_PAGES = ['login','registro','recuperar','restablecer','terminos'];
 const APP_PAGES  = ['home','carrito','perfil','tienda','pedidos','historial','ajustes','mensajes','chat','admin','ajustes-admin'];
 
@@ -72,12 +69,12 @@ async function cargarCatalogoDesdeAPI() {
 function productCardHTML(key, p, withEdit) {
   const badge = (p.disc > 0) ? `<div class="prod-badge disc-badge">-${p.disc}%</div>` : '';
   const old = (p.disc > 0) ? `<div class="prod-price-old">${fmtCOP(Math.round(p.price / (1 - p.disc / 100)))}</div>` : '';
-  const edit = withEdit ? `<button class="prod-edit-btn seller-only" onclick="event.stopPropagation(); openEditProductModal('${escAttr(key)}')" title="Editar producto">
+  const edit = withEdit ? `<button class="prod-edit-btn seller-only" data-action="open-edit-product-modal" data-arg="${escAttr(key)}" title="Editar producto">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
   </button>` : '';
   const img = p.img ? `<img src="${escAttr(p.img)}" alt="${escAttr(p.name)}" class="prod-img" style="object-fit:cover;" />`
     : `<div style="width:100%;aspect-ratio:1;background:var(--bg-input);display:flex;align-items:center;justify-content:center;font-size:48px;">📦</div>`;
-  return `<div class="prod-card" style="animation:fadeIn 0.3s ease;" onclick="openProductDetail('${escAttr(key)}')">
+  return `<div class="prod-card" style="animation:fadeIn 0.3s ease;" data-action="open-product-detail" data-arg="${escAttr(key)}">
     ${badge}${edit}${img}
     <div class="prod-info"><div class="prod-name">${escAttr(p.name)}</div>${old}<div class="prod-price">${fmtCOP(p.price)}</div></div>
   </div>`;
@@ -178,7 +175,7 @@ let CHAT_LISTA = [];              // filas reales del listado de mensajes
 let CHAT_FALLBACK_HTML = null;    // HTML estático de page-mensajes (fallback offline)
 
 function apiReady() { return (typeof api !== 'undefined'); }
-function apiBaseUrl() { try { return (typeof API_URL !== 'undefined' && API_URL) || 'http://10.0.2.2:3000'; } catch (e) { return 'http://10.0.2.2:3000'; } }
+function apiBaseUrl() { try { return (typeof API_URL !== 'undefined' && API_URL) || ''; } catch (e) { return ''; } }
 function apiErrorMessage(err) {
   if (!err) return 'Error desconocido';
   if (typeof err === 'string') return err;
@@ -215,12 +212,23 @@ function applyRoles(roles) {
   setRole(seller, admin);
 }
 function clearSession() {
-  ['commercity_token','commercity_user_id','commercity_roles','commercity_logged_in',
-   'commercity_is_seller','commercity_is_admin','commercity_rem_pass'].forEach(k => {
-    try { localStorage.removeItem(k); } catch (e) {}
-  });
+  // M-23: borra TODAS las claves commercity_* (token, perfil, carrito, restos antiguos).
+  try {
+    const claves = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf('commercity_') === 0) claves.push(k);
+    }
+    claves.forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+  } catch (e) {}
+  try { sessionStorage.removeItem('commercity_reset_token'); } catch (e) {}
 }
 function fmtCOP(n) { return '$' + Number(n || 0).toLocaleString('es-CO'); }
+
+/* M-24: datos personales que NO se persisten (solo viven en memoria durante la sesion). */
+let perfilFotoLocal = null;
+let perfilDescLocal = null;
+let direccionLocal = { addr: '', city: '', dept: '' };
 
 /* ---- Helpers de render (estados, avatares, escape) ---- */
 function claveEstado(est) {
@@ -371,11 +379,11 @@ async function cargarPedidos() {
     const detalleId = v.detalle_id ?? v.id ?? null;
     const acc = [];
     if (pedidoId != null && Number.isFinite(Number(pedidoId))) {
-      acc.push(`<button class="btn-ver" style="margin-right:4px;" onclick="openOrderDetail(${Number(pedidoId)},${detalleId != null ? Number(detalleId) : 'null'})">Ver detalle</button>`);
+      acc.push(`<button class="btn-ver" style="margin-right:4px;" data-action="open-order-detail" data-arg="${Number(pedidoId)}"${detalleId != null ? ` data-arg2="${Number(detalleId)}"` : ''}>Ver detalle</button>`);
       if (k === 'pendiente') {
-        acc.push(`<button class="btn-ver" style="color:var(--orange);border-color:rgba(245,166,35,0.5);" onclick="actualizarEstadoPedido(${Number(pedidoId)},'En camino')">Enviar</button>`);
+        acc.push(`<button class="btn-ver" style="color:var(--orange);border-color:rgba(245,166,35,0.5);" data-action="actualizar-estado-pedido" data-arg="${Number(pedidoId)}" data-arg2="En camino">Enviar</button>`);
       } else if (k === 'camino') {
-        acc.push(`<button class="btn-ver" style="color:#22c55e;border-color:rgba(34,197,94,0.5);" onclick="actualizarEstadoPedido(${Number(pedidoId)},'Entregado')">Entregado</button>`);
+        acc.push(`<button class="btn-ver" style="color:#22c55e;border-color:rgba(34,197,94,0.5);" data-action="actualizar-estado-pedido" data-arg="${Number(pedidoId)}" data-arg2="Entregado">Entregado</button>`);
       }
     } else {
       acc.push('—');
@@ -452,9 +460,9 @@ async function cargarHistorial() {
   if (!lineas.length) { tb.innerHTML = filaVacia(7, 'Aún no tienes compras registradas'); return; }
   tb.innerHTML = lineas.map((l, i) => {
     const k = claveEstado(l.estado);
-    const acciones = [`<button class="btn-ver" style="margin-right:4px;" onclick="abrirCalificacion(${i})">Calificar</button>`];
+    const acciones = [`<button class="btn-ver" style="margin-right:4px;" data-action="abrir-calificacion" data-arg="${i}">Calificar</button>`];
     if (k === 'pendiente' && l.detalle_id != null) {
-      acciones.push(`<button class="btn-ver" style="color:var(--danger);border-color:rgba(239,68,68,0.45);" onclick="cancelarCompraLinea(${i})">Cancelar</button>`);
+      acciones.push(`<button class="btn-ver" style="color:var(--danger);border-color:rgba(239,68,68,0.45);" data-action="cancelar-compra-linea" data-arg="${i}">Cancelar</button>`);
     }
     return `<tr data-estado="${k}">
         <td><div class="tbl-user"><div class="tbl-ava" style="background:${colorAvatar(l.vendedor)};">${letraAvatar(l.vendedor)}</div>${escAttr(l.vendedor)}</div></td>
@@ -503,7 +511,7 @@ async function cargarMensajes(uid) {
       const out = (yo != null && Number(m.emisor_id) === yo);
       if (!out && m.id != null && Number(m.leido) === 0) porLeer.push(Number(m.id));
       return `<div class="msg-wrap ${out ? 'outgoing' : 'incoming'}">
-        <div class="msg-bubble">${escAttr(m.mensaje || '')}${m.archivo_url ? `<br><a href="${escAttr(apiBaseUrl() + m.archivo_url)}" target="_blank">📎 archivo</a>` : ''}</div>
+        <div class="msg-bubble">${escAttr(m.mensaje || '')}${m.archivo_url ? `<br><a href="${escAttr(apiBaseUrl() + m.archivo_url)}" target="_blank" rel="noopener noreferrer">📎 archivo</a>` : ''}</div>
         <div class="msg-time">${horaCorta(m.enviado_at || m.fecha)}</div>
       </div>`;
     }).join('');
@@ -888,12 +896,11 @@ async function handleRestablecer() {
   if (!a || !b) { toast('⚠️ Completa todos los campos'); return; }
   if (a !== b) { toast('⚠️ Las contraseñas no coinciden'); return; }
   if (!apiReady()) { toast('⚠️ API no disponible (falta api.js)'); return; }
-  const token = new URLSearchParams(window.location.search).get('token')
-    || localStorage.getItem('commercity_reset_token');
+  // M-24: el token de reset viaja en el enlace (query) y nunca se persiste.
+  const token = new URLSearchParams(window.location.search).get('token');
   if (!token) { toast('⚠️ Abre el enlace de recuperación de tu correo para obtener el token'); return; }
   try {
     await api.resetPassword(token, a);
-    try { localStorage.removeItem('commercity_reset_token'); } catch (e) {}
     toast('✅ ¡Contraseña restablecida!');
     setTimeout(() => navigate('login'), 900);
   } catch (err) {
@@ -1112,14 +1119,14 @@ async function renderCart() {
             </div>
           </div>
         </div>
-        <button class="trash-btn" onclick="cartRemove(${idx})" title="Eliminar">
+        <button class="trash-btn" data-action="cart-remove" data-idx="${idx}" title="Eliminar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
         </button>
         <div class="cart-item-right">
           <span class="qty-label">CANTIDAD</span>
-          <button class="qty-btn-sm" onclick="cartQty(${idx},-1)">-</button>
+          <button class="qty-btn-sm" data-action="cart-qty" data-idx="${idx}" data-arg="-1">-</button>
           <span class="qty-val">${item.qty}</span>
-          <button class="qty-btn-sm" onclick="cartQty(${idx},1)">+</button>
+          <button class="qty-btn-sm" data-action="cart-qty" data-idx="${idx}" data-arg="1">+</button>
         </div>
       </div>`;
   }).join('');
@@ -1428,7 +1435,7 @@ function chatRowHTML(f, i) {
   const color = colorAvatar(nombre);
   const tiempo = f.tiempo ? `<div class="chat-li-time">${escAttr(f.tiempo)}</div>` : '';
   const dot = f.unread ? '<div class="unread-dot"></div>' : '';
-  return `<div class="chat-li${f.unread ? ' unread' : ''}" onclick="abrirChatLista(${i})">
+  return `<div class="chat-li${f.unread ? ' unread' : ''}" data-action="abrir-chat-lista" data-arg="${i}">
             <div class="chat-li-ava" style="background:linear-gradient(135deg,${color},${color}99);">${letraAvatar(nombre)}</div>
             <div class="chat-li-body">
               <div class="chat-li-name">${escAttr(nombre)}</div>
@@ -1528,7 +1535,8 @@ async function savePersonalInfo() {
 
   const desc = document.getElementById('aj-desc')?.value.trim();
   if (desc !== undefined) {
-    localStorage.setItem('commercity_desc', desc || 'Hola,Soy nuevo');
+    perfilDescLocal = desc || 'Hola,Soy nuevo';
+    try { localStorage.removeItem('commercity_desc'); } catch (err) {}
     const perfilDesc = document.getElementById('perfil-desc');
     if (perfilDesc) perfilDesc.textContent = desc || 'Hola,Soy nuevo';
   }
@@ -1543,9 +1551,12 @@ function saveAddress() {
   const city = document.getElementById('aj-city')?.value.trim();
   const dept = document.getElementById('aj-dept')?.value.trim();
   if (!addr || !city || !dept) { toast('⚠️ Completa la dirección'); return; }
-  localStorage.setItem('commercity_addr', addr);
-  localStorage.setItem('commercity_city', city);
-  localStorage.setItem('commercity_dept', dept);
+  direccionLocal = { addr, city, dept };
+  try {
+    localStorage.removeItem('commercity_addr');
+    localStorage.removeItem('commercity_city');
+    localStorage.removeItem('commercity_dept');
+  } catch (e) {}
   toast('✅ Dirección de entrega guardada');
 }
 
@@ -1636,19 +1647,190 @@ function toast(msg) {
   el._t = setTimeout(() => el.classList.remove('show'), 2600);
 }
 
-function minimizeWindow() { if (ipcRenderer) ipcRenderer.send('minimize-window'); }
-function maximizeWindow() { if (ipcRenderer) ipcRenderer.send('maximize-window'); }
-function closeWindow()    { if (ipcRenderer) ipcRenderer.send('close-window'); }
+// M-24: la app movil (Capacitor) no usa controles de ventana de Electron.
+function minimizeWindow() {}
+function maximizeWindow() {}
+function closeWindow()    {}
 
 document.addEventListener('click', (e) => {
   const panel = document.getElementById('notifs-panel');
   if (panel?.classList.contains('open')) {
-    if (!panel.contains(e.target) && !e.target.closest('button[onclick*="toggleNotifs"]')) closeNotifs();
+    if (!panel.contains(e.target) && !e.target.closest('[data-action="toggle-notifs"]')) closeNotifs();
   }
   const catDd = document.getElementById('cat-dropdown');
   if (catDd?.classList.contains('open')) {
     if (!e.target.closest('.cat-wrap')) closeCatMenu();
   }
+});
+
+// ════════════════════════════════════════════════════════════
+// DELEGACIÓN DE EVENTOS
+// La CSP es `script-src 'self'`: sin handlers inline. Cada botón/enlace
+// declara data-action (y data-arg/data-arg2/data-idx) y se despacha aquí.
+// ════════════════════════════════════════════════════════════
+
+const ACCIONES_CLICK = {
+  'win-minimize':   () => minimizeWindow(),
+  'win-maximize':   () => maximizeWindow(),
+  'win-close':      () => closeWindow(),
+  'skip-intro':     () => skipIntro(),
+  'navigate':       el => navigate(el.dataset.arg),
+  'toggle-pwd':     el => togglePwd(el.dataset.arg, el),
+  'handle-login':   () => handleLogin(),
+  'handle-registro': () => handleRegistro(),
+  'handle-recuperar': () => handleRecuperar(),
+  'handle-restablecer': () => handleRestablecer(),
+  'handle-logout':  () => handleLogout(),
+  'toggle-notifs':  (el, e) => toggleNotifs(e),
+  'clear-notifs':   (el, e) => clearNotifs(e),
+  'close-notifs':   () => closeNotifs(),
+  'toggle-cat-menu': (el, e) => toggleCatMenu(e),
+  'toggle-more-menu': () => toggleMoreMenu(),
+  'close-more-menu':  () => closeMoreMenu(),
+  'menu-navigate':  el => { closeMoreMenu(); navigate(el.dataset.arg); },
+  'menu-logout':    () => { closeMoreMenu(); handleLogout(); },
+  'open-product-detail': el => openProductDetail(el.dataset.arg),
+  'open-edit-product-modal': el => openEditProductModal(el.dataset.arg),
+  'change-qty':     el => changeQty(Number(el.dataset.arg) || 0),
+  'add-to-cart':    () => addToCart(),
+  'open-pasarela':  () => openPasarela(),
+  'process-pago':   () => processPago(),
+  'close-pas':      () => closePas(),
+  'download-receipt': () => downloadReceipt(),
+  'close-pd':       () => closePd(),
+  'close-od':       () => closeOd(),
+  'close-add-prod': () => closeAddProd(),
+  'close-edit-prod': () => closeEditProd(),
+  'open-add-product-modal': () => openAddProductModal(),
+  'close-report-modal': () => closeReportModal(),
+  'submit-report-modal': () => submitReportModal(),
+  'open-report-modal': el => openReportModal(el.dataset.arg),
+  'close-rating-modal': () => closeRatingModal(),
+  'set-vendor-rating': el => setVendorRating(Number(el.dataset.arg) || 0),
+  'submit-vendor-rating': () => submitVendorRating(),
+  'rate-profile':   el => rateProfile(Number(el.dataset.arg) || 0),
+  'open-followers-modal': el => openFollowersModal(el.dataset.arg),
+  'close-followers-modal': () => closeFollowersModal(),
+  'switch-follow-tab': el => switchFollowTab(el.dataset.arg),
+  'switch-perfil-tab': el => switchPerfilTab(el.dataset.arg),
+  'switch-admin-tab': el => switchAdminTab(el.dataset.arg),
+  'save-bank-account': () => saveBankAccount(),
+  'save-admin-bank-account': () => saveAdminBankAccount(),
+  'save-personal-info': () => savePersonalInfo(),
+  'save-address':   () => saveAddress(),
+  'become-seller':  () => becomeSeller(),
+  'confirm-delete': () => confirmDelete(),
+  'send-chat-message': () => sendChatMessage(),
+  'filter-tab':     el => filterTab(el, el.dataset.arg, el.dataset.arg2),
+  'filter-htab':    el => filterHTab(el, el.dataset.arg),
+  'chat-demo':      el => { try { openChat(...JSON.parse(el.dataset.arg || '[]')); } catch (err) {} },
+  'notif-row-remove': (el, e) => { e.stopPropagation(); el.closest('.notif-row')?.remove(); },
+  'toast':          el => toast(el.dataset.arg),
+  'close-admin-user': () => closeAdminUser(),
+  'close-admin-product': () => closeAdminProduct(),
+  'close-admin-report': () => closeAdminReport(),
+  'admin-accion':   el => {
+    currentAdminTarget = el.closest('.admin-list-card') || currentAdminTarget;
+    adminAction(el.dataset.arg, el.dataset.arg2 || null);
+  },
+  'admin-accion-report-detail': el => {
+    currentAdminTarget = el.closest('.admin-list-card') || currentAdminTarget;
+    adminAction(el.dataset.arg, null);
+    try { openAdminReportDetail(...JSON.parse(el.dataset.arg2 || '[]')); } catch (err) {}
+  },
+  'admin-open-user-detail': el => {
+    currentAdminTarget = el;
+    if (el.dataset.arg) { try { openAdminUserDetail(...JSON.parse(el.dataset.arg)); } catch (err) {} }
+    else openAdminUserDetail(el.dataset.nombre, el.dataset.rol, el.dataset.estado, el.dataset.email, el.dataset.publicados, el.dataset.reportes);
+  },
+  'admin-open-product-detail': el => {
+    currentAdminTarget = el;
+    if (el.dataset.arg) { try { openAdminProductDetail(...JSON.parse(el.dataset.arg)); } catch (err) {} }
+    else openAdminProductDetail(el.dataset.nombre, el.dataset.vendedor, el.dataset.estado, el.dataset.precio, el.dataset.reportes);
+  },
+  'admin-open-report-detail': el => {
+    currentAdminTarget = el;
+    try { openAdminReportDetail(...JSON.parse(el.dataset.arg || '[]')); } catch (err) {}
+  },
+  'admin-open-report-by-id': el => { currentAdminTarget = el; openAdminReportDetailById(el.dataset.arg ? Number(el.dataset.arg) : null); },
+  // Tablas y listas generadas desde app.js
+  'open-order-detail': el => openOrderDetail(Number(el.dataset.arg), el.dataset.arg2 ? Number(el.dataset.arg2) : null),
+  'actualizar-estado-pedido': el => actualizarEstadoPedido(Number(el.dataset.arg), el.dataset.arg2),
+  'abrir-calificacion': el => abrirCalificacion(Number(el.dataset.arg)),
+  'cancelar-compra-linea': el => cancelarCompraLinea(Number(el.dataset.arg)),
+  'cart-remove':    el => cartRemove(Number(el.dataset.idx)),
+  'cart-qty':       el => cartQty(Number(el.dataset.idx), Number(el.dataset.arg) || 0),
+  'abrir-chat-lista': el => abrirChatLista(Number(el.dataset.arg)),
+  'toggle-follow':  el => toggleFollow(Number(el.dataset.arg), el.dataset.arg2 === '1'),
+};
+
+const ACCIONES_CHANGE = {
+  'change-profile-pic': (el, e) => changeProfilePic(e.target),
+  'preview-upload':     (el, e) => previewUpload(e.target),
+  'preview-edit-upload':(el, e) => previewEditUpload(e.target),
+};
+
+const ACCIONES_INPUT = {
+  'fmt-card': (el, e) => fmtCard(e.target),
+};
+
+const ACCIONES_KEYUP = {
+  'filter-admin-list': el => filterAdminList(el.dataset.arg, el.dataset.arg2),
+};
+
+const ACCIONES_KEYDOWN = {
+  'send-chat-message-enter': () => sendChatMessage(),
+};
+
+const ACCIONES_SUBMIT = {
+  'handle-add-product':  (el, e) => handleAddProduct(e),
+  'handle-edit-product': (el, e) => handleEditProduct(e),
+};
+
+document.addEventListener('click', (e) => {
+  const el = e.target.closest ? e.target.closest('[data-action]') : null;
+  if (el) {
+    const fn = ACCIONES_CLICK[el.dataset.action];
+    if (typeof fn === 'function') { fn(el, e); return; }
+  }
+  const auto = e.target.closest ? e.target.closest('[data-self-close]') : null;
+  if (auto && e.target === auto) auto.classList.remove('open', 'show');
+});
+
+document.addEventListener('change', (e) => {
+  const el = e.target.closest ? e.target.closest('[data-action]') : null;
+  if (!el) return;
+  const fn = ACCIONES_CHANGE[el.dataset.action];
+  if (typeof fn === 'function') fn(el, e);
+});
+
+document.addEventListener('input', (e) => {
+  const el = e.target.closest ? e.target.closest('[data-action]') : null;
+  if (!el) return;
+  const fn = ACCIONES_INPUT[el.dataset.action];
+  if (typeof fn === 'function') fn(el, e);
+});
+
+document.addEventListener('keyup', (e) => {
+  const el = e.target.closest ? e.target.closest('[data-action]') : null;
+  if (!el) return;
+  const fn = ACCIONES_KEYUP[el.dataset.action];
+  if (typeof fn === 'function') fn(el, e);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const el = e.target.closest ? e.target.closest('[data-action]') : null;
+  if (!el) return;
+  const fn = ACCIONES_KEYDOWN[el.dataset.action];
+  if (typeof fn === 'function') fn(el, e);
+});
+
+document.addEventListener('submit', (e) => {
+  const el = e.target.closest ? e.target.closest('[data-action]') : null;
+  if (!el) return;
+  const fn = ACCIONES_SUBMIT[el.dataset.action];
+  if (typeof fn === 'function') fn(el, e);
 });
 
 window.addEventListener('resize', () => {
@@ -1673,7 +1855,8 @@ function changeProfilePic(input) {
       if (avaImg) {
         avaImg.src = e.target.result;
         avaImg.style.display = 'block';
-        localStorage.setItem('commercity_profile_pic', e.target.result);
+        perfilFotoLocal = e.target.result;
+        try { localStorage.removeItem('commercity_profile_pic'); } catch (err) {}
       }
     };
     reader.readAsDataURL(input.files[0]);
@@ -1681,7 +1864,8 @@ function changeProfilePic(input) {
 }
 
 function loadProfilePic() {
-  const pic = localStorage.getItem('commercity_profile_pic');
+  try { localStorage.removeItem('commercity_profile_pic'); } catch (e) {}
+  const pic = perfilFotoLocal;
   if (pic) {
     const avaText = document.getElementById('perfil-ava-text');
     const avaImg = document.getElementById('perfil-ava-img');
@@ -1698,7 +1882,14 @@ loadProfilePic();
 function loadPersonalInfo() {
   const user = localStorage.getItem('commercity_user');
   const email = localStorage.getItem('commercity_email');
-  const desc = localStorage.getItem('commercity_desc');
+  // M-24: desc/foto/direccion ya no se leen de localStorage (no se persisten).
+  try {
+    localStorage.removeItem('commercity_desc');
+    localStorage.removeItem('commercity_addr');
+    localStorage.removeItem('commercity_city');
+    localStorage.removeItem('commercity_dept');
+  } catch (e) {}
+  const desc = perfilDescLocal;
   if (user) {
     const perfilName = document.querySelector('.perfil-name');
     if (perfilName) perfilName.textContent = user;
@@ -1716,9 +1907,9 @@ function loadPersonalInfo() {
     if (perfilDesc) perfilDesc.textContent = desc;
   }
 
-  const addr = localStorage.getItem('commercity_addr');
-  const city = localStorage.getItem('commercity_city');
-  const dept = localStorage.getItem('commercity_dept');
+  const addr = direccionLocal.addr;
+  const city = direccionLocal.city;
+  const dept = direccionLocal.dept;
   if (addr) { const e=document.getElementById('aj-addr'); if(e) e.value = addr; }
   if (city) { const e=document.getElementById('aj-city'); if(e) e.value = city; }
   if (dept) { const e=document.getElementById('aj-dept'); if(e) e.value = dept; }
@@ -1780,7 +1971,7 @@ document.getElementById('page-home').addEventListener('scroll', function(e) {
       if (grid) {
         EXTRA_PRODUCTS.forEach(p => {
           const html = `
-            <div class="prod-card" style="animation:fadeIn 0.3s ease;" onclick="openProductDetail('${p.id}')">
+            <div class="prod-card" style="animation:fadeIn 0.3s ease;" data-action="open-product-detail" data-arg="${escAttr(p.id)}">
               <img src="${p.img}" alt="${p.name}" class="prod-img" style="object-fit:cover;" />
               <div class="prod-info"><div class="prod-name">${p.name}</div><div class="prod-price">${p.price}</div></div>
             </div>
@@ -1855,7 +2046,7 @@ async function renderFollowersList(tab) {
           const nombre = u.nombre_completo || u.nombre || 'Usuario';
           const letter = escAttr((nombre.charAt(0) || '?').toUpperCase());
           const uidNum = Number(uid);
-          const btn = Number.isFinite(uidNum) ? `<button class="btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="toggleFollow(${uidNum}, ${tab === 'siguiendo'})">${tab === 'siguiendo' ? 'Dejar de seguir' : 'Seguir'}</button>` : '';
+          const btn = Number.isFinite(uidNum) ? `<button class="btn-ghost" style="padding:4px 10px;font-size:11px;" data-action="toggle-follow" data-arg="${uidNum}" data-arg2="${tab === 'siguiendo' ? '1' : '0'}">${tab === 'siguiendo' ? 'Dejar de seguir' : 'Seguir'}</button>` : '';
           return `
           <div class="follow-item">
             <div class="follow-ava" style="background:linear-gradient(135deg,#7c3aed,#7c3aed99);">${letter}</div>
@@ -2041,12 +2232,12 @@ async function cargarAdminUsuarios() {
       const rol = u.rol || 'Comprador';
       const estado = String(u.estado || (u.activo === 0 ? 'Baneado' : 'Activo'));
       const ban = /ban/i.test(estado);
-      return `<div class="admin-list-card admin-user-card" data-user-id="${escAttr(uid)}" data-nombre="${escAttr(nombre)}" data-rol="${escAttr(rol)}" data-estado="${escAttr(estado)}" data-email="${escAttr(u.email || '')}" data-publicados="${escAttr(u.productos ?? u.publicados ?? 0)}" data-reportes="${escAttr(u.reportes ?? 0)}" onclick="currentAdminTarget=this; openAdminUserDetail(this.dataset.nombre,this.dataset.rol,this.dataset.estado,this.dataset.email,this.dataset.publicados,this.dataset.reportes)">
+      return `<div class="admin-list-card admin-user-card" data-user-id="${escAttr(uid)}" data-nombre="${escAttr(nombre)}" data-rol="${escAttr(rol)}" data-estado="${escAttr(estado)}" data-email="${escAttr(u.email || '')}" data-publicados="${escAttr(u.productos ?? u.publicados ?? 0)}" data-reportes="${escAttr(u.reportes ?? 0)}" data-action="admin-open-user-detail">
         <div class="admin-card-left"><div class="tbl-ava" style="background:#4b5563;">${escAttr(nombre.charAt(0))}</div>
           <div><div class="admin-card-title">${escAttr(nombre)}</div><div class="admin-card-sub">${escAttr(rol)}</div></div></div>
         <div class="admin-card-right"><span class="badge ${ban ? 'badge-red' : 'badge-green'}">${escAttr(estado)}</span>
-          <button class="btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card'); adminAction('${ban ? 'Activar' : 'Banear'}', null)">${ban ? 'Activar' : 'Banear'}</button>
-          <button class="btn-ghost" style="padding:4px 8px; color:var(--danger);" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card'); adminAction('Eliminar', null)">Eliminar</button>
+          <button class="btn-ghost" style="padding:4px 8px;" data-action="admin-accion" data-arg="${ban ? 'Activar' : 'Banear'}">${ban ? 'Activar' : 'Banear'}</button>
+          <button class="btn-ghost" style="padding:4px 8px; color:var(--danger);" data-action="admin-accion" data-arg="Eliminar">Eliminar</button>
         </div></div>`;
     }).join('');
   } catch (e) {}
@@ -2065,11 +2256,11 @@ async function cargarAdminProductos() {
       const pid = p.id ?? p.producto_id;
       const nombre = p.nombre || 'Producto';
       const vend = p.vendedor || p.vendedor_nombre || '—';
-      return `<div class="admin-list-card admin-prod-card" data-product-id="${escAttr(pid)}" data-nombre="${escAttr(nombre)}" data-vendedor="${escAttr(vend)}" data-estado="${escAttr(p.estado || 'Activo')}" data-precio="${escAttr(fmtCOP(p.precio))}" data-reportes="${escAttr(p.reportes ?? 0)}" onclick="currentAdminTarget=this; openAdminProductDetail(this.dataset.nombre,this.dataset.vendedor,this.dataset.estado,this.dataset.precio,this.dataset.reportes)">
+      return `<div class="admin-list-card admin-prod-card" data-product-id="${escAttr(pid)}" data-nombre="${escAttr(nombre)}" data-vendedor="${escAttr(vend)}" data-estado="${escAttr(p.estado || 'Activo')}" data-precio="${escAttr(fmtCOP(p.precio))}" data-reportes="${escAttr(p.reportes ?? 0)}" data-action="admin-open-product-detail">
         <div class="admin-card-left"><div class="admin-prod-img-placeholder">📦</div>
           <div><div class="admin-card-title">${escAttr(nombre)}</div><div class="admin-card-sub">${escAttr(fmtCOP(p.precio))}</div></div></div>
         <div class="admin-card-right"><div class="admin-card-sub">${escAttr(vend)}</div>
-          <button class="btn-ghost" style="padding:4px 8px; color:var(--danger);" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card'); adminAction('Eliminar producto', null)">🗑️</button>
+          <button class="btn-ghost" style="padding:4px 8px; color:var(--danger);" data-action="admin-accion" data-arg="Eliminar producto">🗑️</button>
         </div></div>`;
     }).join('');
   } catch (e) {}
@@ -2103,9 +2294,8 @@ async function cargarAdminReportes() {
       const estado = r.estado || 'Pendiente';
       const res = /resuelto/i.test(estado);
       const ridNum = Number(rid);
-      const ridArg = Number.isFinite(ridNum) ? ridNum : 'null';
       ADMIN_REPORTES_CACHE[String(rid)] = { tipo, rep, by: '', motivo, fecha, estado };
-      return `<div class="admin-list-card admin-rep-card" data-report-id="${escAttr(rid)}" onclick="currentAdminTarget=this; openAdminReportDetailById(${ridArg})">
+      return `<div class="admin-list-card admin-rep-card" data-report-id="${escAttr(rid)}" data-action="admin-open-report-by-id"${Number.isFinite(ridNum) ? ` data-arg="${ridNum}"` : ''}>
         <div class="admin-card-left" style="flex:1; flex-direction:column; align-items:flex-start;">
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
             <span class="badge badge-red outline">${escAttr(tipo)}</span><div class="admin-card-title">${escAttr(rep)}</div></div>
@@ -2113,7 +2303,7 @@ async function cargarAdminReportes() {
         <div class="admin-card-right" style="flex-direction:column; align-items:flex-end; justify-content:center; gap:6px;">
           <div class="admin-card-sub" style="margin:0;">${escAttr(fecha)}</div>
           <div style="display:flex; gap:6px; align-items:center;"><span class="badge ${res ? 'badge-green' : 'badge-red'}">${escAttr(estado)}</span>
-          <button class="btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); currentAdminTarget=this.closest('.admin-list-card'); adminAction('${res ? 'Ver' : 'Resolver'}', null)">${res ? 'Ver' : 'Resolver'}</button>
+          <button class="btn-ghost" style="padding:4px 8px;" data-action="admin-accion" data-arg="${res ? 'Ver' : 'Resolver'}">${res ? 'Ver' : 'Resolver'}</button>
           </div></div></div>`;
     }).join('');
   } catch (e) {}
@@ -2300,7 +2490,7 @@ function switchPerfilTab(tab) {
       const fmtPrice = '$' + p.price.toLocaleString('es-CO');
       // Fix residual post-review: 'Mi Feed' pinta datos de la API -> escapar (XSS).
       return `
-        <div class="prod-card" style="animation:fadeIn 0.3s ease;" onclick="openProductDetail('${escAttr(key)}')">
+        <div class="prod-card" style="animation:fadeIn 0.3s ease;" data-action="open-product-detail" data-arg="${escAttr(key)}">
           ${p.disc > 0 ? `<div class="prod-badge disc-badge">-${Number(p.disc)}%</div>` : ''}
           <img src="${escAttr(p.img)}" alt="${escAttr(p.name)}" class="prod-img" style="object-fit:cover;" />
           <div class="prod-info">

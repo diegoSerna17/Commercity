@@ -2,10 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
+  <!-- CSP (M-19): scripts solo locales, sin handlers inline; fuentes locales. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http://localhost:3000 http://127.0.0.1:3000 https:; font-src 'self'; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 https:; object-src 'none'; base-uri 'none'; form-action 'none'"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CommerCity</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -14,9 +14,9 @@
 <div id="titlebar">
   <div class="tb-brand">CommerCity</div>
   <div class="tb-controls">
-    <button class="tb-btn tb-min" onclick="window.electron && window.electron.minimize()"></button>
-    <button class="tb-btn tb-max" onclick="window.electron && window.electron.maximize()"></button>
-    <button class="tb-btn tb-close" onclick="window.electron && window.electron.close()"></button>
+    <button class="tb-btn tb-min" data-action="win-minimize"></button>
+    <button class="tb-btn tb-max" data-action="win-maximize"></button>
+    <button class="tb-btn tb-close" data-action="win-close"></button>
   </div>
 </div>
 
@@ -67,17 +67,17 @@
           <div class="field-inner has-icon">
             <span class="fi-icon">🔒</span>
             <input type="password" id="login-pass" placeholder="••••••••"/>
-            <button class="eye-btn" onclick="togglePass('login-pass')">👁</button>
+            <button class="eye-btn" data-action="toggle-pass" data-arg="login-pass">👁</button>
           </div>
         </div>
         <p id="login-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:12px;">Usuario o contraseña incorrectos.</p>
         <div class="row-between">
           <span></span>
-          <a class="link" onclick="navigate('recuperar')">¿Olvidaste tu contraseña?</a>
+          <a class="link" data-action="navigate" data-arg="recuperar">¿Olvidaste tu contraseña?</a>
         </div>
-        <button class="btn btn-orange btn-full btn-lg" onclick="doLogin()" style="margin-bottom:12px;">Entrar →</button>
+        <button class="btn btn-orange btn-full btn-lg" data-action="do-login" style="margin-bottom:12px;">Entrar →</button>
         <div class="divider"><span>o</span></div>
-        <button class="btn btn-ghost btn-full" onclick="navigate('registro')">Crear cuenta nueva</button>
+        <button class="btn btn-ghost btn-full" data-action="navigate" data-arg="registro">Crear cuenta nueva</button>
       </div>
     </div>
   </div>
@@ -110,20 +110,20 @@
           <div class="field-inner has-icon">
             <span class="fi-icon">🔒</span>
             <input type="password" id="reg-pass" placeholder="Contraseña"/>
-            <button class="eye-btn" onclick="togglePass('reg-pass')">👁</button>
+            <button class="eye-btn" data-action="toggle-pass" data-arg="reg-pass">👁</button>
           </div>
         </div>
         <div class="field" style="margin-bottom:20px">
-          <label class="checkbox-row"><input type="checkbox" id="reg-vendedor"/> <a class="link" onclick="navigate('terminos')">Quiero vender en CommerCity</a></label>
+          <label class="checkbox-row"><input type="checkbox" id="reg-vendedor"/> <a class="link" data-action="navigate" data-arg="terminos">Quiero vender en CommerCity</a></label>
         </div>
         <p id="reg-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px">Ese usuario ya existe. Elige otro nombre.</p>
-        <button class="btn btn-orange btn-full btn-lg" onclick="doRegistro()">Registrarse</button>
-        <p class="auth-footer">¿Ya tienes cuenta? <a class="link" onclick="doLogout()">Iniciar sesión</a></p>
+        <button class="btn btn-orange btn-full btn-lg" data-action="do-registro">Registrarse</button>
+        <p class="auth-footer">¿Ya tienes cuenta? <a class="link" data-action="do-logout">Iniciar sesión</a></p>
       </div>
     </div>
     <div class="auth-footer-bar">
       <span>©copyright Commercity 2026</span>
-      <a class="link" onclick="navigate('terminos')">términos y condiciones</a>
+      <a class="link" data-action="navigate" data-arg="terminos">términos y condiciones</a>
     </div>
   </div>
 </div>
@@ -134,7 +134,7 @@
 <div class="page" id="page-terminos">
   <div class="terms-page" style="width:100%;min-height:100%">
     <div class="terms-header">
-      <button class="btn btn-ghost btn-sm terms-back" onclick="navigate('registro')">← Volver</button>
+      <button class="btn btn-ghost btn-sm terms-back" data-action="navigate" data-arg="registro">← Volver</button>
       <h2>Terminos y Condiciones</h2>
     </div>
     <div class="terms-body">
@@ -186,15 +186,15 @@
           </div>
         </div>
         <p id="rec-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px">Usuario no encontrado. Verifica el nombre.</p>
-        <button class="btn btn-orange btn-full btn-lg" onclick="doRecuperar()" style="margin-bottom:14px">Verificar usuario</button>
-        <a class="link" style="display:block;text-align:center" onclick="navigate('login')">← Volver al inicio de sesión</a>
+        <button class="btn btn-orange btn-full btn-lg" data-action="do-recuperar" style="margin-bottom:14px">Verificar usuario</button>
+        <a class="link" style="display:block;text-align:center" data-action="navigate" data-arg="login">← Volver al inicio de sesión</a>
       </div>
       <div id="rec-ok" style="display:none;text-align:center">
         <div style="font-size:44px;margin-bottom:12px">✅</div>
         <h3 style="font-family:var(--font);font-size:17px;font-weight:700;margin-bottom:8px;color:var(--green)">Usuario encontrado</h3>
         <p style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6">Ahora puedes crear una nueva contraseña.</p>
-        <button class="btn btn-orange btn-full btn-lg" onclick="navigate('restablecer')" style="margin-bottom:10px">Restablecer contraseña →</button>
-        <a class="link" style="display:block;text-align:center" onclick="navigate('login')">Cancelar</a>
+        <button class="btn btn-orange btn-full btn-lg" data-action="navigate" data-arg="restablecer" style="margin-bottom:10px">Restablecer contraseña →</button>
+        <a class="link" style="display:block;text-align:center" data-action="navigate" data-arg="login">Cancelar</a>
       </div>
     </div>
   </div>
@@ -211,7 +211,7 @@
         <div class="field-inner has-icon">
           <span class="fi-icon">🔒</span>
           <input type="password" id="reset-p1" placeholder="Mínimo 8 caracteres (letra y número)"/>
-          <button class="eye-btn" onclick="togglePass('reset-p1')">👁</button>
+          <button class="eye-btn" data-action="toggle-pass" data-arg="reset-p1">👁</button>
         </div>
       </div>
       <div class="field">
@@ -219,7 +219,7 @@
         <div class="field-inner has-icon">
           <span class="fi-icon">🔒</span>
           <input type="password" id="reset-p2" placeholder="Repite tu contraseña"/>
-          <button class="eye-btn" onclick="togglePass('reset-p2')">👁</button>
+          <button class="eye-btn" data-action="toggle-pass" data-arg="reset-p2">👁</button>
         </div>
       </div>
       <div style="margin-bottom:16px">
@@ -231,7 +231,7 @@
         <div id="str-label" style="font-size:11px;color:var(--text3)">Ingresa una contraseña</div>
       </div>
       <p id="reset-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px"></p>
-      <button class="btn btn-orange btn-full btn-lg" onclick="doRestablecer()">Restablecer contraseña</button>
+      <button class="btn btn-orange btn-full btn-lg" data-action="do-restablecer">Restablecer contraseña</button>
     </div>
   </div>
 </div>
@@ -248,11 +248,11 @@
     <!-- SECCIÓN PRINCIPAL (comprador + vendedor) -->
     <div id="sb-sec-principal">
       <div class="sb-section">Principal</div>
-      <div class="sb-item active" id="nav-home" onclick="navigate('home')">
+      <div class="sb-item active" id="nav-home" data-action="navigate" data-arg="home">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L8 1.5 14 6v8H10V9H6v5H2V6z"/></svg>
         Inicio
       </div>
-      <div class="sb-item" id="nav-carrito" onclick="navigate('carrito')">
+      <div class="sb-item" id="nav-carrito" data-action="navigate" data-arg="carrito">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1h2l2 7.5h6.5l1.5-5H4.5"/><circle cx="7" cy="13" r="1"/><circle cx="12" cy="13" r="1"/></svg>
         Carrito
       </div>
@@ -261,25 +261,25 @@
     <!-- SECCIÓN CUENTA (comprador + vendedor) -->
     <div id="sb-sec-cuenta">
       <div class="sb-section">Cuenta</div>
-      <div class="sb-item" id="nav-perfil" onclick="navigate('perfil')">
+      <div class="sb-item" id="nav-perfil" data-action="navigate" data-arg="perfil">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5.5" r="3"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5"/></svg>
         Perfil
       </div>
       <!-- Solo vendedor -->
-      <div class="sb-item" id="nav-tienda" onclick="navigate('tienda')" style="display:none">
+      <div class="sb-item" id="nav-tienda" data-action="navigate" data-arg="tienda" style="display:none">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="6" width="13" height="8.5" rx="1"/><path d="M4.5 6V4.5a3.5 3.5 0 017 0V6"/></svg>
         Tienda
       </div>
-      <div class="sb-item" id="nav-pedidos" onclick="navigate('pedidos')" style="display:none">
+      <div class="sb-item" id="nav-pedidos" data-action="navigate" data-arg="pedidos" style="display:none">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 8h6M5 5h6M5 11h3"/></svg>
         Pedidos
       </div>
       <!-- Comprador + vendedor -->
-      <div class="sb-item" id="nav-historial" onclick="navigate('historial')">
+      <div class="sb-item" id="nav-historial" data-action="navigate" data-arg="historial">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2.5 1.5"/></svg>
         Historial Compras
       </div>
-      <div class="sb-item" id="nav-ajustes" onclick="navigate('ajustes')">
+      <div class="sb-item" id="nav-ajustes" data-action="navigate" data-arg="ajustes">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.5 3.5l.85.85M11.65 11.65l.85.85M3.5 12.5l.85-.85M11.65 4.35l.85-.85"/></svg>
         Ajustes
       </div>
@@ -288,7 +288,7 @@
     <!-- SECCIÓN ADMIN (solo admin) -->
     <div id="sb-sec-admin" style="display:none">
       <div class="sb-section">Administración</div>
-      <div class="sb-item" id="nav-admin" onclick="navigate('admin')" style="display:none">
+      <div class="sb-item" id="nav-admin" data-action="navigate" data-arg="admin" style="display:none">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/></svg>
         Panel de Control
       </div>
@@ -300,7 +300,7 @@
       <div class="sb-avatar" id="sb-user-initial">J</div>
       <div><div class="sb-uname" id="sb-user-name">Juan_Giraldo</div><div class="sb-urole" id="sb-user-role">Comprador</div></div>
     </div>
-    <button class="sb-logout" onclick="doLogout()">Cerrar Sesion</button>
+    <button class="sb-logout" data-action="do-logout">Cerrar Sesion</button>
   </div>
 </div>
 
@@ -311,7 +311,7 @@
   <div class="main">
     <div class="cat-bar">
       <div class="cat-select" style="position:relative">
-        <select id="cat-filter" onchange="filtrarPorCategoria(this.value)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+        <select id="cat-filter" data-action="filtrar-categoria" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
           <option value="Todos">Todas las categorías</option>
           <option value="Calzado">Calzado</option>
           <option value="Tecnología">Tecnología</option>
@@ -324,18 +324,18 @@
       <div class="topbar-right">
         <div class="tb-search">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/></svg>
-          <input id="search-input" oninput="filtrarProductos()" placeholder="Buscar productos..."/>
+          <input id="search-input" data-action="filtrar-productos" placeholder="Buscar productos..."/>
         </div>
-        <div class="tb-icon-btn" onclick="toggleNotif()">
+        <div class="tb-icon-btn" data-action="toggle-notif">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2a5 5 0 015 5v2.5l1.5 2H1.5L3 9.5V7a5 5 0 015-5z"/><path d="M6.5 13a1.5 1.5 0 003 0"/></svg>
           <span class="notif-dot"></span>
         </div>
-        <div class="tb-avatar" onclick="navigate('perfil')">J</div>
+        <div class="tb-avatar" data-action="navigate" data-arg="perfil">J</div>
         <!-- RF95-100 NOTIF PANEL DINÁMICO -->
         <div class="notif-panel" id="notif-panel">
           <div class="notif-head">
             <span>NOTIFICACIONES</span>
-            <button class="notif-clear" onclick="clearAllNotifs()">Limpiar todo</button>
+            <button class="notif-clear" data-action="clear-all-notifs">Limpiar todo</button>
           </div>
           <div id="notif-list"></div>
         </div>
@@ -358,13 +358,13 @@
 </div>
 
 <!-- FICHA PRODUCTO OVERLAY -->
-<div class="overlay" id="prod-overlay" onclick="closeProd(event)">
+<div class="overlay" id="prod-overlay" data-self-close="1">
   <div class="prod-detail" id="prod-detail-card">
     <div class="pd-top">
       <span>Commercity</span>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost btn-sm" onclick="closeProdDirect()">← Volver</button>
-        <button class="btn btn-ghost btn-sm" onclick="openReportarProducto()" title="Reportar">⋯ Reportar</button>
+        <button class="btn btn-ghost btn-sm" data-action="close-prod-direct">← Volver</button>
+        <button class="btn btn-ghost btn-sm" data-action="open-reportar-producto" title="Reportar">⋯ Reportar</button>
       </div>
     </div>
     <div class="pd-body">
@@ -388,11 +388,11 @@
     </div>
     <div class="pd-actions">
       <div class="qty-ctrl">
-        <button onclick="changeQty(-1)">−</button>
+        <button data-action="change-qty" data-arg="-1">−</button>
         <span id="pd-qty">1</span>
-        <button onclick="changeQty(1)">+</button>
+        <button data-action="change-qty" data-arg="1">+</button>
       </div>
-      <button class="btn btn-orange" style="flex:1" onclick="addToCartAndClose()">Agregar al carrito</button>
+      <button class="btn btn-orange" style="flex:1" data-action="add-to-cart-and-close">Agregar al carrito</button>
     </div>
   </div>
 </div>
@@ -418,29 +418,29 @@
           </div>
           <span class="prof-online"></span>
           <label style="position:absolute;bottom:2px;right:2px;width:26px;height:26px;border-radius:50%;background:var(--bg2);border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px" title="Cambiar foto">
-            📷<input type="file" accept="image/*" style="display:none" onchange="cambiarFotoPerfil(event,'comprador')"/>
+            📷<input type="file" accept="image/*" style="display:none" data-action="cambiar-foto" data-arg="comprador"/>
           </label>
         </div>
         <div style="flex:1">
           <div class="prof-name">juan_giraldo</div>
           <div class="prof-stats">
-            <div style="cursor:pointer" onclick="openSeguidores('seguidores')"><div class="prof-stat-val">15.8k</div><div class="prof-stat-lbl">SEGUIDORES</div></div>
-            <div style="cursor:pointer" onclick="openSeguidores('siguiendo')"><div class="prof-stat-val">842</div><div class="prof-stat-lbl">SIGUIENDO</div></div>
+            <div style="cursor:pointer" data-action="open-seguidores" data-arg="seguidores"><div class="prof-stat-val">15.8k</div><div class="prof-stat-lbl">SEGUIDORES</div></div>
+            <div style="cursor:pointer" data-action="open-seguidores" data-arg="siguiendo"><div class="prof-stat-val">842</div><div class="prof-stat-lbl">SIGUIENDO</div></div>
           </div>
           <div class="prof-bio">
             <span id="prof-bio-display" class="prof-bio-txt">Me gusta encontrar productos de buena calidad y apoyar tiendas con excelente atención. Siempre busco compras con buenas recomendaciones.</span>
-            <button onclick="toggleBioEdit('comprador')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;margin-left:6px" title="Editar">✏</button>
+            <button data-action="toggle-bio-edit" data-arg="comprador" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;margin-left:6px" title="Editar">✏</button>
             <div id="bio-edit-comprador" style="display:none;margin-top:8px">
               <textarea id="bio-input-comprador" style="width:100%;background:var(--bg3);border:1px solid var(--orange);border-radius:8px;padding:8px;color:var(--text);font-size:12px;font-family:var(--ui);resize:none;outline:none;height:64px"></textarea>
               <div style="display:flex;gap:6px;margin-top:6px">
-                <button class="btn btn-orange btn-sm" onclick="guardarBio('comprador')">Guardar</button>
-                <button class="btn btn-ghost btn-sm" onclick="toggleBioEdit('comprador')">Cancelar</button>
+                <button class="btn btn-orange btn-sm" data-action="guardar-bio" data-arg="comprador">Guardar</button>
+                <button class="btn btn-ghost btn-sm" data-action="toggle-bio-edit" data-arg="comprador">Cancelar</button>
               </div>
             </div>
           </div>
         </div>
         <div class="prof-btns">
-          <button class="btn btn-orange btn-sm" onclick="openMensajes()">✉ Mensajes</button>
+          <button class="btn btn-orange btn-sm" data-action="open-mensajes">✉ Mensajes</button>
         </div>
       </div>
       <div class="feed-tabs">
@@ -500,24 +500,24 @@
         <div class="prof-name">juan_giraldo</div>
         <div class="prof-stars">★★★★★</div>
         <div class="prof-stats">
-          <div style="cursor:pointer" onclick="openSeguidores('seguidores')"><div class="prof-stat-val">15.8k</div><div class="prof-stat-lbl">SEGUIDORES</div></div>
-          <div style="cursor:pointer" onclick="openSeguidores('siguiendo')"><div class="prof-stat-val">842</div><div class="prof-stat-lbl">SIGUIENDO</div></div>
+          <div style="cursor:pointer" data-action="open-seguidores" data-arg="seguidores"><div class="prof-stat-val">15.8k</div><div class="prof-stat-lbl">SEGUIDORES</div></div>
+          <div style="cursor:pointer" data-action="open-seguidores" data-arg="siguiendo"><div class="prof-stat-val">842</div><div class="prof-stat-lbl">SIGUIENDO</div></div>
         </div>
         <div class="prof-bio">
             <span id="prof-bio-vendedor" class="prof-bio-txt">Me gusta encontrar productos de buena calidad y apoyar tiendas con excelente atención. Siempre busco compras con buenas recomendaciones.</span>
-            <button onclick="toggleBioEdit('vendedor')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;margin-left:6px" title="Editar">✏</button>
+            <button data-action="toggle-bio-edit" data-arg="vendedor" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;margin-left:6px" title="Editar">✏</button>
             <div id="bio-edit-vendedor" style="display:none;margin-top:8px">
               <textarea id="bio-input-vendedor" style="width:100%;background:var(--bg3);border:1px solid var(--orange);border-radius:8px;padding:8px;color:var(--text);font-size:12px;font-family:var(--ui);resize:none;outline:none;height:64px"></textarea>
               <div style="display:flex;gap:6px;margin-top:6px">
-                <button class="btn btn-orange btn-sm" onclick="guardarBio('vendedor')">Guardar</button>
-                <button class="btn btn-ghost btn-sm" onclick="toggleBioEdit('vendedor')">Cancelar</button>
+                <button class="btn btn-orange btn-sm" data-action="guardar-bio" data-arg="vendedor">Guardar</button>
+                <button class="btn btn-ghost btn-sm" data-action="toggle-bio-edit" data-arg="vendedor">Cancelar</button>
               </div>
             </div>
           </div>
       </div>
       <div class="prof-btns">
-        <button class="btn btn-orange btn-sm" onclick="openMensajes()">✉ Mensajes</button>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-producto').classList.add('show')">+ Agregar Producto</button>
+        <button class="btn btn-orange btn-sm" data-action="open-mensajes">✉ Mensajes</button>
+        <button class="btn btn-ghost btn-sm" data-action="overlay-open" data-arg="modal-producto">+ Agregar Producto</button>
       </div>
     </div>
     <div class="feed-tabs">
@@ -565,11 +565,11 @@
 
 <!-- MODAL AGREGAR PRODUCTO -->
 <div class="modal-overlay" id="modal-producto">
-  <div class="modal" onclick="event.stopPropagation()">
+  <div class="modal">
     <div class="modal-title">Agregar Producto</div>
     <div class="field-row">
       <div class="field"><label>Nombre del producto</label><input id="prod-nombre" type="text" placeholder=""/></div>
-      <div class="field"><label>Imagen</label><div class="upload-box" onclick="document.getElementById('prod-imagen').click()">+ Cargar imagen<input id="prod-imagen" type="file" accept="image/*" style="display:none"/></div></div>
+      <div class="field"><label>Imagen</label><div class="upload-box" data-action="file-click" data-arg="prod-imagen">+ Cargar imagen<input id="prod-imagen" type="file" accept="image/*" style="display:none"/></div></div>
     </div>
     <div class="field"><label>Descripcion completa</label><textarea id="prod-descripcion" placeholder=""></textarea></div>
     <div class="field-row3">
@@ -582,8 +582,8 @@
       <div class="field"><label>Categoría</label><input id="prod-categoria" type="text" placeholder="Ej: Ropa"/></div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('modal-producto').classList.remove('show')">Cancelar</button>
-      <button class="btn btn-orange" style="flex:1" onclick="handleAddProduct()">Agregar Producto</button>
+      <button class="btn btn-ghost" style="flex:1" data-action="overlay-hide" data-arg="modal-producto">Cancelar</button>
+      <button class="btn btn-orange" style="flex:1" data-action="handle-add-product">Agregar Producto</button>
     </div>
   </div>
 </div>
@@ -641,7 +641,7 @@
           <div class="field"><label>Número de cuenta</label><input id="bank-numero" value="Ej: 1234567890" type="text"/></div>
         </div>
         <div style="display:flex;justify-content:flex-end">
-          <button class="btn btn-orange" onclick="guardarCuentaBancaria()">Guardar cuenta bancaria</button>
+          <button class="btn btn-orange" data-action="guardar-cuenta-bancaria">Guardar cuenta bancaria</button>
         </div>
       </div>
 
@@ -682,11 +682,11 @@
     <div class="topbar">
       <span class="topbar-title">Carrito</span>
       <div class="topbar-right">
-        <div class="tb-icon-btn" onclick="toggleNotif()">
+        <div class="tb-icon-btn" data-action="toggle-notif">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2a5 5 0 015 5v2.5l1.5 2H1.5L3 9.5V7a5 5 0 015-5z"/><path d="M6.5 13a1.5 1.5 0 003 0"/></svg>
           <span class="notif-dot"></span>
         </div>
-        <div class="tb-avatar" onclick="navigate('perfil')">J</div>
+        <div class="tb-avatar" data-action="navigate" data-arg="perfil">J</div>
       </div>
     </div>
     <div class="content">
@@ -705,7 +705,7 @@
         <div style="font-size:48px;margin-bottom:12px">🛒</div>
         <div style="font-size:16px;font-weight:600;margin-bottom:6px">Tu carrito está vacío</div>
         <div style="font-size:13px;margin-bottom:20px">Agrega productos desde el inicio</div>
-        <button class="btn btn-orange" onclick="navigate('home')">Explorar productos</button>
+        <button class="btn btn-orange" data-action="navigate" data-arg="home">Explorar productos</button>
       </div>
 
       <!-- Resumen -->
@@ -728,7 +728,7 @@
             <span id="sum-total" style="font-family:var(--font);font-size:18px;font-weight:800;color:var(--orange)">$0</span>
           </div>
         </div>
-        <button class="btn btn-orange btn-full btn-lg" style="margin-top:16px;border-radius:24px;font-size:18px" onclick="abrirPago()">Comprar</button>
+        <button class="btn btn-orange btn-full btn-lg" style="margin-top:16px;border-radius:24px;font-size:18px" data-action="abrir-pago">Comprar</button>
       </div>
 
     </div>
@@ -738,8 +738,8 @@
 <!-- ═══════════════════════════════════════
      PASARELA DE PAGO (overlay tipo Figma)
 ═══════════════════════════════════════ -->
-<div class="pago-overlay" id="pago-overlay" onclick="cerrarPago(event)">
-  <div class="pago-card" id="pago-card" onclick="event.stopPropagation()" style="border-radius:24px;width:480px;padding:32px">
+<div class="pago-overlay" id="pago-overlay" data-self-close="1">
+  <div class="pago-card" id="pago-card" style="border-radius:24px;width:480px;padding:32px">
 
     <!-- Estado: Formulario -->
     <div id="pago-form-state">
@@ -757,7 +757,7 @@
       <div class="field">
         <label>Número de la tarjeta</label>
         <input id="pago-numero" type="text" placeholder="0000-0000-0000-0000" maxlength="19"
-          oninput="formatCardNumber(this)"/>
+          data-action="format-card-number"/>
       </div>
 
       <div class="field">
@@ -766,10 +766,10 @@
       </div>
       <p id="pago-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px">Completa todos los campos correctamente.</p>
 
-      <button class="btn btn-orange btn-full btn-lg" id="pago-btn" onclick="confirmarPago()" style="border-radius:24px;font-size:18px;margin-bottom:10px">
+      <button class="btn btn-orange btn-full btn-lg" id="pago-btn" data-action="confirmar-pago" style="border-radius:24px;font-size:18px;margin-bottom:10px">
         Pagar <span id="pago-btn-total"></span>
       </button>
-      <button class="btn btn-ghost btn-full" onclick="cerrarPago()" style="border-radius:20px">Cancelar y volver al carrito</button>
+      <button class="btn btn-ghost btn-full" data-action="cerrar-pago" style="border-radius:20px">Cancelar y volver al carrito</button>
     </div>
 
     <!-- Estado: Confirmado -->
@@ -783,17 +783,17 @@
       <div id="pago-rating-section" style="margin-bottom: 24px; background: var(--bg3); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
         <p style="font-size: 13px; color: var(--text2); margin-bottom: 8px;">Califica al vendedor:</p>
         <div class="stars-rating" style="display: flex; justify-content: center; gap: 8px; font-size: 24px; cursor: pointer; color: var(--text3);">
-          <span onclick="rateSeller(1)">☆</span>
-          <span onclick="rateSeller(2)">☆</span>
-          <span onclick="rateSeller(3)">☆</span>
-          <span onclick="rateSeller(4)">☆</span>
-          <span onclick="rateSeller(5)">☆</span>
+          <span data-action="rate-seller" data-arg="1">☆</span>
+          <span data-action="rate-seller" data-arg="2">☆</span>
+          <span data-action="rate-seller" data-arg="3">☆</span>
+          <span data-action="rate-seller" data-arg="4">☆</span>
+          <span data-action="rate-seller" data-arg="5">☆</span>
         </div>
         <p id="rating-confirm-msg" style="display:none; color:var(--orange); font-size:12px; margin-top:8px; font-weight:600;"></p>
       </div>
 
-      <button class="btn btn-orange btn-full" style="border-radius:20px;margin-bottom:10px" onclick="descargarComprobante()">⬇ Descargar Comprobante</button>
-      <button class="btn btn-ghost btn-full" style="border-radius:20px" onclick="volverAlInicio()">Volver al inicio</button>
+      <button class="btn btn-orange btn-full" style="border-radius:20px;margin-bottom:10px" data-action="descargar-comprobante">⬇ Descargar Comprobante</button>
+      <button class="btn btn-ghost btn-full" style="border-radius:20px" data-action="volver-al-inicio">Volver al inicio</button>
     </div>
 
   </div>
@@ -815,10 +815,10 @@
       <h2 style="font-family:var(--font);font-size:18px;font-weight:700;margin-bottom:4px">Historial Compras</h2>
       <p style="font-size:13px;color:var(--text2);margin-bottom:18px">Visualiza y has seguimiento de tus compras en el historial.</p>
       <div class="filter-tabs">
-        <div class="ftab hist-ftab active" onclick="filtroHistorial('Todo',this)">Todo</div>
-        <div class="ftab hist-ftab" onclick="filtroHistorial('Pendiente',this)">Pendiente</div>
-        <div class="ftab hist-ftab" onclick="filtroHistorial('En Camino',this)">En camino</div>
-        <div class="ftab hist-ftab" onclick="filtroHistorial('Entregado',this)">Entregado</div>
+        <div class="ftab hist-ftab active" data-action="filtro-historial" data-arg="Todo">Todo</div>
+        <div class="ftab hist-ftab" data-action="filtro-historial" data-arg="Pendiente">Pendiente</div>
+        <div class="ftab hist-ftab" data-action="filtro-historial" data-arg="En Camino">En camino</div>
+        <div class="ftab hist-ftab" data-action="filtro-historial" data-arg="Entregado">Entregado</div>
       </div>
       <div class="card" style="padding:0;overflow:hidden;overflow-x:auto">
         <table class="data-table">
@@ -832,12 +832,12 @@
 </div>
 
 <!-- Detalle compra overlay -->
-<div class="modal-overlay" id="hist-detalle-overlay" onclick="if(event.target===this)this.classList.remove('show')" style="z-index:450">
-  <div class="modal" style="max-width:460px" onclick="event.stopPropagation()">
+<div class="modal-overlay" id="hist-detalle-overlay" data-self-close="1" style="z-index:450">
+  <div class="modal" style="max-width:460px">
     <div class="modal-title">Detalle del Pedido</div>
     <div id="hist-detalle-body"></div>
     <div id="hist-detalle-actions" style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
-      <button class="btn btn-ghost btn-full" onclick="document.getElementById('hist-detalle-overlay').classList.remove('show')">Cerrar</button>
+      <button class="btn btn-ghost btn-full" data-action="overlay-hide" data-arg="hist-detalle-overlay">Cerrar</button>
     </div>
   </div>
 </div>
@@ -858,10 +858,10 @@
       <h2 style="font-family:var(--font);font-size:18px;font-weight:700;margin-bottom:4px">Pedidos</h2>
       <p style="font-size:13px;color:var(--text2);margin-bottom:18px">Gestiona y actualiza el estado de tus pedidos.</p>
       <div class="filter-tabs">
-        <div class="ftab pedidos-ftab active" onclick="filtroPedido('Todo', this)">Todo</div>
-        <div class="ftab pedidos-ftab" onclick="filtroPedido('Pendiente', this)">Pendiente</div>
-        <div class="ftab pedidos-ftab" onclick="filtroPedido('En camino', this)">En camino</div>
-        <div class="ftab pedidos-ftab" onclick="filtroPedido('Entregado', this)">Entregado</div>
+        <div class="ftab pedidos-ftab active" data-action="filtro-pedido" data-arg="Todo">Todo</div>
+        <div class="ftab pedidos-ftab" data-action="filtro-pedido" data-arg="Pendiente">Pendiente</div>
+        <div class="ftab pedidos-ftab" data-action="filtro-pedido" data-arg="En camino">En camino</div>
+        <div class="ftab pedidos-ftab" data-action="filtro-pedido" data-arg="Entregado">Entregado</div>
       </div>
       <div class="card" style="padding:0;overflow:hidden;overflow-x:auto">
         <table class="data-table">
@@ -876,8 +876,8 @@
 </div>
 
 <!-- DETALLE PEDIDO PANEL -->
-<div class="detalle-overlay" id="detalle-overlay" onclick="closeDetalle(event)">
-  <div class="detalle-panel" onclick="event.stopPropagation()">
+<div class="detalle-overlay" id="detalle-overlay" data-self-close="1">
+  <div class="detalle-panel">
     <div class="detalle-title">Detalle del pedido <span class="badge badge-orange" style="font-size:11px">En Camino</span></div>
     <div class="detalle-date">Fecha: 23 octubre, 2026</div>
     <div class="btn-seller-row">
@@ -891,7 +891,7 @@
       <span class="detalle-total-lbl">Precio total del pedido</span>
       <span class="detalle-total-val">$1.900.000</span>
     </div>
-    <button class="btn btn-ghost btn-full" onclick="closeDetalle()">Cerrar</button>
+    <button class="btn btn-ghost btn-full" data-action="close-detalle">Cerrar</button>
   </div>
 </div>
 
@@ -917,7 +917,7 @@
         <div class="card">
           <div class="field"><label>Usuario</label><input value="Juan_Giraldo" type="text"/></div>
           <div class="field" style="margin-bottom:16px"><label>Correo electrónico</label><input value="Juan_commercity@gmail.com" type="email"/></div>
-          <button class="btn btn-orange btn-sm" onclick="guardarPerfil()">Guardar Cambios</button>
+          <button class="btn btn-orange btn-sm" data-action="guardar-perfil">Guardar Cambios</button>
         </div>
       </div>
 
@@ -930,7 +930,7 @@
             <div class="field" style="margin:0"><label>Ciudad</label><input value="cali" type="text"/></div>
             <div class="field" style="margin:0"><label>Departamento</label><input value="valle del cauca" type="text"/></div>
           </div>
-          <button class="btn btn-orange btn-sm" onclick="guardarDireccion()">Cambiar Dirección</button>
+          <button class="btn btn-orange btn-sm" data-action="guardar-direccion">Cambiar Dirección</button>
         </div>
       </div>
 
@@ -939,7 +939,7 @@
           <h4>¿ Quieres vender en CommerCity ?</h4>
           <p>Crea tu tienda y construye tu futuro en CommerCity. llega a mas compradores en esta comunidad.</p>
         </div>
-        <button class="btn btn-orange btn-sm" onclick="convertirAVendedor()">Cambiar a vendedor</button>
+        <button class="btn btn-orange btn-sm" data-action="convertir-a-vendedor">Cambiar a vendedor</button>
       </div>
 
       <div class="delete-banner">
@@ -947,7 +947,7 @@
           <h4>Elimina tu cuenta</h4>
           <p>Una vez que elimines tu cuenta, todos tus datos serán borrados permanentemente, esta acción no se puede deshacer.</p>
         </div>
-        <button class="btn btn-danger btn-sm" onclick="eliminarCuenta()">Eliminar Cuenta</button>
+        <button class="btn btn-danger btn-sm" data-action="eliminar-cuenta">Eliminar Cuenta</button>
       </div>
     </div>
   </div>
@@ -961,21 +961,21 @@
     <div class="topbar">
       <span class="topbar-title">Mensajes</span>
       <div class="topbar-right">
-        <button class="btn btn-orange btn-sm" onclick="navigate('perfil')">Volver</button>
+        <button class="btn btn-orange btn-sm" data-action="navigate" data-arg="perfil">Volver</button>
       </div>
     </div>
     <div class="main-scroll" style="padding:16px 24px">
-      <div class="msg-row unread" onclick="openChat('Marco Valerio','M','https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=300&q=80','Bolso Boutique','$250.000 COP')">
+      <div class="msg-row unread" data-action="chat-demo" data-arg="[&quot;Marco Valerio&quot;,&quot;M&quot;,&quot;https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=300&amp;q=80&quot;,&quot;Bolso Boutique&quot;,&quot;$250.000 COP&quot;]">
         <div class="msg-av"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80" alt=""/></div>
         <div class="msg-info"><div class="msg-name">Marco Valerio</div><div class="msg-preview">¿Cuándo llega mi pedido de 2026?</div></div>
         <div class="msg-meta"><span class="msg-time-lbl">10:24 AM</span><span class="msg-unread-dot">2</span></div>
       </div>
-      <div class="msg-row" onclick="openChat('Sofia Alarcón','S','https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=300&q=80','Bolso Boutique','$250.000 COP')">
+      <div class="msg-row" data-action="chat-demo" data-arg="[&quot;Sofia Alarcón&quot;,&quot;S&quot;,&quot;https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=300&amp;q=80&quot;,&quot;Bolso Boutique&quot;,&quot;$250.000 COP&quot;]">
         <div class="msg-av"><img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80" alt=""/></div>
         <div class="msg-info"><div class="msg-name">Sofia Alarcón</div><div class="msg-preview">Gracias por la atención, excelente...</div></div>
         <div class="msg-meta"><span class="msg-time-lbl">Ayer</span></div>
       </div>
-      <div class="msg-row" onclick="openChat('Soporte Commercity','C','https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=300&q=80','Soporte','')">
+      <div class="msg-row" data-action="chat-demo" data-arg="[&quot;Soporte Commercity&quot;,&quot;C&quot;,&quot;https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=300&amp;q=80&quot;,&quot;Soporte&quot;,&quot;&quot;]">
         <div class="msg-av" style="background:var(--orange-bg);display:flex;align-items:center;justify-content:center;font-family:var(--font);font-weight:800;font-size:15px;color:var(--orange)">C</div>
         <div class="msg-info"><div class="msg-name">Soporte Commercity</div><div class="msg-preview">Su ticket #8849 ha sido resuelto</div></div>
         <div class="msg-meta"><span class="msg-time-lbl">Lun</span></div>
@@ -991,7 +991,7 @@
       <div class="chat-uav" id="chat-user-av">D</div>
       <span class="chat-uname" id="chat-user-name">Dario Gomez</span>
       <div class="chat-actions">
-        <button class="btn btn-orange btn-sm" onclick="navigate('mensajes')">Volver</button>
+        <button class="btn btn-orange btn-sm" data-action="navigate" data-arg="mensajes">Volver</button>
         <button class="btn btn-ghost btn-sm">Ver Perfil</button>
         <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.25)">Reportar</button>
       </div>
@@ -1011,11 +1011,11 @@
       <div class="msg-bubble msg-out"><div class="msg-text">Si, garantía de 6 meses.</div><div class="msg-time">12:23 AM</div></div>
     </div>
     <div class="chat-footer">
-      <div class="chat-footer-icon" onclick="document.getElementById('chat-archivo').click()" title="Adjuntar archivo">📎</div>
+      <div class="chat-footer-icon" data-action="file-click" data-arg="chat-archivo" title="Adjuntar archivo">📎</div>
       <input id="chat-archivo" type="file" accept="image/*" style="display:none"/>
       <div class="chat-footer-icon">🖼</div>
       <input class="chat-inp" id="chat-input" placeholder="Escribe un mensaje..."/>
-      <button class="chat-send" onclick="sendMsg()">▶</button>
+      <button class="chat-send" data-action="send-msg">▶</button>
     </div>
   </div>
 </div>
@@ -1027,7 +1027,7 @@
     <!-- TOPBAR ADMIN -->
     <div class="admin-topbar">
       <span class="admin-brand">CommerCity</span>
-      <button class="admin-gear-btn" onclick="navigate('admin-ajustes')" title="Ajustes">⚙</button>
+      <button class="admin-gear-btn" data-action="navigate" data-arg="admin-ajustes" title="Ajustes">⚙</button>
     </div>
 
     <!-- CONTENIDO -->
@@ -1069,7 +1069,7 @@
             Gestion de Usuarios
             <div class="admin-search">
               <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4.5"/><line x1="9.5" y1="9.5" x2="13" y2="13"/></svg>
-              <input placeholder="Buscar usuario..." onkeydown="if(event.key==='Enter')adminBuscar(this.value)"/>
+              <input placeholder="Buscar usuario..." data-action="admin-buscar"/>
             </div>
           </div>
           <table class="admin-table">
@@ -1109,7 +1109,7 @@
             Gestion de Productos
             <div class="admin-search">
               <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4.5"/><line x1="9.5" y1="9.5" x2="13" y2="13"/></svg>
-              <input placeholder="Buscar Producto..." onkeydown="if(event.key==='Enter')adminBuscar(this.value)"/>
+              <input placeholder="Buscar Producto..." data-action="admin-buscar"/>
             </div>
           </div>
           <table class="admin-table">
@@ -1146,7 +1146,7 @@
           Gestion de Reportes
           <div class="admin-search">
             <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4.5"/><line x1="9.5" y1="9.5" x2="13" y2="13"/></svg>
-            <input placeholder="Buscar Reporte..." onkeydown="if(event.key==='Enter')adminBuscar(this.value)"/>
+            <input placeholder="Buscar Reporte..." data-action="admin-buscar"/>
           </div>
         </div>
         <div class="filter-tabs" style="margin-bottom:14px">
@@ -1162,42 +1162,42 @@
               <td style="font-size:12px">Julian Guerrero</td>
               <td style="font-size:11px;color:var(--text2)">24 Oct, 2026</td>
               <td><span class="badge badge-orange" style="font-size:10px">Pendiente</span></td>
-              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte('mario-alberto')">Responder</button></td>
+              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" data-action="open-reporte" data-arg="mario-alberto">Responder</button></td>
             </tr>
             <tr>
               <td><span class="badge badge-blue" style="font-size:10px">Producto</span></td>
               <td style="font-size:12px">Teclado Gamer Pro</td>
               <td style="font-size:11px;color:var(--text2)">30 Oct, 2026</td>
               <td><span class="badge badge-green" style="font-size:10px">Resuelto</span></td>
-              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte()">Ver</button></td>
+              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" data-action="open-reporte">Ver</button></td>
             </tr>
             <tr>
               <td><span class="badge badge-blue" style="font-size:10px">Producto</span></td>
               <td style="font-size:12px">Camiseta Seleccion Colombia</td>
               <td style="font-size:11px;color:var(--text2)">22 Oct, 2026</td>
               <td><span class="badge badge-orange" style="font-size:10px">Pendiente</span></td>
-              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte()">Responder</button></td>
+              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" data-action="open-reporte">Responder</button></td>
             </tr>
             <tr>
               <td><span class="badge badge-orange" style="font-size:10px">Usuario</span></td>
               <td style="font-size:12px">Mario Alberto</td>
               <td style="font-size:11px;color:var(--text2)">20 Oct, 2026</td>
               <td><span class="badge badge-orange" style="font-size:10px">Pendiente</span></td>
-              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte()">Responder</button></td>
+              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" data-action="open-reporte">Responder</button></td>
             </tr>
             <tr>
               <td><span class="badge badge-blue" style="font-size:10px">Producto</span></td>
               <td style="font-size:12px">Zapatillas NIKE Fi</td>
               <td style="font-size:11px;color:var(--text2)">19 Oct, 2026</td>
               <td><span class="badge badge-green" style="font-size:10px">Resuelto</span></td>
-              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte('nike-fi')">Ver</button></td>
+              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" data-action="open-reporte" data-arg="nike-fi">Ver</button></td>
             </tr>
             <tr>
               <td><span class="badge badge-orange" style="font-size:10px">Usuario</span></td>
               <td style="font-size:12px">Dominick Toreto</td>
               <td style="font-size:11px;color:var(--text2)">18 Oct, 2026</td>
               <td><span class="badge badge-green" style="font-size:10px">Resuelto</span></td>
-              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" onclick="openReporte()">Ver</button></td>
+              <td><button class="btn btn-ghost btn-sm" style="padding:4px 12px;font-size:11px" data-action="open-reporte">Ver</button></td>
             </tr>
           </tbody>
         </table>
@@ -1235,11 +1235,11 @@
 </div>
 
 <!-- DETALLE REPORTE OVERLAY -->
-<div class="reporte-overlay" id="reporte-overlay" onclick="closeReporte(event)">
-  <div class="reporte-panel" onclick="event.stopPropagation()">
+<div class="reporte-overlay" id="reporte-overlay" data-self-close="1">
+  <div class="reporte-panel">
     <div class="rp-title">
       Detalle del Reporte
-      <button class="btn btn-orange btn-sm" onclick="closeReporte()">Volver</button>
+      <button class="btn btn-orange btn-sm" data-action="close-reporte">Volver</button>
     </div>
     <div class="rp-lbl">TIPO</div>
     <div style="margin-top:4px"><span id="rp-tipo" class="badge badge-orange">Usuario</span></div>
@@ -1265,7 +1265,7 @@
     <div id="rp-respuesta-box">
       <div class="rp-lbl">RESPONDER</div>
       <textarea class="rp-textarea" placeholder="Escribe tu respuesta aquí...."></textarea>
-      <button class="btn btn-orange btn-full" style="margin-top:10px" onclick="adminResponderReporte()">Enviar Respuesta</button>
+      <button class="btn btn-orange btn-full" style="margin-top:10px" data-action="admin-responder-reporte">Enviar Respuesta</button>
     </div>
     <!-- Respuesta enviada (cuando ya hay respuesta) -->
     <div id="rp-respuesta-enviada" style="display:none">
@@ -1277,8 +1277,8 @@
     <div id="rp-acciones-usuario" style="display:none;margin-top:14px">
       <div class="rp-lbl">ACCIONES SOBRE EL USUARIO</div>
       <div class="rp-actions" style="margin-top:8px">
-        <button class="btn btn-orange" style="flex:1" onclick="adminAccionReporte('banear-usuario')">Banear</button>
-        <button class="btn btn-sm" style="flex:1;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.25);padding:10px" onclick="adminAccionReporte('eliminar-usuario')">Eliminar</button>
+        <button class="btn btn-orange" style="flex:1" data-action="admin-accion-reporte" data-arg="banear-usuario">Banear</button>
+        <button class="btn btn-sm" style="flex:1;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.25);padding:10px" data-action="admin-accion-reporte" data-arg="eliminar-usuario">Eliminar</button>
       </div>
       <p style="font-size:11px;color:var(--text3);margin-top:8px">Asegurate de haber revisado el reporte antes de proceder.</p>
     </div>
@@ -1286,7 +1286,7 @@
     <div id="rp-acciones-producto" style="display:none;margin-top:14px">
       <div class="rp-lbl">ACCIONES SOBRE EL PRODUCTO</div>
       <div style="margin-top:8px">
-        <button class="btn btn-sm" style="width:100%;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.25);padding:10px" onclick="adminAccionReporte('eliminar-producto')">Eliminar 🗑</button>
+        <button class="btn btn-sm" style="width:100%;background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.25);padding:10px" data-action="admin-accion-reporte" data-arg="eliminar-producto">Eliminar 🗑</button>
       </div>
       <p style="font-size:11px;color:var(--text3);margin-top:8px">Asegurate de haber revisado el reporte antes de proceder.</p>
     </div>
@@ -1298,7 +1298,7 @@
   <div class="admin-shell">
     <div class="admin-topbar">
       <span class="admin-brand">CommerCity</span>
-      <button class="btn btn-orange btn-sm" onclick="navigate('admin')">Volver</button>
+      <button class="btn btn-orange btn-sm" data-action="navigate" data-arg="admin">Volver</button>
     </div>
     <div class="admin-body">
       <h2 class="admin-page-title">Ajustes</h2>
@@ -1316,14 +1316,14 @@
           <div class="field"><label>Número de cuenta</label><input id="admin-bank-numero" type="text" placeholder="Ej. 1234567890"/></div>
         </div>
         <div style="display:flex;justify-content:flex-end">
-          <button class="btn btn-orange" onclick="guardarCuentaAdmin()">Guardar cuenta bancaria</button>
+          <button class="btn btn-orange" data-action="guardar-cuenta-admin">Guardar cuenta bancaria</button>
         </div>
       </div>
 
       <div style="border-top:1px solid var(--border);padding-top:24px">
         <h3 style="font-family:var(--font);font-size:16px;font-weight:700;margin-bottom:4px">SALIR</h3>
         <p style="font-size:13px;color:var(--text2);margin-bottom:16px">En este lugar puedes salir del panel administrador.</p>
-        <button class="btn btn-ghost btn-sm" onclick="doLogout()">Salir</button>
+        <button class="btn btn-ghost btn-sm" data-action="do-logout">Salir</button>
       </div>
     </div>
   </div>
@@ -1333,15 +1333,15 @@
 
 
 <!-- MODAL SEGUIDORES / SIGUIENDO -->
-<div class="modal-overlay" id="seguidores-modal" onclick="closeSeguidores(event)" style="z-index:500">
-  <div class="modal" style="max-width:360px;padding:0;overflow:hidden;border-radius:16px" onclick="event.stopPropagation()">
+<div class="modal-overlay" id="seguidores-modal" data-self-close="1" style="z-index:500">
+  <div class="modal" style="max-width:360px;padding:0;overflow:hidden;border-radius:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
       <span style="font-family:var(--font);font-size:14px;font-weight:700;color:var(--orange)">juan_giraldo</span>
-      <button onclick="closeSeguidores()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;line-height:1;padding:0 4px">✕</button>
+      <button data-action="close-seguidores" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;line-height:1;padding:0 4px">✕</button>
     </div>
     <div style="display:flex;border-bottom:1px solid var(--border)">
-      <div id="tab-seguidores" class="feed-tab active" style="flex:1;text-align:center;border-radius:0" onclick="openSeguidores('seguidores')">Seguidores 15.8k</div>
-      <div id="tab-siguiendo"  class="feed-tab"        style="flex:1;text-align:center;border-radius:0" onclick="openSeguidores('siguiendo')">Siguiendo 842</div>
+      <div id="tab-seguidores" class="feed-tab active" style="flex:1;text-align:center;border-radius:0" data-action="open-seguidores" data-arg="seguidores">Seguidores 15.8k</div>
+      <div id="tab-siguiendo"  class="feed-tab"        style="flex:1;text-align:center;border-radius:0" data-action="open-seguidores" data-arg="siguiendo">Siguiendo 842</div>
     </div>
     <div id="seguidores-list" style="padding:8px 0;max-height:340px;overflow-y:auto"></div>
   </div>
@@ -1349,8 +1349,8 @@
 
 
 <!-- MODAL REPORTAR PRODUCTO (RF82/83) -->
-<div class="modal-overlay" id="reportar-overlay" onclick="closeReportarProducto(event)" style="z-index:500">
-  <div class="modal" style="max-width:420px" onclick="event.stopPropagation()">
+<div class="modal-overlay" id="reportar-overlay" data-self-close="1" style="z-index:500">
+  <div class="modal" style="max-width:420px">
     <div class="modal-title">Reportar Producto</div>
     <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Ayúdanos a mantener la calidad de CommerCity.</p>
     <div class="field">
@@ -1359,11 +1359,11 @@
     </div>
     <div class="field">
       <label>Evidencia - Foto (Obligatorio)</label>
-      <div class="upload-box" onclick="this.querySelector('input').click()">📎 Adjuntar foto<input type="file" id="rep-evidencia" accept="image/*" style="display:none" onchange="handleEvidenciaUpload(event)"/></div>
+      <div class="upload-box" data-action="child-file-click">📎 Adjuntar foto<input type="file" id="rep-evidencia" accept="image/*" style="display:none" data-action="handle-evidencia"/></div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" style="flex:1" onclick="closeReportarProducto()">Cancelar</button>
-      <button class="btn btn-orange" style="flex:1" onclick="enviarReporte()">Enviar Reporte</button>
+      <button class="btn btn-ghost" style="flex:1" data-action="close-reportar-producto">Cancelar</button>
+      <button class="btn btn-orange" style="flex:1" data-action="enviar-reporte">Enviar Reporte</button>
     </div>
   </div>
 </div>
