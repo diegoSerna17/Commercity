@@ -21,6 +21,7 @@ import seguidoresRouter from "./routes/seguidores.routes.js";
 import docsRouter from "./docs/docs.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { authRequired } from "./middleware/auth.middleware.js";
+import pool from "./config/db.js";
 
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -141,6 +142,21 @@ app.use(["/api/productos", "/api/reportes"], (req, res, next) =>
 // Rate limit general de escritura (H5): 200 req / 15 min por IP para /api.
 const limiteEscritura = limitePorVentana({ windowMs: 15 * 60 * 1000, max: 200 });
 app.use("/api/", limiteEscritura);
+
+// TASK-8.4 (auditoria 2026-10-11): healthcheck para Docker/compose y
+// monitoreo. Publico (sin auth); comprueba la BD con SELECT 1 y responde 503
+// si no esta disponible.
+app.get("/health", async (_req, res) => {
+    try {
+        await pool.query("SELECT 1");
+        return res.json({ success: true, data: { status: "ok", db: "ok" } });
+    } catch {
+        return res.status(503).json({
+            success: false,
+            error: { code: "DB_UNAVAILABLE", message: "Base de datos no disponible" },
+        });
+    }
+});
 
 // Routers por modulo
 app.use("/", router);

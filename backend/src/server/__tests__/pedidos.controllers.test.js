@@ -162,16 +162,53 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
     expect(res.status).toBe(401);
   });
 
-  it("rechaza tarjeta con Luhn invalido (402 PAGO_RECHAZADO)", async () => {
+  it("M-28: acepta tarjeta con ultimos4 + marca (201) sin recibir el PAN", async () => {
     const res = await request(app)
       .post("/api/pedidos/confirmar-pago")
       .set("Authorization", `Bearer ${token}`)
-      .send({ direccion_envio: "Calle 1 # 2-3", metodo_pago: "tarjeta", numero_tarjeta: "1234567890123456", nombre_tarjeta: "JUAN PEREZ" });
-    expect(res.status).toBe(402);
-    expect(res.body.error.code).toBe("PAGO_RECHAZADO");
-    // No inicia transaccion (el pago se rechaza antes de tocar la BD)
+      .send({
+        direccion_envio: "Calle 1 # 2-3",
+        metodo_pago: "tarjeta",
+        ultimos4_tarjeta: "1111",
+        marca_tarjeta: "Visa",
+        nombre_tarjeta: "JUAN PEREZ",
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.tarjeta).toEqual({ ultimos4: "1111", marca: "Visa" });
+    // Ninguna sentencia a BD recibe un numero de tarjeta completo
+    const llamadas = conn.query.mock.calls
+      .map(([sql, params]) => `${sql} ${JSON.stringify(params ?? [])}`)
+      .join(" ");
+    expect(llamadas).not.toMatch(/\d{13,19}/);
+  });
+
+  it("M-28: rechaza tarjeta sin ultimos4 (400)", async () => {
+    const res = await request(app)
+      .post("/api/pedidos/confirmar-pago")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ direccion_envio: "Calle 1 # 2-3", metodo_pago: "tarjeta", nombre_tarjeta: "JUAN PEREZ" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
     expect(conn.beginTransaction).not.toHaveBeenCalled();
     expect(conn.commit).not.toHaveBeenCalled();
+  });
+
+  it("M-28: el contrato ya no acepta numero_tarjeta completo (.strict -> 400)", async () => {
+    const res = await request(app)
+      .post("/api/pedidos/confirmar-pago")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        direccion_envio: "Calle 1 # 2-3",
+        metodo_pago: "tarjeta",
+        numero_tarjeta: "4111111111111111",
+        nombre_tarjeta: "JUAN PEREZ",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(conn.beginTransaction).not.toHaveBeenCalled();
   });
 
   it("crea pedido + lineas + descuenta stock + registra pago en UNA transaccion (201)", async () => {

@@ -91,12 +91,20 @@ const creado = (description, extra = {}) => ({ 201: { description }, ...extra })
 
 /** @type {Operacion[]} */
 export const operaciones = [
-  // ── Base (1) ──────────────────────────────────────────────
+  // ── Base (2) ──────────────────────────────────────────────
   {
     method: "get", path: "/", operationId: "verificarServidor", tag: "Base",
     summary: "Verificacion del servidor",
     description: "Endpoint raiz de verificacion (responde el modulo usuarios).",
     responses: ok("Servidor en linea."),
+  },
+  {
+    method: "get", path: "/health", operationId: "healthCheck", tag: "Base",
+    summary: "Healthcheck",
+    description: "Estado del servicio y de la BD (SELECT 1). Publico; 503 si la BD no responde (TASK-8.4).",
+    responses: ok("Servicio y BD operativos.", {
+      503: { description: "Base de datos no disponible (DB_UNAVAILABLE)." },
+    }),
   },
 
   // ── Usuarios (13) ─────────────────────────────────────────

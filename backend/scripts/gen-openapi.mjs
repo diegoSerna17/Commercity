@@ -18,7 +18,7 @@ if (doc.openapi !== "3.1.0") errores.push(`openapi debe ser 3.1.0 (es ${doc.open
 const numPaths = Object.keys(doc.paths).length;
 const numOps = Object.values(doc.paths).reduce((n, item) => n + Object.keys(item).length, 0);
 // Actualizar SOLO al agregar/quitar rutas de forma intencional (guard anti-drift).
-const OPERACIONES_ESPERADAS = 73; // + logout-todas (TASK-4.3, M-8)
+const OPERACIONES_ESPERADAS = 74; // + logout-todas (TASK-4.3) + /health (TASK-8.4)
 if (operaciones.length !== OPERACIONES_ESPERADAS) errores.push(`el registro debe tener ${OPERACIONES_ESPERADAS} operaciones (tiene ${operaciones.length})`);
 if (numOps !== OPERACIONES_ESPERADAS) errores.push(`el documento debe tener ${OPERACIONES_ESPERADAS} operaciones (tiene ${numOps}, ${numPaths} paths)`);
 const ids = new Set();

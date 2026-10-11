@@ -88,6 +88,38 @@
         }
       }
     },
+    "/health": {
+      "get": {
+        "operationId": "healthCheck",
+        "tags": [
+          "Base"
+        ],
+        "summary": "Healthcheck",
+        "description": "Estado del servicio y de la BD (SELECT 1). Publico; 503 si la BD no responde (TASK-8.4).",
+        "responses": {
+          "200": {
+            "description": "Servicio y BD operativos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Base de datos no disponible (DB_UNAVAILABLE).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/usuarios/": {
       "get": {
         "operationId": "verificarModuloUsuarios",
@@ -5148,9 +5180,20 @@
             ],
             "description": "Metodo de pago simulado"
           },
-          "numero_tarjeta": {
-            "description": "Requerido si metodo_pago=tarjeta (se valida Luhn, RF118)",
-            "type": "string"
+          "ultimos4_tarjeta": {
+            "description": "Ultimos 4 digitos (requerido si metodo_pago=tarjeta)",
+            "type": "string",
+            "pattern": "^\\d{4}$"
+          },
+          "marca_tarjeta": {
+            "description": "Marca de la tarjeta (opcional)",
+            "type": "string",
+            "enum": [
+              "Visa",
+              "Mastercard",
+              "Amex",
+              "Otra"
+            ]
           },
           "nombre_tarjeta": {
             "description": "Nombre en la tarjeta",
@@ -5164,12 +5207,13 @@
         ],
         "additionalProperties": false,
         "title": "ConfirmarPago",
-        "description": "Body de POST /api/pedidos/confirmar-pago (checkout ACID RF134)",
+        "description": "Body de POST /api/pedidos/confirmar-pago (checkout ACID RF134; tarjeta enmascarada, M-28)",
         "examples": [
           {
             "direccion_envio": "Calle 10 #20-30, Medellin",
             "metodo_pago": "tarjeta",
-            "numero_tarjeta": "4111111111111111",
+            "ultimos4_tarjeta": "1111",
+            "marca_tarjeta": "Visa",
             "nombre_tarjeta": "Ana Compradora"
           }
         ]

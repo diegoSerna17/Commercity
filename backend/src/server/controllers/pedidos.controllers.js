@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-import { calcularLinea, calcularTotales, validarLuhn, round2 } from "../utils/finanzas.js";
+import { calcularLinea, calcularTotales, round2 } from "../utils/finanzas.js";
 import {
   estadoPagoVendedorTrasCancelacion,
   importeReembolsoLineas,
@@ -117,20 +117,18 @@ export const confirmarPago = async (req, res, next) => {
     const data = parse(confirmarPagoSchema, req.body);
     const compradorId = req.userId;
 
-    // RF118: forma academica; la tarjeta nunca se persiste.
+    // M-28 (TASK-5.5): la pasarela es simulada. El backend SOLO recibe los
+    // ultimos 4 digitos y la marca; el numero completo nunca llega ni se guarda.
+    let tarjeta = null;
     if (data.metodo_pago === "tarjeta") {
-      const numero = String(data.numero_tarjeta || "").replace(/\s/g, "");
-      if (!/^\d{13,19}$/.test(numero) || !data.nombre_tarjeta) {
+      if (!data.ultimos4_tarjeta || !data.nombre_tarjeta) {
         return errorResponse(
-          res, "Número de tarjeta (13-19 dígitos) y nombre del titular son obligatorios (RF118)", 400
+          res,
+          "Para pagar con tarjeta envíe los últimos 4 dígitos (ultimos4_tarjeta) y el nombre del titular",
+          400
         );
       }
-      if (!validarLuhn(numero)) {
-        return res.status(402).json({
-          success: false,
-          error: { code: "PAGO_RECHAZADO", message: "La pasarela rechazó la tarjeta (Luhn inválido)" }
-        });
-      }
+      tarjeta = { ultimos4: data.ultimos4_tarjeta, marca: data.marca_tarjeta || "Otra" };
     }
 
     await conn.beginTransaction();
@@ -277,6 +275,8 @@ export const confirmarPago = async (req, res, next) => {
       pedido_id: pedidoId,
       referencia_pago: referenciaPago,
       metodo_pago: data.metodo_pago,
+      // M-28: solo la tarjeta enmascarada (ultimos4 + marca) viaja al cliente.
+      tarjeta,
       estado_pago: "Aprobado",
       total_neto: totalNeto,
       iva: totalIva,

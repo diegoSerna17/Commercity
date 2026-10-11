@@ -454,7 +454,7 @@
 
 ## ConfirmarPago (`ConfirmarPago`)
 
-> Body de POST /api/pedidos/confirmar-pago (checkout ACID RF134)
+> Body de POST /api/pedidos/confirmar-pago (checkout ACID RF134; tarjeta enmascarada, M-28)
 
 - **Fuente:** `backend/src/server/schemas/pedidos.schema.js`
 - **Usado en:** `POST /api/pedidos/confirmar-pago`
@@ -463,7 +463,8 @@
 |---|---|---|---|
 | `direccion_envio` | string [longitud >= 5, longitud <= 1000] | si | Direccion de envio (5-1000) |
 | `metodo_pago` | enum: "tarjeta" \| "transferencia" \| "pse" | si | Metodo de pago simulado |
-| `numero_tarjeta` | string | no | Requerido si metodo_pago=tarjeta (se valida Luhn, RF118) |
+| `ultimos4_tarjeta` | string | no | Ultimos 4 digitos (requerido si metodo_pago=tarjeta) |
+| `marca_tarjeta` | enum: "Visa" \| "Mastercard" \| "Amex" \| "Otra" | no | Marca de la tarjeta (opcional) |
 | `nombre_tarjeta` | string [longitud <= 100] | no | Nombre en la tarjeta |
 
 **Ejemplo:**
@@ -472,7 +473,8 @@
 {
   "direccion_envio": "Calle 10 #20-30, Medellin",
   "metodo_pago": "tarjeta",
-  "numero_tarjeta": "4111111111111111",
+  "ultimos4_tarjeta": "1111",
+  "marca_tarjeta": "Visa",
   "nombre_tarjeta": "Ana Compradora"
 }
 ```
