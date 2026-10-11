@@ -124,7 +124,7 @@ describe("Carrito", () => {
     await user.click(screen.getByRole("button", { name: "+" }));
 
     await waitFor(() => {
-      expect(modificarCantidad).toHaveBeenCalledWith(7, 42, 3);
+      expect(modificarCantidad).toHaveBeenCalledWith(42, 3);
     });
     expect(await screen.findByText("3")).toBeInTheDocument();
   });
@@ -141,7 +141,7 @@ describe("Carrito", () => {
     await user.click(screen.getByRole("button", { name: "−" }));
 
     await waitFor(() => {
-      expect(eliminarProducto).toHaveBeenCalledWith(7, 42);
+      expect(eliminarProducto).toHaveBeenCalledWith(42);
     });
     expect(modificarCantidad).not.toHaveBeenCalled();
     expect(await screen.findByText("Tu carrito está vacío")).toBeInTheDocument();
@@ -159,7 +159,7 @@ describe("Carrito", () => {
     await user.click(screen.getByRole("button", { name: "Eliminar producto" }));
 
     await waitFor(() => {
-      expect(eliminarProducto).toHaveBeenCalledWith(7, 42);
+      expect(eliminarProducto).toHaveBeenCalledWith(42);
     });
     expect(await screen.findByText("Tu carrito está vacío")).toBeInTheDocument();
   });

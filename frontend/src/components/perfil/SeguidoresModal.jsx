@@ -137,6 +137,7 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
   return createPortal(
     <div
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+      role="presentation"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose?.();
       }}
@@ -209,7 +210,7 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
               Sin resultados para tu busqueda
             </p>
           ) : (
-            <ul className="min-h-[160px] flex-1 overflow-y-auto px-padding-sm py-padding-xs" role="list">
+            <ul className="min-h-[160px] flex-1 overflow-y-auto px-padding-sm py-padding-xs">
               {filtrados.map((usuario) => {
                 const estadoFila = acciones[usuario.id];
                 const siguiendo = estaSiguiendo(usuario);
@@ -218,7 +219,6 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
                   <li
                     key={usuario.id}
                     className="flex cursor-pointer items-center gap-3 rounded-card px-padding-sm py-2.5 transition-colors hover:bg-white/5"
-                    role="listitem"
                   >
                     <Avatar usuario={usuario} />
                     <div className="min-w-0 flex-1">

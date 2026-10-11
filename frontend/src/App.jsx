@@ -1,24 +1,42 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Navbar from './components/globales/Navbar';
 import NotificacionesEnVivo from './components/globales/NotificacionesEnVivo';
-import RutaProtegidaAdmin from './components/globales/RutaProtegidaAdmin';
-import Home from './pages/Home';
-import IniciarSesion from './pages/IniciarSesion/IniciarSesion';
-import Registro from './pages/IniciarSesion/Registro';
-import Recuperar from './pages/IniciarSesion/Recuperar';
-import Restablecer from './pages/IniciarSesion/Restablecer';
-import PerfilVendedor from './pages/Perfil/PerfilVendedor';
-import PerfilPublico from './pages/Perfil/PerfilPublico';
-import Pedidos from './pages/Perfil/Pedidos';
-import Mensajes from './pages/Perfil/Mensajes';
-import Chats from './pages/Perfil/Chats';
-import Carrito from './pages/Carrito/Carrito';
-import HistorialDeCompras from './pages/Perfil/HistorialDeCompras';
-import Ajustes from './pages/Perfil/Ajustes';
-import Tienda from './pages/Tienda/Tienda';
-import PanelAdministrador from './pages/Administrador/PanelControl';
+import RutaProtegida from './components/globales/RutaProtegida';
+import RutaProtegidaRol from './components/globales/RutaProtegidaRol';
+import { getCurrentUser } from './api/client.js';
+
+// Code-splitting: cada pagina se carga bajo demanda para reducir el chunk inicial.
+const Home = lazy(() => import('./pages/Home'));
+const IniciarSesion = lazy(() => import('./pages/IniciarSesion/IniciarSesion'));
+const Registro = lazy(() => import('./pages/IniciarSesion/Registro'));
+const Recuperar = lazy(() => import('./pages/IniciarSesion/Recuperar'));
+const Restablecer = lazy(() => import('./pages/IniciarSesion/Restablecer'));
+const PerfilVendedor = lazy(() => import('./pages/Perfil/PerfilVendedor'));
+const PerfilPublico = lazy(() => import('./pages/Perfil/PerfilPublico'));
+const Pedidos = lazy(() => import('./pages/Perfil/Pedidos'));
+const Mensajes = lazy(() => import('./pages/Perfil/Mensajes'));
+const Chats = lazy(() => import('./pages/Perfil/Chats'));
+const Carrito = lazy(() => import('./pages/Carrito/Carrito'));
+const HistorialDeCompras = lazy(() => import('./pages/Perfil/HistorialDeCompras'));
+const Ajustes = lazy(() => import('./pages/Perfil/Ajustes'));
+const Tienda = lazy(() => import('./pages/Tienda/Tienda'));
+const PanelAdministrador = lazy(() => import('./pages/Administrador/PanelControl'));
+
+// Roles con acceso a las paginas de vendedor (RF20/RF21).
+const ROLES_VENDEDOR = ['vendedor', 'administrador'];
+
+function CargandoPagina() {
+  return (
+    <div
+      className="flex flex-1 items-center justify-center p-8 text-body-sm text-brand-muted-text"
+      role="status"
+    >
+      Cargando...
+    </div>
+  );
+}
 
 function AppContent() {
   const location = useLocation();
@@ -59,42 +77,114 @@ function AppContent() {
       )}
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<IniciarSesion />} />
-          <Route path="/register" element={<Registro />} />
-          <Route path="/recover" element={<Recuperar />} />
-          <Route path="/restore" element={<Restablecer />} />
-          <Route path="/profile" element={<PerfilVendedor />} />
-          <Route path="/PerfilVendedor" element={<PerfilVendedor />} />
-          <Route path="/vendedor/:id" element={<PerfilPublico />} />
-          <Route path="/orders" element={<Pedidos />} />
-          <Route path="/messages" element={<Mensajes />} />
-          <Route path="/messages/chat" element={<Chats />} />
-          <Route path="/cart" element={<Carrito />} />
-          <Route path="/history" element={<HistorialDeCompras />} />
-          <Route path="/settings" element={<Ajustes />} />
-          <Route path="/store" element={<Tienda />} />
-          <Route
-            path="/admin/dashboard"
-            element={
-              <RutaProtegidaAdmin>
-                <PanelAdministrador />
-              </RutaProtegidaAdmin>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <RutaProtegidaAdmin>
-                <PanelAdministrador />
-              </RutaProtegidaAdmin>
-            }
-          />
-        </Routes>
+        <Suspense fallback={<CargandoPagina />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<IniciarSesion />} />
+            <Route path="/register" element={<Registro />} />
+            <Route path="/recover" element={<Recuperar />} />
+            <Route path="/restore" element={<Restablecer />} />
+            <Route path="/vendedor/:id" element={<PerfilPublico />} />
+
+            {/* M-22: rutas de vendedor, confirmadas por rol contra /api/usuarios/me */}
+            <Route
+              path="/profile"
+              element={
+                <RutaProtegidaRol roles={ROLES_VENDEDOR}>
+                  <PerfilVendedor />
+                </RutaProtegidaRol>
+              }
+            />
+            <Route
+              path="/PerfilVendedor"
+              element={
+                <RutaProtegidaRol roles={ROLES_VENDEDOR}>
+                  <PerfilVendedor />
+                </RutaProtegidaRol>
+              }
+            />
+            <Route
+              path="/orders"
+              element={
+                <RutaProtegidaRol roles={ROLES_VENDEDOR}>
+                  <Pedidos />
+                </RutaProtegidaRol>
+              }
+            />
+            <Route
+              path="/store"
+              element={
+                <RutaProtegidaRol roles={ROLES_VENDEDOR}>
+                  <Tienda />
+                </RutaProtegidaRol>
+              }
+            />
+
+            {/* M-22: rutas que exigen sesion */}
+            <Route
+              path="/messages"
+              element={
+                <RutaProtegida>
+                  <Mensajes />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/messages/chat"
+              element={
+                <RutaProtegida>
+                  <Chats />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/cart"
+              element={
+                <RutaProtegida>
+                  <Carrito />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <RutaProtegida>
+                  <HistorialDeCompras />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <RutaProtegida>
+                  <Ajustes />
+                </RutaProtegida>
+              }
+            />
+
+            {/* M-22: panel de administracion, confirmado por rol */}
+            <Route
+              path="/admin/dashboard"
+              element={
+                <RutaProtegidaRol roles={['administrador']}>
+                  <PanelAdministrador />
+                </RutaProtegidaRol>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <RutaProtegidaRol roles={['administrador']}>
+                  <PanelAdministrador />
+                </RutaProtegidaRol>
+              }
+            />
+          </Routes>
+        </Suspense>
       </main>
 
-      <NotificacionesEnVivo />
+      {/* A-5: las notificaciones en vivo solo se montan con sesion iniciada. */}
+      {getCurrentUser() && <NotificacionesEnVivo />}
     </div>
   );
 }

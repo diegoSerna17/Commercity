@@ -16,7 +16,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { User, Mail, Lock, EyeOff, Eye, Check } from "lucide-react";
-import { request, setToken, setCurrentUser } from "../../api/client.js";
+import { request, setCurrentUser } from "../../api/client.js";
 
 // JS Validacion local simple del formato de correo antes de enviar al backend
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -67,8 +67,8 @@ const Register = () => {
           password,
         },
       });
-      // JS Mismo patron de sesion que la pantalla de inicio de sesion
-      setToken(res.data.token);
+      // JS Mismo patron de sesion que la pantalla de inicio de sesion:
+      // F4: cookie httpOnly; solo se guardan datos no sensibles del usuario.
       if (res.data.user) setCurrentUser(res.data.user);
       navigate("/");
     } catch (err) {

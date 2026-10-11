@@ -41,6 +41,7 @@ export default function AdminModalReporte({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80"
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCerrar();
       }}

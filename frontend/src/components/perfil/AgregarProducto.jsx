@@ -217,10 +217,11 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
           <form onSubmit={handleSubmit} noValidate className="space-y-padding-md">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 min-w-0">
-                <label className="block text-body-xs font-bold text-brand-muted-text mb-1">
+                <label className="block text-body-xs font-bold text-brand-muted-text mb-1" htmlFor="producto-nombre">
                   Nombre del producto
                 </label>
                 <input
+                  id="producto-nombre"
                   type="text"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
@@ -232,7 +233,7 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
               </div>
               
               <div className="flex-1 min-w-0">
-                <label className="block text-body-xs font-bold text-brand-muted-text mb-1">
+                <label className="block text-body-xs font-bold text-brand-muted-text mb-1" htmlFor="imagen">
                   Imagen
                 </label>
                 <label
@@ -266,10 +267,11 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
             </div>
 
             <div>
-              <label className="block text-body-xs font-bold text-brand-muted-text mb-1">
+              <label className="block text-body-xs font-bold text-brand-muted-text mb-1" htmlFor="producto-descripcion">
                 Descripcion completa
               </label>
               <textarea
+                id="producto-descripcion"
                 rows={3}
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
@@ -282,10 +284,11 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
 
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 min-w-0">
-                <label className="block text-body-xs font-bold text-brand-muted-text mb-1">
+                <label className="block text-body-xs font-bold text-brand-muted-text mb-1" htmlFor="producto-precio">
                   Precio $
                 </label>
                 <input
+                  id="producto-precio"
                   type="text"
                   inputMode="numeric"
                   autoComplete="off"
@@ -300,10 +303,11 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
               </div>
               
               <div className="flex-1 min-w-0">
-                <label className="block text-body-xs font-bold text-brand-muted-text mb-1">
+                <label className="block text-body-xs font-bold text-brand-muted-text mb-1" htmlFor="producto-stock">
                   Stock
                 </label>
                 <input
+                  id="producto-stock"
                   type="number"
                   min="0"
                   value={stock}
@@ -317,12 +321,13 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
               </div>
               
               <div className="flex-1 min-w-0">
-                <label className="block text-body-xs font-bold text-brand-muted-text mb-1">
+                <label className="block text-body-xs font-bold text-brand-muted-text mb-1" htmlFor="producto-estado">
                   Estado
                 </label>
                 {/* El estado Disponible/Agotado lo calcula la base de datos segun el stock. */}
                 <div className="relative">
                   <select
+                    id="producto-estado"
                     value={estado}
                     onChange={(e) => setEstado(e.target.value)}
                     className="w-full bg-input-bg border border-input-bg rounded-xl px-4 py-3 pr-10 text-body-sm text-on-surface outline-none appearance-none focus:ring-2 focus:ring-border-focus transition-colors cursor-pointer"
@@ -339,10 +344,11 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
 
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 min-w-0">
-                <label className="block text-body-xs font-bold text-brand-muted-text mb-1">
+                <label className="block text-body-xs font-bold text-brand-muted-text mb-1" htmlFor="producto-descuento">
                   Descuento %
                 </label>
                 <input
+                  id="producto-descuento"
                   type="number"
                   min="0"
                   max="100"
@@ -354,11 +360,12 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
               </div>
               
               <div className="flex-1 min-w-0">
-                <label className="block text-body-xs font-bold text-brand-muted-text mb-1">
+                <label className="block text-body-xs font-bold text-brand-muted-text mb-1" htmlFor="producto-categoria">
                   Categoria
                 </label>
                 {errorCategorias ? (
                   <input
+                    id="producto-categoria"
                     type="text"
                     placeholder="EJ: Ropa"
                     value={categoria}
@@ -368,6 +375,7 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
                 ) : (
                   <div className="relative">
                     <select
+                      id="producto-categoria"
                       value={categoria}
                       onChange={(e) => setCategoria(e.target.value)}
                       disabled={cargandoCategorias}

@@ -3,8 +3,6 @@
 // del frontend con:  VITE_API_URL=https://tu-dominio
 export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-// Clave de localStorage donde se guarda el JWT al iniciar sesión.
-export const TOKEN_KEY = "token";
-
-// Clave de localStorage donde se guarda el usuario autenticado.
+// Clave de localStorage donde se guardan los datos no sensibles del usuario.
+// F4: el JWT vive en una cookie httpOnly; nunca en localStorage.
 export const USER_KEY = "commercity_user";

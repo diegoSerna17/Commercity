@@ -28,12 +28,13 @@ import {
 } from "lucide-react";
 import {
   getCurrentUser,
-  setCurrentUser,
-  clearToken,
+  clearCurrentUser,
 } from "../../api/client.js";
 import { cerrarSesion } from "../../services/usuarios.service.js";
+import { AVATAR_POR_DEFECTO } from "../../utils/mapearProducto.js";
 
-// JS Configuracion de secciones de navegacion con nombre, icono y ruta
+// JS Configuracion de secciones de navegacion con nombre, icono y ruta.
+// M-22: los items con `roles` solo se muestran a esos roles.
 const NAV_SECTIONS = [
   {
     label: "Principal",
@@ -45,9 +46,9 @@ const NAV_SECTIONS = [
   {
     label: "Cuenta",
     items: [
-      { name: "Perfil", icon: User, path: "/profile" },
-      { name: "Tienda", icon: Store, path: "/store" },
-      { name: "Pedidos", icon: ClipboardList, path: "/orders" },
+      { name: "Perfil", icon: User, path: "/profile", roles: ["vendedor", "administrador"] },
+      { name: "Tienda", icon: Store, path: "/store", roles: ["vendedor", "administrador"] },
+      { name: "Pedidos", icon: ClipboardList, path: "/orders", roles: ["vendedor", "administrador"] },
       { name: "Historial de compras", icon: History, path: "/history" },
       { name: "Ajustes", icon: Settings, path: "/settings" },
     ],
@@ -61,6 +62,15 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
   const location = useLocation();
   // RE Usuario autenticado guardado en localStorage
   const currentUser = getCurrentUser();
+  // M-22: navegacion filtrada por los roles vigentes del usuario
+  const rolesUsuario = Array.isArray(currentUser?.roles) ? currentUser.roles : [];
+  const navegacion = NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter(
+      (item) =>
+        !item.roles || item.roles.some((rol) => rolesUsuario.includes(rol))
+    ),
+  })).filter((section) => section.items.length > 0);
   // RE Estado que indica si el cierre de sesion esta en curso
   const [cerrandoSesion, setCerrandoSesion] = useState(false);
 
@@ -82,8 +92,12 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
     } catch {
       // JS Si falla la revocacion del token, se limpia igualmente la sesion local
     } finally {
-      clearToken();
-      setCurrentUser(null);
+      clearCurrentUser();
+      try {
+        sessionStorage.removeItem("activeChat");
+      } catch {
+        // sessionStorage no disponible
+      }
       navigate("/login");
       onClose();
     }
@@ -106,7 +120,7 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
 
       {/* TW Navegacion principal y de cuenta */}
       <nav className="flex-grow px-padding-sm md:px-padding-md mt-md space-y-md md:space-y-lg">
-        {NAV_SECTIONS.map((section) => (
+        {navegacion.map((section) => (
           <div key={section.label}>
             {/* TW Titulo de seccion */}
             <h3 className="px-padding-sm md:px-padding-md text-xs font-semibold text-brand-muted-text uppercase tracking-wider mb-xs md:mb-sm">
@@ -156,7 +170,7 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
             <img
               alt="Usuario"
               className="w-full h-full object-cover"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqMhoV6Qxd6R46I1ZtAFlf5n_DO_I13Qm9yS5Vf_rKjen_gSD4D1eGs_IGsY9mYZicvUnBWImsdYyPEJJxxwSAuS694ltHi4ESaDFRk1CRgTTI3vp68l_W_dEJa-EVHsN3rm41cm3nqymh-KPqn_UMthgkmjFf1_p430Ewa8M_OCwbYgz_0Z7Dayu6Afj_13iTxnn1B7NKHy-nPa3ssguZioMGoR67bc1IE8JHHoPgwBwaaDagvUGxDojSh8e0QMhlC_nzp3n8og"
+              src={AVATAR_POR_DEFECTO}
             />
           </div>
           <div className="flex-grow min-w-0">

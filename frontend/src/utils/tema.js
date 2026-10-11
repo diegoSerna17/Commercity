@@ -1,13 +1,29 @@
 // Gestión del tema visual (Light / Dark / System).
 // La preferencia se guarda en localStorage; "system" es el valor por defecto
-// cuando el usuario nunca ha elegido un tema.
+// cuando el usuario nunca ha elegido un tema o el almacenamiento no esta disponible.
 
 const THEME_KEY = "commercity-theme";
 
 export const TEMAS = ["light", "dark", "system"];
 
+function leerTemaGuardado() {
+  try {
+    return localStorage.getItem(THEME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function escribirTemaGuardado(tema) {
+  try {
+    localStorage.setItem(THEME_KEY, tema);
+  } catch {
+    // localStorage no disponible (modo privado/cuota): el tema sigue aplicado en memoria.
+  }
+}
+
 export function obtenerTemaGuardado() {
-  const guardado = localStorage.getItem(THEME_KEY);
+  const guardado = leerTemaGuardado();
   return TEMAS.includes(guardado) ? guardado : "system";
 }
 
@@ -26,7 +42,7 @@ export function aplicarTema(tema) {
 
 export function guardarTema(tema) {
   const normalizado = TEMAS.includes(tema) ? tema : "system";
-  localStorage.setItem(THEME_KEY, normalizado);
+  escribirTemaGuardado(normalizado);
   aplicarTema(normalizado);
   return normalizado;
 }

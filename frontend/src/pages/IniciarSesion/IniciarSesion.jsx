@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, EyeOff, Check, ArrowRight } from "lucide-react";
-import { request, setToken, setCurrentUser } from "../../api/client.js";
+import { request, setCurrentUser } from "../../api/client.js";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -28,7 +28,8 @@ const Login = () => {
         method: "POST",
         body: { email, password },
       });
-      setToken(res.data.token);
+      // F4: la sesion viaja en la cookie httpOnly del backend; aqui solo se
+      // guardan los datos no sensibles del usuario para la interfaz.
       if (res.data.user) setCurrentUser(res.data.user);
       navigate("/");
     } catch (err) {
@@ -155,6 +156,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                   className={`absolute right-sm top-1/2 -translate-y-1/2 p-sm transition-colors ${
                     showPassword ? "text-brand-orange" : "text-icon-gray-500 hover:text-on-surface"
                   }`}

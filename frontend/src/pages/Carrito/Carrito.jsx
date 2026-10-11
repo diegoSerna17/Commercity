@@ -40,7 +40,7 @@ function formatPeso(valor) {
 }
 
 export default function Carrito() {
-  // El comprador sale de la sesion (login real); el carrito no usa JWT, usa id.
+  // El carrito se resuelve con la sesion del usuario autenticado.
   const compradorId = getCurrentUser()?.id;
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -59,7 +59,7 @@ export default function Carrito() {
 
     setCargando(true);
     try {
-      const res = await listarCarrito(compradorId);
+      const res = await listarCarrito();
       const items = (res.data?.vendedores ?? []).flatMap((vendedor) =>
         vendedor.items.map((item) => ({
           id: item.producto_id,
@@ -90,7 +90,7 @@ export default function Carrito() {
       return eliminar(productoId);
     }
     try {
-      await modificarCantidad(compradorId, productoId, cantidad);
+      await modificarCantidad(productoId, cantidad);
       await cargarCarrito();
     } catch (err) {
       setError(err.message || "No se pudo actualizar la cantidad");
@@ -99,7 +99,7 @@ export default function Carrito() {
 
   async function eliminar(productoId) {
     try {
-      await eliminarProducto(compradorId, productoId);
+      await eliminarProducto(productoId);
       await cargarCarrito();
     } catch (err) {
       setError(err.message || "No se pudo eliminar el producto");
@@ -151,7 +151,7 @@ export default function Carrito() {
         <Header showSearch={false} />
 
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 py-5 sm:py-6 md:py-8">
-          <div className="w-[450px] sm:w-[600px] lg:w-[700px] xl:w-[800px] max-w-[1000px] mx-auto">
+          <div className="w-full max-w-[450px] sm:max-w-[600px] lg:max-w-[700px] xl:max-w-[800px] mx-auto">
 
             <h1 className="font-sans font-extrabold text-2xl sm:text-3xl tracking-tight text-brand-orange mb-7">
               Carrito de Compras

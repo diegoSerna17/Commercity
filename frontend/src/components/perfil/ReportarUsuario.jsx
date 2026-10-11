@@ -107,6 +107,7 @@ export default function ReportarUsuario({ usuario, onClose }) {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose?.();
       }}
@@ -199,7 +200,8 @@ export default function ReportarUsuario({ usuario, onClose }) {
           >
             Evidencia (opcional)
           </p>
-          <div
+          <button
+            type="button"
             onClick={manejarClickDropZone}
             onDragOver={(e) => {
               e.preventDefault();
@@ -207,7 +209,7 @@ export default function ReportarUsuario({ usuario, onClose }) {
             }}
             onDragLeave={() => setArrastrando(false)}
             onDrop={manejarDrop}
-            className="rounded-xl h-36 flex flex-col items-center justify-center gap-2 cursor-pointer border-2 transition-all"
+            className="w-full rounded-xl h-36 flex flex-col items-center justify-center gap-2 cursor-pointer border-2 transition-all"
             style={{
               backgroundColor: "var(--color-input-bg)",
               borderColor: arrastrando ? "var(--color-brand-orange)" : "transparent",
@@ -222,24 +224,26 @@ export default function ReportarUsuario({ usuario, onClose }) {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
-            <p className="font-medium text-sm text-center px-6" style={{ color: "var(--color-on-surface)" }}>
+            <span className="font-medium text-sm text-center px-6" style={{ color: "var(--color-on-surface)" }}>
               Haz click para subir tu archivo aquí
-            </p>
-            <p className="text-xs text-center px-6 truncate max-w-full" style={{ color: "var(--color-placeholder-gray-600)" }}>
+            </span>
+            <span className="text-xs text-center px-6 truncate max-w-full" style={{ color: "var(--color-placeholder-gray-600)" }}>
               {archivo?.name || "Sin archivo seleccionado"}
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={manejarCambioInput}
-            />
-          </div>
+            </span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            aria-label="Archivo de evidencia"
+            className="hidden"
+            onChange={manejarCambioInput}
+          />
           {exitoEnvio && (
             <p className="text-xs mt-1" style={{ color: "var(--color-brand-orange)" }}>
               Reporte enviado exitosamente

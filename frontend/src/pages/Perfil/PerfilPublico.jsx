@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import Header from "../../components/globales/Header";
 import { getCurrentUser } from "../../api/client.js";
-import { API_BASE_URL } from "../../constants/config.js";
 import {
   aplicarFallbackImagenProducto,
   replaceInvalidProductImage,
-  resolverImagenRespaldoProducto,
 } from "../../utils/productImageFallback.js";
+import {
+  AVATAR_POR_DEFECTO,
+  calcularPrecioFinal,
+  mapearProducto,
+  resolverUrlArchivo,
+} from "../../utils/mapearProducto.js";
 import { listarProductos, listarVendedores } from "../../services/productos.service.js";
 import {
   contarSeguidores,
@@ -16,68 +20,6 @@ import {
   seguirUsuario,
 } from "../../services/seguidores.service.js";
 import ReportarUsuario from "../../components/perfil/ReportarUsuario.jsx";
-
-// JS Avatar de respaldo cuando el vendedor no tiene foto de perfil.
-const AVATAR_FALLBACK = "https://picsum.photos/seed/avatar1/400/400";
-
-/**
- * Resuelve una ruta de archivo del backend a una URL absoluta.
- * @param {string|null|undefined} ruta
- * @returns {string|null}
- */
-function resolverUrlArchivo(ruta) {
-  if (!ruta) return null;
-  if (/^https?:\/\//i.test(ruta)) return ruta;
-  return `${API_BASE_URL}${ruta}`;
-}
-
-/**
- * Imagen del producto: usa la del backend o una foto real de respaldo acorde
- * a la categoria del producto (estable por id).
- */
-function resolverImagenProducto(imagenUrl, id, categoria) {
-  return resolverUrlArchivo(imagenUrl) ?? resolverImagenRespaldoProducto(categoria, id);
-}
-
-// JS Avatar por defecto cuando el vendedor no tiene foto de perfil.
-function resolverAvatar(vendedor) {
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    vendedor || "Vendedor"
-  )}&background=1a1a26&color=fff&bold=true&size=80&rounded=true`;
-}
-
-/**
- * Traduce el producto del listado /api/productos al shape de la tarjeta.
- * Mismo mapeo que usa la pagina principal (Inicio.jsx) para reutilizar el
- * diseño y las animaciones de las tarjetas.
- */
-function mapearProducto(producto) {
-  const descuento = Number(producto.descuento_porcentaje) || 0;
-  const precio = Number(producto.precio) || 0;
-
-  return {
-    id: producto.id,
-    name: producto.nombre,
-    category: producto.categoria,
-    price: Math.round(precio),
-    precioBase: Math.round(precio),
-    descuento,
-    stock: Number(producto.stock) || 0,
-    image: resolverImagenProducto(producto.imagen, producto.id, producto.categoria),
-    imageAlt: producto.nombre,
-    description: producto.descripcion,
-    vendedorId: producto.vendedor_id,
-    vendedorNombre: producto.vendedor,
-    vendedorAvatar: producto.vendedor_foto || resolverAvatar(producto.vendedor),
-    badge: descuento > 0 ? `-${descuento}%` : null,
-  };
-}
-
-// JS Precio final con el descuento aplicado (misma formula del backend).
-function calcularPrecioFinal(producto) {
-  if (!producto.descuento) return producto.price;
-  return Math.round(producto.precioBase - (producto.precioBase * producto.descuento) / 100);
-}
 
 /**
  * Perfil publico de un vendedor (accesible desde el producto).
@@ -94,7 +36,7 @@ export default function PerfilPublico() {
   const [vendedor, setVendedor] = useState({
     id: Number(id),
     nombre: state.nombre || "",
-    avatar: resolverUrlArchivo(state.avatar) ?? AVATAR_FALLBACK,
+    avatar: resolverUrlArchivo(state.avatar) ?? AVATAR_POR_DEFECTO,
   });
   const [productos, setProductos] = useState([]);
   const [contadores, setContadores] = useState({ seguidores: 0, siguiendo: 0 });
@@ -112,7 +54,7 @@ export default function PerfilPublico() {
         // Resuelve nombre/avatar del vendedor. Prioridad al state de navegacion;
         // si el usuario recarga la URL, se recupera desde /api/vendedores.
         let nombre = state.nombre || "";
-        let avatar = resolverUrlArchivo(state.avatar) ?? AVATAR_FALLBACK;
+        let avatar = resolverUrlArchivo(state.avatar) ?? AVATAR_POR_DEFECTO;
 
         if (!nombre) {
           const res = await listarVendedores();
@@ -124,8 +66,8 @@ export default function PerfilPublico() {
         if (!activo) return;
         setVendedor({ id: Number(id), nombre, avatar });
 
-        // Lista los productos en venta del vendedor (filtro por nombre).
-        const resProductos = await listarProductos({ vendedor: nombre, limit: 100 });
+        // Lista los productos en venta del vendedor (M-20: filtro exacto por vendedor_id).
+        const resProductos = await listarProductos({ vendedorId: id, limit: 100 });
         const data = resProductos?.data || {};
         if (!activo) return;
         setProductos((data.productos || []).map(mapearProducto));
@@ -152,16 +94,19 @@ export default function PerfilPublico() {
         // silencio: si falla, los contadores quedan en 0
       });
 
-    // Estado de seguimiento del usuario autenticado hacia este vendedor.
-    listarSiguiendo()
-      .then((res) => {
-        if (!activo) return;
-        const lista = Array.isArray(res?.data) ? res.data : [];
-        setSiguiendo(lista.some((u) => Number(u.id) === Number(id)));
-      })
-      .catch(() => {
-        // silencio: sin sesion o error, se muestra como no seguido
-      });
+    // M-21: el estado de seguimiento es del usuario autenticado; sin sesion
+    // no se consulta la API (evita el 401 anonimo).
+    if (getCurrentUser()) {
+      listarSiguiendo()
+        .then((res) => {
+          if (!activo) return;
+          const lista = Array.isArray(res?.data) ? res.data : [];
+          setSiguiendo(lista.some((u) => Number(u.id) === Number(id)));
+        })
+        .catch(() => {
+          // silencio: error de red, se muestra como no seguido
+        });
+    }
 
     return () => {
       activo = false;
@@ -267,7 +212,7 @@ export default function PerfilPublico() {
                   alt={`Avatar de ${vendedor.nombre}`}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    e.currentTarget.src = AVATAR_FALLBACK;
+                    e.currentTarget.src = AVATAR_POR_DEFECTO;
                   }}
                 />
               </div>
