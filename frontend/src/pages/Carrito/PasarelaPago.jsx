@@ -23,6 +23,16 @@ function formatPeso(valor) {
   return "$" + Math.round(valor).toLocaleString("es-CO");
 }
 
+// M-28: la pasarela es simulada; al backend solo viajan los ultimos 4 digitos
+// y la marca. El numero completo nunca se envia ni se registra.
+function detectarMarcaTarjeta(digitos) {
+  if (/^4/.test(digitos)) return "Visa";
+  if (/^(5[1-5]|2[2-7])/.test(digitos)) return "Mastercard";
+  if (/^3[47]/.test(digitos)) return "American Express";
+  if (/^6/.test(digitos)) return "Discover";
+  return "Tarjeta";
+}
+
 export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
   const [numeroTarjeta, setNumeroTarjeta] = useState("");
   const [nombreTarjeta, setNombreTarjeta] = useState("");
@@ -52,12 +62,19 @@ export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
       return;
     }
 
+    const digitosTarjeta = numeroTarjeta.replace(/\D/g, "");
+    if (digitosTarjeta.length !== 16) {
+      setError("Ingresa los 16 dígitos de la tarjeta");
+      return;
+    }
+
     setEnviando(true);
     try {
       await confirmarPago({
         direccion_envio: direccionEnvio.trim(),
         metodo_pago: "tarjeta",
-        numero_tarjeta: numeroTarjeta.replace(/\s/g, ""),
+        tarjeta_ultimos4: digitosTarjeta.slice(-4),
+        tarjeta_marca: detectarMarcaTarjeta(digitosTarjeta),
         nombre_tarjeta: nombreTarjeta.trim(),
       });
       setPagado(true);

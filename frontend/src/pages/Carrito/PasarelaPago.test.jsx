@@ -54,7 +54,34 @@ describe("PasarelaPago", () => {
     expect(confirmarPago).not.toHaveBeenCalled();
   });
 
-  it("envía los datos normalizados al confirmar el pago", async () => {
+  it("exige los 16 dígitos de la tarjeta antes de confirmar", async () => {
+    const user = userEvent.setup();
+    render(
+      <PasarelaPago
+        totales={totales}
+        onCancelar={vi.fn()}
+        onPagoExitoso={vi.fn()}
+      />
+    );
+
+    await user.type(
+      screen.getByPlaceholderText("0000 0000 0000 0000"),
+      "4111 1111"
+    );
+    await user.type(screen.getByPlaceholderText("NOMBRE APELLIDO"), "Ana Perez");
+    await user.type(
+      screen.getByPlaceholderText("Dirección completa de entrega"),
+      "Calle 123"
+    );
+    await user.click(screen.getByRole("button", { name: /Total a Pagar/ }));
+
+    expect(
+      screen.getByText("Ingresa los 16 dígitos de la tarjeta")
+    ).toBeInTheDocument();
+    expect(confirmarPago).not.toHaveBeenCalled();
+  });
+
+  it("M-28: envía solo los últimos 4 dígitos y la marca, nunca el número completo", async () => {
     const user = userEvent.setup();
     render(
       <PasarelaPago
@@ -71,9 +98,14 @@ describe("PasarelaPago", () => {
     expect(confirmarPago).toHaveBeenCalledWith({
       direccion_envio: "Calle 123",
       metodo_pago: "tarjeta",
-      numero_tarjeta: "4111111111111111",
+      tarjeta_ultimos4: "1111",
+      tarjeta_marca: "Visa",
       nombre_tarjeta: "ANA PEREZ",
     });
+
+    const payload = confirmarPago.mock.calls[0][0];
+    expect(JSON.stringify(payload)).not.toContain("4111111111111111");
+    expect(Object.keys(payload)).not.toContain("numero_tarjeta");
   });
 
   it("presenta el error cuando confirmarPago rechaza", async () => {
