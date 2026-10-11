@@ -2,6 +2,7 @@ import { Bell, Search, User, X } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useRef, useEffect, useCallback } from "react";
 import NotificacionesDropdown from "./NotificacionesDropdown";
+import { getCurrentUser } from "../../api/client.js";
 import { contarNoLeidas } from "../../services/notificaciones.service.js";
 import { listarProductos } from "../../services/productos.service.js";
 import { API_BASE_URL } from "../../constants/config.js";
@@ -39,7 +40,9 @@ const Header = ({ title, showSearch = true, onSelectProduct }) => {
     setMobileSearchOpen(false);
   }
 
+  // A-5: las notificaciones solo se consultan con sesion iniciada.
   const cargarNoLeidas = useCallback(async () => {
+    if (!getCurrentUser()) return;
     try {
       const res = await contarNoLeidas();
       setNoLeidas(res.data?.total_no_leidas ?? 0);
@@ -49,6 +52,7 @@ const Header = ({ title, showSearch = true, onSelectProduct }) => {
   }, []);
 
   useEffect(() => {
+    if (!getCurrentUser()) return undefined;
     let cancelado = false;
     (async () => {
       try {

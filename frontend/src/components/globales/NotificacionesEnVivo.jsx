@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell } from "lucide-react";
+import { getCurrentUser } from "../../api/client.js";
 import {
   listarNotificaciones,
   marcarLeida,
@@ -30,6 +31,8 @@ export default function NotificacionesEnVivo() {
   const maxIdRef = useRef(null);
 
   useEffect(() => {
+    // A-5: sin sesion no se consulta la API (ni se monta el polling).
+    if (!getCurrentUser()) return undefined;
     let cancelado = false;
 
     const consultar = async () => {

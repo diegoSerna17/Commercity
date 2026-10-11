@@ -28,8 +28,7 @@ import {
 } from "lucide-react";
 import {
   getCurrentUser,
-  setCurrentUser,
-  clearToken,
+  clearCurrentUser,
 } from "../../api/client.js";
 import { cerrarSesion } from "../../services/usuarios.service.js";
 
@@ -82,8 +81,12 @@ const Navbar = ({ isOpen = false, onClose = () => {} }) => {
     } catch {
       // JS Si falla la revocacion del token, se limpia igualmente la sesion local
     } finally {
-      clearToken();
-      setCurrentUser(null);
+      clearCurrentUser();
+      try {
+        sessionStorage.removeItem("activeChat");
+      } catch {
+        // sessionStorage no disponible
+      }
       navigate("/login");
       onClose();
     }

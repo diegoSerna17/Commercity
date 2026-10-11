@@ -3,12 +3,11 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { getCurrentUser, getToken } from "../../api/client.js";
+import { getCurrentUser } from "../../api/client.js";
 import RutaProtegidaAdmin from "./RutaProtegidaAdmin.jsx";
 
 vi.mock("../../api/client.js", () => ({
   getCurrentUser: vi.fn(),
-  getToken: vi.fn(),
 }));
 
 function LocationProbe() {
@@ -37,13 +36,11 @@ function renderRutasProtegidas() {
 
 describe("RutaProtegidaAdmin", () => {
   beforeEach(() => {
-    vi.mocked(getToken).mockReset();
     vi.mocked(getCurrentUser).mockReset();
   });
 
-  it("permite renderizar a un usuario con token y rol administrador", () => {
+  it("permite renderizar a un usuario con rol administrador", () => {
     // Arrange
-    vi.mocked(getToken).mockReturnValue("jwt-de-prueba");
     vi.mocked(getCurrentUser).mockReturnValue({
       roles: ["usuario", "administrador"],
     });
@@ -58,10 +55,9 @@ describe("RutaProtegidaAdmin", () => {
     expect(screen.getByTestId("ruta-actual").textContent).toBe("/admin");
   });
 
-  it("redirige a /login cuando no hay token", () => {
+  it("redirige a /login cuando no hay sesion", () => {
     // Arrange
-    vi.mocked(getToken).mockReturnValue(null);
-    vi.mocked(getCurrentUser).mockReturnValue({ roles: ["administrador"] });
+    vi.mocked(getCurrentUser).mockReturnValue(null);
 
     // Act
     renderRutasProtegidas();
@@ -75,7 +71,6 @@ describe("RutaProtegidaAdmin", () => {
 
   it("redirige a /login cuando el usuario no tiene rol administrador", () => {
     // Arrange
-    vi.mocked(getToken).mockReturnValue("jwt-de-prueba");
     vi.mocked(getCurrentUser).mockReturnValue({ roles: ["usuario"] });
 
     // Act

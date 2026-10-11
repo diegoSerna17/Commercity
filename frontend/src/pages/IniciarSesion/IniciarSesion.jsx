@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, EyeOff, Check, ArrowRight } from "lucide-react";
-import { request, setToken, setCurrentUser } from "../../api/client.js";
+import { request, setCurrentUser } from "../../api/client.js";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -28,7 +28,8 @@ const Login = () => {
         method: "POST",
         body: { email, password },
       });
-      setToken(res.data.token);
+      // F4: la sesion viaja en la cookie httpOnly del backend; aqui solo se
+      // guardan los datos no sensibles del usuario para la interfaz.
       if (res.data.user) setCurrentUser(res.data.user);
       navigate("/");
     } catch (err) {

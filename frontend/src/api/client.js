@@ -1,38 +1,52 @@
-import { API_BASE_URL, TOKEN_KEY, USER_KEY } from "../constants/config.js";
+import { API_BASE_URL, USER_KEY } from "../constants/config.js";
 
-// Gestión del token y usuario autenticado en localStorage.
-export const getToken = () => localStorage.getItem(TOKEN_KEY);
-export const setToken = (token) => localStorage.setItem(TOKEN_KEY, token);
-export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+// F4 (DEC-005): la sesion web viaja en una cookie httpOnly; el JWT no se guarda
+// ni se lee en localStorage. Solo se persisten datos no sensibles del usuario.
 
+/** @returns {object|null} Usuario de la sesion guardado para la UI. */
 export const getCurrentUser = () => {
-  const raw = localStorage.getItem(USER_KEY);
-  if (!raw) return null;
   try {
+    const raw = localStorage.getItem(USER_KEY);
+    if (!raw) return null;
     return JSON.parse(raw);
   } catch {
     return null;
   }
 };
-export const setCurrentUser = (user) => localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+export const setCurrentUser = (user) => {
+  try {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } catch {
+    // localStorage no disponible: la sesion sigue valida por la cookie httpOnly.
+  }
+};
+
+export const clearCurrentUser = () => {
+  try {
+    localStorage.removeItem(USER_KEY);
+  } catch {
+    // silencio: almacenamiento no disponible
+  }
+};
+
+// Rutas publicas: un 401 aqui (credenciales o enlace invalido) no es "sesion caducada".
+const RUTAS_PUBLICAS = ["/login", "/register", "/recover", "/restore"];
+
+const esRutaPublica = (pathname) =>
+  RUTAS_PUBLICAS.some((ruta) => String(pathname || "").toLowerCase().startsWith(ruta));
 
 /**
  * Cliente HTTP base contra la API del backend.
- * Agrega el header Authorization con el token cuando existe.
- * F6 (P2): valida el contrato { success, data } y maneja 401 globalmente
- * (limpia sesion y redirige a /login). Incluye credenciales para la cookie
- * httpOnly (F4) manteniendo compatibilidad con el token en localStorage.
+ * Envia la cookie httpOnly de sesion (credentials: include) y valida el
+ * contrato { success, data | error }. A-5: el 401 global solo limpia la sesion
+ * y redirige cuando habia sesion previa y la ruta no es publica.
  */
 export async function request(path, { method = "GET", body, headers, isForm = false } = {}) {
-  const token = getToken();
-
   const config = {
     method,
     credentials: "include",
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers,
-    },
+    headers: { ...headers },
   };
 
   if (body !== undefined) {
@@ -57,13 +71,12 @@ export async function request(path, { method = "GET", body, headers, isForm = fa
   }
 
   if (!res.ok) {
-    // F6: 401 global. Limpia sesion y redirige a /login (solo navegador).
+    // A-5: 401 global. Solo es "sesion caducada" si habia sesion y no es ruta publica.
     if (res.status === 401) {
-      try {
-        clearToken();
-        localStorage.removeItem(USER_KEY);
-      } catch { /* almacenamiento no disponible */ }
-      if (typeof window !== "undefined" && window.location && !String(window.location.pathname).includes("/login")) {
+      const teniaSesion = Boolean(getCurrentUser());
+      const hayNavegador = typeof window !== "undefined" && Boolean(window.location);
+      if (teniaSesion && hayNavegador && !esRutaPublica(window.location.pathname)) {
+        clearCurrentUser();
         window.location.assign("/login");
       }
     }

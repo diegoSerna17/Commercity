@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { Menu } from 'lucide-react';
 import Navbar from './components/globales/Navbar';
 import NotificacionesEnVivo from './components/globales/NotificacionesEnVivo';
+import { getCurrentUser } from './api/client.js';
 import RutaProtegidaAdmin from './components/globales/RutaProtegidaAdmin';
 import Home from './pages/Home';
 import IniciarSesion from './pages/IniciarSesion/IniciarSesion';
@@ -94,7 +95,8 @@ function AppContent() {
         </Routes>
       </main>
 
-      <NotificacionesEnVivo />
+      {/* A-5: las notificaciones en vivo solo se montan con sesion iniciada. */}
+      {getCurrentUser() && <NotificacionesEnVivo />}
     </div>
   );
 }

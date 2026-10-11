@@ -5,7 +5,7 @@ import Header from "../../components/globales/Header";
 import {
   getCurrentUser,
   setCurrentUser,
-  clearToken,
+  clearCurrentUser,
 } from "../../api/client.js";
 import {
   actualizarPerfil,
@@ -166,7 +166,7 @@ export default function Ajustes() {
     setEliminandoCuenta(true);
     try {
       await eliminarCuenta();
-      clearToken();
+      clearCurrentUser();
       navigate("/login");
     } catch (err) {
       setEliminandoCuenta(false);
