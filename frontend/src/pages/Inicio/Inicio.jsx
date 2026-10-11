@@ -127,7 +127,7 @@ const Hero = () => {
       navigate("/login");
       throw new Error("Inicia sesión para agregar productos al carrito");
     }
-    await agregarProducto(compradorId, product.id, cantidad);
+    await agregarProducto(product.id, cantidad);
   }
 
   // JS Navega al perfil publico del vendedor pasando nombre y avatar por state.
