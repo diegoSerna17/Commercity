@@ -98,8 +98,8 @@ describe("PasarelaPago", () => {
     expect(confirmarPago).toHaveBeenCalledWith({
       direccion_envio: "Calle 123",
       metodo_pago: "tarjeta",
-      tarjeta_ultimos4: "1111",
-      tarjeta_marca: "Visa",
+      ultimos4_tarjeta: "1111",
+      marca_tarjeta: "Visa",
       nombre_tarjeta: "ANA PEREZ",
     });
 

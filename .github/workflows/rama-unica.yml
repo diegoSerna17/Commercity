@@ -1,0 +1,29 @@
+name: Rama unica
+
+on:
+  pull_request:
+    branches: [PREVIEW]
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  control:
+    name: Control PREVIEW unica + version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Node 22
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.4.0
+        with:
+          node-version: 22
+      - name: Inventario de ramas
+        run: node tools/ramas-estado.mjs --check
+      - name: Version unica
+        run: node tools/verificar-version.mjs

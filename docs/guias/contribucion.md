@@ -1,9 +1,11 @@
 # Guia de contribucion — CommerCity
 
-## Ramas
-- `main`: estable. **Push directo prohibido sin confirmacion explicita.**
-- Trabajo en `feature/<tema>` desde `main`; push con `-u` la primera vez.
-- Referencia: integracion por PR hacia `PREVIEW` y luego merge a `main` (historial del proyecto).
+## Ramas (DEC-008, Fase 10: PREVIEW unica rama de integracion)
+
+- `PREVIEW` es la UNICA rama de integracion (backend, web, escritorio y movil).
+- Trabajo en `feature/*` y `fix/*` cortas, creadas desde `PREVIEW`; entran por PR y se borran al mergear.
+- `main` es solo puntero de release: avanza por fast-forward desde `PREVIEW` en cada bump con tag `vX.Y.Z`.
+- Prohibido mantener ramas o repos paralelos por app.
 
 ## Commits (uno por cambio logico)
 - Mensaje convencional: `tipo(alcance): descripcion` (p. ej. `docs(api): ...`, `refactor(backend): ...`, `feat(backend): ...`).
@@ -23,6 +25,10 @@ Por `.gitignore` la carpeta `docs/` esta excluida salvo excepciones aprobadas:
 - No cablear `validate()` en rutas existentes sin plan aparte (cambia respuestas 200->400).
 - Codificacion: UTF-8. Si ves mojibake (`electrnico`, `catlogo`), es deuda pre-existente: no la propagues, reportala.
 
-## Versionado
-- `VERSION` (raiz) y `backend/package.json` van sincronizados; bump en el mismo commit que el cambio (ver `docs/guias/despliegue.md`).
+## Versionado (DEC-010, Fase 10)
+
+- `VERSION` (raiz) es la fuente; `backend/package.json`, `apps/*/package.json`,
+  `MARKETING_VERSION` iOS y `versionName` Android se sincronizan con
+  `node tools/sync-version.mjs` y se verifican con `node tools/verificar-version.mjs`.
+- Nunca editar la version a mano en varios lugares.
 - Entrada en `docs/CHANGELOG.md` con formato Autor / Archivos / Descripcion / Motivo / Requerimientos / Evidencia / Estado.

@@ -25,12 +25,12 @@ function formatPeso(valor) {
 
 // M-28: la pasarela es simulada; al backend solo viajan los ultimos 4 digitos
 // y la marca. El numero completo nunca se envia ni se registra.
+// Marcas alineadas al enum del backend (pedidos.schema.js): Visa/Mastercard/Amex/Otra.
 function detectarMarcaTarjeta(digitos) {
   if (/^4/.test(digitos)) return "Visa";
   if (/^(5[1-5]|2[2-7])/.test(digitos)) return "Mastercard";
-  if (/^3[47]/.test(digitos)) return "American Express";
-  if (/^6/.test(digitos)) return "Discover";
-  return "Tarjeta";
+  if (/^3[47]/.test(digitos)) return "Amex";
+  return "Otra";
 }
 
 export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
@@ -73,8 +73,8 @@ export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
       await confirmarPago({
         direccion_envio: direccionEnvio.trim(),
         metodo_pago: "tarjeta",
-        tarjeta_ultimos4: digitosTarjeta.slice(-4),
-        tarjeta_marca: detectarMarcaTarjeta(digitosTarjeta),
+        ultimos4_tarjeta: digitosTarjeta.slice(-4),
+        marca_tarjeta: detectarMarcaTarjeta(digitosTarjeta),
         nombre_tarjeta: nombreTarjeta.trim(),
       });
       setPagado(true);

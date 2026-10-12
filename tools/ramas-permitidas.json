@@ -1,0 +1,20 @@
+{
+  "comentario": "Ramas con trabajo propio aun no integrado (TASK-10.1/10.10). Requieren decision del lider antes de archivar. No borrar sin tag archive/<rama> y aprobacion explicita (SEC-003).",
+  "permitidas": [
+    "origin/fix/auditoria-preview-2026-10-11",
+    "origin/preview-movil",
+    "origin/feature/docs-api-zod-openapi",
+    "origin/main",
+    "fix/auditoria-preview-2026-10-11",
+    "fix/aud-p1-backend",
+    "fix/aud-p2-frontend",
+    "fix/aud-p3-apps",
+    "fix/aud-p4-bddocs",
+    "fix/aud-p5-consolidacion",
+    "movil/main",
+    "movil",
+    "origin/fix/command-code-write-eof-resiliente",
+    "fix/command-code-write-eof-resiliente"
+  ],
+  "archivadas": []
+}

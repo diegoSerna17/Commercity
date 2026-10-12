@@ -1266,6 +1266,7 @@ async function processPago() {
   const name = document.getElementById('card-holder')?.value.trim();
   if (!num || num.length < 13 || num.length > 19 || !name) { toast('⚠️ Tarjeta inválida (13-19 dígitos) y titular requerido'); return; }
   if (!apiReady()) { toast('⚠️ API no disponible (falta api.js)'); return; }
+  if (!/^\d{4}$/.test(num.slice(-4))) { toast('⚠️ No se pudo enmascarar la tarjeta'); return; }
 
   const btn = document.getElementById('pay-btn');
   btn.textContent = '⏳ Procesando...';
@@ -1274,11 +1275,17 @@ async function processPago() {
   const addr = localStorage.getItem('commercity_addr') || '';
   const city = localStorage.getItem('commercity_city') || '';
   const dept = localStorage.getItem('commercity_dept') || '';
+  const direccion = [addr, city, dept].filter(Boolean).join(', ');
+  if (direccion.trim().length < 5) { btn.disabled = false; toast('⚠️ Ingresa una dirección de envío válida (mínimo 5 caracteres)'); return; }
+  // M-28: pasarela simulada; solo viajan los ultimos 4 digitos y la marca (enum del backend). El PAN nunca sale del dispositivo.
+  const ultimos4 = num.slice(-4);
+  const marca = /^4/.test(num) ? 'Visa' : /^(5[1-5]|2[2-7])/.test(num) ? 'Mastercard' : /^3[47]/.test(num) ? 'Amex' : 'Otra';
   try {
     await api.confirmarPago({
-      direccion_envio: [addr, city, dept].filter(Boolean).join(', '),
+      direccion_envio: direccion,
       metodo_pago: 'tarjeta',
-      numero_tarjeta: num,
+      ultimos4_tarjeta: ultimos4,
+      marca_tarjeta: marca,
       nombre_tarjeta: name
     });
     document.getElementById('pas-title').textContent = '¡Pago Exitoso! ✅';
