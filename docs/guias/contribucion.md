@@ -32,3 +32,5 @@ Por `.gitignore` la carpeta `docs/` esta excluida salvo excepciones aprobadas:
   `node tools/sync-version.mjs` y se verifican con `node tools/verificar-version.mjs`.
 - Nunca editar la version a mano en varios lugares.
 - Entrada en `docs/CHANGELOG.md` con formato Autor / Archivos / Descripcion / Motivo / Requerimientos / Evidencia / Estado.
+- F-10 (2026-10-12): el CHANGELOG vive en `PREVIEW` (no en rama de release):
+  cada cambio —incluido el bump— trae su entrada en el MISMO commit.

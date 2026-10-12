@@ -1,7 +1,7 @@
 # Contratos de datos — CommerCity
 
 > Generado con `npm run docs:api` + `npm run docs:entidades` desde `backend/src/server/schemas/`. No editar a mano.
-> 42 contratos documentados. Fuente de verdad: los esquemas Zod.
+> 43 contratos documentados. Fuente de verdad: los esquemas Zod.
 
 ## Indice
 
@@ -35,6 +35,7 @@
 - [HistorialComprasQuery](#historialcomprasquery)
 - [ConversacionParams](#conversacionparams)
 - [ConversacionQuery](#conversacionquery)
+- [ConversacionesQuery](#conversacionesquery)
 - [EnviarMensaje](#enviarmensaje)
 - [MensajeIdParams](#mensajeidparams)
 - [ListarNotificacionesQuery](#listarnotificacionesquery)
@@ -611,20 +612,24 @@
 
 ## HistorialComprasQuery (`HistorialComprasQuery`)
 
-> Query de GET /api/historial/compras (filtro opcional por estado RF30)
+> Query de GET /api/historial/compras (filtro opcional por estado RF30 + paginacion B-9)
 
 - **Fuente:** `backend/src/server/schemas/compras.schema.js`
 - **Usado en:** `GET /api/historial/compras`
 
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
-| `estado` | enum: "Pendiente" \| "En camino" \| "Entregado" \| "Cancelado" | no | Filtra lineas por estado (otro valor = sin filtro) |
+| `estado` | string | no | Filtra lineas por estado (otro valor = sin filtro) |
+| `pagina` | integer [max 9007199254740991, > 0] | no | Pagina (default 1) |
+| `por_pagina` | integer [max 100, > 0] | no | Pedidos por pagina (default 20, max 100) |
 
 **Ejemplo:**
 
 ```json
 {
-  "estado": "Pendiente"
+  "estado": "Pendiente",
+  "pagina": 1,
+  "por_pagina": 20
 }
 ```
 
@@ -658,6 +663,27 @@
 |---|---|---|---|
 | `pagina` | integer [max 9007199254740991, > 0] | no | Pagina (default 1) |
 | `por_pagina` | integer [max 100, > 0] | no | Mensajes por pagina (default 50, max 100) |
+
+**Ejemplo:**
+
+```json
+{
+  "pagina": 1,
+  "por_pagina": 50
+}
+```
+
+## ConversacionesQuery (`ConversacionesQuery`)
+
+> Query de GET /api/chat/conversaciones (paginado, B-9)
+
+- **Fuente:** `backend/src/server/schemas/chat.schema.js`
+- **Usado en:** `GET /api/chat/conversaciones`
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `pagina` | integer [max 9007199254740991, > 0] | no | Pagina (default 1) |
+| `por_pagina` | integer [max 100, > 0] | no | Conversaciones por pagina (default 50, max 100) |
 
 **Ejemplo:**
 
@@ -838,7 +864,7 @@ Union discriminada con 2 variantes (ver `openapi.json#/components/schemas/CrearR
 
 ## AdminUsuariosQuery (`AdminUsuariosQuery`)
 
-> Query de GET /api/admin/usuarios (RF67/RF73/RF74)
+> Query de GET /api/admin/usuarios (RF67/RF73/RF74, paginado B-9)
 
 - **Fuente:** `backend/src/server/schemas/admin.schema.js`
 - **Usado en:** `GET /api/admin/usuarios`
@@ -846,12 +872,16 @@ Union discriminada con 2 variantes (ver `openapi.json#/components/schemas/CrearR
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
 | `q` | string | no | Busca por nombre o correo |
+| `pagina` | integer [max 9007199254740991, > 0] | no | Pagina (default 1) |
+| `por_pagina` | integer [max 100, > 0] | no | Usuarios por pagina (default 50, max 100) |
 
 **Ejemplo:**
 
 ```json
 {
-  "q": "ana"
+  "q": "ana",
+  "pagina": 1,
+  "por_pagina": 50
 }
 ```
 

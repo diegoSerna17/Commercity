@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-12 - RELEASE 1.3.1: cierre de pendientes de la auditoria PREVIEW 2026-10-12 (paquetes A-E)
+
+- **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: VERSION (1.3.0->1.3.1); backend/package.json + package-lock.json; apps/escritorio/package.json + package-lock.json; apps/movil/package.json + package-lock.json; apps/movil/android/app/build.gradle (versionName); apps/movil/ios/App/App.xcodeproj/project.pbxproj (MARKETING_VERSION); frontend/src/constants/buttons.css, inputs.css (@version); README.md; docs/api/openapi.json + docs/api/entidades.md (regenerados v1.3.1); docs/CHANGELOG.md; docs/guias/contribucion.md (F-10). Cambios de codigo de los paquetes A-E (detalle abajo).
+- **Descripcion**: (A) A-1: el escritorio enviaba `numero_tarjeta` (PAN completo); queda una sola `confirmarPago` con `ultimos4_tarjeta`+`marca_tarjeta` y el contrato del escritorio falla si reaparece un PAN; A-2: `DB_NAME` por defecto pasa de `commercity_v2` (compartida) a `commercity_dev`; A-3: middleware nuevo `validarOriginCookies` (Origin/Referer en mutantes con cookie, 9 tests); A-4: retirados los audios prohibidos del movil. (B) B-4: `porEstado` excluye cancelados; B-5: caso multi-vendedor en integracion (5/5 en MySQL local); B-6: 404 uniforme en PATCH estado + hash ficticio en register (anti-enumeracion); B-7: cuenta de admin enmascarada por defecto (`?revelar=completa` para edicion); B-8: `req.body ?? {}`; B-9: paginacion Zod+LIMIT/OFFSET (max 100) en 3 listados; B-10: roles en la consulta unica de auth; B-11: umbrales de cobertura 97/99/88/96 (medido 97.02 Lines, CON-004); B-12: banner de arranque con version dinamica; B-13: refs obsoletas al multer de chat. (C) C-1: umbral Lines 70 en frontend (medido 75.31); C-2: elimina la copia local de `mapearProducto`; C-3: build sin chunk de 587 kB (max 247 kB) y jsx-a11y activo. (D) D-1: registro movil exige 8 caracteres; D-2: HTTPS obligatorio en escritorio y movil (salvo dev local) + READMEs; D-3: Electron 44.7.0 vigente (sin cambio); D-4: autoria del port movil registrada; D-5: CSP del escritorio restringe `img-src`; D-6: revisado sin cambios. (E) E-1: idempotencia 12/12 en MySQL local; E-2: 018 FK-safe verificada; E-3: `.dockerignore`; E-4: comentario `/health`; E-5: compose dev-only verificado; E-6: `paths:` en CI. **B-2 sigue abierto** (contradiccion del CHANGELOG sobre la BD compartida; lo verifica el lider con `schema_migrations`).
+- **Motivo**: cierre de los pendientes de la auditoria PREVIEW 2026-10-12 (M-27/M-28, B-4 a B-13, C/D/E, VER-001/DEC-010).
+- **Requerimientos**: RF30, RF54, RF67, RF101, RF130-139, RF140, M-27, M-28, CON-004, DEC-010
+- **Evidencia**: backend 536/536 (cobertura 97.02 Lines); integracion 5/5 en `commercity_dev` local; frontend 124/124 (75.31 Lines); contratos escritorio/movil OK; `docs:api` v1.3.1 (63 paths/74 ops/40 esquemas); `verificar-version.mjs 1.3.0` -> `VERSION-CHECK: OK (1.3.1 sincronizada)`; E-1 segunda pasada con 12 `[SKIP]` y reejecucion directa 12/12 OK.
+- **Estado**: Completado (pendientes humanos: B-2/H-8, rotaciones H-1..H-4, congelar movil H-5, proteger PREVIEW H-6, informar a Diego H-7; aprobaciones separadas para tags `archive/*`, borrados de ramas, fast-forward de `main` y push a PREVIEW)
+
+---
+
 ## 2026-10-12 - DOCS: autoria del port movil registrada sin reescribir historia (D-4, DEC-013)
 
 - **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
