@@ -1,7 +1,19 @@
 // api.js - Capa de red CommerCity (compartida movil + escritorio)
 // Escritorio (Electron loadFile): API_URL http://localhost:3000
-const API_URL = (typeof window !== "undefined" && window.COMMERCITY_API_URL) || "http://localhost:3000";
+// D-2: la URL se define por build/entorno (window.COMMERCITY_API_URL).
+// Se exige HTTPS salvo en hosts de desarrollo locales (localhost/127.0.0.1);
+// cualquier otro http se rechaza en puerta (fail-closed, codigo CONFIG).
+const API_URL_CFG = (typeof window !== "undefined" && window.COMMERCITY_API_URL) || "http://localhost:3000";
+const API_URL = (() => {
+  try {
+    const u = new URL(API_URL_CFG);
+    if (u.protocol === "https:") return u.origin;
+    if (u.protocol === "http:" && /^(localhost|127\.0\.0\.1)$/.test(u.hostname)) return u.origin;
+  } catch (e) {}
+  return "";
+})();
 async function apiRequest(path, options = {}) {
+  if (!API_URL) throw { status: 0, code: "CONFIG", message: "API sin URL valida: define window.COMMERCITY_API_URL con HTTPS para builds de release." };
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   const token = localStorage.getItem("commercity_token");
   if (token) headers["Authorization"] = "Bearer " + token;

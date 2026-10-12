@@ -40,6 +40,8 @@ Abre **`http://127.0.0.1:8080/www/index.html`**.
 
 > \[!IMPORTANT]
 > `www/api.js` apunta por defecto a `http://10.0.2.2:3000` (loopback del emulador Android). En el navegador de PC o en un dispositivo físico hay que definir `window.COMMERCITY_API_URL` (por ejemplo `http://localhost:3000` o la IP-LAN del equipo) **antes** de cargar `api.js`.
+>
+> D-2 (HTTPS en release): `www/config.js` (cargado antes de `api.js`) define `COMMERCITY_API_URL=http://localhost:3000` solo en live-server de PC (puerto 8080); en emulador/nativo rige el default. `api.js` **exige HTTPS** salvo en hosts de desarrollo (`10.0.2.2`, `localhost`, `127.0.0.1`): cualquier otro `http://` se rechaza en puerta (error `CONFIG`) para que un build de release nunca hable en claro con producción.
 
 ## 🔑 Usuarios de prueba
 

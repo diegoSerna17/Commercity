@@ -24,6 +24,8 @@ npm start        # abre la ventana nativa de CommerCity (Electron)
 
 `src/api.js` usa `http://localhost:3000` por defecto, así que la app toma la API automáticamente en local.
 
+D-2 (HTTPS en release): para apuntar a otra API hay que definir `window.COMMERCITY_API_URL` **antes** de cargar `api.js`. `api.js` **exige HTTPS** salvo en `localhost`/`127.0.0.1`: cualquier otro `http://` se rechaza en puerta (error `CONFIG`) para que un build empaquetado nunca hable en claro con producción.
+
 ## 🔑 Usuarios de prueba
 
 Creados por `seed_commercity.sql`; la contraseña de prueba de todos es la misma y **se pide al líder por canal privado** (2026-10-11, R-1: el seed solo versiona hashes bcrypt; la contraseña no está en el repositorio):

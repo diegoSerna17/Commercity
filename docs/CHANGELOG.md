@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-12 - DOCS: autoria del port movil registrada sin reescribir historia (D-4, DEC-013)
+
+- **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: docs/CHANGELOG.md (solo registro; sin cambios de codigo ni de historia)
+- **Descripcion**: el arbol `apps/movil` desciende del port del repo externo BLACK-CODE-JSB/COMMERCITY-2.0-MOBILE- y se integro sin reescritura de historia (DEC-006/DEC-013). Verificado: 16 commits tocan `apps/movil` en PREVIEW, todos de Daniel Palacios, sin commits por tema y sin autoria de Jhon Jairo Parra en el historial de este repositorio. No se tocan `commercycity` ni el repo movil (son de otros).
+- **Motivo**: D-4 de la auditoria PREVIEW 2026-10-12 (port sin commits por tema ni autoria registrada).
+- **Requerimientos**: DEC-006, DEC-013
+- **Evidencia**: `git log --oneline PREVIEW -- apps/movil` (16 commits); `git log --format="%an" PREVIEW -- apps/movil` (solo Daniel Palacios); `git log --oneline --all --author="Parra"` (vacio).
+- **Estado**: Completado (registro; no requiere aprobacion por no tocar codigo ni historia)
+
+---
+
 ## 2026-10-12 - FIX: la app movil no conectaba con la API al abrirla en el navegador (config.js M-24)
 
 - **Autor**: Daniel Palacios (lider)

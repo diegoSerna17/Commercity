@@ -856,6 +856,8 @@ async function handleRegistro() {
   const acceptedTerms = document.getElementById('reg-terms')?.checked;
 
   if (!u || !e || !p) { toast('⚠️ Completa todos los campos'); return; }
+  // D-1: minimo 8 caracteres, igual que escritorio, web y backend.
+  if (p.length < 8) { toast('⚠️ La contraseña debe tener al menos 8 caracteres'); return; }
   if (!acceptedTerms) { toast('⚠️ Debes aceptar los Términos y Condiciones'); return; }
   if (!apiReady()) { toast('⚠️ API no disponible (falta api.js)'); return; }
 

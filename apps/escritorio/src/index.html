@@ -2,8 +2,11 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <!-- CSP (M-19): scripts solo locales, sin handlers inline; fuentes locales. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http://localhost:3000 http://127.0.0.1:3000 https:; font-src 'self'; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 https:; object-src 'none'; base-uri 'none'; form-action 'none'"/>
+  <!-- CSP (M-19): scripts solo locales, sin handlers inline; fuentes locales.
+       D-5: img-src restringido a 'self'/data/localhost + images.unsplash.com
+       (fallbacks del catalogo); connect-src mantiene https: porque el host de
+       la API de release se configura por despliegue (ver README, D-2). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http://localhost:3000 http://127.0.0.1:3000 https://images.unsplash.com; font-src 'self'; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 https:; object-src 'none'; base-uri 'none'; form-action 'none'"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CommerCity</title>
   <link rel="stylesheet" href="styles.css">
