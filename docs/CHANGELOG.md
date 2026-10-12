@@ -4,6 +4,16 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-12 - BD: correccion de la migracion 018 (orden FK-safe) y aplicacion de las 12 migraciones a la BD compartida (SEC-003, TASK-7.4)
+
+- **Autor**: Daniel Palacios (lider)
+- **Archivos**: backend/src/server/db/018_calificaciones_unique_vendedor.sql; docs/CHANGELOG.md
+- **Descripcion**: se reescribio la migracion 018 con orden FK-safe: (1) crear el indice compuesto `uq_pedido_vendedor_calif (pedido_id, vendedor_id)` si no existe, (2) localizar la FK sobre `pedido_id` que esta respaldada por el indice unico simple, (3) dropear esa FK, (4) dropear el indice unico simple `uq_pedido_calificacion_vend`, (5) re-agregar la FK `ON DELETE CASCADE`; todo con DDL idempotente via `SET @var` + `PREPARE/EXECUTE/DEALLOCATE`. Con esto las 12 migraciones (000-018) quedaron aplicadas y registradas en el ledger `schema_migrations` de la BD compartida remota `commercycity_v2`, bajo autorizacion humana explicita SEC-003 (`--permitir-compartida`).
+- **Motivo**: la version anterior abortaba con `Cannot drop index 'uq_pedido_calificacion_vend': needed in a foreign key constraint` (el indice simple respaldaba la FK `calificaciones_vendedores_ibfk_1`), dejando la 018 en FATAL y el ledger incompleto; aplicar las migraciones era prerequisito del login 1.3.0 (columna `usuarios.token_version` creada por la migracion 015).
+- **Requerimientos**: RF107 (calificaciones); RNF de integridad de datos
+- **Evidencia**: salida real del script: `[OK] 018_calificaciones_unique_vendedor.sql aplicada y registrada` y `Migraciones al dia` (ledger 12/12); verificacion contra BD real con `SHOW CREATE TABLE calificaciones_vendedores` -> `UNIQUE KEY uq_pedido_vendedor_calif (pedido_id, vendedor_id)` y `CONSTRAINT calificaciones_vendedores_ibfk_1 FOREIGN KEY (pedido_id) REFERENCES pedidos (id) ON DELETE CASCADE` intactas (indice simple eliminado); `SHOW CREATE TABLE usuarios` con `token_version int NOT NULL DEFAULT 0`; login `POST /api/usuarios/login` -> `success=true` con JWT emitido. Suite del modulo: comando entregado al usuario (`node node_modules\vitest\vitest.mjs run src/server/__tests__/calificaciones.controllers.test.js`); la IA no ejecuta tests (regla ahorro-tokens-test-manual).
+- **Estado**: Completado (pendiente del usuario: corrida de la suite de calificaciones y `--coverage`)
+
 ## 2026-10-12 - RELEASE 1.3.0: cierre de la auditoria PREVIEW 2026-10-11 + PREVIEW como unica rama (M-28, Fase 10, VER-001)
 
 - **Autor**: Daniel Palacios (lider) — rama fix/auditoria-preview-2026-10-11
