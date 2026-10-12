@@ -88,6 +88,38 @@
         }
       }
     },
+    "/health": {
+      "get": {
+        "operationId": "healthCheck",
+        "tags": [
+          "Base"
+        ],
+        "summary": "Healthcheck",
+        "description": "Estado del servicio y de la BD (SELECT 1). Publico; 503 si la BD no responde (TASK-8.4).",
+        "responses": {
+          "200": {
+            "description": "Servicio y BD operativos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Base de datos no disponible (DB_UNAVAILABLE).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/usuarios/": {
       "get": {
         "operationId": "verificarModuloUsuarios",
@@ -486,6 +518,43 @@
         ]
       }
     },
+    "/api/usuarios/logout-todas": {
+      "post": {
+        "operationId": "cerrarTodasLasSesiones",
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Cerrar todas mis sesiones",
+        "description": "Incrementa token_version: invalida todos los JWT emitidos antes (M-8). Exige token.",
+        "responses": {
+          "200": {
+            "description": "Todas las sesiones fueron cerradas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado: falta el JWT Bearer o es invalido/revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/usuarios/me": {
       "get": {
         "operationId": "obtenerMiPerfil",
@@ -765,6 +834,17 @@
             "schema": {
               "description": "Filtro por vendedor",
               "type": "string"
+            }
+          },
+          {
+            "name": "vendedor_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Filtro por id de vendedor",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
             }
           }
         ]
@@ -1669,7 +1749,7 @@
           "Tienda"
         ],
         "summary": "Ver mi cuenta bancaria",
-        "description": "Cuenta bancaria del vendedor (datos sensibles, RNF11 cifrado).",
+        "description": "Cuenta bancaria del vendedor ENMASCARADA por defecto (B-5: nunca el numero completo).",
         "responses": {
           "200": {
             "description": "Cuenta bancaria.",
@@ -1727,7 +1807,7 @@
           "Tienda"
         ],
         "summary": "Crear mi cuenta bancaria",
-        "description": "Alta de cuenta bancaria del vendedor (RNF9/RNF11).",
+        "description": "Alta de cuenta bancaria del vendedor (RNF9/RNF11). La respuesta va enmascarada (B-5).",
         "responses": {
           "201": {
             "description": "Cuenta bancaria creada.",
@@ -1795,7 +1875,7 @@
           "Tienda"
         ],
         "summary": "Actualizar mi cuenta bancaria",
-        "description": "Actualiza la cuenta bancaria del vendedor.",
+        "description": "Actualiza la cuenta bancaria del vendedor. La respuesta va enmascarada (B-5).",
         "responses": {
           "200": {
             "description": "Cuenta bancaria actualizada.",
@@ -3462,7 +3542,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CuentaBancaria"
+                "$ref": "#/components/schemas/CuentaBancariaPlataforma"
               }
             }
           }
@@ -3530,7 +3610,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CuentaBancaria"
+                "$ref": "#/components/schemas/CuentaBancariaPlataforma"
               }
             }
           }
@@ -3856,7 +3936,7 @@
           "Chat"
         ],
         "summary": "Ver historial con un usuario",
-        "description": "Mensajes entre el autenticado y otro usuario.",
+        "description": "Mensajes entre el autenticado y otro usuario (paginado; M-14).",
         "responses": {
           "200": {
             "description": "Historial de mensajes.",
@@ -3915,6 +3995,30 @@
               "maximum": 9007199254740991,
               "description": "Identificador entero positivo de ruta o cuerpo",
               "title": "IdParam"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Pagina (default 1)",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "por_pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Mensajes por pagina (default 50, max 100)",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 100
             }
           }
         ]
@@ -4064,6 +4168,17 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 50
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Pagina, base 1 (default 1)",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
             }
           }
         ]
@@ -4682,7 +4797,7 @@
                 "pattern": "\\d"
               }
             ],
-            "description": "Contraseña: minimo 8 caracteres, con letra y numero",
+            "description": "Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes)",
             "title": "Password"
           },
           "nombre_completo": {
@@ -4730,7 +4845,7 @@
                 "pattern": "\\d"
               }
             ],
-            "description": "Contraseña: minimo 8 caracteres, con letra y numero",
+            "description": "Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes)",
             "title": "Password"
           }
         },
@@ -4793,7 +4908,7 @@
                 "pattern": "\\d"
               }
             ],
-            "description": "Contraseña: minimo 8 caracteres, con letra y numero",
+            "description": "Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes)",
             "title": "Password"
           }
         },
@@ -4885,6 +5000,12 @@
           "vendedor": {
             "description": "Filtro por vendedor",
             "type": "string"
+          },
+          "vendedor_id": {
+            "description": "Filtro por id de vendedor",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           }
         },
         "title": "CatalogoQuery",
@@ -5059,9 +5180,20 @@
             ],
             "description": "Metodo de pago simulado"
           },
-          "numero_tarjeta": {
-            "description": "Requerido si metodo_pago=tarjeta (se valida Luhn, RF118)",
-            "type": "string"
+          "ultimos4_tarjeta": {
+            "description": "Ultimos 4 digitos (requerido si metodo_pago=tarjeta)",
+            "type": "string",
+            "pattern": "^\\d{4}$"
+          },
+          "marca_tarjeta": {
+            "description": "Marca de la tarjeta (opcional)",
+            "type": "string",
+            "enum": [
+              "Visa",
+              "Mastercard",
+              "Amex",
+              "Otra"
+            ]
           },
           "nombre_tarjeta": {
             "description": "Nombre en la tarjeta",
@@ -5075,12 +5207,13 @@
         ],
         "additionalProperties": false,
         "title": "ConfirmarPago",
-        "description": "Body de POST /api/pedidos/confirmar-pago (checkout ACID RF134)",
+        "description": "Body de POST /api/pedidos/confirmar-pago (checkout ACID RF134; tarjeta enmascarada, M-28)",
         "examples": [
           {
             "direccion_envio": "Calle 10 #20-30, Medellin",
             "metodo_pago": "tarjeta",
-            "numero_tarjeta": "4111111111111111",
+            "ultimos4_tarjeta": "1111",
+            "marca_tarjeta": "Visa",
             "nombre_tarjeta": "Ana Compradora"
           }
         ]
@@ -5497,6 +5630,64 @@
           }
         ]
       },
+      "CuentaBancariaPlataforma": {
+        "type": "object",
+        "properties": {
+          "titular_nombre": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100,
+            "pattern": "^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\\s]+$",
+            "description": "Nombre del titular (solo letras y espacios)"
+          },
+          "banco": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 50,
+            "description": "Nombre del banco"
+          },
+          "tipo_cuenta": {
+            "type": "string",
+            "enum": [
+              "ahorros",
+              "corriente"
+            ],
+            "description": "Tipo de cuenta"
+          },
+          "numero_cuenta": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 20,
+            "pattern": "^\\d+$",
+            "description": "Numero de cuenta (solo digitos, 6-20)"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "description": "Contrasena del administrador (step-up obligatorio)"
+          }
+        },
+        "required": [
+          "titular_nombre",
+          "banco",
+          "tipo_cuenta",
+          "numero_cuenta",
+          "password"
+        ],
+        "additionalProperties": false,
+        "title": "CuentaBancariaPlataforma",
+        "description": "Body de alta/actualizacion de la cuenta bancaria de Commercity (admin + contrasena)",
+        "examples": [
+          {
+            "titular_nombre": "CommerCity SAS",
+            "banco": "Bancolombia",
+            "tipo_cuenta": "corriente",
+            "numero_cuenta": "1234567890",
+            "password": "ClaveAdmin123"
+          }
+        ]
+      },
       "CrearReporte": {
         "oneOf": [
           {
@@ -5625,7 +5816,8 @@
           "mensaje": {
             "type": "string",
             "minLength": 1,
-            "description": "Texto del mensaje (no vacio)"
+            "maxLength": 2000,
+            "description": "Texto del mensaje (1-2000)"
           }
         },
         "required": [
@@ -5660,6 +5852,33 @@
         "examples": [
           {
             "usuarioId": 7
+          }
+        ]
+      },
+      "ConversacionQuery": {
+        "type": "object",
+        "properties": {
+          "pagina": {
+            "default": 1,
+            "description": "Pagina (default 1)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "por_pagina": {
+            "default": 50,
+            "description": "Mensajes por pagina (default 50, max 100)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 100
+          }
+        },
+        "title": "ConversacionQuery",
+        "description": "Query de GET /api/chat/mensajes/:usuarioId (paginado)",
+        "examples": [
+          {
+            "pagina": 1,
+            "por_pagina": 50
           }
         ]
       },
@@ -5706,14 +5925,21 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 50
+          },
+          "pagina": {
+            "description": "Pagina, base 1 (default 1)",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
           }
         },
         "title": "ListarNotificacionesQuery",
-        "description": "Query de GET /api/notificaciones/ (tipo y limite opcionales)",
+        "description": "Query de GET /api/notificaciones/ (tipo, limite y pagina opcionales)",
         "examples": [
           {
             "tipo": "mensajes",
-            "limite": 20
+            "limite": 20,
+            "pagina": 1
           }
         ]
       },

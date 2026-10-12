@@ -5,12 +5,12 @@ import jwt from "jsonwebtoken";
 // Mock del pool MySQL (sin BD real) - cubre authRequired y el controller.
 vi.mock("mysql2/promise", () => {
   // query envoltorio: responde de forma transparente la consulta que authRequired
-  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // hace por DEF-01 ("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1") y delega
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -28,19 +28,21 @@ vi.mock("mysql2/promise", () => {
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto_test";
 
+// TASK-4.6: buffer con magic bytes reales de JPEG (la subida valida contenido).
+const IMAGEN_JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(24)]);
+
 const { __pool: pool } = await import("mysql2/promise");
 const { default: app } = await import("../app.js");
 
-const tokenComprador = jwt.sign(
-  { id: 8, email: "camila.torres@commercity.com" },
+const tokenComprador = jwt.sign({ id: 8, email: "camila.torres@commercity.com" , token_version: 0},
   process.env.JWT_SECRET,
-  { expiresIn: "1h" }
+  { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
 
 // authRequired solo consulta la lista negra de tokens; no hay rol exigido.
 function mockAuth() {
   pool.query.mockImplementation((sql) => {
-    if (sql.includes("tokens_invalidados")) return [[], undefined];
+    if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
     return [[], undefined];
   });
 }
@@ -86,7 +88,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
   it("POST /api/reportes de producto inexistente -> 404", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM productos")) return [[], undefined];
       return [[], undefined];
     });
@@ -100,7 +102,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
   it("POST /api/reportes de producto crea con informante del JWT (201)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM productos")) return [[{ id: 1 }], undefined];
       if (sql.includes("INSERT INTO reportes")) return [{ insertId: 500 }, undefined];
       return [[], undefined];
@@ -134,7 +136,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
   it("POST /api/reportes de usuario inexistente -> 404", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM usuarios")) return [[], undefined];
       return [[], undefined];
     });
@@ -148,7 +150,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
   it("POST /api/reportes de usuario crea (201)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM usuarios")) return [[{ id: 2 }], undefined];
       if (sql.includes("INSERT INTO reportes")) return [{ insertId: 501 }, undefined];
       return [[], undefined];
@@ -168,7 +170,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
   it("POST /api/reportes con evidencia (multipart) guarda evidencia_url (201)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM productos")) return [[{ id: 1 }], undefined];
       if (sql.includes("INSERT INTO reportes")) return [{ insertId: 502 }, undefined];
       return [[], undefined];
@@ -180,16 +182,42 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
       .field("tipo", "Producto")
       .field("motivo", "Producto con defecto")
       .field("producto_id", "1")
-      .attach("evidencia", Buffer.from("imagen-fake"), "evidencia.jpg");
+      .attach("evidencia", IMAGEN_JPEG, "evidencia.jpg");
 
     expect(res.status).toBe(201);
     const insert = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO reportes"));
     expect(insert[1][5]).toMatch(/^\/uploads\/[0-9a-f]{32}\.jpg$/);
   });
 
+  it("M-14: deduplica un reporte abierto del mismo informante sobre el mismo objetivo (409)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("SELECT id FROM productos")) return [[{ id: 1 }], undefined];
+      if (sql.includes("FROM reportes") && sql.includes("estado_reporte = 'Pendiente'")) {
+        return [[{ id: 30 }], undefined]; // ya existe un reporte abierto
+      }
+      if (sql.includes("INSERT INTO reportes")) return [{ insertId: 999 }, undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .post("/api/reportes")
+      .set("Authorization", `Bearer ${tokenComprador}`)
+      .field("tipo", "Producto")
+      .field("motivo", "Repetido")
+      .field("producto_id", "1")
+      .attach("evidencia", IMAGEN_JPEG, "evidencia.jpg");
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("CONFLICT");
+    // No se inserta un duplicado
+    expect(pool.query.mock.calls.some(([sql]) =>
+      String(sql).includes("INSERT INTO reportes"))).toBe(false);
+  });
+
   it("devuelve 500 si la BD falla al crear", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM productos")) return [[{ id: 1 }], undefined];
       throw new Error("BD caida");
     });

@@ -29,3 +29,30 @@ export const bancoSchema = z
       { titular_nombre: "Ana Compradora", banco: "Bancolombia", tipo_cuenta: "ahorros", numero_cuenta: "1234567890" },
     ],
   });
+
+/**
+ * M-12 (TASK-4.5): el cambio de la cuenta bancaria DE LA PLATAFORMA exige
+ * step-up con la contrasena del administrador (accion sensible sobre dinero).
+ */
+export const bancoPlataformaSchema = bancoSchema
+  .extend({
+    password: z
+      .string()
+      .min(8)
+      .max(72)
+      .describe("Contrasena del administrador (step-up obligatorio)"),
+  })
+  .meta({
+    id: "CuentaBancariaPlataforma",
+    title: "CuentaBancariaPlataforma",
+    description: "Body de alta/actualizacion de la cuenta bancaria de Commercity (admin + contrasena)",
+    examples: [
+      {
+        titular_nombre: "CommerCity SAS",
+        banco: "Bancolombia",
+        tipo_cuenta: "corriente",
+        numero_cuenta: "1234567890",
+        password: "ClaveAdmin123",
+      },
+    ],
+  });

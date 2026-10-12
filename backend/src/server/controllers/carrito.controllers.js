@@ -19,16 +19,16 @@ function esEnteroPositivo(valor) {
 }
 
 /**
- * Obtiene el stock disponible de un producto activo (no eliminado por admin).
+ * Obtiene stock y vendedor de un producto activo (no eliminado por admin).
  * @param {number} productoId - ID del producto
- * @returns {Promise<number|null>} Stock disponible o null si no existe
+ * @returns {Promise<{stock: number, vendedor_id: number}|null>} Datos o null si no existe
  */
-async function obtenerStock(productoId) {
+async function obtenerProducto(productoId) {
   const [filas] = await pool.query(
-    "SELECT stock FROM productos WHERE id = ? AND eliminado_por_admin = 0 LIMIT 1",
+    "SELECT stock, vendedor_id FROM productos WHERE id = ? AND eliminado_por_admin = 0 LIMIT 1",
     [productoId]
   );
-  return filas.length > 0 ? filas[0].stock : null;
+  return filas.length > 0 ? filas[0] : null;
 }
 
 /**
@@ -57,7 +57,7 @@ export async function agregarProducto(req, res) {
     // H1 (P0): el comprador se deriva del JWT (req.userId). Se ignora
     // cualquier comprador_id enviado por el cliente para cerrar el IDOR.
     const compradorId = Number(req.userId);
-    const { producto_id: productoId, cantidad = 1 } = req.body;
+    const { producto_id: productoId, cantidad = 1 } = req.body ?? {};
 
     if (
       !esEnteroPositivo(compradorId) ||
@@ -70,14 +70,23 @@ export async function agregarProducto(req, res) {
       });
     }
 
-    const stock = await obtenerStock(productoId);
-    if (stock === null) {
+    const producto = await obtenerProducto(productoId);
+    if (producto === null) {
       return res.status(404).json({
         success: false,
         error: { code: "PRODUCT_NOT_FOUND", message: "El producto no existe o fue eliminado por el administrador" },
       });
     }
 
+    // DEC-002/M-4: prohibida la autocompra (tambien se valida en confirmarPago).
+    if (Number(producto.vendedor_id) === compradorId) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "AUTOCOMPRA", message: "No puedes agregar tus propios productos al carrito" },
+      });
+    }
+
+    const stock = Number(producto.stock);
     if (!(await compradorExiste(compradorId))) {
       return res.status(404).json({
         success: false,
@@ -93,7 +102,12 @@ export async function agregarProducto(req, res) {
       [compradorId, productoId]
     );
 
-    const cantidadAcumulada = existentes.length > 0 ? existentes[0].cantidad + cantidad : cantidad;
+    // B-9 (TASK-4.9): coercion numerica ANTES de sumar; un body con "3" no debe
+    // concatenar strings ("83") ni romper la comparacion con el stock.
+    const cantidadNumerica = Number(cantidad);
+    const cantidadAcumulada = existentes.length > 0
+      ? Number(existentes[0].cantidad) + cantidadNumerica
+      : cantidadNumerica;
     if (cantidadAcumulada > stock) {
       await conexion.rollback();
       return res.status(400).json({
@@ -106,7 +120,7 @@ export async function agregarProducto(req, res) {
       `INSERT INTO carrito_items (comprador_id, producto_id, cantidad)
        VALUES (?, ?, ?)
        ON DUPLICATE KEY UPDATE cantidad = cantidad + VALUES(cantidad)`,
-      [compradorId, productoId, cantidad]
+      [compradorId, productoId, cantidadNumerica]
     );
 
     await conexion.commit();
@@ -177,7 +191,7 @@ export async function modificarCantidad(req, res) {
     // H1 (P0): comprador desde JWT, nunca de query.
     const compradorId = Number(req.userId);
     const productoId = Number(req.params.productoId);
-    const { cantidad } = req.body;
+    const { cantidad } = req.body ?? {};
 
     if (
       !esEnteroPositivo(compradorId) ||
@@ -190,18 +204,20 @@ export async function modificarCantidad(req, res) {
       });
     }
 
-    const stock = await obtenerStock(productoId);
-    if (stock === null) {
+    const producto = await obtenerProducto(productoId);
+    if (producto === null) {
       return res.status(404).json({
         success: false,
         error: { code: "PRODUCT_NOT_FOUND", message: "El producto no existe o fue eliminado por el administrador" },
       });
     }
 
-    if (cantidad > stock) {
+    // B-9: coercion numerica antes de comparar/actualizar.
+    const cantidadNumerica = Number(cantidad);
+    if (cantidadNumerica > producto.stock) {
       return res.status(400).json({
         success: false,
-        error: { code: "INSUFFICIENT_STOCK", message: `Stock insuficiente. Disponible: ${stock}` },
+        error: { code: "INSUFFICIENT_STOCK", message: `Stock insuficiente. Disponible: ${producto.stock}` },
       });
     }
 
@@ -222,7 +238,7 @@ export async function modificarCantidad(req, res) {
 
     await conexion.query(
       "UPDATE carrito_items SET cantidad = ? WHERE comprador_id = ? AND producto_id = ?",
-      [cantidad, compradorId, productoId]
+      [cantidadNumerica, compradorId, productoId]
     );
 
     await conexion.commit();

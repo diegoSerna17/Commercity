@@ -13,12 +13,14 @@ vi.mock("resend", () => {
 
 describe("utils/mailer.js - con RESEND_API_KEY", () => {
     let enviar;
+    let enviarAviso;
     let sendMock;
 
     beforeAll(async () => {
         process.env.RESEND_API_KEY = "re_test_key";
         process.env.RESEND_FROM = "CommerCity <test@resend.dev>";
-        ({ enviarCorreoRecuperacion: enviar } = await import("../utils/mailer.js"));
+        ({ enviarCorreoRecuperacion: enviar, enviarAvisoRegistroDuplicado: enviarAviso } =
+            await import("../utils/mailer.js"));
         ({ __send: sendMock } = await import("resend"));
     });
 
@@ -42,6 +44,27 @@ describe("utils/mailer.js - con RESEND_API_KEY", () => {
         await expect(enviar("a@test.com", "http://localhost:5173/restore?token=abc"))
             .rejects.toThrow("No se pudo enviar el correo de recuperación");
     });
+
+    it("M-15: envia el aviso de registro duplicado al titular", async () => {
+        sendMock.mockResolvedValue({ data: { id: "mail-aviso" }, error: null });
+
+        const resultado = await enviarAviso("existe@test.com");
+
+        expect(resultado).toEqual({ id: "mail-aviso" });
+        const arg = sendMock.mock.calls.at(-1)[0];
+        expect(arg.to).toEqual(["existe@test.com"]);
+        expect(arg.subject).toContain("Intento de registro");
+        // El aviso no incluye enlaces con token ni datos de la cuenta
+        expect(arg.html).not.toContain("restore?token");
+        expect(arg.html).not.toContain("nombre_completo");
+    });
+
+    it("M-15: lanza error si Resend falla al enviar el aviso", async () => {
+        sendMock.mockResolvedValue({ data: null, error: new Error("aviso fail") });
+
+        await expect(enviarAviso("existe@test.com"))
+            .rejects.toThrow("No se pudo enviar el aviso de registro");
+    });
 });
 
 describe("utils/mailer.js - modo desarrollo sin API key", () => {
@@ -49,9 +72,12 @@ describe("utils/mailer.js - modo desarrollo sin API key", () => {
         vi.resetModules();
         delete process.env.RESEND_API_KEY;
 
-        const { enviarCorreoRecuperacion: enviarDev } = await import("../utils/mailer.js");
+        const { enviarCorreoRecuperacion: enviarDev, enviarAvisoRegistroDuplicado: avisoDev } =
+            await import("../utils/mailer.js");
         const resultado = await enviarDev("dev@test.com", "http://localhost:5173/restore?token=abc");
 
         expect(resultado).toEqual({ id: "dev-mail-simulado" });
+        // M-15: el aviso tambien se simula sin API key
+        await expect(avisoDev("dev@test.com")).resolves.toEqual({ id: "dev-mail-simulado" });
     });
 });

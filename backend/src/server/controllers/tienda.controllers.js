@@ -2,14 +2,17 @@ import { z } from "zod";
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { bancoSchema } from "../schemas/cuentaBancaria.schema.js";
-import {
-  encryptSensitive,
-  decryptSensitive,
-  maskBankAccount,
-  maskFullName,
-} from "../utils/crypto.js";
 import { round2 } from "../utils/finanzas.js";
 import { importeReembolsoLinea } from "../utils/reembolsos.js";
+import {
+  buscarCuentaBancaria,
+  recifrarCuentaBancariaSiEsLegado,
+  cifrarCampo,
+  buildPublicRecord,
+  validarCuentaBancaria,
+} from "../utils/cuentaBancaria.js";
+import { registrarAuditoria, ACCIONES } from "../utils/auditoria.js";
+import { escapeLike } from "../utils/sql.js";
 
 // ============================================================================
 // MODULO TIENDA DEL VENDEDOR (integrado desde AVANCES/SPRING 1/ERICK/TIENDA)
@@ -25,55 +28,21 @@ const ESTADOS_VENTA = ["Pendiente", "En camino", "Entregado", "Cancelado"];
 
 // ─────────────────────────────────────────────────────────────
 // CUENTA BANCARIA (RF121-RF123, RNF11)
+// La lectura/escritura y el cifrado v2 con AAD viven en utils/cuentaBancaria.js
+// (A3/TASK-4.10); el re-cifrado perezoso (M-10) se dispara en cada lectura.
 // ─────────────────────────────────────────────────────────────
-async function buscarCuentaBancaria(usuarioId) {
-  const [rows] = await pool.query(
-    `SELECT id, usuario_id, titular_nombre, banco, tipo_cuenta, numero_cuenta,
-            es_commercity, updated_at
-       FROM datos_bancarios WHERE usuario_id = ? LIMIT 1`,
-    [usuarioId]
-  );
-  return rows[0] || null;
-}
 
-function buildPrivateRecord(row) {
-  return {
-    id: row.id,
-    usuario_id: row.usuario_id,
-    titular_nombre: decryptSensitive(row.titular_nombre),
-    banco: row.banco,
-    tipo_cuenta: row.tipo_cuenta,
-    numero_cuenta: decryptSensitive(row.numero_cuenta),
-    es_commercity: Boolean(row.es_commercity),
-    updated_at: row.updated_at || null,
-  };
-}
-
-function buildPublicRecord(row) {
-  const rawNumero = decryptSensitive(row.numero_cuenta);
-  const rawTitular = decryptSensitive(row.titular_nombre);
-  return {
-    id: row.id,
-    usuario_id: row.usuario_id,
-    banco: row.banco,
-    tipo_cuenta: row.tipo_cuenta,
-    titular_nombre_enmascarado: maskFullName(rawTitular),
-    numero_cuenta_enmascarado: maskBankAccount(rawNumero),
-    ultimos4: rawNumero ? rawNumero.slice(-4) : null,
-    es_commercity: Boolean(row.es_commercity),
-    updated_at: row.updated_at || null,
-    tiene_datos_registrados: Boolean(rawNumero && rawTitular),
-  };
-}
-
-/** GET /api/tienda/mi-cuenta-bancaria (datos completos, solo el vendedor) */
+/** GET /api/tienda/mi-cuenta-bancaria (vista enmascarada, B-5) */
 export const getMiCuentaBancaria = async (req, res, next) => {
   try {
-    const fila = await buscarCuentaBancaria(req.userId);
+    let fila = await buscarCuentaBancaria(req.userId);
+    fila = await recifrarCuentaBancariaSiEsLegado(fila);
     if (!fila) {
       return successResponse(res, "Sin datos bancarios registrados", { registrado: false, datos: null });
     }
-    return successResponse(res, "Cuenta bancaria obtenida", { registrado: true, datos: buildPrivateRecord(fila) });
+    // B-5 (TASK-4.9): el numero completo JAMAS se devuelve por defecto; la
+    // respuesta expone solo la version enmascarada y los ultimos 4 digitos.
+    return successResponse(res, "Cuenta bancaria obtenida (enmascarada)", { registrado: true, datos: buildPublicRecord(fila) });
   } catch (err) {
     next(err);
   }
@@ -82,7 +51,8 @@ export const getMiCuentaBancaria = async (req, res, next) => {
 /** GET /api/tienda/mi-cuenta-bancaria/masked (vista segura, RF122) */
 export const getMiCuentaBancariaMasked = async (req, res, next) => {
   try {
-    const fila = await buscarCuentaBancaria(req.userId);
+    let fila = await buscarCuentaBancaria(req.userId);
+    fila = await recifrarCuentaBancariaSiEsLegado(fila);
     if (!fila) {
       return successResponse(res, "Sin datos bancarios registrados", { registrado: false, datos: null });
     }
@@ -99,8 +69,9 @@ export const upsertMiCuentaBancaria = async (req, res, next) => {
     const data = bancoSchema.parse(req.body);
     const usuarioId = req.userId;
 
-    const encryptedTitular = encryptSensitive(data.titular_nombre);
-    const encryptedNumero = encryptSensitive(data.numero_cuenta);
+    // M-10: v2 con AAD = usuario_id.
+    const encryptedTitular = cifrarCampo(data.titular_nombre, usuarioId);
+    const encryptedNumero = cifrarCampo(data.numero_cuenta, usuarioId);
 
     await conn.beginTransaction();
     const [existing] = await conn.query(
@@ -128,10 +99,24 @@ export const upsertMiCuentaBancaria = async (req, res, next) => {
     await conn.commit();
 
     const fila = await buscarCuentaBancaria(usuarioId);
+    // M-11: auditoria del cambio de cuenta bancaria del vendedor (sin datos sensibles).
+    await registrarAuditoria({
+      actorId: usuarioId,
+      accion: ACCIONES.CUENTA_BANCARIA_CAMBIADA,
+      objetivoTipo: "datos_bancarios",
+      objetivoId: fila?.id ?? existing[0]?.id ?? null,
+      detalle: {
+        banco: data.banco,
+        tipo_cuenta: data.tipo_cuenta,
+        es_actualizacion: existing.length > 0,
+      },
+      ip: req.ip,
+    });
     return successResponse(
       res,
       existing.length === 0 ? "Cuenta bancaria registrada correctamente." : "Cuenta bancaria actualizada correctamente.",
-      { registrado: true, es_actualizacion: existing.length > 0, datos: buildPrivateRecord(fila) },
+      // B-5: la respuesta del upsert tambien va enmascarada.
+      { registrado: true, es_actualizacion: existing.length > 0, datos: buildPublicRecord(fila) },
       existing.length === 0 ? 201 : 200
     );
   } catch (err) {
@@ -182,7 +167,8 @@ export const getHistorialVentas = async (req, res, next) => {
       params.push(String(fecha_hasta));
     }
     if (q && String(q).trim()) {
-      const like = "%" + String(q).trim() + "%";
+      // B-8: los comodines del usuario se escapan (busqueda literal).
+      const like = escapeLike(String(q).trim());
       where.push("(pr.nombre LIKE ? OR uc.nombre_completo LIKE ? OR ps.referencia_pago LIKE ?)");
       params.push(like, like, like);
     }
@@ -208,7 +194,7 @@ export const getHistorialVentas = async (req, res, next) => {
          pr.nombre AS nombre_producto, pr.imagen_url AS url_imagen,
          dp.cantidad, dp.precio_unitario_historico AS valor_unitario,
          dp.subtotal AS valor_subtotal, dp.monto_vendedor, dp.monto_comision,
-         uc.nombre_completo AS nombre_comprador, uc.email AS email_comprador,
+         uc.nombre_completo AS nombre_comprador,
          dp.estado_envio, p.fecha_pedido, p.direccion_envio
        ` + fromJoin + `
        ORDER BY p.fecha_pedido DESC, dp.id DESC
@@ -216,13 +202,15 @@ export const getHistorialVentas = async (req, res, next) => {
       [...params, porPagina, offset]
     );
 
+    // M-6: el resumen (dinero) excluye las lineas canceladas, igual que
+    // admin/stats; el listado de items conserva el historial completo (RF137).
     const [resumenRows] = await pool.query(
       `SELECT
          COUNT(*) AS total_ventas,
          COALESCE(SUM(dp.subtotal), 0) AS total_bruto,
          COALESCE(SUM(dp.monto_vendedor), 0) AS total_neto_vendedor,
          COALESCE(SUM(dp.monto_comision), 0) AS total_comision_plataforma
-       ` + fromJoin, params
+       ` + fromJoin + ` AND dp.estado_envio <> 'Cancelado'`, params
     );
 
     return successResponse(res, "Historial de ventas", {
@@ -260,7 +248,9 @@ export const getHistorialIngresos = async (req, res, next) => {
     const { fecha_desde, fecha_hasta, agrupar_por = "transaccion" } = req.query;
     const { pagina, porPagina } = parsePaginacion(req.query);
 
-    const where = ["dp.vendedor_id = ?"];
+    // M-6: el historial de INGRESOS excluye las lineas canceladas (fueron
+    // reembolsadas al comprador y no generan ingreso para el vendedor).
+    const where = ["dp.vendedor_id = ?", "dp.estado_envio <> 'Cancelado'"];
     const params = [vendedorId];
     if (fecha_desde) {
       where.push("DATE(p.fecha_pedido) >= DATE(?)");
@@ -378,6 +368,7 @@ export const getDashboardStats = async (req, res, next) => {
   try {
     const vendedorId = req.userId;
 
+    // M-6: las tarjetas (dinero) excluyen lineas canceladas, igual que admin/stats.
     const [totalRows] = await pool.query(
       `SELECT
          COUNT(DISTINCT p.id) AS total_ventas,
@@ -387,7 +378,7 @@ export const getDashboardStats = async (req, res, next) => {
          SUM(dp.cantidad) AS unidades_vendidas
        FROM detalle_pedidos dp
        INNER JOIN pedidos p ON p.id = dp.pedido_id
-       WHERE dp.vendedor_id = ?`,
+       WHERE dp.vendedor_id = ? AND dp.estado_envio <> 'Cancelado'`,
       [vendedorId]
     );
 
@@ -402,12 +393,13 @@ export const getDashboardStats = async (req, res, next) => {
       [vendedorId]
     );
 
+    // M-6: ganancias por mes solo de lineas vivas (sin canceladas).
     const [meses] = await pool.query(
       `SELECT DATE_FORMAT(p.fecha_pedido, '%Y-%m') AS mes,
               COALESCE(SUM(dp.monto_vendedor), 0) AS ganancias
          FROM detalle_pedidos dp
          INNER JOIN pedidos p ON p.id = dp.pedido_id
-        WHERE dp.vendedor_id = ?
+        WHERE dp.vendedor_id = ? AND dp.estado_envio <> 'Cancelado'
         GROUP BY DATE_FORMAT(p.fecha_pedido, '%Y-%m')
         ORDER BY mes DESC
         LIMIT 6`,
@@ -446,40 +438,6 @@ export const getDashboardStats = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 const TOLERANCIA_CENTAVOS = 0.01;
 
-/** Comprueba que la cuenta bancaria este registrada y sea utilizable (RF131-RF133). */
-function validarCuentaBancaria(fila) {
-  if (!fila) {
-    return {
-      registrada: false,
-      completa: false,
-      banco: null,
-      tipo_cuenta: null,
-      titular_enmascarado: null,
-      numero_enmascarado: null,
-      ultimos4: null,
-      updated_at: null,
-    };
-  }
-  const titular = decryptSensitive(fila.titular_nombre);
-  const numero = decryptSensitive(fila.numero_cuenta);
-  const completa = Boolean(
-    titular && numero &&
-    fila.banco && fila.tipo_cuenta &&
-    ["ahorros", "corriente"].includes(fila.tipo_cuenta) &&
-    /^\d{6,20}$/.test(String(numero))
-  );
-  return {
-    registrada: true,
-    completa,
-    banco: fila.banco,
-    tipo_cuenta: fila.tipo_cuenta,
-    titular_enmascarado: maskFullName(titular),
-    numero_enmascarado: maskBankAccount(numero),
-    ultimos4: numero ? String(numero).slice(-4) : null,
-    updated_at: fila.updated_at || null,
-  };
-}
-
 /**
  * GET /api/tienda/validacion
  * Validacion integral de Mi Tienda contra la BD real (RF130-RF139):
@@ -496,15 +454,11 @@ export const getValidacionTienda = async (req, res, next) => {
     const vendedorId = req.userId;
 
     // --- 1. Cuenta bancaria (RF131-RF133, RF138) ---
-    const [bancarias] = await pool.query(
-      `SELECT id, usuario_id, titular_nombre, banco, tipo_cuenta, numero_cuenta,
-              es_commercity, updated_at
-         FROM datos_bancarios
-        WHERE usuario_id = ?
-        LIMIT 1`,
-      [vendedorId]
+    // M-10: el re-cifrado perezoso se dispara antes de validar/enmascarar.
+    const cuenta = await recifrarCuentaBancariaSiEsLegado(
+      await buscarCuentaBancaria(vendedorId)
     );
-    const cuentaBancaria = validarCuentaBancaria(bancarias[0] || null);
+    const cuentaBancaria = validarCuentaBancaria(cuenta);
 
     // --- 2. Flujo 90/10 (RF136/RF139) ---
     const [lineas] = await pool.query(

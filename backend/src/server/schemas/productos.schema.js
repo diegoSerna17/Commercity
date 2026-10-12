@@ -38,6 +38,9 @@ export const catalogoQuerySchema = z
     nombre: z.string().optional().describe("Filtro por nombre"),
     categoria: z.string().optional().describe("Filtro por categoria"),
     vendedor: z.string().optional().describe("Filtro por vendedor"),
+    // M-20 (TASK-5.4): permite filtrar el catalogo por vendedor exacto (el
+    // perfil publico deja de buscar por LIKE de nombre).
+    vendedor_id: z.coerce.number().int().positive().optional().describe("Filtro por id de vendedor"),
   })
   .meta({
     id: "CatalogoQuery",

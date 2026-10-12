@@ -6,13 +6,16 @@ const email = z
   .describe("Correo del usuario")
   .meta({ title: "Email", description: "Correo del usuario", examples: ["comprador@ejemplo.com"] });
 // H5 (P2): minimo 8 + complejidad (letra y numero) en vez de 6 sin reglas.
+// H8 (TASK-4.8): bcrypt solo considera los primeros 72 BYTES; se rechaza el
+// resto en vez de truncarlo en silencio.
 const password = z
   .string()
   .min(8, "La contraseña debe tener al menos 8 caracteres")
   .regex(/[A-Za-z]/, "La contraseña debe incluir al menos una letra")
   .regex(/\d/, "La contraseña debe incluir al menos un número")
-  .describe("Contraseña (min 8, con letra y número)")
-  .meta({ title: "Password", description: "Contraseña: minimo 8 caracteres, con letra y numero" });
+  .refine((valor) => Buffer.byteLength(valor, "utf8") <= 72, "La contraseña no puede superar 72 bytes")
+  .describe("Contraseña (min 8, con letra y número; max 72 bytes)")
+  .meta({ title: "Password", description: "Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes)" });
 
 export const registerSchema = z
   .object({

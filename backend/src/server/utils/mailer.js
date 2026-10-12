@@ -15,8 +15,8 @@ export const enviarCorreoRecuperacion = async (email, resetUrl) => {
     const from = process.env.RESEND_FROM || "CommerCity <onboarding@resend.dev>";
 
     // H3 (P2): jamas volcar el token/URL a logs (riesgo en agregadores).
-    // Solo se registra el evento, sin datos sensibles.
-    console.log(`[AUTH] Solicitud de recuperacion para: ${email}`);
+    // B-* (TASK-4.9): tampoco el email (dato personal) en el log.
+    console.log("[AUTH] Solicitud de recuperacion de contrasena registrada.");
 
     // Sin API key configurada -> modo desarrollo: no se envia nada.
     if (!resend) {
@@ -54,6 +54,49 @@ export const enviarCorreoRecuperacion = async (email, resetUrl) => {
     if (error) {
         console.error("❌ Error enviando correo con Resend:", error);
         throw new Error("No se pudo enviar el correo de recuperación");
+    }
+
+    return data;
+};
+
+/**
+ * M-15 (TASK-4.7): aviso al titular de una cuenta cuando alguien intenta
+ * registrarse con su email. Permite responder de forma uniforme en `register`
+ * sin revelar si el email existe (anti-enumeracion).
+ * @param {String} email destinatario
+ */
+export const enviarAvisoRegistroDuplicado = async (email) => {
+    const from = process.env.RESEND_FROM || "CommerCity <onboarding@resend.dev>";
+
+    // Sin datos personales en el log.
+    console.log("[AUTH] Aviso de intento de registro con email ya existente.");
+    if (!resend) {
+        console.log("[DEV] Resend NO configurado — simulación de aviso (no se envió nada).\n");
+        return { id: "dev-mail-simulado" };
+    }
+
+    const { data, error } = await resend.emails.send({
+        from,
+        to: [email],
+        subject: "Intento de registro — CommerCity",
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; background: #f8f8fb; border-radius: 16px;">
+                <h2 style="color: #f97316; margin: 0 0 12px;">CommerCity</h2>
+                <p style="color: #333; font-size: 15px; line-height: 1.6;">Hola 👋,</p>
+                <p style="color: #333; font-size: 15px; line-height: 1.6;">
+                    Alguien intentó crear una cuenta con este correo, pero ya tienes una.
+                    Si fuiste tú, inicia sesión o restablece tu contraseña; si no, ignora este mensaje.
+                </p>
+                <p style="color: #999; font-size: 12px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 12px;">
+                    © ${new Date().getFullYear()} CommerCity — Todos los derechos reservados.
+                </p>
+            </div>
+        `,
+    });
+
+    if (error) {
+        console.error("❌ Error enviando aviso de registro con Resend:", error);
+        throw new Error("No se pudo enviar el aviso de registro");
     }
 
     return data;

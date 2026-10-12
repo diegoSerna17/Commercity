@@ -6,7 +6,6 @@ import {
   round2,
   calcularLinea,
   calcularTotales,
-  validarLuhn,
 } from "../utils/finanzas.js";
 
 describe("round2", () => {
@@ -71,25 +70,5 @@ describe("calcularTotales (RF117: en vuelo, no persistidos)", () => {
   it("maneja arreglo vacio", () => {
     const t = calcularTotales([]);
     expect(t).toEqual({ subtotal: 0, iva: 0, total: 0 });
-  });
-});
-
-describe("validarLuhn (RF118)", () => {
-  it("aprueba Visa de prueba", () => {
-    expect(validarLuhn("4111111111111111")).toBe(true);
-  });
-
-  it("rechaza numero con Luhn invalido", () => {
-    expect(validarLuhn("1234567890123456")).toBe(false);
-  });
-
-  it("ignora espacios y no digitos", () => {
-    expect(validarLuhn("4111 1111 1111 1111")).toBe(true);
-  });
-
-  it("rechaza longitudes fuera de 13-19", () => {
-    expect(validarLuhn("4111")).toBe(false);
-    expect(validarLuhn("")).toBe(false);
-    expect(validarLuhn("abc")).toBe(false);
   });
 });

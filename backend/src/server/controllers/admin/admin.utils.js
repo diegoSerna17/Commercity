@@ -4,10 +4,10 @@
 
 // A4: validarId vive en utils/ids.js (capa comun); se re-exporta por compat.
 export { validarId } from "../../utils/ids.js";
+// B-8/A4: escapeLike se movio a utils/sql.js (capa comun); re-export por compat.
+export { escapeLike } from "../../utils/sql.js";
 
 export const capitalizar = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-
-export const escapeLike = (q) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
 export const formatFecha = (d) =>
   d

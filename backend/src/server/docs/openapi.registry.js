@@ -40,6 +40,7 @@ import {
 import {
   enviarMensajeSchema,
   conversacionParamsSchema,
+  conversacionQuerySchema,
   mensajeIdParamsSchema,
 } from "../schemas/chat.schema.js";
 import { listarNotificacionesQuerySchema } from "../schemas/notificaciones.schema.js";
@@ -90,12 +91,20 @@ const creado = (description, extra = {}) => ({ 201: { description }, ...extra })
 
 /** @type {Operacion[]} */
 export const operaciones = [
-  // ── Base (1) ──────────────────────────────────────────────
+  // ── Base (2) ──────────────────────────────────────────────
   {
     method: "get", path: "/", operationId: "verificarServidor", tag: "Base",
     summary: "Verificacion del servidor",
     description: "Endpoint raiz de verificacion (responde el modulo usuarios).",
     responses: ok("Servidor en linea."),
+  },
+  {
+    method: "get", path: "/health", operationId: "healthCheck", tag: "Base",
+    summary: "Healthcheck",
+    description: "Estado del servicio y de la BD (SELECT 1). Publico; 503 si la BD no responde (TASK-8.4).",
+    responses: ok("Servicio y BD operativos.", {
+      503: { description: "Base de datos no disponible (DB_UNAVAILABLE)." },
+    }),
   },
 
   // ── Usuarios (13) ─────────────────────────────────────────
@@ -160,6 +169,13 @@ export const operaciones = [
     description: "Revoca el token actual (lista negra en BD, RF2). Exige token.",
     auth: true,
     responses: ok("Sesion cerrada.", { ...R401 }),
+  },
+  {
+    method: "post", path: "/api/usuarios/logout-todas", operationId: "cerrarTodasLasSesiones", tag: "Usuarios",
+    summary: "Cerrar todas mis sesiones",
+    description: "Incrementa token_version: invalida todos los JWT emitidos antes (M-8). Exige token.",
+    auth: true,
+    responses: ok("Todas las sesiones fueron cerradas.", { ...R401 }),
   },
   {
     method: "get", path: "/api/usuarios/me", operationId: "obtenerMiPerfil", tag: "Usuarios",
@@ -303,7 +319,7 @@ export const operaciones = [
   {
     method: "get", path: "/api/tienda/mi-cuenta-bancaria", operationId: "obtenerMiCuentaBancaria", tag: "Tienda",
     summary: "Ver mi cuenta bancaria",
-    description: "Cuenta bancaria del vendedor (datos sensibles, RNF11 cifrado).",
+    description: "Cuenta bancaria del vendedor ENMASCARADA por defecto (B-5: nunca el numero completo).",
     auth: true, roles: ["vendedor"],
     responses: ok("Cuenta bancaria.", { ...R401, ...R403, ...R404 }),
   },
@@ -317,14 +333,14 @@ export const operaciones = [
   {
     method: "post", path: "/api/tienda/mi-cuenta-bancaria", operationId: "crearMiCuentaBancaria", tag: "Tienda",
     summary: "Crear mi cuenta bancaria",
-    description: "Alta de cuenta bancaria del vendedor (RNF9/RNF11).",
+    description: "Alta de cuenta bancaria del vendedor (RNF9/RNF11). La respuesta va enmascarada (B-5).",
     auth: true, roles: ["vendedor"], body: upsertCuentaBancariaSchema,
     responses: creado("Cuenta bancaria creada.", { ...R400, ...R401, ...R403 }),
   },
   {
     method: "put", path: "/api/tienda/mi-cuenta-bancaria", operationId: "actualizarMiCuentaBancaria", tag: "Tienda",
     summary: "Actualizar mi cuenta bancaria",
-    description: "Actualiza la cuenta bancaria del vendedor.",
+    description: "Actualiza la cuenta bancaria del vendedor. La respuesta va enmascarada (B-5).",
     auth: true, roles: ["vendedor"], body: upsertCuentaBancariaSchema,
     responses: ok("Cuenta bancaria actualizada.", { ...R400, ...R401, ...R403 }),
   },
@@ -523,8 +539,8 @@ export const operaciones = [
   {
     method: "get", path: "/api/chat/mensajes/{usuarioId}", operationId: "obtenerConversacion", tag: "Chat",
     summary: "Ver historial con un usuario",
-    description: "Mensajes entre el autenticado y otro usuario.",
-    auth: true, params: conversacionParamsSchema,
+    description: "Mensajes entre el autenticado y otro usuario (paginado; M-14).",
+    auth: true, params: conversacionParamsSchema, query: conversacionQuerySchema,
     responses: ok("Historial de mensajes.", { ...R400, ...R401, ...R404 }),
   },
   {

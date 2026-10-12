@@ -5,13 +5,13 @@ import jwt from "jsonwebtoken";
 
 // Mock del pool para no depender de la BD real.
 // La query es un envoltorio: responde de forma transparente la consulta que
-// authRequired hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")
+// authRequired hace por DEF-01 ("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1")
 // y delega todas las demas consultas a la query interna que configura cada test.
 vi.mock("../config/db.js", () => {
     const queryInterna = vi.fn();
     const query = vi.fn((sql, ...resto) => {
-        if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
-            return Promise.resolve([[{ activo: 1 }], undefined]);
+        if (typeof sql === "string" && sql.includes("AS revocado")) {
+            return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
         }
         return queryInterna(sql, ...resto);
     });
@@ -33,7 +33,7 @@ app.get("/protegido", authRequired, requireRoles(["administrador"]), (req, res) 
     res.json({ success: true, data: { userId: req.userId, roles: req.userRoles } });
 });
 
-const tokenValido = jwt.sign({ id: 7, email: "admin@test.com" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+const tokenValido = jwt.sign({ id: 7, email: "admin@test.com" , token_version: 0}, process.env.JWT_SECRET, { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" });
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -45,16 +45,17 @@ describe("requireRoles (RBAC)", () => {
         expect(res.status).toBe(401);
     });
 
-    it("deberia devolver 403 con token invalido", async () => {
+    it("deberia devolver 401 con token invalido (M-8: 401 unificado)", async () => {
         const res = await request(app)
             .get("/protegido")
             .set("Authorization", "Bearer token_falso_123");
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(401);
+        expect(res.body.error.code).toBe("UNAUTHORIZED");
     });
 
     it("deberia devolver 403 si el usuario no tiene el rol administrador", async () => {
         pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") ? [[], undefined] : [[{ nombre: "vendedor" }]]
+            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [[{ nombre: "vendedor" }]]
         );
 
         const res = await request(app)
@@ -68,7 +69,7 @@ describe("requireRoles (RBAC)", () => {
 
     it("deberia devolver 403 si el usuario no tiene roles asignados", async () => {
         pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") ? [[], undefined] : [[]]
+            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [[]]
         );
 
         const res = await request(app)
@@ -80,7 +81,7 @@ describe("requireRoles (RBAC)", () => {
 
     it("deberia permitir el acceso y consultar los roles del usuario autenticado", async () => {
         pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") ? [[], undefined] : [[{ nombre: "administrador" }]]
+            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [[{ nombre: "administrador" }]]
         );
 
         const res = await request(app)

@@ -2,17 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { enviarCorreoRecuperacion } from "../utils/mailer.js";
+import { enviarCorreoRecuperacion, enviarAvisoRegistroDuplicado } from "../utils/mailer.js";
 
 // Mock de mysql2/promise: createPool devuelve un pool simulado (sin BD real).
 vi.mock("mysql2/promise", () => {
   // query envoltorio: responde de forma transparente la consulta que authRequired
-  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // hace por DEF-01 ("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1") y delega
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -41,6 +41,7 @@ vi.mock("bcrypt", () => ({
 // Mock del mailer: no envia correos reales en tests.
 vi.mock("../utils/mailer.js", () => ({
   enviarCorreoRecuperacion: vi.fn().mockResolvedValue({ id: "mock-mail" }),
+  enviarAvisoRegistroDuplicado: vi.fn().mockResolvedValue({ id: "mock-mail" }),
 }));
 
 // El secreto debe existir antes de importar app.js (utils/config.js lo exige).
@@ -53,10 +54,9 @@ const { default: app } = await import("../app.js");
 const { adminGetDatos } = await import("../controllers/usuarios.controllers.js");
 
 // Token compartido para las rutas protegidas del modulo de autenticacion.
-const token = jwt.sign(
-  { id: 7, email: "test@test.com" },
+const token = jwt.sign({ id: 7, email: "test@test.com" , token_version: 0},
   process.env.JWT_SECRET,
-  { expiresIn: "1h" }
+  { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
 
 beforeEach(() => {
@@ -206,16 +206,22 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
     expect(conn.rollback).not.toHaveBeenCalled();
   });
 
-  it("rechaza email duplicado (400)", async () => {
+  it("M-15: email duplicado -> 201 uniforme sin token y aviso al titular", async () => {
     pool.query.mockResolvedValue([[{ id: 5 }], undefined]);
 
     const res = await request(app)
       .post("/api/usuarios/register")
       .send({ email: "duplicado@test.com", password: "SuperPass123" });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    // Misma respuesta que un alta (no se revela que el email existe)
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.token).toBeNull();
+    expect(res.body.data.user.email).toBe("duplicado@test.com");
+    // No se crea ninguna cuenta ni se toca la transaccion
     expect(pool.getConnection).not.toHaveBeenCalled();
+    // Se avisa al titular real del intento (anti-enumeracion)
+    expect(enviarAvisoRegistroDuplicado).toHaveBeenCalledWith("duplicado@test.com");
   });
 
   it("rechaza body con campo extra 'rol' (.strict())", async () => {
@@ -247,7 +253,7 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
     expect(conn.rollback).toHaveBeenCalled();
   });
 
-  it("maneja la race condition de email duplicado (ER_DUP_ENTRY -> 400)", async () => {
+  it("M-15: race condition de email duplicado (ER_DUP_ENTRY) -> 201 uniforme", async () => {
     pool.query.mockResolvedValue([[], undefined]);
     conn.query.mockRejectedValue(Object.assign(new Error("dup"), { code: "ER_DUP_ENTRY" }));
 
@@ -255,9 +261,10 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
       .post("/api/usuarios/register")
       .send({ email: "race@test.com", password: "SuperPass123" });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error.message).toContain("ya está registrado");
+    expect(res.status).toBe(201);
+    expect(res.body.data.token).toBeNull();
     expect(conn.rollback).toHaveBeenCalled();
+    expect(enviarAvisoRegistroDuplicado).toHaveBeenCalledWith("race@test.com");
   });
 
   it("hace rollback si el rol comprador no existe en la BD (500)", async () => {
@@ -295,6 +302,26 @@ describe("POST /api/usuarios/login (RF2 - fix 3.1)", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.token).toBeTruthy();
     expect(res.body.data.user.roles).toEqual(["comprador"]);
+  });
+
+  it("M-8/B-4: el token de login lleva token_version y iss/aud (revocable)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("FROM usuarios u WHERE u.email"))
+        return [[{ id: 7, email: "compra@test.com", password: "$2b$10$x", nombre_completo: "Comprador", foto_perfil: null, activo: 1, token_version: 3 }], undefined];
+      if (sql.includes("FROM roles r"))
+        return [[{ nombre: "comprador" }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .post("/api/usuarios/login")
+      .send({ email: "compra@test.com", password: "SuperPass123" });
+
+    expect(res.status).toBe(200);
+    const payload = jwt.decode(res.body.data.token);
+    expect(payload.token_version).toBe(3);
+    expect(payload.iss).toBe("commercity-api");
+    expect(payload.aud).toBe("commercity-clients");
   });
 
   it("rechaza email inexistente (401)", async () => {
@@ -357,18 +384,19 @@ describe("GET /api/usuarios/me (protegido)", () => {
     expect(res.body.success).toBe(false);
   });
 
-  it("rechaza token invalido (403)", async () => {
+  it("rechaza token invalido (401 unificado, M-8)", async () => {
     const res = await request(app)
       .get("/api/usuarios/me")
       .set("Authorization", "Bearer token_falso_123456");
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe("UNAUTHORIZED");
   });
 
   it("devuelve el perfil del usuario autenticado con roles", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuarios u WHERE u.id"))
         return [[{ id: 7, email: "test@test.com", nombre_completo: "Yo", foto_perfil: null }], undefined];
       if (sql.includes("FROM roles r"))
@@ -388,7 +416,7 @@ describe("GET /api/usuarios/me (protegido)", () => {
 
   it("devuelve 404 si el usuario no existe", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [[], undefined];
     });
 
@@ -402,7 +430,7 @@ describe("GET /api/usuarios/me (protegido)", () => {
 
   it("devuelve 500 si la BD falla", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       throw new Error("BD caida");
     });
 
@@ -436,15 +464,37 @@ describe("POST /api/usuarios/logout (RF2 - fix 3.3 revocacion de token)", () => 
     expect(insertCall).toBeTruthy();
   });
 
-  it("rechaza un token ya revocado (401)", async () => {
-    pool.query.mockResolvedValue([[{ token_hash: "x" }], undefined]);
+  // Nota: el caso "token ya revocado" se cubre en auth.middleware.test.js
+  // (aqui el wrapper del pool fija la fila combinada de auth).
+});
+
+describe("POST /api/usuarios/logout-todas (M-8 - cerrar todas las sesiones)", () => {
+  it("rechaza sin token (401)", async () => {
+    const res = await request(app).post("/api/usuarios/logout-todas");
+    expect(res.status).toBe(401);
+  });
+
+  it("incrementa token_version, revoca el token actual y limpia la cookie (200)", async () => {
+    pool.query.mockResolvedValue([[], undefined]);
 
     const res = await request(app)
-      .post("/api/usuarios/logout")
+      .post("/api/usuarios/logout-todas")
       .set("Authorization", `Bearer ${token}`);
 
-    expect(res.status).toBe(401);
-    expect(res.body.error.message).toContain("revocado");
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    // M-8: todos los JWT emitidos antes quedan invalidos
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE usuarios SET token_version = token_version + 1 WHERE id = ?"),
+      [7]
+    );
+    // Ademas revoca el token actual en la lista negra y limpia la cookie
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT IGNORE INTO tokens_invalidados"),
+      [expect.any(String)]
+    );
+    const cookies = res.headers["set-cookie"] || [];
+    expect(cookies.some((c) => c.startsWith("token=;"))).toBe(true);
   });
 });
 
@@ -488,7 +538,7 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
 
   it("rechaza que un administrador se autodegrade (403)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 2 }], undefined];
       if (sql.includes("FROM roles r")) return [[{ nombre: "administrador" }], undefined];
       return [[], undefined];
@@ -505,7 +555,7 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
 
   it("cambia de comprador a vendedor con transaccion (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 2 }], undefined];
       if (sql.includes("FROM roles r")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
@@ -524,7 +574,7 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
 
   it("devuelve 404 si el rol solicitado no existe en la BD", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[], undefined];
       if (sql.includes("FROM roles r")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
@@ -542,7 +592,7 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
 
   it("devuelve 500 si falla la conexion al pool al cambiar de rol (catch cambiarRol 296-297)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 2 }], undefined];
       if (sql.includes("FROM roles r")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
@@ -565,7 +615,7 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
 
   it("devuelve 500 con rollback si la transaccion falla al cambiar de rol (catch cambiarRol 296-297)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 2 }], undefined];
       if (sql.includes("FROM roles r")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
@@ -621,6 +671,29 @@ describe("POST /api/usuarios/recover (RF4 - anti-enumeracion)", () => {
     expect(updateCall).toBeTruthy();
   });
 
+  it("M-9: cooldown por usuario: con token reciente no reenvia correo (respuesta uniforme)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT id, email, activo FROM usuarios WHERE email"))
+        return [[{ id: 7, email: "existe@test.com", activo: 1 }], undefined];
+      if (sql.includes("UPDATE usuarios SET token_recuperacion"))
+        return [{ affectedRows: 0 }, undefined]; // emitido hace menos de 1 minuto
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .post("/api/usuarios/recover")
+      .send({ email: "existe@test.com" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    // El correo no se reenvia y la respuesta no filtra el motivo
+    expect(enviarCorreoRecuperacion).not.toHaveBeenCalled();
+    const updateCall = pool.query.mock.calls.find(([sql]) =>
+      sql.includes("UPDATE usuarios SET token_recuperacion"));
+    // La guarda del cooldown viaja en el WHERE del UPDATE (atomico)
+    expect(updateCall[0]).toContain("INTERVAL 4 MINUTE");
+  });
+
   it("devuelve 400 con email vacio (zod)", async () => {
     const res = await request(app)
       .post("/api/usuarios/recover")
@@ -658,7 +731,8 @@ describe("POST /api/usuarios/reset-password (RF4 - token de un solo uso)", () =>
   const TOKEN_VALIDO = "token_valido_de_64chars_123456789012345678901234567890";
 
   it("rechaza token invalido o expirado (400)", async () => {
-    pool.query.mockResolvedValue([[], undefined]);
+    // B-* (TASK-4.9): el reset es un UPDATE atomico; 0 filas = enlace invalido.
+    pool.query.mockResolvedValue([{ affectedRows: 0 }, undefined]);
 
     const res = await request(app)
       .post("/api/usuarios/reset-password")
@@ -670,8 +744,6 @@ describe("POST /api/usuarios/reset-password (RF4 - token de un solo uso)", () =>
 
   it("restablece la contrasena, limpia el token y responde 200", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("WHERE token_recuperacion = ?"))
-        return [[{ id: 7, email: "existe@test.com" }], undefined];
       if (sql.includes("UPDATE usuarios SET password"))
         return [{ affectedRows: 1 }, undefined];
       return [[], undefined];
@@ -689,6 +761,9 @@ describe("POST /api/usuarios/reset-password (RF4 - token de un solo uso)", () =>
     const updateCall = pool.query.mock.calls.find(([sql]) =>
       sql.includes("token_recuperacion = NULL"));
     expect(updateCall).toBeTruthy();
+    // M-8: el reset revoca todas las sesiones previas (sube token_version)
+    expect(updateCall[0]).toContain("token_version = token_version + 1");
+    expect(updateCall[0]).toContain("password_changed_at = NOW()");
   });
 
   it("rechaza contrasena corta (400 - zod)", async () => {
@@ -720,7 +795,7 @@ describe("GET /api/usuarios/admin (RBAC - requireRoles)", () => {
 
   it("rechaza a un comprador (403)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "comprador" }], undefined];
       return [[], undefined];
     });
@@ -735,7 +810,7 @@ describe("GET /api/usuarios/admin (RBAC - requireRoles)", () => {
 
   it("permite el acceso a un administrador (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       return [[], undefined];
     });
@@ -793,10 +868,9 @@ describe("DELETE /api/usuarios/cuenta (RF40 - comprador elimina su cuenta)", () 
     rollback: vi.fn(),
     release: vi.fn(),
   };
-  const tokenCuenta = jwt.sign(
-    { id: 5, email: "comprador@test.com" },
+  const tokenCuenta = jwt.sign({ id: 5, email: "comprador@test.com" , token_version: 0},
     process.env.JWT_SECRET,
-    { expiresIn: "1h" }
+    { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
   );
 
   beforeEach(() => {
@@ -816,20 +890,26 @@ describe("DELETE /api/usuarios/cuenta (RF40 - comprador elimina su cuenta)", () 
     expect(res.status).toBe(401);
   });
 
-  it("desactiva la cuenta, suspende productos y vacia el carrito (200)", async () => {
+  it("desactiva la cuenta, suspende productos, resuelve pedidos y vacia el carrito (200)", async () => {
     conn.query.mockImplementation((sql) => {
-      if (sql.includes("SELECT id, activo FROM usuarios"))
-        return [[{ id: 5, activo: 1 }], undefined];
+      if (sql.includes("SELECT id, password, activo FROM usuarios"))
+        return [[{ id: 5, password: "$2b$10$mock_hash", activo: 1 }], undefined];
       return [[], undefined];
     });
 
     const res = await request(app)
       .delete("/api/usuarios/cuenta")
-      .set("Authorization", `Bearer ${tokenCuenta}`);
+      .set("Authorization", `Bearer ${tokenCuenta}`)
+      .send({ password: "secreta123" });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data).toEqual({ id: 5, estado: "desactivado" });
+    expect(res.body.data).toMatchObject({ id: 5, estado: "desactivado" });
+    // M-7: se resuelven sus lineas abiertas como vendedor (sin lineas -> 0/0)
+    expect(res.body.data.pedidos).toEqual({ cancelados: 0, enRevision: 0 });
+
+    // M-7: step-up con la contrasena actual (hasheada, nunca en claro)
+    expect(bcrypt.compare).toHaveBeenCalledWith("secreta123", "$2b$10$mock_hash");
 
     // B-R6: nunca DELETE fisico del usuario
     expect(conn.query).not.toHaveBeenCalledWith(
@@ -837,7 +917,7 @@ describe("DELETE /api/usuarios/cuenta (RF40 - comprador elimina su cuenta)", () 
       expect.anything()
     );
     expect(conn.query).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE usuarios SET activo = 0 WHERE id = ?"),
+      expect.stringContaining("UPDATE usuarios SET activo = 0, token_version = token_version + 1 WHERE id = ?"),
       [5]
     );
     expect(conn.query).toHaveBeenCalledWith(
@@ -848,7 +928,46 @@ describe("DELETE /api/usuarios/cuenta (RF40 - comprador elimina su cuenta)", () 
       expect.stringContaining("DELETE FROM carrito_items WHERE comprador_id = ?"),
       [5]
     );
+    // M-7: se reutiliza la ruta del baneo para las lineas abiertas como vendedor
+    expect(conn.query.mock.calls.some(([sql]) => String(sql).includes("FROM detalle_pedidos dp")))
+      .toBe(true);
     expect(conn.commit).toHaveBeenCalled();
+  });
+
+  it("M-7: rechaza la baja sin contrasena (403) y no muta nada", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT id, password, activo FROM usuarios"))
+        return [[{ id: 5, password: "$2b$10$mock_hash", activo: 1 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .delete("/api/usuarios/cuenta")
+      .set("Authorization", `Bearer ${tokenCuenta}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("FORBIDDEN");
+    expect(conn.rollback).toHaveBeenCalled();
+    expect(conn.query.mock.calls.some(([sql]) => String(sql).includes("UPDATE usuarios SET activo = 0")))
+      .toBe(false);
+  });
+
+  it("M-7: rechaza la baja con contrasena incorrecta (403)", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT id, password, activo FROM usuarios"))
+        return [[{ id: 5, password: "$2b$10$mock_hash", activo: 1 }], undefined];
+      return [[], undefined];
+    });
+    bcrypt.compare.mockResolvedValueOnce(false);
+
+    const res = await request(app)
+      .delete("/api/usuarios/cuenta")
+      .set("Authorization", `Bearer ${tokenCuenta}`)
+      .send({ password: "incorrecta" });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.message).toMatch(/Contraseña/i);
+    expect(conn.rollback).toHaveBeenCalled();
   });
 
   it("devuelve 404 si la cuenta no existe", async () => {
@@ -884,7 +1003,7 @@ describe("GET /api/usuarios/directorio (directorio de usuarios para chat)", () =
 
   it("filtra por nombre/email cuando se envia q y excluye al propio usuario (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("activo = 1 AND id <> ?"))
         return [[{ id: 9, nombre_completo: "Ana Perez", foto_perfil: null }], undefined];
       return [[], undefined];
@@ -906,18 +1025,20 @@ describe("GET /api/usuarios/directorio (directorio de usuarios para chat)", () =
     // Solo expone datos publicos: nada de password ni otros campos sensibles.
     expect(sqlDir).toContain("SELECT id, nombre_completo, foto_perfil");
     expect(sqlDir).not.toContain("password");
-    expect(sqlDir).toContain("nombre_completo LIKE ? OR email LIKE ?");
+    // M-15: el directorio no filtra por email (no confirma correos)
+    expect(sqlDir).toContain("nombre_completo LIKE ?");
+    expect(sqlDir).not.toContain("email LIKE ?");
     expect(sqlDir).toContain("ORDER BY nombre_completo ASC LIMIT 50");
-    // Excluye al usuario autenticado (id = 7) y busca con comodines %q%.
+    // Excluye al usuario autenticado (id = 7) y busca con un unico comodin %q%.
     expect(pool.query.mock.calls).toContainEqual([
       expect.stringContaining("activo = 1 AND id <> ?"),
-      [7, "%ana%", "%ana%"],
+      [7, "%ana%"],
     ]);
   });
 
   it("sin q no agrega el filtro LIKE y solo envia el id (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [[], undefined];
     });
 
@@ -941,7 +1062,7 @@ describe("GET /api/usuarios/directorio (directorio de usuarios para chat)", () =
 
   it("q con solo espacios se trima y no agrega el filtro LIKE (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       return [[], undefined];
     });
 
@@ -958,7 +1079,7 @@ describe("GET /api/usuarios/directorio (directorio de usuarios para chat)", () =
 
   it("devuelve 500 si la BD falla", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       throw new Error("BD caida");
     });
 
@@ -1025,7 +1146,7 @@ describe("PATCH /api/usuarios/me (actualiza nombre de perfil)", () => {
 
   it("actualiza el nombre y devuelve el perfil actualizado (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("UPDATE usuarios SET nombre_completo"))
         return [{ affectedRows: 1 }, undefined];
       if (sql.includes("SELECT id, email, nombre_completo, foto_perfil FROM usuarios"))
@@ -1057,7 +1178,7 @@ describe("PATCH /api/usuarios/me (actualiza nombre de perfil)", () => {
 
   it("devuelve 500 si la BD falla", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       throw new Error("BD caida");
     });
 

@@ -46,25 +46,3 @@ export function calcularTotales(lineas) {
   const iva = round2(lineas.reduce((acc, l) => acc + l.iva, 0));
   return { subtotal, iva, total: round2(subtotal + iva) };
 }
-
-/**
- * Valida un numero de tarjeta con el algoritmo de Luhn (RF118, forma academica).
- * @param {string|number} numero
- * @returns {boolean}
- */
-export function validarLuhn(numero) {
-  const digitos = String(numero).replace(/\D/g, "");
-  if (digitos.length < 13 || digitos.length > 19) return false;
-  let suma = 0;
-  let doblar = false;
-  for (let i = digitos.length - 1; i >= 0; i -= 1) {
-    let d = Number(digitos[i]);
-    if (doblar) {
-      d *= 2;
-      if (d > 9) d -= 9;
-    }
-    suma += d;
-    doblar = !doblar;
-  }
-  return suma % 10 === 0;
-}

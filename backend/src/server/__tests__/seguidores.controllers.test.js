@@ -4,12 +4,12 @@ import jwt from "jsonwebtoken";
 
 vi.mock("mysql2/promise", () => {
     // query envoltorio: responde de forma transparente la consulta que authRequired
-    // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+    // hace por DEF-01 ("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1") y delega
     // el resto a la query interna que configura cada test con mockImplementation.
     const queryInterna = vi.fn();
     const query = vi.fn((sql, ...resto) => {
-        if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
-            return Promise.resolve([[{ activo: 1 }], undefined]);
+        if (typeof sql === "string" && sql.includes("AS revocado")) {
+            return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
         }
         return queryInterna(sql, ...resto);
     });
@@ -26,16 +26,15 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto_test";
 const { __pool: pool } = await import("mysql2/promise");
 const { default: app } = await import("../app.js");
 
-const token = jwt.sign(
-    { id: 9, email: "camila.torres@commercity.com" },
+const token = jwt.sign({ id: 9, email: "camila.torres@commercity.com" , token_version: 0},
     process.env.JWT_SECRET,
-    { expiresIn: "1h" }
+    { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
 
 beforeEach(() => {
     vi.clearAllMocks();
     pool.query.mockImplementation((sql) =>
-        sql.includes("tokens_invalidados") ? [[], undefined] : [[], undefined]
+        sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [[], undefined]
     );
 });
 
@@ -65,7 +64,7 @@ describe("Seguidores", () => {
 
     it("devuelve 404 si el usuario no existe", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("FROM usuarios WHERE id")) return [[], undefined];
             return [[], undefined];
         });
@@ -78,7 +77,7 @@ describe("Seguidores", () => {
 
     it("devuelve 409 si el seguimiento ya existe", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("FROM usuarios WHERE id")) return [[{ 1: 1 }], undefined];
             if (sql.includes("FROM seguidores WHERE seguidor_id")) return [[{ 1: 1 }], undefined];
             return [[], undefined];
@@ -92,7 +91,7 @@ describe("Seguidores", () => {
 
     it("crea el seguimiento con parámetros", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("FROM usuarios WHERE id")) return [[{ 1: 1 }], undefined];
             if (sql.includes("FROM seguidores WHERE seguidor_id")) return [[], undefined];
             if (sql.includes("INSERT INTO seguidores")) return [{ insertId: 1 }, undefined];
@@ -110,7 +109,7 @@ describe("Seguidores", () => {
 
     it("elimina un seguimiento existente", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("DELETE FROM seguidores")) return [{ affectedRows: 1 }, undefined];
             return [[], undefined];
         });
@@ -124,7 +123,7 @@ describe("Seguidores", () => {
 
     it("devuelve 404 si no existe el seguimiento a eliminar", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("DELETE FROM seguidores")) return [{ affectedRows: 0 }, undefined];
             return [[], undefined];
         });
@@ -137,7 +136,7 @@ describe("Seguidores", () => {
     it("lista usuarios seguidos", async () => {
         const rows = [{ id: 3, nombre_completo: "Vendedor Uno", foto_perfil: null }];
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("s.seguido_id")) return [rows, undefined];
             return [[], undefined];
         });
@@ -151,7 +150,7 @@ describe("Seguidores", () => {
     it("lista usuarios seguidores", async () => {
         const rows = [{ id: 5, nombre_completo: "Comprador Dos", foto_perfil: null }];
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("s.seguidor_id")) return [rows, undefined];
             return [[], undefined];
         });
@@ -172,7 +171,7 @@ describe("Seguidores", () => {
 
     it("devuelve 500 si la BD falla al crear el seguimiento", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             throw new Error("BD caida");
         });
         const response = await request(app)
@@ -185,7 +184,7 @@ describe("Seguidores", () => {
 
     it("devuelve 500 si la BD falla al eliminar el seguimiento", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("DELETE FROM seguidores")) throw new Error("BD caida");
             return [[], undefined];
         });
@@ -198,7 +197,7 @@ describe("Seguidores", () => {
 
     it("devuelve 500 si la BD falla al listar seguidos", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("FROM seguidores s")) throw new Error("BD caida");
             return [[], undefined];
         });
@@ -211,7 +210,7 @@ describe("Seguidores", () => {
 
     it("devuelve 500 si la BD falla al listar seguidores", async () => {
         pool.query.mockImplementation((sql) => {
-            if (sql.includes("tokens_invalidados")) return [[], undefined];
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
             if (sql.includes("FROM seguidores s")) throw new Error("BD caida");
             return [[], undefined];
         });

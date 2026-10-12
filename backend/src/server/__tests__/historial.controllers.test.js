@@ -4,13 +4,13 @@ import express from "express";
 
 // Mock del pool para no depender de la BD real.
 // La query es un envoltorio: responde la consulta que authRequired hace por DEF-01
-// ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega el resto a la
+// ("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1") y delega el resto a la
 // query interna que configura cada test.
 vi.mock("../config/db.js", () => {
     const queryInterna = vi.fn();
     const query = vi.fn((sql, ...resto) => {
-        if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
-            return Promise.resolve([[{ activo: 1 }], undefined]);
+        if (typeof sql === "string" && sql.includes("AS revocado")) {
+            return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
         }
         return queryInterna(sql, ...resto);
     });
@@ -31,7 +31,7 @@ const app = express();
 app.use(express.json());
 app.use("/api/historial", historialRouter);
 
-const tokenValido = jwt.sign({ id: 7, email: "test@test.com" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+const tokenValido = jwt.sign({ id: 7, email: "test@test.com" , token_version: 0}, process.env.JWT_SECRET, { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" });
 
 const filasMock = [
     {
@@ -75,17 +75,18 @@ describe("GET /api/historial/compras", () => {
         expect(res.body.success).toBe(false);
     });
 
-    it("deberia devolver 403 con token invalido", async () => {
+    it("deberia devolver 401 con token invalido (M-8: 401 unificado)", async () => {
         const res = await request(app)
             .get("/api/historial/compras")
             .set("Authorization", "Bearer token_falso_123");
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(401);
+        expect(res.body.error.code).toBe("UNAUTHORIZED");
         expect(res.body.success).toBe(false);
     });
 
     it("deberia devolver el historial del comprador agrupado por pedido (RF32) con campos RF31", async () => {
         pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") ? [[], undefined] : [filasMock]
+            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [filasMock]
         );
 
         const res = await request(app)
@@ -126,7 +127,7 @@ describe("GET /api/historial/compras", () => {
 
     it("deberia aplicar el filtro por estado cuando llega ?estado=", async () => {
         pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") ? [[], undefined] : [filasMock]
+            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [filasMock]
         );
 
         const res = await request(app)
@@ -142,7 +143,7 @@ describe("GET /api/historial/compras", () => {
 
     it("NO deberia filtrar si el estado no esta en la lista valida", async () => {
         pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") ? [[], undefined] : [filasMock]
+            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [filasMock]
         );
 
         await request(app)
@@ -212,6 +213,8 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
 
     it("deberia cancelar la linea, restituir stock y acumular el reembolso proporcional (200)", async () => {
         conn.query.mockImplementation((sql) => {
+            if (sql.includes("FROM pagos_simulados"))
+                return [[{ estado: "Aprobado", monto: 100000, monto_reembolsado: 0 }], undefined];
             if (sql.includes("FOR UPDATE"))
                 return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 50000, estado_pago_vendedor: "Pendiente" }], undefined];
             if (sql.includes("UPDATE pagos_simulados"))
@@ -240,12 +243,24 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
             expect.stringContaining("UPDATE productos SET stock = stock + ? WHERE id = ?"),
             [2, 3]
         );
-        // S1 (mig 013): acumula el importe en monto_reembolsado y deriva el estado
-        // por monto; el guard de estado protege pagos 'Rechazado'/'Pendiente'.
+        // S1 (mig 013) + A-2: acumula el importe en monto_reembolsado y deriva
+        // el estado por monto; el estado se evalua ANTES de incrementar (MySQL
+        // evalua el SET de izquierda a derecha) y con tolerancia +-0.01 (B-10);
+        // el guard de estado protege pagos 'Rechazado'/'Pendiente'.
         const updatePago = conn.query.mock.calls.find(([sql]) => sql.includes("UPDATE pagos_simulados"));
-        expect(updatePago[0]).toContain("monto_reembolsado = monto_reembolsado + ?");
+        expect(updatePago[0]).toContain("estado = IF(monto_reembolsado + ? >= monto - 0.01, 'Reembolsado', 'Aprobado')");
+        expect(updatePago[0]).toContain("monto_reembolsado = LEAST(monto_reembolsado + ?, monto)");
+        // A-2: el estado se asigna ANTES que el acumulado, nunca despues.
+        expect(updatePago[0].indexOf("estado = IF")).toBeLessThan(
+            updatePago[0].indexOf("monto_reembolsado = LEAST")
+        );
         expect(updatePago[0]).toContain("estado IN ('Aprobado', 'Reembolsado')");
         expect(updatePago[1]).toEqual([59500, 59500, 4]);
+        // La lectura del pago va bloqueada y trae los montos para derivar estado.
+        expect(conn.query).toHaveBeenCalledWith(
+            expect.stringContaining("FROM pagos_simulados WHERE pedido_id = ? FOR UPDATE"),
+            [4]
+        );
         // S1: el estatus todo-o-nada antiguo (reembolsar el pago completo por
         // cancelar UNA linea) quedo invalidado: el SQL nuevo nunca reembolsa el
         // monto completo si no lo cubre el importe acumulado.
@@ -261,8 +276,11 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
 
     it("S1: linea con pago_vendedor ya 'Desembolsado' lo conserva en la linea cancelada", async () => {
         conn.query.mockImplementation((sql) => {
+            if (sql.includes("FROM pagos_simulados"))
+                return [[{ estado: "Aprobado", monto: 100000, monto_reembolsado: 0 }], undefined];
             if (sql.includes("FOR UPDATE"))
                 return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 50000, estado_pago_vendedor: "Desembolsado" }], undefined];
+            if (sql.includes("UPDATE pagos_simulados")) return [{ affectedRows: 1 }, undefined];
             return [[], undefined];
         });
 
@@ -280,6 +298,8 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
 
     it("S1: subtotales con decimales se redondean con round2 en el importe", async () => {
         conn.query.mockImplementation((sql) => {
+            if (sql.includes("FROM pagos_simulados"))
+                return [[{ estado: "Aprobado", monto: 100000, monto_reembolsado: 0 }], undefined];
             if (sql.includes("FOR UPDATE"))
                 return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 25333.33, estado_pago_vendedor: "Pendiente" }], undefined];
             if (sql.includes("UPDATE pagos_simulados"))
@@ -300,8 +320,10 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
         );
     });
 
-    it("S1/H2: pago no Aprobado (affectedRows 0) se cancela sin reembolso reportado", async () => {
+    it("S1/H2: pago no Aprobado se cancela sin reembolso reportado", async () => {
         conn.query.mockImplementation((sql) => {
+            if (sql.includes("FROM pagos_simulados"))
+                return [[{ estado: "Pendiente", monto: 100000, monto_reembolsado: 0 }], undefined];
             if (sql.includes("FOR UPDATE"))
                 return [[{ id: 9, producto_id: 3, cantidad: 2, pedido_id: 4, subtotal: 50000, estado_pago_vendedor: "Pendiente" }], undefined];
             if (sql.includes("UPDATE pagos_simulados"))
@@ -317,6 +339,8 @@ describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
         expect(res.body.success).toBe(true);
         // H2: NO se reporta un reembolso que la BD no registro
         expect(res.body.data).toEqual({ id: 9, estado: "Cancelado", reembolsado: false, monto_reembolsado: 0 });
+        // H2: el guard de estado del helper evita el UPDATE sobre el pago
+        expect(conn.query.mock.calls.some(([sql]) => sql.includes("UPDATE pagos_simulados"))).toBe(false);
         // La cancelacion de la linea y el stock SI ocurrieron
         expect(conn.query).toHaveBeenCalledWith(
             expect.stringContaining("UPDATE detalle_pedidos SET estado_envio = 'Cancelado'"),

@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -21,6 +21,7 @@ import seguidoresRouter from "./routes/seguidores.routes.js";
 import docsRouter from "./docs/docs.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { authRequired } from "./middleware/auth.middleware.js";
+import pool from "./config/db.js";
 
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -28,20 +29,41 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Seguridad centralizada (regla api-seguridad.md)
 app.disable("x-powered-by");
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-app.use(express.json({ limit: "10mb" }));
-// CORS estricto (H5 auditoria 2026-10-05): allowlist explicita + funcion
-// validadora. Los origenes de escritorio/movil (null, file://, capacitor)
-// solo se aceptan si ALLOW_DESKTOP_ORIGINS=true (dev/entorno controlado);
-// en produccion solo entran FRONTEND_URL y los esquemas Capacitor https.
-// Nunca usar comodin "*". Las peticiones sin Origin (curl, apps nativas)
-// se permiten porque no son navegadores.
+// M-9/H7: el limite del body JSON baja de 10mb a 100kb. Las subidas reales van
+// por multipart/multer (no consumen este parser), asi que 100kb sobra para el
+// resto de la API.
+app.use(express.json({ limit: "100kb" }));
+
+// M-9/H7: confianza en proxies inversos SOLO por entorno (TRUST_PROXY: numero
+// de hops o valor de express). Sin variable no se confia en X-Forwarded-For.
+const TRUST_PROXY = String(process.env.TRUST_PROXY || "").trim();
+if (TRUST_PROXY) {
+  app.set("trust proxy", /^\d+$/.test(TRUST_PROXY) ? Number(TRUST_PROXY) : TRUST_PROXY);
+}
+
+// CORS (M-16/H6): CERRADO por defecto.
+//  - FRONTEND_URL (origen web principal) + CORS_ALLOWLIST (extra, coma-separado).
+//  - Localhost y los esquemas Capacitor de desarrollo solo fuera de produccion.
+//  - ALLOW_DESKTOP_ORIGINS=true habilita los origenes null/file:// de las apps
+//    de escritorio/movil empaquetadas (por defecto false).
+//  - Nunca comodin "*". Las peticiones sin Origin (curl, apps nativas) se
+//    permiten porque no son navegadores.
+const ES_PRODUCCION = process.env.NODE_ENV === "production";
 const CORS_ALLOWLIST = [
-  process.env.FRONTEND_URL || "http://localhost:5173",
-  "https://localhost",      // Capacitor Android (androidScheme https por defecto)
-  "http://localhost",       // Capacitor Android con esquema http / dev
-  "capacitor://localhost",  // Capacitor iOS
-];
-const ALLOW_DESKTOP_ORIGINS = process.env.ALLOW_DESKTOP_ORIGINS === "true" || process.env.NODE_ENV !== "production";
+  process.env.FRONTEND_URL,
+  ...String(process.env.CORS_ALLOWLIST || "")
+    .split(",")
+    .map((origen) => origen.trim()),
+].filter(Boolean);
+if (!ES_PRODUCCION) {
+  CORS_ALLOWLIST.push(
+    "http://localhost:5173",  // Vite dev por defecto
+    "https://localhost",      // Capacitor Android (androidScheme https por defecto)
+    "http://localhost",       // Capacitor Android con esquema http / dev
+    "capacitor://localhost"   // Capacitor iOS
+  );
+}
+const ALLOW_DESKTOP_ORIGINS = process.env.ALLOW_DESKTOP_ORIGINS === "true";
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
@@ -67,28 +89,74 @@ app.use(
   express.static(path.join(__dirname, "uploads"), { dotfiles: "deny", index: false })
 );
 
-// Rate limit para rutas de autenticacion (anti fuerza bruta / spam de correos).
-// Un limitador independiente por ruta: cada una tiene su propio cupo de 10/min.
-const opcionesRateLimit = {
-    windowMs: 60 * 1000,
-    max: 10,
-    message: { success: false, error: { code: "RATE_LIMIT", message: "Demasiadas peticiones." } },
-    standardHeaders: true,
-    legacyHeaders: false,
-};
-// Rate limit general de escritura (H5): 200 req / 15 min por IP para /api.
-// En NODE_ENV=test se desactiva para no romper Vitest/Supertest.
-const limiteEscritura = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 200,
-    message: { success: false, error: { code: "RATE_LIMIT", message: "Demasiadas peticiones." } },
+// Rate limits (M-9/H7): por endpoint y por cuenta, ademas del general. Los
+// limitadores con `skip` se desactivan en NODE_ENV=test para no romper
+// Vitest/Supertest; el skip se evalua por peticion.
+const MENSAJE_RATE_LIMIT = { success: false, error: { code: "RATE_LIMIT", message: "Demasiadas peticiones." } };
+const limitePorVentana = ({ windowMs, max, keyGenerator }) => rateLimit({
+    windowMs,
+    max,
+    keyGenerator,
+    message: MENSAJE_RATE_LIMIT,
     standardHeaders: true,
     legacyHeaders: false,
     skip: () => process.env.NODE_ENV === "test",
 });
-app.use("/api/usuarios/login", rateLimit(opcionesRateLimit));
-app.use("/api/usuarios/recover", rateLimit(opcionesRateLimit));
+
+// Anti fuerza bruta en login/recover: por IP (10/min) y ADEMAS por CUENTA
+// (5 / 15 min sobre el email normalizado; sin email cae al IP seguro).
+const opcionesRateLimit = {
+    windowMs: 60 * 1000,
+    max: 10,
+    message: MENSAJE_RATE_LIMIT,
+    standardHeaders: true,
+    legacyHeaders: false,
+};
+const limitePorCuenta = limitePorVentana({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    keyGenerator: (req) =>
+        req.body?.email
+            ? `cuenta:${String(req.body.email).trim().toLowerCase()}`
+            : ipKeyGenerator(req.ip),
+});
+app.use("/api/usuarios/login", rateLimit(opcionesRateLimit), limitePorCuenta);
+app.use("/api/usuarios/recover", rateLimit(opcionesRateLimit), limitePorCuenta);
+
+// Cupos especificos de endpoints sensibles.
+app.use("/api/usuarios/register", limitePorVentana({ windowMs: 60 * 60 * 1000, max: 5 }));
+app.use("/api/usuarios/reset-password", limitePorVentana({ windowMs: 15 * 60 * 1000, max: 10 }));
+app.use("/api/chat", limitePorVentana({ windowMs: 60 * 1000, max: 60 }));
+app.use("/api/reportes", limitePorVentana({ windowMs: 60 * 60 * 1000, max: 20 }));
+app.use("/api/seguidores", limitePorVentana({ windowMs: 60 * 1000, max: 30 }));
+
+// Subidas multipart (productos/reportes): cupo propio; el limite por usuario
+// se aplica ademas en config/multer.js (TASK-4.6).
+const limiteSubidas = limitePorVentana({ windowMs: 60 * 60 * 1000, max: 30 });
+app.use(["/api/productos", "/api/reportes"], (req, res, next) =>
+    req.method === "POST" || req.method === "PUT"
+        ? limiteSubidas(req, res, next)
+        : next()
+);
+
+// Rate limit general de escritura (H5): 200 req / 15 min por IP para /api.
+const limiteEscritura = limitePorVentana({ windowMs: 15 * 60 * 1000, max: 200 });
 app.use("/api/", limiteEscritura);
+
+// TASK-8.4 (auditoria 2026-10-11): healthcheck para Docker/compose y
+// monitoreo. Publico (sin auth); comprueba la BD con SELECT 1 y responde 503
+// si no esta disponible.
+app.get("/health", async (_req, res) => {
+    try {
+        await pool.query("SELECT 1");
+        return res.json({ success: true, data: { status: "ok", db: "ok" } });
+    } catch {
+        return res.status(503).json({
+            success: false,
+            error: { code: "DB_UNAVAILABLE", message: "Base de datos no disponible" },
+        });
+    }
+});
 
 // Routers por modulo
 app.use("/", router);

@@ -1,16 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
 // Mock del pool MySQL (sin BD real).
 vi.mock("mysql2/promise", () => {
   // query envoltorio: responde de forma transparente la consulta que authRequired
-  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // hace por DEF-01 ("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1") y delega
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -32,15 +33,13 @@ process.env.CRYPTO_SECRET_KEY = process.env.CRYPTO_SECRET_KEY || "clave_test_cif
 const { __pool: pool } = await import("mysql2/promise");
 const { default: app } = await import("../app.js");
 
-const tokenAdmin = jwt.sign(
-  { id: 471, email: "admin01@commercity.com" },
+const tokenAdmin = jwt.sign({ id: 471, email: "admin01@commercity.com" , token_version: 0},
   process.env.JWT_SECRET,
-  { expiresIn: "1h" }
+  { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
-const tokenVendedor = jwt.sign(
-  { id: 2, email: "juan.giraldo@commercity.com" },
+const tokenVendedor = jwt.sign({ id: 2, email: "juan.giraldo@commercity.com" , token_version: 0},
   process.env.JWT_SECRET,
-  { expiresIn: "1h" }
+  { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
 
 // Fila cifrada simulada de datos_bancarios (iv:tag:data base64url)
@@ -55,13 +54,16 @@ const filaCifrada = {
   updated_at: null,
 };
 
+// M-12: hash real de la contrasena del admin para el step-up.
+const HASH_ADMIN = await bcrypt.hash("ClaveAdmin123", 4);
+
 beforeEach(() => {
     vi.clearAllMocks();
     // Default: auth OK (blacklist vacia) + rol administrador + usuario activo
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
-      if (sql.includes("SELECT activo FROM usuarios")) return [[{ activo: 1 }], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
       return [[], undefined];
     });
     // getConnection para upsert
@@ -82,7 +84,7 @@ describe("GET /api/admin/mi-cuenta-bancaria (RF76)", () => {
 
   it("rechaza a un vendedor (403 - solo admin)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       return [[], undefined];
     });
@@ -95,7 +97,7 @@ describe("GET /api/admin/mi-cuenta-bancaria (RF76)", () => {
 
   it("devuelve registrado=false cuando no existe cuenta de Commercity", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("es_commercity = 1")) return [[], undefined];
       return [[], undefined];
@@ -111,7 +113,7 @@ describe("GET /api/admin/mi-cuenta-bancaria (RF76)", () => {
 
   it("devuelve la cuenta de Commercity descifrada", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("es_commercity = 1")) return [[filaCifrada], undefined];
       return [[], undefined];
@@ -128,7 +130,7 @@ describe("GET /api/admin/mi-cuenta-bancaria (RF76)", () => {
 
   it("devuelve la cuenta enmascarada en /masked", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
       if (sql.includes("es_commercity = 1")) return [[filaCifrada], undefined];
       return [[], undefined];
@@ -145,11 +147,12 @@ describe("GET /api/admin/mi-cuenta-bancaria (RF76)", () => {
 });
 
 describe("POST /api/admin/mi-cuenta-bancaria (RF76 upsert)", () => {
-  it("crea la cuenta de Commercity con es_commercity = 1 (201)", async () => {
+  it("crea la cuenta de Commercity con es_commercity = 1 (201) y la audita", async () => {
     // SELECT de existencia -> vacio (INSERT)
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      if (sql.includes("SELECT password FROM usuarios")) return [[{ password: HASH_ADMIN }], undefined];
       if (sql.includes("SELECT id FROM datos_bancarios WHERE es_commercity")) return [[], undefined];
       if (sql.includes("WHERE es_commercity = 1")) return [[filaCifrada], undefined];
       return [[], undefined];
@@ -172,6 +175,7 @@ describe("POST /api/admin/mi-cuenta-bancaria (RF76 upsert)", () => {
         banco: "Bancolombia",
         tipo_cuenta: "corriente",
         numero_cuenta: "1234567890",
+        password: "ClaveAdmin123",
       });
 
     expect(res.status).toBe(201);
@@ -183,12 +187,68 @@ describe("POST /api/admin/mi-cuenta-bancaria (RF76 upsert)", () => {
     expect(insert).toBeDefined();
     expect(insert[0]).toContain("es_commercity");
     expect(insert[0]).toMatch(/VALUES\s*\([^)]*1\)\s*$/i);
+    // M-11: la auditoria registra el cambio (sin datos sensibles)
+    const auditoria = pool.query.mock.calls.find(([sql]) =>
+      typeof sql === "string" && sql.includes("INSERT INTO auditoria_acciones"));
+    expect(auditoria).toBeTruthy();
+    expect(auditoria[1][1]).toBe("cuenta_bancaria_plataforma.cambiada");
+  });
+
+  it("M-12: sin contrasena de step-up -> 400 (zod)", async () => {
+    const res = await request(app)
+      .post("/api/admin/mi-cuenta-bancaria")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({
+        titular_nombre: "CommerCity SAS",
+        banco: "Bancolombia",
+        tipo_cuenta: "corriente",
+        numero_cuenta: "1234567890",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    // El step-up ni siquiera se evalua: zod corta antes de tocar la cuenta
+    expect(pool.query.mock.calls.some(([sql]) =>
+      typeof sql === "string" && sql.includes("INSERT INTO datos_bancarios"))).toBe(false);
+  });
+
+  it("M-12: contrasena incorrecta -> 403 y no toca la cuenta", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      if (sql.includes("SELECT password FROM usuarios")) return [[{ password: HASH_ADMIN }], undefined];
+      return [[], undefined];
+    });
+    const connQuery = vi.fn().mockResolvedValue([[], undefined]);
+    pool.getConnection.mockResolvedValue({
+      beginTransaction: vi.fn().mockResolvedValue(),
+      commit: vi.fn().mockResolvedValue(),
+      rollback: vi.fn().mockResolvedValue(),
+      release: vi.fn().mockResolvedValue(),
+      query: connQuery,
+    });
+
+    const res = await request(app)
+      .put("/api/admin/mi-cuenta-bancaria")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({
+        titular_nombre: "CommerCity SAS",
+        banco: "Bancolombia",
+        tipo_cuenta: "corriente",
+        numero_cuenta: "1234567890",
+        password: "Incorrecta999",
+      });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.message).toMatch(/Contraseña/i);
+    expect(connQuery).not.toHaveBeenCalled();
   });
 
   it("actualiza la cuenta existente (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      if (sql.includes("SELECT password FROM usuarios")) return [[{ password: HASH_ADMIN }], undefined];
       if (sql.includes("WHERE es_commercity = 1")) return [[filaCifrada], undefined];
       return [[], undefined];
     });
@@ -213,6 +273,7 @@ describe("POST /api/admin/mi-cuenta-bancaria (RF76 upsert)", () => {
         banco: "Davivienda",
         tipo_cuenta: "ahorros",
         numero_cuenta: "9876543210",
+        password: "ClaveAdmin123",
       });
 
     expect(res.status).toBe(200);

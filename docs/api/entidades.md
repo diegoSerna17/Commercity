@@ -1,7 +1,7 @@
 # Contratos de datos — CommerCity
 
 > Generado con `npm run docs:api` + `npm run docs:entidades` desde `backend/src/server/schemas/`. No editar a mano.
-> 40 contratos documentados. Fuente de verdad: los esquemas Zod.
+> 42 contratos documentados. Fuente de verdad: los esquemas Zod.
 
 ## Indice
 
@@ -16,6 +16,7 @@
 - [Recuperacion](#recuperacion)
 - [Registro](#registro)
 - [RestablecerPassword](#restablecerpassword)
+- [CuentaBancariaPlataforma](#cuentabancariaplataforma)
 - [CuentaBancaria](#cuentabancaria)
 - [ActualizarPerfil](#actualizarperfil)
 - [DirectorioQuery](#directorioquery)
@@ -33,6 +34,7 @@
 - [HistorialVentasQuery](#historialventasquery)
 - [HistorialComprasQuery](#historialcomprasquery)
 - [ConversacionParams](#conversacionparams)
+- [ConversacionQuery](#conversacionquery)
 - [EnviarMensaje](#enviarmensaje)
 - [MensajeIdParams](#mensajeidparams)
 - [ListarNotificacionesQuery](#listarnotificacionesquery)
@@ -168,7 +170,7 @@
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
 | `email` | string (email) | si | Correo del usuario |
-| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero |
+| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes) |
 
 **Ejemplo:**
 
@@ -208,7 +210,7 @@
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
 | `email` | string (email) | si | Correo del usuario |
-| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero |
+| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes) |
 | `nombre_completo` | string [longitud >= 2] | no | Nombre completo (opcional, min 2) |
 
 **Ejemplo:**
@@ -231,7 +233,7 @@
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
 | `token` | string [longitud >= 10] | si | Token de restablecimiento recibido por correo |
-| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero |
+| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes) |
 
 **Ejemplo:**
 
@@ -242,12 +244,39 @@
 }
 ```
 
+## CuentaBancariaPlataforma (`CuentaBancariaPlataforma`)
+
+> Body de alta/actualizacion de la cuenta bancaria de Commercity (admin + contrasena)
+
+- **Fuente:** `backend/src/server/schemas/cuentaBancaria.schema.js`
+- **Usado en:** `POST /api/admin/mi-cuenta-bancaria`, `PUT /api/admin/mi-cuenta-bancaria`
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `titular_nombre` | string [longitud >= 3, longitud <= 100] | si | Nombre del titular (solo letras y espacios) |
+| `banco` | string [longitud >= 3, longitud <= 50] | si | Nombre del banco |
+| `tipo_cuenta` | enum: "ahorros" \| "corriente" | si | Tipo de cuenta |
+| `numero_cuenta` | string [longitud >= 6, longitud <= 20] | si | Numero de cuenta (solo digitos, 6-20) |
+| `password` | string [longitud >= 8, longitud <= 72] | si | Contrasena del administrador (step-up obligatorio) |
+
+**Ejemplo:**
+
+```json
+{
+  "titular_nombre": "CommerCity SAS",
+  "banco": "Bancolombia",
+  "tipo_cuenta": "corriente",
+  "numero_cuenta": "1234567890",
+  "password": "ClaveAdmin123"
+}
+```
+
 ## CuentaBancaria (`CuentaBancaria`)
 
 > Body de alta/actualizacion de cuenta bancaria (vendedor y admin). RNF11: se cifra en BD.
 
 - **Fuente:** `backend/src/server/schemas/cuentaBancaria.schema.js`
-- **Usado en:** `POST /api/tienda/mi-cuenta-bancaria`, `PUT /api/tienda/mi-cuenta-bancaria`, `POST /api/admin/mi-cuenta-bancaria`, `PUT /api/admin/mi-cuenta-bancaria`
+- **Usado en:** `POST /api/tienda/mi-cuenta-bancaria`, `PUT /api/tienda/mi-cuenta-bancaria`
 
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
@@ -319,6 +348,7 @@
 | `nombre` | string | no | Filtro por nombre |
 | `categoria` | string | no | Filtro por categoria |
 | `vendedor` | string | no | Filtro por vendedor |
+| `vendedor_id` | integer [max 9007199254740991, > 0] | no | Filtro por id de vendedor |
 
 **Ejemplo:**
 
@@ -424,7 +454,7 @@
 
 ## ConfirmarPago (`ConfirmarPago`)
 
-> Body de POST /api/pedidos/confirmar-pago (checkout ACID RF134)
+> Body de POST /api/pedidos/confirmar-pago (checkout ACID RF134; tarjeta enmascarada, M-28)
 
 - **Fuente:** `backend/src/server/schemas/pedidos.schema.js`
 - **Usado en:** `POST /api/pedidos/confirmar-pago`
@@ -433,7 +463,8 @@
 |---|---|---|---|
 | `direccion_envio` | string [longitud >= 5, longitud <= 1000] | si | Direccion de envio (5-1000) |
 | `metodo_pago` | enum: "tarjeta" \| "transferencia" \| "pse" | si | Metodo de pago simulado |
-| `numero_tarjeta` | string | no | Requerido si metodo_pago=tarjeta (se valida Luhn, RF118) |
+| `ultimos4_tarjeta` | string | no | Ultimos 4 digitos (requerido si metodo_pago=tarjeta) |
+| `marca_tarjeta` | enum: "Visa" \| "Mastercard" \| "Amex" \| "Otra" | no | Marca de la tarjeta (opcional) |
 | `nombre_tarjeta` | string [longitud <= 100] | no | Nombre en la tarjeta |
 
 **Ejemplo:**
@@ -442,7 +473,8 @@
 {
   "direccion_envio": "Calle 10 #20-30, Medellin",
   "metodo_pago": "tarjeta",
-  "numero_tarjeta": "4111111111111111",
+  "ultimos4_tarjeta": "1111",
+  "marca_tarjeta": "Visa",
   "nombre_tarjeta": "Ana Compradora"
 }
 ```
@@ -615,6 +647,27 @@
 }
 ```
 
+## ConversacionQuery (`ConversacionQuery`)
+
+> Query de GET /api/chat/mensajes/:usuarioId (paginado)
+
+- **Fuente:** `backend/src/server/schemas/chat.schema.js`
+- **Usado en:** `GET /api/chat/mensajes/{usuarioId}`
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `pagina` | integer [max 9007199254740991, > 0] | no | Pagina (default 1) |
+| `por_pagina` | integer [max 100, > 0] | no | Mensajes por pagina (default 50, max 100) |
+
+**Ejemplo:**
+
+```json
+{
+  "pagina": 1,
+  "por_pagina": 50
+}
+```
+
 ## EnviarMensaje (`EnviarMensaje`)
 
 > Body de POST /api/chat/ (solo texto; el multipart se rechaza con 400)
@@ -625,7 +678,7 @@
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
 | `receptor_id` | integer [max 9007199254740991, > 0] | si | Destinatario (distinto del usuario autenticado) |
-| `mensaje` | string [longitud >= 1] | si | Texto del mensaje (no vacio) |
+| `mensaje` | string [longitud >= 1, longitud <= 2000] | si | Texto del mensaje (1-2000) |
 
 **Ejemplo:**
 
@@ -657,7 +710,7 @@
 
 ## ListarNotificacionesQuery (`ListarNotificacionesQuery`)
 
-> Query de GET /api/notificaciones/ (tipo y limite opcionales)
+> Query de GET /api/notificaciones/ (tipo, limite y pagina opcionales)
 
 - **Fuente:** `backend/src/server/schemas/notificaciones.schema.js`
 - **Usado en:** `GET /api/notificaciones/`
@@ -666,13 +719,15 @@
 |---|---|---|---|
 | `tipo` | enum: "compra" \| "pedido enviado" \| "en camino" \| "entregado" \| "devolucion" \| "mensajes" \| "reporte" | no | Filtra por tipo de notificacion |
 | `limite` | integer [min 1, max 50] | no | Maximo de registros (default 50) |
+| `pagina` | integer [min 1, max 9007199254740991] | no | Pagina, base 1 (default 1) |
 
 **Ejemplo:**
 
 ```json
 {
   "tipo": "mensajes",
-  "limite": 20
+  "limite": 20,
+  "pagina": 1
 }
 ```
 

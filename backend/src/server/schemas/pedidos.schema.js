@@ -12,16 +12,26 @@ export const confirmarPagoSchema = z
   .object({
     direccion_envio: z.string().trim().min(5).max(1000).describe("Direccion de envio (5-1000)"),
     metodo_pago: z.enum(["tarjeta", "transferencia", "pse"]).describe("Metodo de pago simulado"),
-    numero_tarjeta: z.string().trim().optional().describe("Requerido si metodo_pago=tarjeta (se valida Luhn, RF118)"),
+    // M-28/TASK-5.5: la pasarela es simulada y el backend NUNCA recibe el PAN.
+    // Solo circulan los ultimos 4 digitos y la marca de la tarjeta.
+    ultimos4_tarjeta: z
+      .string()
+      .regex(/^\d{4}$/, "Ultimos 4 digitos de la tarjeta")
+      .optional()
+      .describe("Ultimos 4 digitos (requerido si metodo_pago=tarjeta)"),
+    marca_tarjeta: z
+      .enum(["Visa", "Mastercard", "Amex", "Otra"])
+      .optional()
+      .describe("Marca de la tarjeta (opcional)"),
     nombre_tarjeta: z.string().trim().max(100).optional().describe("Nombre en la tarjeta"),
   })
   .strict()
   .meta({
     id: "ConfirmarPago",
     title: "ConfirmarPago",
-    description: "Body de POST /api/pedidos/confirmar-pago (checkout ACID RF134)",
+    description: "Body de POST /api/pedidos/confirmar-pago (checkout ACID RF134; tarjeta enmascarada, M-28)",
     examples: [
-      { direccion_envio: "Calle 10 #20-30, Medellin", metodo_pago: "tarjeta", numero_tarjeta: "4111111111111111", nombre_tarjeta: "Ana Compradora" },
+      { direccion_envio: "Calle 10 #20-30, Medellin", metodo_pago: "tarjeta", ultimos4_tarjeta: "1111", marca_tarjeta: "Visa", nombre_tarjeta: "Ana Compradora" },
     ],
   });
 

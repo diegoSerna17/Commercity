@@ -3,9 +3,11 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import pool from "../config/db.js";
 import pkg from "../../../package.json" with { type: "json" };
-import { JWT_SECRET } from "../utils/config.js";
+import { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } from "../utils/config.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-import { enviarCorreoRecuperacion } from "../utils/mailer.js";
+import { enviarCorreoRecuperacion, enviarAvisoRegistroDuplicado } from "../utils/mailer.js";
+import { escapeLike } from "../utils/sql.js";
+import { destinoPedidosVendedor } from "./admin/pedidos.controllers.js";
 
 // ============================================================================
 // MODULO DE AUTENTICACION (integrado desde AVANCES/SPRING 1/DIEGO SERNA/2)
@@ -57,16 +59,28 @@ function emitirCookieSesion(res, token) {
 
 // ============================ REGISTRO ============================
 export const register = async (req, res) => {
-    const { email, password, nombre_completo } = req.body;
+    // TASK-4.9: body puede faltar; el contrato Zod ya lo rechaza aguas arriba,
+    // pero la desestructuracion no debe romper con 500.
+    const { email, password, nombre_completo } = req.body ?? {};
 
     try {
-        // Email duplicado (la UNIQUE de la BD es la garantia final)
+        // M-15 (TASK-4.7): respuesta UNIFORME. Si el email ya existe NO se
+        // revela: se avisa al titular real por correo y se responde igual que
+        // un alta (sin token, porque la cuenta existente no se toca).
         const [existente] = await pool.query(
             "SELECT id FROM usuarios WHERE email = ?",
             [email]
         );
         if (existente.length > 0) {
-            return errorResponse(res, "El email ya está registrado", 400);
+            try {
+                await enviarAvisoRegistroDuplicado(email);
+            } catch {
+                // fail-soft: la respuesta no cambia aunque falle el correo
+            }
+            return successResponse(res, "Usuario registrado correctamente", {
+                token: null,
+                user: { email, nombre_completo: nombre_completo || null, roles: [] },
+            }, 201);
         }
 
         const rolSolicitado = "comprador";
@@ -100,10 +114,16 @@ export const register = async (req, res) => {
             await connection.commit();
 
             // Fix 3.1: secreto validado, nunca un fallback hardcodeado.
+            // M-8/B-4: HS256 + iss/aud + token_version (usuario nuevo -> 0).
             const token = jwt.sign(
-                { id: usuarioId, email },
+                { id: usuarioId, email, token_version: 0 },
                 JWT_SECRET,
-                { expiresIn: "7d" }
+                {
+                    algorithm: "HS256",
+                    expiresIn: "7d",
+                    issuer: JWT_ISSUER,
+                    audience: JWT_AUDIENCE,
+                }
             );
 
             emitirCookieSesion(res, token);
@@ -123,37 +143,52 @@ export const register = async (req, res) => {
             connection.release();
         }
     } catch (error) {
-        // Duplicado de email a pesar del pre-check (race condition)
+        // Duplicado de email a pesar del pre-check (race condition): M-15, misma
+        // respuesta uniforme (aviso al titular, sin token).
         if (error?.code === "ER_DUP_ENTRY") {
-            return errorResponse(res, "El email ya está registrado", 400);
+            try {
+                await enviarAvisoRegistroDuplicado(email);
+            } catch {
+                // fail-soft
+            }
+            return successResponse(res, "Usuario registrado correctamente", {
+                token: null,
+                user: { email, nombre_completo: nombre_completo || null, roles: [] },
+            }, 201);
         }
-        console.error("Error en register:", error);
+        console.error("Error en register:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
+// H5/H8 (TASK-4.8): hash bcrypt ficticio para igualar el TIEMPO de login entre
+// una cuenta existente y una inexistente (anti-enumeracion por timing). No
+// corresponde a ninguna contrasena real (se genero de un valor aleatorio).
+const HASH_FICTICIO = "$2b$10$f3bObWmLFI8EVveYGbAXP.4MwdtHCDDHnbQFA4.jGDg5c5RIg5IYS";
+
 // ============================= LOGIN =============================
 export const login = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password } = req.body ?? {};
 
     try {
         const [usuarios] = await pool.query(
-            `SELECT u.id, u.email, u.password, u.nombre_completo, u.foto_perfil, u.activo
+            `SELECT u.id, u.email, u.password, u.nombre_completo, u.foto_perfil, u.activo,
+                    u.token_version
              FROM usuarios u WHERE u.email = ?`,
             [email]
         );
+
+        // H5: mismo trabajo criptografico exista o no la cuenta.
         if (usuarios.length === 0) {
+            await bcrypt.compare(password ?? "", HASH_FICTICIO);
             return errorResponse(res, "Credenciales inválidas", 401);
         }
 
         const usuario = usuarios[0];
-        // H5 anti-enumeracion: mensaje uniforme tambien para inactivos.
-        if (!usuario.activo) {
-            return errorResponse(res, "Credenciales inválidas", 401);
-        }
-
-        const passwordValido = await bcrypt.compare(password, usuario.password);
-        if (!passwordValido) {
+        const passwordValido = await bcrypt.compare(password ?? "", usuario.password);
+        // H5 anti-enumeracion: mensaje uniforme tambien para inactivos y el
+        // chequeo de estado va DESPUES del compare (mismo tiempo).
+        if (!usuario.activo || !passwordValido) {
             return errorResponse(res, "Credenciales inválidas", 401);
         }
 
@@ -166,10 +201,16 @@ export const login = async (req, res) => {
         );
 
         // Fix 3.1: secreto validado, nunca un fallback hardcodeado.
+        // M-8/B-4: HS256 + iss/aud + token_version vigente del usuario.
         const token = jwt.sign(
-            { id: usuario.id, email: usuario.email },
+            { id: usuario.id, email: usuario.email, token_version: Number(usuario.token_version || 0) },
             JWT_SECRET,
-            { expiresIn: "7d" }
+            {
+                algorithm: "HS256",
+                expiresIn: "7d",
+                issuer: JWT_ISSUER,
+                audience: JWT_AUDIENCE,
+            }
         );
 
         emitirCookieSesion(res, token);
@@ -184,15 +225,14 @@ export const login = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error("Error en login:", error);
+        console.error("Error en login:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
 // ========================= LOGOUT (RF2) =========================
-// Fix 3.3: revoca el JWT en la lista negra tokens_invalidados (la ruta exige
-// token via authRequired). INSERT IGNORE hace idempotente un doble logout.
-export const logout = async (req, res) => {
+/** Extrae el JWT de la peticion: header Bearer o cookie httpOnly. */
+function tokenDeLaPeticion(req) {
     let token = (req.headers.authorization || "").replace("Bearer ", "");
     if (!token && req.headers.cookie) {
         const m = String(req.headers.cookie).match(/(?:^|;\s*)token=([^;]+)/);
@@ -200,16 +240,45 @@ export const logout = async (req, res) => {
             try { token = decodeURIComponent(m[1]); } catch { token = m[1]; }
         }
     }
-    if (token) {
-        const hash = crypto.createHash("sha256").update(token).digest("hex");
-        await pool.query(
-            "INSERT IGNORE INTO tokens_invalidados (token_hash, expira_en) VALUES (?, DATE_ADD(NOW(), INTERVAL 7 DAY))",
-            [hash]
-        );
-    }
+    return token;
+}
+
+/** Revoca un token en la lista negra (idempotente via INSERT IGNORE). */
+async function revocarToken(token) {
+    if (!token) return;
+    const hash = crypto.createHash("sha256").update(token).digest("hex");
+    await pool.query(
+        "INSERT IGNORE INTO tokens_invalidados (token_hash, expira_en) VALUES (?, DATE_ADD(NOW(), INTERVAL 7 DAY))",
+        [hash]
+    );
+}
+
+// Fix 3.3: revoca el JWT en la lista negra tokens_invalidados (la ruta exige
+// token via authRequired). INSERT IGNORE hace idempotente un doble logout.
+export const logout = async (req, res) => {
+    await revocarToken(tokenDeLaPeticion(req));
     // F4: limpia la cookie httpOnly en el logout.
     res.clearCookie("token", { httpOnly: true, sameSite: "lax", path: "/" });
     return successResponse(res, "Sesión cerrada correctamente");
+};
+
+// ============ CERRAR TODAS LAS SESIONES (M-8/TASK-4.3) ==========
+// Incrementa token_version: TODOS los JWT emitidos antes (Bearer o cookie)
+// quedan invalidos. Ademas revoca el token actual en la lista negra y limpia
+// la cookie del navegador.
+export const cerrarTodasLasSesiones = async (req, res) => {
+    try {
+        await pool.query(
+            "UPDATE usuarios SET token_version = token_version + 1 WHERE id = ?",
+            [req.userId]
+        );
+        await revocarToken(tokenDeLaPeticion(req));
+        res.clearCookie("token", { httpOnly: true, sameSite: "lax", path: "/" });
+        return successResponse(res, "Todas las sesiones fueron cerradas");
+    } catch (error) {
+        console.error("Error en cerrarTodasLasSesiones:", error?.message);
+        return errorResponse(res, "Error interno del servidor", 500);
+    }
 };
 
 // ===================== PERFIL (autenticado) =====================
@@ -237,14 +306,14 @@ export const getPerfil = async (req, res) => {
             roles: roles.map(r => r.nombre)
         });
     } catch (error) {
-        console.error("Error en getPerfil:", error);
+        console.error("Error en getPerfil:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
 // ============ CAMBIAR ROL (comprador <-> vendedor) =============
 export const cambiarRol = async (req, res) => {
-    const { rol } = req.body;
+    const { rol } = req.body ?? {};
 
     try {
         const rolesValidos = ["comprador", "vendedor"];
@@ -296,14 +365,14 @@ export const cambiarRol = async (req, res) => {
             roles: [rol]
         });
     } catch (error) {
-        console.error("Error en cambiarRol:", error);
+        console.error("Error en cambiarRol:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
 // ================ SOLICITAR RECUPERACION (RF4) =================
 export const solicitarRecuperacion = async (req, res) => {
-    const { email } = req.body;
+    const { email } = req.body ?? {};
 
     try {
         const [usuarios] = await pool.query(
@@ -326,11 +395,21 @@ export const solicitarRecuperacion = async (req, res) => {
         const token = crypto.randomBytes(32).toString("hex");
         const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
-        // RF4: expira a los 5 minutos
-        await pool.query(
-            "UPDATE usuarios SET token_recuperacion = ?, token_recuperacion_expiracion = DATE_ADD(NOW(), INTERVAL 5 MINUTE) WHERE id = ?",
+        // RF4: expira a los 5 minutos.
+        // M-9: cooldown por usuario: el UPDATE solo aplica si no hay un token
+        // emitido en el ultimo minuto (expiracion a 5 min -> umbral 4 min). Con
+        // affectedRows 0 no se reenvia correo; la respuesta sigue siendo
+        // uniforme para no filtrar la existencia de la cuenta.
+        const [resultado] = await pool.query(
+            "UPDATE usuarios SET token_recuperacion = ?, token_recuperacion_expiracion = DATE_ADD(NOW(), INTERVAL 5 MINUTE) WHERE id = ? AND (token_recuperacion_expiracion IS NULL OR token_recuperacion_expiracion < DATE_ADD(NOW(), INTERVAL 4 MINUTE))",
             [tokenHash, usuario.id]
         );
+        if (Number(resultado?.affectedRows) === 0) {
+            return successResponse(
+                res,
+                "Si el correo existe, recibirás un enlace para restablecer tu contraseña."
+            );
+        }
 
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
         const resetUrl = `${frontendUrl}/restore?token=${token}`;
@@ -342,43 +421,38 @@ export const solicitarRecuperacion = async (req, res) => {
             "Si el correo existe, recibirás un enlace para restablecer tu contraseña."
         );
     } catch (error) {
-        console.error("Error en solicitarRecuperacion:", error);
+        console.error("Error en solicitarRecuperacion:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
 // ================ RESTABLECER CONTRASEÑA (RF4) =================
 export const restablecerPassword = async (req, res) => {
-    const { token, password } = req.body;
+    const { token, password } = req.body ?? {};
 
     try {
         // H3: se compara el hash (el token en claro jamas se guardo).
         const tokenHash = typeof token === "string"
             ? crypto.createHash("sha256").update(token).digest("hex")
             : "";
-        // Token de un solo uso y no expirado (RF4: 5 minutos)
-        const [usuarios] = await pool.query(
-            "SELECT id, email FROM usuarios WHERE token_recuperacion = ? AND token_recuperacion_expiracion > NOW()",
-            [tokenHash]
-        );
-
-        if (usuarios.length === 0) {
-            return errorResponse(res, "El enlace es inválido o ya fue utilizado", 400);
-        }
-
-        const usuario = usuarios[0];
 
         const passwordHash = await bcrypt.hash(password, 10);
 
-        // Actualizar contraseña y limpiar token (el link muere: un solo uso)
-        await pool.query(
-            "UPDATE usuarios SET password = ?, token_recuperacion = NULL, token_recuperacion_expiracion = NULL WHERE id = ?",
-            [passwordHash, usuario.id]
+        // B-* (TASK-4.9) + M-8: reset ATOMICO de un solo uso: la guarda del
+        // token vigente viaja en el WHERE, de modo que dos peticiones
+        // simultaneas no pueden reutilizarlo (affectedRows 0 = ya usado o
+        // expirado). Ademas revoca todas las sesiones previas.
+        const [resultado] = await pool.query(
+            "UPDATE usuarios SET password = ?, token_version = token_version + 1, password_changed_at = NOW(), token_recuperacion = NULL, token_recuperacion_expiracion = NULL WHERE token_recuperacion = ? AND token_recuperacion_expiracion > NOW()",
+            [passwordHash, tokenHash]
         );
+        if (Number(resultado?.affectedRows) === 0) {
+            return errorResponse(res, "El enlace es inválido o ya fue utilizado", 400);
+        }
 
         return successResponse(res, "Contraseña restablecida correctamente. Ya puedes iniciar sesión.");
     } catch (error) {
-        console.error("Error en restablecerPassword:", error);
+        console.error("Error en restablecerPassword:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
@@ -392,7 +466,7 @@ export const adminGetDatos = async (req, res) => {
             roles: req.userRoles,
         });
     } catch (error) {
-        console.error("Error en adminGetDatos:", error);
+        console.error("Error en adminGetDatos:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
@@ -460,22 +534,29 @@ export const getPerfilPublico = async (req, res) => {
 };
 
 /**
- * RF40 / B-R6: el comprador elimina su cuenta desde ajustes (desactivacion logica).
+ * RF40 / B-R6 / M-7: el comprador elimina su cuenta desde ajustes (desactivacion logica).
+ * - Exige la contrasena actual (step-up: la baja es irreversible).
  * - usuarios.activo = 0 (nunca DELETE fisico)
+ * - Resuelve sus lineas abiertas como vendedor con la MISMA ruta del baneo
+ *   (`destinoPedidosVendedor`: cancela Pendiente + stock + reembolso + aviso;
+ *   'En camino' queda en revision del admin, DEC-004).
  * - Se vacia su carrito (dato transitorio)
  * - Si ademas es vendedor, sus productos se suspenden (RF54/RF74)
  * - Se conservan pedidos, calificaciones y reportes (historial intacto)
+ * - Todo en UNA sola transaccion.
  */
 export const eliminarCuentaComprador = async (req, res) => {
     const compradorId = req.userId;
+    const { password } = req.body ?? {};
 
     const conn = await pool.getConnection();
     try {
         await conn.beginTransaction();
 
-        // Verificar que la cuenta exista y este activa
+        // Verificar que la cuenta exista y este activa (FOR UPDATE: nadie mas
+        // la desactiva en paralelo mientras se resuelven sus pedidos).
         const [usuarios] = await conn.query(
-            "SELECT id, activo FROM usuarios WHERE id = ?",
+            "SELECT id, password, activo FROM usuarios WHERE id = ? FOR UPDATE",
             [compradorId]
         );
         if (usuarios.length === 0) {
@@ -486,9 +567,24 @@ export const eliminarCuentaComprador = async (req, res) => {
             });
         }
 
-        // Desactivacion logica de la cuenta
+        // M-7: la baja exige la contrasena actual (step-up antes de una accion
+        // irreversible sobre la cuenta).
+        const passwordValida =
+            typeof password === "string" &&
+            password.length > 0 &&
+            (await bcrypt.compare(password, usuarios[0].password));
+        if (!passwordValida) {
+            await conn.rollback();
+            return res.status(403).json({
+                success: false,
+                error: { code: "FORBIDDEN", message: "Contraseña incorrecta" }
+            });
+        }
+
+        // Desactivacion logica de la cuenta. M-8: incrementa token_version
+        // (todas las sesiones del usuario quedan invalidas al instante).
         await conn.query(
-            "UPDATE usuarios SET activo = 0 WHERE id = ?",
+            "UPDATE usuarios SET activo = 0, token_version = token_version + 1 WHERE id = ?",
             [compradorId]
         );
         // Suspender sus productos publicados si es vendedor (RF54/RF74)
@@ -496,6 +592,9 @@ export const eliminarCuentaComprador = async (req, res) => {
             "UPDATE productos SET eliminado_por_admin = 1 WHERE vendedor_id = ? AND eliminado_por_admin = 0",
             [compradorId]
         );
+        // M-7: resolver las lineas abiertas del usuario como VENDEDOR reutilizando
+        // la ruta del baneo (cancela Pendiente + reembolsa + notifica al comprador).
+        const pedidos = await destinoPedidosVendedor(conn, compradorId);
         // Vaciar el carrito (dato transitorio, se puede borrar)
         await conn.query(
             "DELETE FROM carrito_items WHERE comprador_id = ?",
@@ -505,7 +604,7 @@ export const eliminarCuentaComprador = async (req, res) => {
         await conn.commit();
         return res.status(200).json({
             success: true,
-            data: { id: compradorId, estado: "desactivado" }
+            data: { id: compradorId, estado: "desactivado", pedidos }
         });
     } catch (error) {
         await conn.rollback();
@@ -534,8 +633,10 @@ export const listarUsuarios = async (req, res, next) => {
         const params = [req.userId];
 
         if (q) {
-            sql += " AND (nombre_completo LIKE ? OR email LIKE ?)";
-            params.push(`%${q}%`, `%${q}%`);
+            // M-15: el directorio no filtra por email (no confirma correos);
+            // B-8: los comodines LIKE del usuario se escapan.
+            sql += " AND nombre_completo LIKE ?";
+            params.push(escapeLike(String(q)));
         }
 
         sql += " ORDER BY nombre_completo ASC LIMIT 50";

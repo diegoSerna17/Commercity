@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import request from "supertest";
 
 // Mock de mysql2/promise: createPool devuelve un pool simulado (sin BD real).
@@ -16,15 +16,30 @@ const { default: app } = await import("../app.js");
 // Mismo origen web que resuelve app.js (el .env del proyecto define FRONTEND_URL).
 const FRONTEND_WEB = process.env.FRONTEND_URL || "http://localhost:5173";
 
-// CORS (RNF seguridad / regla api-seguridad.md): ademas del frontend web, la
-// WebView de Capacitor (app movil Ionic) envia su propio Origin y debe poder
-// llamar a la API; los origenes desconocidos no se reflejan (los bloquea el
-// navegador). Se prueba el preflight OPTIONS sobre una ruta real del backend.
-const preflight = (origin) =>
-  request(app)
+// CORS (M-16/H6, auditoria 2026-10-11): CERRADO por defecto.
+//  - FRONTEND_URL + CORS_ALLOWLIST siempre permitidos.
+//  - Localhost/Capacitor solo fuera de produccion.
+//  - null/file:// (escritorio/movil empaquetado) SOLO con
+//    ALLOW_DESKTOP_ORIGINS=true.
+//  - Un origen desconocido no se refleja (el navegador lo bloquea).
+const preflight = (origin, appObjetivo = app) =>
+  request(appObjetivo)
     .options("/api/productos")
     .set("Origin", origin)
     .set("Access-Control-Request-Method", "POST");
+
+afterEach(() => {
+  process.env.NODE_ENV = "test";
+  process.env.JWT_SECRET = "jwt-secret-solo-para-pruebas-vitest-000000000000";
+  delete process.env.CRYPTO_SECRET_KEY;
+  delete process.env.CORS_ALLOWLIST;
+  delete process.env.DB_USER;
+  delete process.env.DB_PASSWORD;
+  delete process.env.ALLOW_DESKTOP_ORIGINS;
+  delete process.env.TRUST_PROXY;
+  process.env.FRONTEND_URL = "http://localhost:5173";
+  vi.resetModules();
+});
 
 describe("CORS (origenes permitidos: frontend web + WebView Capacitor)", () => {
   it("permite el origen del frontend web configurado (FRONTEND_URL o default localhost:5173)", async () => {
@@ -55,18 +70,55 @@ describe("CORS (origenes permitidos: frontend web + WebView Capacitor)", () => {
     expect(res.headers["access-control-allow-origin"]).toBe("capacitor://localhost");
   });
 
-  it("permite Electron loadFile (Origin: null -> 204 con ACAO null)", async () => {
-    const res = await preflight("null");
+  it("M-16/H6: por defecto NO permite Electron (null) ni file://", async () => {
+    const resNull = await preflight("null");
+    expect(resNull.headers["access-control-allow-origin"]).toBeUndefined();
 
-    expect(res.status).toBe(204);
-    expect(res.headers["access-control-allow-origin"]).toBe("null");
+    const resFile = await preflight("file://");
+    expect(resFile.headers["access-control-allow-origin"]).toBeUndefined();
   });
 
-  it("permite Electron file:// (Origin: file://)", async () => {
-    const res = await preflight("file://");
+  it("M-16/H6: con ALLOW_DESKTOP_ORIGINS=true si permite null y file:// (entorno controlado)", async () => {
+    process.env.ALLOW_DESKTOP_ORIGINS = "true";
+    vi.resetModules();
+    const { default: appDesktop } = await import("../app.js");
 
-    expect(res.status).toBe(204);
-    expect(res.headers["access-control-allow-origin"]).toBe("file://");
+    const resNull = await preflight("null", appDesktop);
+    expect(resNull.headers["access-control-allow-origin"]).toBe("null");
+
+    const resFile = await preflight("file://", appDesktop);
+    expect(resFile.headers["access-control-allow-origin"]).toBe("file://");
+  });
+
+  it("M-16/H6: en produccion solo entran FRONTEND_URL y CORS_ALLOWLIST (sin localhost ni desktop)", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.JWT_SECRET = "j".repeat(48);
+    process.env.CRYPTO_SECRET_KEY = "c".repeat(48);
+    // Evita el aborto de config/db.js por credenciales por defecto.
+    process.env.DB_USER = "commercity_app";
+    process.env.DB_PASSWORD = "clave-local";
+    process.env.FRONTEND_URL = "https://commercity.example";
+    process.env.CORS_ALLOWLIST = "https://admin.commercity.example";
+    process.env.ALLOW_DESKTOP_ORIGINS = "false";
+    vi.resetModules();
+    const { default: appProd } = await import("../app.js");
+
+    expect((await preflight("http://localhost:5173", appProd)).headers["access-control-allow-origin"]).toBeUndefined();
+    expect((await preflight("https://localhost", appProd)).headers["access-control-allow-origin"]).toBeUndefined();
+    expect((await preflight("null", appProd)).headers["access-control-allow-origin"]).toBeUndefined();
+    expect((await preflight("https://malicioso.com", appProd)).headers["access-control-allow-origin"]).toBeUndefined();
+    expect((await preflight("https://commercity.example", appProd)).headers["access-control-allow-origin"])
+      .toBe("https://commercity.example");
+    expect((await preflight("https://admin.commercity.example", appProd)).headers["access-control-allow-origin"])
+      .toBe("https://admin.commercity.example");
+  });
+
+  it("M-9/H7: TRUST_PROXY por env configura el trust proxy de Express", async () => {
+    process.env.TRUST_PROXY = "1";
+    vi.resetModules();
+    const { default: appTrust } = await import("../app.js");
+
+    expect(appTrust.get("trust proxy")).toBe(1);
   });
 
   it("no refleja un origen desconocido (https://malicioso.com)", async () => {

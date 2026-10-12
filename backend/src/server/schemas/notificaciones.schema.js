@@ -4,7 +4,8 @@ import { z } from "zod";
 // Contratos del modulo notificaciones.
 // Espejan la validacion manual de notificaciones.controllers.js:
 //  - ?tipo solo filtra si es uno de los 7 validos (otro valor = 400);
-//  - ?limite entero 1-50 (default 50, fuera de rango = 400).
+//  - ?limite entero 1-50 (default 50, fuera de rango = 400);
+//  - ?pagina entero >= 1 (default 1; B-7 TASK-4.9).
 // Fuente documental (OpenAPI); sin cablear validate() todavia (Fase 1).
 // ============================================================================
 
@@ -31,10 +32,16 @@ export const listarNotificacionesQuerySchema = z
       .max(50, "El límite debe estar entre 1 y 50")
       .optional()
       .describe("Maximo de registros (default 50)"),
+    pagina: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .describe("Pagina, base 1 (default 1)")
   })
   .meta({
     id: "ListarNotificacionesQuery",
     title: "ListarNotificacionesQuery",
-    description: "Query de GET /api/notificaciones/ (tipo y limite opcionales)",
-    examples: [{ tipo: "mensajes", limite: 20 }],
+    description: "Query de GET /api/notificaciones/ (tipo, limite y pagina opcionales)",
+    examples: [{ tipo: "mensajes", limite: 20, pagina: 1 }],
   });

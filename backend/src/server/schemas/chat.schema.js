@@ -15,13 +15,38 @@ import { idParam } from "./common.schema.js";
 export const enviarMensajeSchema = z
   .object({
     receptor_id: idParam.describe("Destinatario (distinto del usuario autenticado)"),
-    mensaje: z.string().trim().min(1, "El mensaje está vacío").describe("Texto del mensaje (no vacio)"),
+    // M-14 (TASK-4.7): longitud maxima explicita del mensaje de chat.
+    mensaje: z
+      .string()
+      .trim()
+      .min(1, "El mensaje está vacío")
+      .max(2000, "El mensaje no puede superar 2000 caracteres")
+      .describe("Texto del mensaje (1-2000)"),
   })
   .meta({
     id: "EnviarMensaje",
     title: "EnviarMensaje",
     description: "Body de POST /api/chat/ (solo texto; el multipart se rechaza con 400)",
     examples: [{ receptor_id: 7, mensaje: "Hola, sigue disponible?" }],
+  });
+
+/** Query de GET /api/chat/mensajes/:usuarioId (paginacion, TASK-4.7). */
+export const conversacionQuerySchema = z
+  .object({
+    pagina: z.coerce.number().int().positive().default(1).describe("Pagina (default 1)"),
+    por_pagina: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(100)
+      .default(50)
+      .describe("Mensajes por pagina (default 50, max 100)"),
+  })
+  .meta({
+    id: "ConversacionQuery",
+    title: "ConversacionQuery",
+    description: "Query de GET /api/chat/mensajes/:usuarioId (paginado)",
+    examples: [{ pagina: 1, por_pagina: 50 }],
   });
 
 /** Params de GET /api/chat/mensajes/:usuarioId. */

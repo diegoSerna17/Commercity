@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { bancoSchema } from "./cuentaBancaria.schema.js";
+import { bancoSchema, bancoPlataformaSchema } from "./cuentaBancaria.schema.js";
 
 // ============================================================================
 // Contratos del modulo admin (RF55-RF76; toda ruta exige rol administrador).
@@ -12,7 +12,9 @@ import { bancoSchema } from "./cuentaBancaria.schema.js";
 // ============================================================================
 
 export { bancoSchema };
-export const upsertCuentaBancariaAdminSchema = bancoSchema;
+// M-12 (TASK-4.5): el alta/actualizacion de la cuenta de la plataforma exige
+// ademas la contrasena del administrador (step-up).
+export const upsertCuentaBancariaAdminSchema = bancoPlataformaSchema;
 
 /** Query de GET /api/admin/usuarios. */
 export const adminUsuariosQuerySchema = z

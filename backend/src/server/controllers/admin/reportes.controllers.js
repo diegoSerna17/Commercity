@@ -1,6 +1,7 @@
 import pool from "../../config/db.js";
 import { successResponse, errorResponse } from "../../utils/response.js";
 import { validarId, escapeLike, mapearReporte, QUERY_REPORTES } from "./admin.utils.js";
+import { registrarAuditoria, ACCIONES } from "../../utils/auditoria.js";
 
 export const getReportes = async (req, res, next) => {
   try {
@@ -66,6 +67,14 @@ export const eliminarReporte = async (req, res, next) => {
     );
     if (result.affectedRows === 0)
       return errorResponse(res, "Reporte no encontrado", 404);
+    // M-11: auditoria del archivado (moderacion).
+    await registrarAuditoria({
+      actorId: req.userId,
+      accion: ACCIONES.REPORTE_ARCHIVADO,
+      objetivoTipo: "reporte",
+      objetivoId: id,
+      ip: req.ip,
+    });
     return successResponse(res, "Reporte archivado", { id, estado: "archivado" });
   } catch (err) {
     next(err);
@@ -89,6 +98,15 @@ export const resolverReporte = async (req, res, next) => {
     );
     if (result.affectedRows === 0)
       return errorResponse(res, "Reporte no encontrado o ya resuelto", 404);
+    // M-11: auditoria de la resolucion (sin el texto de la respuesta).
+    await registrarAuditoria({
+      actorId: req.userId,
+      accion: ACCIONES.REPORTE_RESUELTO,
+      objetivoTipo: "reporte",
+      objetivoId: id,
+      detalle: { largo_respuesta: respuesta.length },
+      ip: req.ip,
+    });
     return successResponse(res, "Reporte resuelto", { id, estado: "resuelto" });
   } catch (err) {
     next(err);

@@ -5,12 +5,12 @@ import jwt from "jsonwebtoken";
 // Mock del pool MySQL (sin BD real) - cubre authRequired, requireRoles y el controller.
 vi.mock("mysql2/promise", () => {
   // query envoltorio: responde de forma transparente la consulta que authRequired
-  // hace por DEF-01 ("SELECT activo FROM usuarios WHERE id = ? LIMIT 1") y delega
+  // hace por DEF-01 ("SELECT activo, token_version FROM usuarios WHERE id = ? LIMIT 1") y delega
   // el resto a la query interna que configura cada test con mockImplementation.
   const queryInterna = vi.fn();
   const query = vi.fn((sql, ...resto) => {
-    if (typeof sql === "string" && sql.includes("SELECT activo FROM usuarios WHERE id = ? LIMIT 1")) {
-      return Promise.resolve([[{ activo: 1 }], undefined]);
+    if (typeof sql === "string" && sql.includes("AS revocado")) {
+      return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
     }
     return queryInterna(sql, ...resto);
   });
@@ -28,23 +28,29 @@ vi.mock("mysql2/promise", () => {
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto_test";
 
+// TASK-4.6: buffers con magic bytes reales; la subida valida el CONTENIDO
+// (no solo la extension/MIME declarados) antes de escribir en disco.
+const IMAGEN_JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(24)]);
+const IMAGEN_PNG = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.alloc(24),
+]);
+
 const { __pool: pool } = await import("mysql2/promise");
 const { default: app } = await import("../app.js");
 
-const tokenVendedor = jwt.sign(
-  { id: 2, email: "juan.giraldo@commercity.com" },
+const tokenVendedor = jwt.sign({ id: 2, email: "juan.giraldo@commercity.com" , token_version: 0},
   process.env.JWT_SECRET,
-  { expiresIn: "1h" }
+  { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
-const tokenComprador = jwt.sign(
-  { id: 8, email: "camila.torres@commercity.com" },
+const tokenComprador = jwt.sign({ id: 8, email: "camila.torres@commercity.com" , token_version: 0},
   process.env.JWT_SECRET,
-  { expiresIn: "1h" }
+  { issuer: "commercity-api", audience: "commercity-clients", expiresIn: "1h" }
 );
 
 function mockAuth(rol = "vendedor") {
   pool.query.mockImplementation((sql) => {
-    if (sql.includes("tokens_invalidados")) return [[], undefined];
+    if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
     if (sql.includes("FROM usuario_roles")) return [[{ nombre: rol }], undefined];
     return [[], undefined];
   });
@@ -75,7 +81,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
   it("POST /api/productos crea con el vendedor del JWT (201) - Fix 4.1", async () => {
     // auth OK + categoria existente + insert producto
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id FROM categorias")) return [[{ id: 5 }], undefined];
       if (sql.includes("INSERT INTO productos")) return [{ insertId: 999 }, undefined];
@@ -91,7 +97,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("stock", "10")
       .field("descuento", "0")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("imagen-fake"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -119,6 +125,55 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("TASK-4.6: rechaza contenido que no es imagen real (magic bytes) -> 400", async () => {
+    const res = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Fake")
+      .field("descripcion", "Desc")
+      .field("precio", "1000")
+      .field("stock", "1")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", Buffer.from("esto-no-es-una-imagen"), "foto.jpg");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("UPLOAD_INVALIDO");
+    // No se escribe nada ni se llega al controller
+    expect(pool.query.mock.calls.some(([sql]) =>
+      String(sql).includes("INSERT INTO productos"))).toBe(false);
+  });
+
+  it("TASK-4.6: rechaza extension que no coincide con el contenido real -> 400", async () => {
+    const res = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Fake")
+      .field("descripcion", "Desc")
+      .field("precio", "1000")
+      .field("stock", "1")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", IMAGEN_PNG, "foto.jpg"); // PNG con nombre .jpg
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("UPLOAD_INVALIDO");
+  });
+
+  it("TASK-4.6: imagen mayor a 5 MB -> 413", async () => {
+    const grande = Buffer.concat([IMAGEN_JPEG, Buffer.alloc(5 * 1024 * 1024 + 32)]);
+    const res = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Grande")
+      .field("descripcion", "Desc")
+      .field("precio", "1000")
+      .field("stock", "1")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", grande, "grande.jpg");
+
+    expect(res.status).toBe(413);
+    expect(res.body.error.code).toBe("PAYLOAD_TOO_LARGE");
+  });
+
   it("POST /api/productos con precio invalido -> 400", async () => {
     const res = await request(app)
       .post("/api/productos")
@@ -128,7 +183,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("precio", "-5")
       .field("stock", "1")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -145,7 +200,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("stock", "1")
       .field("descuento", "150")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -162,7 +217,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("stock", "1")
       .field("descuento", "abc")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -178,7 +233,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("stock", "1")
       .field("descuento", "-3")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -193,7 +248,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("precio", "1000")
       .field("stock", "5.5")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -208,13 +263,13 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("precio", "1000")
       .field("stock", "")
       .field("categoria", "Tecnologia")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(resCrear.status).toBe(400);
     expect(resCrear.body.error.code).toBe("VALIDATION_ERROR");
 
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
@@ -235,7 +290,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id con precio invalido en la edicion -> 400", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
@@ -258,7 +313,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id con stock negativo o decimal -> 400", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
@@ -286,7 +341,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id con descuento fuera de rango -> 400", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
@@ -307,7 +362,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id con rangos validos sigue funcionando (regresion campos opcionales)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
@@ -329,7 +384,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id edita SOLO si el producto es del vendedor (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
@@ -354,7 +409,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id de otro vendedor o inexistente -> 404", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       return [[], undefined]; // el SELECT de propiedad no devuelve filas
     });
@@ -379,7 +434,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("GET /api/productos/mis-productos lista solo los del vendedor (200)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("WHERE p.vendedor_id = ?")) {
         return [
@@ -424,7 +479,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("POST /api/productos crea categoria nueva automaticamente (INSERT categorias)", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id FROM categorias")) return [[], undefined]; // no existe
       if (sql.includes("INSERT INTO categorias")) return [{ insertId: 77 }, undefined];
@@ -440,7 +495,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .field("precio", "10000")
       .field("stock", "2")
       .field("categoria", "Nueva Categoria")
-      .attach("imagen", Buffer.from("x"), "foto.jpg");
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(201);
     const insertCategoria = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO categorias"));
@@ -449,7 +504,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
   it("PUT /api/productos/:id con imagen nueva usa el nuevo archivo", async () => {
     pool.query.mockImplementation((sql) => {
-      if (sql.includes("tokens_invalidados")) return [[], undefined];
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("SELECT id, categoria_id")) {
         return [
@@ -477,7 +532,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .put("/api/productos/1")
       .set("Authorization", `Bearer ${tokenVendedor}`)
       .field("nombre", "Editado con imagen")
-      .attach("imagen", Buffer.from("nueva"), "nueva.png");
+      .attach("imagen", IMAGEN_PNG, "nueva.png");
 
     expect(res.status).toBe(200);
     const update = pool.query.mock.calls.find(([sql]) => sql.includes("UPDATE productos"));
