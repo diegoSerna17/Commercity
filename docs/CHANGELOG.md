@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-12 - CONFIG: allowlist CORS local habilitada para la app movil en el navegador (backend/.env)
+
+- **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: backend/.env (local, gitignored — no se versiona); docs/CHANGELOG.md (solo registro)
+- **Descripcion**: se agregaron `ALLOW_DESKTOP_ORIGINS=true` y `CORS_ALLOWLIST=http://localhost:8080,http://127.0.0.1:8080` al `backend/.env` local (claves inexistentes antes, sin duplicados) y se reinicio el backend (PID 23064 detenido por PID; relanzado con `npm run start`) para cargarlas.
+- **Motivo**: el allowlist por defecto en desarrollo solo agrega `http://localhost:5173` y origenes de Capacitor; sin estas claves el navegador en `http://localhost:8080` (app movil M-24) quedaba bloqueado por CORS al llamar la API en el puerto 3000.
+- **Requerimientos**: N/A (configuracion operativa local; la logica CORS/M-16 y el middleware A-3 ya estaban implementados en backend/src/server/app.js y origin.middleware.js)
+- **Evidencia**: backend reiniciado (`CommerCity API v1.3.1 escuchando en http://localhost:3000`, 14 variables inyectadas desde .env); preflight `OPTIONS /api/productos` con `Origin: http://localhost:8080` -> `204` + `access-control-allow-origin: http://localhost:8080` + `access-control-allow-methods: GET,HEAD,PUT,PATCH,POST,DELETE`; `GET /api/productos` con Origin 8080 -> `200` + ACAO `http://localhost:8080`; con `Origin: http://evil.example.com` -> `200` SIN header ACAO (origen no permitido sigue bloqueado); `git check-ignore -v backend/.env` -> `.gitignore:7`.
+- **Estado**: Completado (cambio local no versionado; no aplica suite de tests por no tocar codigo)
+
+---
+
 ## 2026-10-12 - RELEASE 1.3.1: cierre de pendientes de la auditoria PREVIEW 2026-10-12 (paquetes A-E)
 
 - **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
