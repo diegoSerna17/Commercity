@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
     environment: 'jsdom',
+    env: { NODE_ENV: 'test' },
     setupFiles: ['./src/test/setup.js'],
     clearMocks: true,
     restoreMocks: true,
