@@ -495,7 +495,7 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
     expect(res.status).toBe(401);
   });
 
-  it("rechaza a un comprador que intenta avanzar envios (404 - no es vendedor de ninguna linea)", async () => {
+  it("B-6: comprador que avanza envios recibe el MISMO 404 que un pedido inexistente (anti-enumeracion)", async () => {
     // Nota: requireRoles se eliminó de la ruta; ahora el controller valida por
     // ownership: si estado != Cancelado, se consulta con vendedor_id = token.sub,
     // y un comprador normal no tendra lineas a su nombre en el pedido.
@@ -517,7 +517,30 @@ describe("PATCH /api/pedidos/:id/estado (RF122/RF124 - por linea, un nivel)", ()
       .set("Authorization", `Bearer ${token}`)
       .send({ estado: "En camino" });
     expect(res.status).toBe(404);
-    expect(res.body.error.message).toMatch(/vendedor no tiene envíos|no tiene envios/i);
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: "NOT_FOUND", message: "Pedido no encontrado" },
+    });
+  });
+
+  it("B-6: el 404 de pedido inexistente es identico al de vendedor sin lineas", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
+      if (sql.includes("SELECT id, comprador_id, fecha_pedido FROM pedidos")) {
+        return [[], undefined]; // el pedido no existe
+      }
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/pedidos/999/estado")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .send({ estado: "En camino" });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: "NOT_FOUND", message: "Pedido no encontrado" },
+    });
   });
 
   it("avanza UN nivel las lineas del vendedor autenticado (200)", async () => {

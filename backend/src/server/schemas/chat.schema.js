@@ -68,3 +68,22 @@ export const mensajeIdParamsSchema = z
     description: "Params de PATCH /api/chat/mensajes/:id/leido (marca mensaje recibido como leido)",
     examples: [{ id: 15 }],
   });
+
+/** Query de GET /api/chat/conversaciones (paginacion, B-9). */
+export const conversacionesQuerySchema = z
+  .object({
+    pagina: z.coerce.number().int().positive().default(1).describe("Pagina (default 1)"),
+    por_pagina: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(100)
+      .default(50)
+      .describe("Conversaciones por pagina (default 50, max 100)"),
+  })
+  .meta({
+    id: "ConversacionesQuery",
+    title: "ConversacionesQuery",
+    description: "Query de GET /api/chat/conversaciones (paginado, B-9)",
+    examples: [{ pagina: 1, por_pagina: 50 }],
+  });

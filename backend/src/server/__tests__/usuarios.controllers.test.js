@@ -216,6 +216,8 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
     // Misma respuesta que un alta (no se revela que el email existe)
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+    // B-6: mismo mensaje que un alta nueva (comparar con el test de alta)
+    expect(res.body.message).toBe("Usuario registrado correctamente");
     expect(res.body.data.token).toBeNull();
     expect(res.body.data.user.email).toBe("duplicado@test.com");
     // No se crea ninguna cuenta ni se toca la transaccion

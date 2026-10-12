@@ -2,8 +2,8 @@ import { request } from "../api/client.js";
 
 // Funciones del módulo de Chat interno (RF101).
 
-// Lista de conversaciones del usuario autenticado.
-export const listarConversaciones = () => request("/api/chat/conversaciones");
+// Lista de conversaciones del usuario autenticado (B-9: pagina completa, max 100).
+export const listarConversaciones = () => request("/api/chat/conversaciones?por_pagina=100");
 
 // Historial de mensajes con otro usuario.
 export const obtenerConversacion = (usuarioId) => request(`/api/chat/mensajes/${usuarioId}`);

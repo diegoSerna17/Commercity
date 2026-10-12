@@ -382,13 +382,16 @@ export const getDashboardStats = async (req, res, next) => {
       [vendedorId]
     );
 
+    // B-4: porEstado excluye lineas canceladas, igual que las otras dos
+    // consultas del dashboard (TASK-3.7); si no, el resumen sumaba pedidos
+    // cancelados en el conteo por estado.
     const [porEstado] = await pool.query(
       `SELECT dp.estado_envio AS estado,
               COUNT(DISTINCT p.id) AS cantidad,
               COALESCE(SUM(dp.subtotal), 0) AS valor_subtotal
          FROM detalle_pedidos dp
          INNER JOIN pedidos p ON p.id = dp.pedido_id
-        WHERE dp.vendedor_id = ?
+        WHERE dp.vendedor_id = ? AND dp.estado_envio <> 'Cancelado'
         GROUP BY dp.estado_envio`,
       [vendedorId]
     );

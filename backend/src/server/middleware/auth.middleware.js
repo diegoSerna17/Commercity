@@ -54,12 +54,18 @@ export const authRequired = async (req, res, next) => {
         // por peticion autenticada: revocacion (lista negra), estado (activo) y
         // version del token (M-8). Antes eran dos round-trips por request.
         // Fix DEF-01: rechazar usuarios con activo = 0 (baneados / borrado logico).
+        // B-10: la misma consulta trae ademas los roles (GROUP_CONCAT) para que
+        // requireRoles no haga una segunda consulta por peticion.
         const [usuarioFila] = await pool.query(
             `SELECT u.activo, u.token_version,
                     EXISTS(
                       SELECT 1 FROM tokens_invalidados t
                        WHERE t.token_hash = ? AND t.expira_en > NOW()
-                    ) AS revocado
+                    ) AS revocado,
+                    (SELECT GROUP_CONCAT(r.nombre ORDER BY r.nombre SEPARATOR ',')
+                       FROM usuario_roles ur
+                       JOIN roles r ON r.id = ur.rol_id
+                      WHERE ur.usuario_id = u.id) AS roles_csv
                FROM usuarios u
               WHERE u.id = ?
               LIMIT 1`,
@@ -95,6 +101,14 @@ export const authRequired = async (req, res, next) => {
 
         req.userId = decoded.id;
         req.userEmail = decoded.email;
+        // B-10: roles ya resueltos en la consulta unica; requireRoles los
+        // reutiliza sin otra consulta. Si la columna no viene (mocks viejos),
+        // se deja undefined y requireRoles consulta como antes.
+        if (usuarioFila[0].roles_csv !== undefined) {
+            req.userRoles = usuarioFila[0].roles_csv
+                ? String(usuarioFila[0].roles_csv).split(",")
+                : [];
+        }
         next();
     } catch (error) {
         if (error.name === "TokenExpiredError") {

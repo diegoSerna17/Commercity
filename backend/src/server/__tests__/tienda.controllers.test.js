@@ -438,6 +438,9 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
     expect(tarjetasQ[0]).toContain("estado_envio <> 'Cancelado'");
     const mesesQ = pool.query.mock.calls.find(([sql]) => sql.includes("GROUP BY DATE_FORMAT"));
     expect(mesesQ[0]).toContain("estado_envio <> 'Cancelado'");
+    // B-4: porEstado tambien excluye canceladas (antes sumaba pedidos cancelados)
+    const porEstadoQ = pool.query.mock.calls.find(([sql]) => sql.includes("GROUP BY dp.estado_envio"));
+    expect(porEstadoQ[0]).toContain("estado_envio <> 'Cancelado'");
   });
 });
 

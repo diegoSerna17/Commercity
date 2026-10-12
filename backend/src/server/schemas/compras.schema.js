@@ -9,19 +9,26 @@ import { paramsIdSchema } from "./common.schema.js";
 // Fuente documental (OpenAPI); sin cablear validate() todavia (Fase 1).
 // ============================================================================
 
-/** Query de GET /api/historial/compras (?estado opcional RF30). */
+/** Query de GET /api/historial/compras (?estado opcional RF30 + paginacion B-9). */
 export const historialComprasQuerySchema = z
   .object({
-    estado: z
-      .enum(["Pendiente", "En camino", "Entregado", "Cancelado"])
-      .optional()
-      .describe("Filtra lineas por estado (otro valor = sin filtro)"),
+    // B-9: string libre a proposito; el controller aplica la allowlist manual
+    // (otro valor = sin filtro, RF30) en vez de rechazar con 400.
+    estado: z.string().optional().describe("Filtra lineas por estado (otro valor = sin filtro)"),
+    pagina: z.coerce.number().int().positive().default(1).describe("Pagina (default 1)"),
+    por_pagina: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(100)
+      .default(20)
+      .describe("Pedidos por pagina (default 20, max 100)"),
   })
   .meta({
     id: "HistorialComprasQuery",
     title: "HistorialComprasQuery",
-    description: "Query de GET /api/historial/compras (filtro opcional por estado RF30)",
-    examples: [{ estado: "Pendiente" }],
+    description: "Query de GET /api/historial/compras (filtro opcional por estado RF30 + paginacion B-9)",
+    examples: [{ estado: "Pendiente", pagina: 1, por_pagina: 20 }],
   });
 
 /** Params de POST /api/historial/compras/:id/cancelar (RF135). */

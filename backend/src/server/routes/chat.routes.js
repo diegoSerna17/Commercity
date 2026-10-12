@@ -11,17 +11,12 @@ import { errorResponse } from "../utils/response.js";
 const router = Router();
 
 // ============================================================================
-// RUTAS DEL CHAT INTERNO (RF101)
+// RUTAS DEL CHAT INTERNO (RF101) - solo texto.
 //
-// Integracion en el backend oficial (app.js):
-//   1. Copiar este archivo a src/server/routes/chat.routes.js
-//   2. Importar y montar:
-//        import chatRouter from "./routes/chat.routes.js";
-//        app.use("/api/chat", chatRouter);
-//   La tabla mensajes_chat (6 columnas) esta definida en schema_commercity.sql
-//   (hallazgo B2 auditoria 2026-10-06: sin tipo_mensaje/archivo_url).
-//   config/multer.chat.js queda DESMONTADO: los adjuntos no tienen columna
-//   de persistencia (rama A) y no se aceptan en la ruta.
+// B-13: config/multer.chat.js se elimino (los adjuntos no tienen columna de
+// persistencia, rama A); el multipart se rechaza en la puerta con 400
+// (rechazarMultipartChat) para no dejar archivos huerfanos en uploads/.
+// Montado en app.js: app.use("/api/chat", chatRouter).
 // ============================================================================
 
 /**

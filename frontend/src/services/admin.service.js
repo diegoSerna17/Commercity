@@ -13,7 +13,7 @@ export const obtenerStatsAdmin = () => request("/api/admin/stats");
  * Lista todos los usuarios con su rol principal y estado (RF67, RF73, RF74).
  * @returns {Promise<{success: boolean, data: Array<{id: number, nombre: string, email: string, rol: string, estado: "activo"|"baneado"}>}>}
  */
-export const listarUsuariosAdmin = () => request("/api/admin/usuarios");
+export const listarUsuariosAdmin = () => request("/api/admin/usuarios?por_pagina=100");
 
 /**
  * Cambia el estado de un usuario. Reactivar solo deja activo=1; banear desactiva
@@ -80,11 +80,12 @@ export const eliminarReporteAdmin = (id) =>
 
 /**
  * Cuenta bancaria de Commercity, la que recibe la comision del 10% (RF75/RF76).
- * Llega descifrada porque el formulario de ajustes permite editarla.
+ * B-7: el backend enmascara por defecto; el formulario de ajustes pide la
+ * vista completa con ?revelar=completa para poder editarla.
  * @returns {Promise<{success: boolean, data: {registrado: boolean, datos: {titular_nombre: string, banco: string, tipo_cuenta: string, numero_cuenta: string}|null}}>}
  */
 export const obtenerMiCuentaBancaria = () =>
-  request("/api/admin/mi-cuenta-bancaria");
+  request("/api/admin/mi-cuenta-bancaria?revelar=completa");
 
 /**
  * Registra (POST) o actualiza (PUT) la cuenta bancaria de Commercity. El backend

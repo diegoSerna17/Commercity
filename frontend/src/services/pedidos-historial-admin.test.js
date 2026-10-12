@@ -35,10 +35,11 @@ describe("servicios de pedidos, historial, admin y perfil", () => {
 
   it("historial.service lista compras con filtro opcional y cancela lineas (RF135)", async () => {
     await listarHistorialCompras();
-    expect(request).toHaveBeenCalledWith("/api/historial/compras");
+    // B-9: pagina completa por defecto (max 100)
+    expect(request).toHaveBeenCalledWith("/api/historial/compras?por_pagina=100");
 
     await listarHistorialCompras("Entregado");
-    expect(request).toHaveBeenLastCalledWith("/api/historial/compras?estado=Entregado");
+    expect(request).toHaveBeenLastCalledWith("/api/historial/compras?por_pagina=100&estado=Entregado");
 
     await cancelarCompra(11);
     expect(request).toHaveBeenLastCalledWith("/api/historial/compras/11/cancelar", {
@@ -65,7 +66,8 @@ describe("servicios de pedidos, historial, admin y perfil", () => {
     });
 
     await obtenerMiCuentaBancaria();
-    expect(request).toHaveBeenLastCalledWith("/api/admin/mi-cuenta-bancaria");
+    // B-7: el formulario pide la vista completa (el backend enmascara por defecto)
+    expect(request).toHaveBeenLastCalledWith("/api/admin/mi-cuenta-bancaria?revelar=completa");
   });
 
   it("calificaciones.service envia la calificacion del vendedor (RF107)", async () => {

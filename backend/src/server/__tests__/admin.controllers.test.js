@@ -707,6 +707,37 @@ describe("Casos borde admin (cobertura de 404 y filtros)", () => {
     expect(res.body.data[0].estado).toBe("baneado");
   });
 
+  it("B-9: getUsuarios pagina con LIMIT/OFFSET y expone la meta", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      if (sql.includes("COUNT(DISTINCT u.id)")) return [[{ total: 3 }], undefined];
+      if (sql.includes("GROUP BY u.id")) {
+        return [[{ id: 2, nombre_completo: "Juan", email: "juan@test.com", activo: 1, roles: "vendedor" }], undefined];
+      }
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/admin/usuarios?pagina=1&por_pagina=2")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.paginacion).toEqual({ pagina: 1, por_pagina: 2, total: 3, total_paginas: 2 });
+    const listado = pool.query.mock.calls.find(([sql]) => sql.includes("GROUP BY u.id"));
+    expect(listado[0]).toContain("LIMIT ? OFFSET ?");
+    expect(listado[1]).toEqual([2, 0]);
+  });
+
+  it("B-9: getUsuarios responde 400 con por_pagina mayor a 100", async () => {
+    const res = await request(app)
+      .get("/api/admin/usuarios?por_pagina=1000")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(400);
+  });
+
   it("getReporte inexistente -> 404", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
@@ -1019,6 +1050,15 @@ describe("Reportes admin: filtros, errores e IDs (cobertura restante)", () => {
     expect(res.body.error.message).toContain("obligatoria");
     const consulta = pool.query.mock.calls.find(([sql]) => sql.includes("SET estado_reporte = 'Resuelto'"));
     expect(consulta).toBeUndefined();
+  });
+
+  it("B-8: resolverReporte sin cuerpo -> 400 (no 500)", async () => {
+    const res = await request(app)
+      .patch("/api/admin/reportes/1/resolver")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toContain("obligatoria");
   });
 
   it("ID no numerico -> 400 en GET, DELETE y PATCH de reportes", async () => {

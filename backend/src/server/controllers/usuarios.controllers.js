@@ -72,6 +72,10 @@ export const register = async (req, res) => {
             [email]
         );
         if (existente.length > 0) {
+            // B-6 (anti-enumeracion por tiempo): el alta nueva cuesta un
+            // bcrypt.hash; aqui se hace un hash ficticio descartable para que
+            // ambas respuestas tarden lo mismo y no se distingan por timing.
+            await bcrypt.hash(crypto.randomUUID(), 10);
             try {
                 await enviarAvisoRegistroDuplicado(email);
             } catch {
@@ -144,8 +148,10 @@ export const register = async (req, res) => {
         }
     } catch (error) {
         // Duplicado de email a pesar del pre-check (race condition): M-15, misma
-        // respuesta uniforme (aviso al titular, sin token).
+        // respuesta uniforme (aviso al titular, sin token). B-6: hash ficticio
+        // tambien aqui para no distinguir el camino por timing.
         if (error?.code === "ER_DUP_ENTRY") {
+            await bcrypt.hash(crypto.randomUUID(), 10);
             try {
                 await enviarAvisoRegistroDuplicado(email);
             } catch {

@@ -2327,7 +2327,7 @@
           "Historial"
         ],
         "summary": "Historial de compras",
-        "description": "Compras del comprador agrupadas por pedido con IVA y totales (RF26-RF32).",
+        "description": "Compras del comprador agrupadas por pedido con IVA y totales (RF26-RF32, paginado B-9).",
         "responses": {
           "200": {
             "description": "Historial de compras.",
@@ -2362,13 +2362,31 @@
             "required": false,
             "schema": {
               "description": "Filtra lineas por estado (otro valor = sin filtro)",
-              "type": "string",
-              "enum": [
-                "Pendiente",
-                "En camino",
-                "Entregado",
-                "Cancelado"
-              ]
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Pagina (default 1)",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "por_pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Pedidos por pagina (default 20, max 100)",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 100
             }
           }
         ]
@@ -2512,7 +2530,7 @@
           "Admin"
         ],
         "summary": "Listar usuarios (admin)",
-        "description": "Gestion de usuarios con busqueda (RF67/RF73/RF74).",
+        "description": "Gestion de usuarios con busqueda (RF67/RF73/RF74, paginado B-9).",
         "responses": {
           "200": {
             "description": "Lista de usuarios.",
@@ -2561,6 +2579,30 @@
             "schema": {
               "description": "Busca por nombre o correo",
               "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Pagina (default 1)",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "por_pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Usuarios por pagina (default 50, max 100)",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 100
             }
           }
         ]
@@ -3428,7 +3470,7 @@
           "Admin"
         ],
         "summary": "Ver cuenta bancaria de la plataforma",
-        "description": "Cuenta bancaria de CommerCity para la comision del 10% (RF75/RF76, RNF11 cifrado).",
+        "description": "Cuenta bancaria de CommerCity para la comision del 10% (RF75/RF76, RNF11 cifrado). Enmascarada por defecto (B-7); ?revelar=completa devuelve los datos para edicion.",
         "responses": {
           "200": {
             "description": "Cuenta bancaria.",
@@ -3899,7 +3941,7 @@
           "Chat"
         ],
         "summary": "Listar conversaciones",
-        "description": "Conversaciones del usuario con ultimo mensaje y no leidos.",
+        "description": "Conversaciones del usuario con ultimo mensaje y no leidos (paginado, B-9).",
         "responses": {
           "200": {
             "description": "Lista de conversaciones.",
@@ -3907,6 +3949,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EnvoltorioOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla de negocio (detalle en error.code).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvoltorioError"
                 }
               }
             }
@@ -3925,6 +3977,32 @@
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Pagina (default 1)",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "por_pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Conversaciones por pagina (default 50, max 100)",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 100
+            }
           }
         ]
       }
@@ -5472,20 +5550,30 @@
         "properties": {
           "estado": {
             "description": "Filtra lineas por estado (otro valor = sin filtro)",
-            "type": "string",
-            "enum": [
-              "Pendiente",
-              "En camino",
-              "Entregado",
-              "Cancelado"
-            ]
+            "type": "string"
+          },
+          "pagina": {
+            "default": 1,
+            "description": "Pagina (default 1)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "por_pagina": {
+            "default": 20,
+            "description": "Pedidos por pagina (default 20, max 100)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 100
           }
         },
         "title": "HistorialComprasQuery",
-        "description": "Query de GET /api/historial/compras (filtro opcional por estado RF30)",
+        "description": "Query de GET /api/historial/compras (filtro opcional por estado RF30 + paginacion B-9)",
         "examples": [
           {
-            "estado": "Pendiente"
+            "estado": "Pendiente",
+            "pagina": 1,
+            "por_pagina": 20
           }
         ]
       },
@@ -5495,13 +5583,29 @@
           "q": {
             "description": "Busca por nombre o correo",
             "type": "string"
+          },
+          "pagina": {
+            "default": 1,
+            "description": "Pagina (default 1)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "por_pagina": {
+            "default": 50,
+            "description": "Usuarios por pagina (default 50, max 100)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 100
           }
         },
         "title": "AdminUsuariosQuery",
-        "description": "Query de GET /api/admin/usuarios (RF67/RF73/RF74)",
+        "description": "Query de GET /api/admin/usuarios (RF67/RF73/RF74, paginado B-9)",
         "examples": [
           {
-            "q": "ana"
+            "q": "ana",
+            "pagina": 1,
+            "por_pagina": 50
           }
         ]
       },
@@ -5830,6 +5934,33 @@
           {
             "receptor_id": 7,
             "mensaje": "Hola, sigue disponible?"
+          }
+        ]
+      },
+      "ConversacionesQuery": {
+        "type": "object",
+        "properties": {
+          "pagina": {
+            "default": 1,
+            "description": "Pagina (default 1)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "por_pagina": {
+            "default": 50,
+            "description": "Conversaciones por pagina (default 50, max 100)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 100
+          }
+        },
+        "title": "ConversacionesQuery",
+        "description": "Query de GET /api/chat/conversaciones (paginado, B-9)",
+        "examples": [
+          {
+            "pagina": 1,
+            "por_pagina": 50
           }
         ]
       },

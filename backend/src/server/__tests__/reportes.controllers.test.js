@@ -59,6 +59,14 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
     expect(res.body.success).toBe(false);
   });
 
+  it("B-8: POST /api/reportes sin cuerpo -> 400 (no 500)", async () => {
+    const res = await request(app)
+      .post("/api/reportes")
+      .set("Authorization", `Bearer ${tokenComprador}`);
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
   it("POST /api/reportes con tipo invalido -> 400", async () => {
     const res = await request(app)
       .post("/api/reportes")

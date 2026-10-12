@@ -1,5 +1,6 @@
 import pool from "../config/db.js";
 import { round2 } from "../utils/finanzas.js";
+import { historialComprasQuerySchema } from "../schemas/compras.schema.js";
 import {
     estadoPagoVendedorTrasCancelacion,
     importeReembolsoLinea,
@@ -31,9 +32,48 @@ const NORMALIZAR_ESTADO = (e) => (e === "Cancelado" ? "Cancelado" : e || "Pendie
  */
 export const getHistorialComprasComprador = async (req, res) => {
     const compradorId = req.userId;
-    const { estado } = req.query;
 
-    let query = `
+    // B-9: paginacion validada con Zod (default 20, max 100). ?estado sigue
+    // con allowlist manual: otro valor = sin filtro (RF30, no 400).
+    const parsed = historialComprasQuerySchema.safeParse(req.query ?? {});
+    if (!parsed.success) {
+        return res.status(400).json({
+            success: false,
+            error: { code: "VALIDATION_ERROR", message: "Parámetros de paginación inválidos" }
+        });
+    }
+    const { estado, pagina, por_pagina: porPagina } = parsed.data;
+    const offset = (pagina - 1) * porPagina;
+
+    // Filtro por estado (RF30). El ENUM de la BD usa: 'Pendiente', 'En camino', 'Entregado'
+    const estadosValidos = ["Pendiente", "En camino", "Entregado", "Cancelado"];
+    const filtroEstado = estado && estadosValidos.includes(estado) ? estado : null;
+    const wherePedido = filtroEstado
+        ? "p.comprador_id = ? AND EXISTS (SELECT 1 FROM detalle_pedidos dp2 WHERE dp2.pedido_id = p.id AND dp2.estado_envio = ?)"
+        : "p.comprador_id = ?";
+    const paramsPedido = filtroEstado ? [compradorId, filtroEstado] : [compradorId];
+
+    try {
+        const [[totalRow]] = await pool.query(
+            `SELECT COUNT(DISTINCT p.id) AS total FROM pedidos p WHERE ${wherePedido}`,
+            paramsPedido
+        );
+        const total = Number(totalRow?.total || 0);
+
+        const [idsRows] = await pool.query(
+            `SELECT p.id FROM pedidos p WHERE ${wherePedido} ORDER BY p.fecha_pedido DESC, p.id DESC LIMIT ? OFFSET ?`,
+            [...paramsPedido, porPagina, offset]
+        );
+        const ids = idsRows.map((r) => Number(r.id)).filter((id) => Number.isInteger(id));
+        if (ids.length === 0) {
+            return res.status(200).json({
+                success: true,
+                data: [],
+                paginacion: { pagina, por_pagina: porPagina, total, total_paginas: Math.max(1, Math.ceil(total / porPagina)) }
+            });
+        }
+
+        let query = `
         SELECT
             p.id AS pedido_id,
             p.fecha_pedido AS fecha,
@@ -54,18 +94,18 @@ export const getHistorialComprasComprador = async (req, res) => {
         WHERE p.comprador_id = ?
     `;
 
-    const params = [compradorId];
+        const params = [compradorId];
 
-    // Filtro por estado (RF30). El ENUM de la BD usa: 'Pendiente', 'En camino', 'Entregado'
-    const estadosValidos = ["Pendiente", "En camino", "Entregado", "Cancelado"];
-    if (estado && estadosValidos.includes(estado)) {
-        query += ` AND dp.estado_envio = ?`;
-        params.push(estado);
-    }
+        if (filtroEstado) {
+            query += ` AND dp.estado_envio = ?`;
+            params.push(filtroEstado);
+        }
 
-    query += ` ORDER BY p.fecha_pedido DESC, dp.id ASC;`;
+        query += ` AND p.id IN (${ids.map(() => "?").join(",")})`;
+        params.push(...ids);
 
-    try {
+        query += ` ORDER BY p.fecha_pedido DESC, dp.id ASC;`;
+
         const [rows] = await pool.query(query, params);
 
         // RF32: agrupar lineas por pedido y calcular IVA/totales en vuelo (RF31).
@@ -121,7 +161,11 @@ export const getHistorialComprasComprador = async (req, res) => {
             },
         }));
 
-        return res.status(200).json({ success: true, data: pedidos });
+        return res.status(200).json({
+            success: true,
+            data: pedidos,
+            paginacion: { pagina, por_pagina: porPagina, total, total_paginas: Math.max(1, Math.ceil(total / porPagina)) }
+        });
     } catch (error) {
         console.error("Error al obtener el historial de compras:", error.message);
         return res.status(500).json({

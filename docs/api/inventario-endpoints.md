@@ -89,7 +89,7 @@ Montado directo en `/api` (no en `/api/productos`).
 | # | Metodo + ruta completa | Entrada | Estado Zod |
 |---|---|---|---|
 | 34 | `GET /api/admin/stats` | — (RF55-59) | ❌ |
-| 35 | `GET /api/admin/usuarios` | — (RF67/73/74) | ❌ |
+| 35 | `GET /api/admin/usuarios` | query: q + pagina, por_pagina (max 100, B-9, RF67/73/74) | ✅ (`adminUsuariosQuerySchema`) |
 | 36 | `PATCH /api/admin/usuarios/:id/estado` | params `id` + body estado | ❌ |
 | 37 | `DELETE /api/admin/usuarios/:id` | params `id` | ❌ |
 | 38 | `GET /api/admin/productos` | — (RF68/72) | ❌ |
@@ -122,7 +122,7 @@ Montado directo en `/api` (no en `/api/productos`).
 | # | Metodo + ruta completa | Auth / roles | Entrada | Estado Zod |
 |---|---|---|---|---|
 | 52 | `POST /api/chat/` | Bearer (rechaza multipart en puerta, RF101) | body JSON: receptor_id, mensaje (trim manual) | ❌ |
-| 53 | `GET /api/chat/conversaciones` | Bearer | — | ❌ |
+| 53 | `GET /api/chat/conversaciones` | Bearer | query: pagina, por_pagina (max 100, B-9) | ✅ (`conversacionesQuerySchema`) |
 | 54 | `GET /api/chat/mensajes/:usuarioId` | Bearer | params `usuarioId` (`Number()` manual) | ❌ |
 | 55 | `PATCH /api/chat/mensajes/:id/leido` | Bearer | params `id` (`Number()` manual) | ❌ |
 
@@ -160,7 +160,7 @@ Montado directo en `/api` (no en `/api/productos`).
 
 | # | Metodo + ruta completa | Auth / roles | Entrada | Estado Zod |
 |---|---|---|---|---|
-| 71 | `GET /api/historial/compras` | Bearer | — | ❌ |
+| 71 | `GET /api/historial/compras` | Bearer | query: estado (RF30) + pagina, por_pagina (max 100, B-9) | ✅ (`historialComprasQuerySchema`) |
 | 72 | `POST /api/historial/compras/:id/cancelar` | Bearer (RF135: solo Pendiente, restituye stock + reembolso) | params `id` | ❌ |
 
 ## Resumen de cobertura Zod (base para Fase 1)
@@ -168,8 +168,9 @@ Montado directo en `/api` (no en `/api/productos`).
 | Estado | Cantidad | Endpoints |
 |---|---|---|
 | ✅ centralizado | 5 | 6, 7, 8, 9, 13 (auth) |
+| ✅ query paginada (B-9) | 3 | 35, 53, 71 |
 | ⚠️ inline / ad-hoc | 9 | 24, 25, 28, 29, 48, 49, 51, 64, 65, 66 (10 usos en 9 endpoints; el 25 usa 2 esquemas) |
-| ❌ sin contrato | 58 | resto |
+| ❌ sin contrato | 55 | resto |
 
 > Nota: el conteo ⚠️ es 10 usos de esquema en 9 endpoints (el PATCH `/:id/estado` usa `estadoSchema` + `paramsIdSchema`).
-> Fase 1 debe **extraer** los 10 usos a `schemas/` y **definir** contratos nuevos para los 58 sin validar, priorizando escrituras (POST/PATCH/PUT/DELETE) sobre lecturas.
+> Fase 1 debe **extraer** los 10 usos a `schemas/` y **definir** contratos nuevos para los 55 sin validar (3 listados ya tienen query paginada B-9: 35, 53, 71), priorizando escrituras (POST/PATCH/PUT/DELETE) sobre lecturas.

@@ -84,8 +84,10 @@ export const eliminarReporte = async (req, res, next) => {
 export const resolverReporte = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    // B-8: coalesce a {} para que un PATCH sin cuerpo responda 400, no 500.
+    const bodyAdmin = req.body ?? {};
     const respuesta =
-      typeof req.body.respuesta === "string" ? req.body.respuesta.trim() : "";
+      typeof bodyAdmin.respuesta === "string" ? bodyAdmin.respuesta.trim() : "";
     if (!validarId(id)) return errorResponse(res, "ID inválido", 400);
     if (!respuesta) return errorResponse(res, "La respuesta es obligatoria", 400);
     if (respuesta.length > 2000)

@@ -3,11 +3,12 @@ import { request } from "../api/client.js";
 /**
  * Historial de compras del comprador autenticado (RF26-RF32).
  * El backend agrupa las lineas por pedido y calcula IVA y totales en vuelo.
+ * B-9: se pide la pagina completa (max 100) para no recortar el historial.
  * @param {string} [estado] Filtro opcional: "Pendiente" | "En camino" | "Entregado" | "Cancelado"
  */
 export const listarHistorialCompras = (estado) =>
   request(
-    `/api/historial/compras${estado ? `?estado=${encodeURIComponent(estado)}` : ""}`
+    `/api/historial/compras?por_pagina=100${estado ? `&estado=${encodeURIComponent(estado)}` : ""}`
   );
 
 /**

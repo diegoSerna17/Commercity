@@ -26,11 +26,14 @@ const normalizarTipo = (tipo) =>
  */
 export const crearReporte = async (req, res, next) => {
   try {
+    // B-8: un POST sin cuerpo llegaba como req.body undefined y daba 500 en
+    // vez de 400; se coalesce a {} y las validaciones responden 400.
+    const body = req.body ?? {};
     const tipo = normalizarTipo(
-      typeof req.body.tipo === "string" ? req.body.tipo.trim() : ""
+      typeof body.tipo === "string" ? body.tipo.trim() : ""
     );
     const motivo =
-      typeof req.body.motivo === "string" ? req.body.motivo.trim() : "";
+      typeof body.motivo === "string" ? body.motivo.trim() : "";
     const evidenciaUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!TIPOS_VALIDOS.includes(tipo)) {
@@ -55,7 +58,7 @@ export const crearReporte = async (req, res, next) => {
     let usuarioReportadoId = null;
 
     if (tipo === "Producto") {
-      const id = Number(req.body.producto_id);
+      const id = Number(body.producto_id);
       if (!validarId(id)) {
         borrarArchivoSubido(req.file);
         return errorResponse(res, "Debe indicar un producto valido", 400);
@@ -70,7 +73,7 @@ export const crearReporte = async (req, res, next) => {
       }
       productoId = id;
     } else {
-      const id = Number(req.body.usuario_reportado_id);
+      const id = Number(body.usuario_reportado_id);
       if (!validarId(id)) {
         borrarArchivoSubido(req.file);
         return errorResponse(res, "Debe indicar un usuario valido", 400);

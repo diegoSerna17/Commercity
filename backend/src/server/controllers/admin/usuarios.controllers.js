@@ -1,12 +1,32 @@
 import pool from "../../config/db.js";
 import { successResponse, errorResponse } from "../../utils/response.js";
 import { validarId, capitalizar, escapeLike } from "./admin.utils.js";
+import { adminUsuariosQuerySchema } from "../../schemas/admin.schema.js";
 import { destinoPedidosVendedor } from "./pedidos.controllers.js";
 import { registrarAuditoria, ACCIONES } from "../../utils/auditoria.js";
 
 export const getUsuarios = async (req, res, next) => {
   try {
+    // B-9: paginacion validada con Zod (default 50, max 100).
+    const parsed = adminUsuariosQuerySchema.safeParse(req.query ?? {});
+    if (!parsed.success) {
+      return errorResponse(res, "Parámetros de paginación inválidos", 400);
+    }
+    const { pagina, por_pagina: porPagina } = parsed.data;
+    const offset = (pagina - 1) * porPagina;
+
     const q = req.query.q ? escapeLike(String(req.query.q).trim()) : null;
+    const where = q ? "WHERE u.nombre_completo LIKE ? OR r.nombre LIKE ?" : "";
+    const paramsQ = q ? [q, q] : [];
+    const [[totalRow]] = await pool.query(
+      `SELECT COUNT(DISTINCT u.id) AS total
+         FROM usuarios u
+         LEFT JOIN usuario_roles ur ON ur.usuario_id = u.id
+         LEFT JOIN roles r ON r.id = ur.rol_id
+         ${where}`,
+      paramsQ
+    );
+    const total = Number(totalRow?.total || 0);
     const [rows] = await pool.query(
       `SELECT u.id, u.nombre_completo, u.email, u.activo,
               GROUP_CONCAT(r.nombre ORDER BY CASE r.nombre
@@ -14,17 +34,22 @@ export const getUsuarios = async (req, res, next) => {
          FROM usuarios u
          LEFT JOIN usuario_roles ur ON ur.usuario_id = u.id
          LEFT JOIN roles r ON r.id = ur.rol_id
-         ${q ? "WHERE u.nombre_completo LIKE ? OR r.nombre LIKE ?" : ""}
-         GROUP BY u.id ORDER BY u.id`,
-      q ? [q, q] : []
+         ${where}
+         GROUP BY u.id ORDER BY u.id LIMIT ? OFFSET ?`,
+      [...paramsQ, porPagina, offset]
     );
-    return successResponse(res, "Lista de usuarios", rows.map((u) => ({
-      id: u.id,
-      nombre: u.nombre_completo,
-      email: u.email,
-      rol: capitalizar((u.roles || "").split(",")[0]),
-      estado: u.activo ? "activo" : "baneado",
-    })));
+    return res.status(200).json({
+      success: true,
+      message: "Lista de usuarios",
+      data: rows.map((u) => ({
+        id: u.id,
+        nombre: u.nombre_completo,
+        email: u.email,
+        rol: capitalizar((u.roles || "").split(",")[0]),
+        estado: u.activo ? "activo" : "baneado",
+      })),
+      paginacion: { pagina, por_pagina: porPagina, total, total_paginas: Math.max(1, Math.ceil(total / porPagina)) },
+    });
   } catch (err) {
     next(err);
   }

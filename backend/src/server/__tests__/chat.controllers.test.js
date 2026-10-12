@@ -228,6 +228,49 @@ describe("Chat interno (RF101)", () => {
         expect(sqlConvEjecutable).toContain("WHERE receptor_id = ?");
     });
 
+    it("B-9: GET /api/chat/conversaciones pagina con LIMIT/OFFSET y expone la meta", async () => {
+        pool.query.mockImplementation((sql) => {
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+            if (sql.includes("COUNT(DISTINCT par)")) return [[{ total: 3 }], undefined];
+            if (sql.includes("GROUP BY par")) {
+                return [[{
+                    usuario_id: 2,
+                    nombre_completo: "Carlos Vidal",
+                    foto_perfil: null,
+                    mensaje_id: 5,
+                    emisor_id: 2,
+                    receptor_id: 8,
+                    mensaje: "Hola Diego",
+                    enviado_at: "2026-08-20 10:00:00",
+                    leido: 0,
+                }], undefined];
+            }
+            if (sql.includes("leido = 0")) {
+                return [[{ emisor_id: 2, total: 1 }], undefined];
+            }
+            return [[], undefined];
+        });
+
+        const res = await request(app)
+            .get("/api/chat/conversaciones?pagina=2&por_pagina=10")
+            .set("Authorization", `Bearer ${tokenComprador}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.paginacion).toEqual({ pagina: 2, por_pagina: 10, total: 3, total_paginas: 1 });
+        const sqlConv = pool.query.mock.calls.find(([sql]) => sql.includes("GROUP BY par"))[0];
+        expect(sqlConv).toContain("LIMIT ? OFFSET ?");
+        const llamadaConv = pool.query.mock.calls.find(([sql]) => sql.includes("GROUP BY par"));
+        expect(llamadaConv[1]).toEqual([8, 8, 8, 10, 10]);
+    });
+
+    it("B-9: GET /api/chat/conversaciones responde 400 con por_pagina mayor a 100", async () => {
+        const res = await request(app)
+            .get("/api/chat/conversaciones?por_pagina=500")
+            .set("Authorization", `Bearer ${tokenComprador}`);
+
+        expect(res.status).toBe(400);
+    });
+
     // ========================== RECIBIR MENSAJES ============================
     it("GET /api/chat/mensajes/:usuarioId devuelve el historial paginado (200)", async () => {
         pool.query.mockImplementation((sql) => {

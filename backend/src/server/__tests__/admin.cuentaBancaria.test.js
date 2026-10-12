@@ -111,7 +111,7 @@ describe("GET /api/admin/mi-cuenta-bancaria (RF76)", () => {
     expect(res.body.data.registrado).toBe(false);
   });
 
-  it("devuelve la cuenta de Commercity descifrada", async () => {
+  it("B-7: devuelve la cuenta ENMASCARADA por defecto (sin numero ni titular en claro)", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
@@ -121,6 +121,25 @@ describe("GET /api/admin/mi-cuenta-bancaria (RF76)", () => {
 
     const res = await request(app)
       .get("/api/admin/mi-cuenta-bancaria")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.registrado).toBe(true);
+    expect(res.body.data.datos.numero_cuenta_enmascarado).toBeDefined();
+    expect(res.body.data.datos.titular_nombre_enmascarado).toBeDefined();
+    expect(res.body.data.datos.numero_cuenta).toBeUndefined();
+    expect(res.body.data.datos.titular_nombre).toBeUndefined();
+  });
+
+  it("B-7: ?revelar=completa devuelve la cuenta descifrada (formularios de edicion)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      if (sql.includes("es_commercity = 1")) return [[filaCifrada], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/admin/mi-cuenta-bancaria?revelar=completa")
       .set("Authorization", `Bearer ${tokenAdmin}`);
     expect(res.status).toBe(200);
     expect(res.body.data.registrado).toBe(true);

@@ -85,9 +85,13 @@ describe("GET /api/historial/compras", () => {
     });
 
     it("deberia devolver el historial del comprador agrupado por pedido (RF32) con campos RF31", async () => {
-        pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [filasMock]
-        );
+        pool.query.mockImplementation((sql) => {
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+            // B-9: total e ids de la pagina de pedidos
+            if (sql.includes("COUNT(DISTINCT p.id)")) return [[{ total: 1 }], undefined];
+            if (sql.includes("SELECT p.id FROM pedidos")) return [[{ id: 1 }], undefined];
+            return [filasMock];
+        });
 
         const res = await request(app)
             .get("/api/historial/compras")
@@ -126,34 +130,47 @@ describe("GET /api/historial/compras", () => {
     });
 
     it("deberia aplicar el filtro por estado cuando llega ?estado=", async () => {
-        pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [filasMock]
-        );
+        pool.query.mockImplementation((sql) => {
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+            // B-9: total e ids de la pagina de pedidos
+            if (sql.includes("COUNT(DISTINCT p.id)")) return [[{ total: 1 }], undefined];
+            if (sql.includes("SELECT p.id FROM pedidos")) return [[{ id: 1 }], undefined];
+            return [filasMock];
+        });
 
         const res = await request(app)
             .get("/api/historial/compras?estado=Pendiente")
             .set("Authorization", `Bearer ${tokenValido}`);
 
         expect(res.status).toBe(200);
-        const llamadaCompras = pool.query.mock.calls.find(([sql]) => sql.includes("comprador_id = ?"));
+        // B-9: el filtro vive en la consulta de lineas (dp) y en el conteo (EXISTS dp2)
+        const llamadaCompras = pool.query.mock.calls.find(([sql]) => sql.includes("dp.id AS detalle_id"));
         const [query, params] = llamadaCompras;
         expect(query).toContain("AND dp.estado_envio = ?");
-        expect(params).toEqual([7, "Pendiente"]);
+        expect(params).toEqual([7, "Pendiente", 1]);
+        // La pagina de pedidos se acota con LIMIT/OFFSET por placeholder
+        const llamadaIds = pool.query.mock.calls.find(([sql]) => sql.includes("SELECT p.id FROM pedidos"));
+        expect(llamadaIds[0]).toContain("LIMIT ? OFFSET ?");
+        expect(llamadaIds[1]).toEqual([7, "Pendiente", 20, 0]);
     });
 
     it("NO deberia filtrar si el estado no esta en la lista valida", async () => {
-        pool.query.mockImplementation((sql) =>
-            sql.includes("tokens_invalidados") && !sql.includes("AS revocado") ? [[], undefined] : [filasMock]
-        );
+        pool.query.mockImplementation((sql) => {
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+            // B-9: total e ids de la pagina de pedidos
+            if (sql.includes("COUNT(DISTINCT p.id)")) return [[{ total: 1 }], undefined];
+            if (sql.includes("SELECT p.id FROM pedidos")) return [[{ id: 1 }], undefined];
+            return [filasMock];
+        });
 
         await request(app)
             .get("/api/historial/compras?estado=pendiente")
             .set("Authorization", `Bearer ${tokenValido}`);
 
-        const llamadaCompras = pool.query.mock.calls.find(([sql]) => sql.includes("comprador_id = ?"));
+        const llamadaCompras = pool.query.mock.calls.find(([sql]) => sql.includes("dp.id AS detalle_id"));
         const [query, params] = llamadaCompras;
         expect(query).not.toContain("AND dp.estado_envio = ?");
-        expect(params).toEqual([7]);
+        expect(params).toEqual([7, 1]);
     });
 
     it("deberia devolver 500 con error estructurado si la BD falla", async () => {
@@ -166,6 +183,42 @@ describe("GET /api/historial/compras", () => {
         expect(res.status).toBe(500);
         expect(res.body.success).toBe(false);
         expect(res.body.error.code).toBe("INTERNAL_ERROR");
+    });
+
+    it("B-9: responde 400 con pagina invalida (Zod)", async () => {
+        const res = await request(app)
+            .get("/api/historial/compras?pagina=0")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(400);
+        expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("B-9: responde 400 cuando por_pagina supera el maximo (100)", async () => {
+        const res = await request(app)
+            .get("/api/historial/compras?por_pagina=500")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(400);
+        expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("B-9: expone la meta de paginacion y pagina la segunda pagina con offset", async () => {
+        pool.query.mockImplementation((sql) => {
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+            if (sql.includes("COUNT(DISTINCT p.id)")) return [[{ total: 25 }], undefined];
+            if (sql.includes("SELECT p.id FROM pedidos")) return [[{ id: 1 }], undefined];
+            return [filasMock];
+        });
+
+        const res = await request(app)
+            .get("/api/historial/compras?pagina=2&por_pagina=10")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.paginacion).toEqual({ pagina: 2, por_pagina: 10, total: 25, total_paginas: 3 });
+        const llamadaIds = pool.query.mock.calls.find(([sql]) => sql.includes("SELECT p.id FROM pedidos"));
+        expect(llamadaIds[1]).toEqual([7, 10, 10]);
     });
 });
 

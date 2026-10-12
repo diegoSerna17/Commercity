@@ -41,6 +41,7 @@ import {
   enviarMensajeSchema,
   conversacionParamsSchema,
   conversacionQuerySchema,
+  conversacionesQuerySchema,
   mensajeIdParamsSchema,
 } from "../schemas/chat.schema.js";
 import { listarNotificacionesQuerySchema } from "../schemas/notificaciones.schema.js";
@@ -377,7 +378,7 @@ export const operaciones = [
   {
     method: "get", path: "/api/historial/compras", operationId: "historialCompras", tag: "Historial",
     summary: "Historial de compras",
-    description: "Compras del comprador agrupadas por pedido con IVA y totales (RF26-RF32).",
+    description: "Compras del comprador agrupadas por pedido con IVA y totales (RF26-RF32, paginado B-9).",
     auth: true, query: historialComprasQuerySchema,
     responses: ok("Historial de compras.", { ...R401 }),
   },
@@ -400,7 +401,7 @@ export const operaciones = [
   {
     method: "get", path: "/api/admin/usuarios", operationId: "listarUsuariosAdmin", tag: "Admin",
     summary: "Listar usuarios (admin)",
-    description: "Gestion de usuarios con busqueda (RF67/RF73/RF74).",
+    description: "Gestion de usuarios con busqueda (RF67/RF73/RF74, paginado B-9).",
     auth: true, roles: ["administrador"], query: adminUsuariosQuerySchema,
     responses: ok("Lista de usuarios.", { ...R401, ...R403 }),
   },
@@ -477,7 +478,7 @@ export const operaciones = [
   {
     method: "get", path: "/api/admin/mi-cuenta-bancaria", operationId: "obtenerCuentaBancariaPlataforma", tag: "Admin",
     summary: "Ver cuenta bancaria de la plataforma",
-    description: "Cuenta bancaria de CommerCity para la comision del 10% (RF75/RF76, RNF11 cifrado).",
+    description: "Cuenta bancaria de CommerCity para la comision del 10% (RF75/RF76, RNF11 cifrado). Enmascarada por defecto (B-7); ?revelar=completa devuelve los datos para edicion.",
     auth: true, roles: ["administrador"],
     responses: ok("Cuenta bancaria.", { ...R401, ...R403, ...R404 }),
   },
@@ -532,9 +533,9 @@ export const operaciones = [
   {
     method: "get", path: "/api/chat/conversaciones", operationId: "listarConversaciones", tag: "Chat",
     summary: "Listar conversaciones",
-    description: "Conversaciones del usuario con ultimo mensaje y no leidos.",
-    auth: true,
-    responses: ok("Lista de conversaciones.", { ...R401 }),
+    description: "Conversaciones del usuario con ultimo mensaje y no leidos (paginado, B-9).",
+    auth: true, query: conversacionesQuerySchema,
+    responses: ok("Lista de conversaciones.", { ...R400, ...R401 }),
   },
   {
     method: "get", path: "/api/chat/mensajes/{usuarioId}", operationId: "obtenerConversacion", tag: "Chat",

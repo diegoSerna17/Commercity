@@ -20,7 +20,8 @@ describe("chat.service", () => {
 
   it("lista conversaciones y mensajes con otro usuario", async () => {
     await listarConversaciones();
-    expect(request).toHaveBeenCalledWith("/api/chat/conversaciones");
+    // B-9: pagina completa por defecto (max 100)
+    expect(request).toHaveBeenCalledWith("/api/chat/conversaciones?por_pagina=100");
 
     await obtenerConversacion(9);
     expect(request).toHaveBeenLastCalledWith("/api/chat/mensajes/9");

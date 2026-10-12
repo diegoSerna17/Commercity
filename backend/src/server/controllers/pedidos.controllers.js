@@ -514,7 +514,10 @@ async function avanzarEnviosVendedor(conn, id, vendedorId, estado) {
   );
 
   if (detalles.length === 0) {
-    return { error: { status: 404, message: "El vendedor no tiene envíos en este pedido" } };
+    // B-6 (anti-enumeracion): mismo 404 y mismo mensaje que un pedido
+    // inexistente (actualizarEstado :602/:614). Un mensaje distinto revelaba
+    // si el pedido existe aunque el vendedor no tenga lineas en el.
+    return { error: { status: 404, message: "Pedido no encontrado" } };
   }
 
   // M-3: las lineas 'Cancelado' no bloquean ni participan en el avance; solo

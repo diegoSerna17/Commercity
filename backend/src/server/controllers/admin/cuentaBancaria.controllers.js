@@ -24,7 +24,10 @@ import { registrarAuditoria, ACCIONES } from "../../utils/auditoria.js";
 // ============================================================================
 
 /**
- * GET /api/admin/mi-cuenta-bancaria - Datos completos de la cuenta de Commercity.
+ * GET /api/admin/mi-cuenta-bancaria - Cuenta de Commercity ENMASCARADA por
+ * defecto (B-7). El numero y el titular completos solo se devuelven con el
+ * parametro explicito ?revelar=completa (los formularios de edicion de web y
+ * escritorio lo piden asi); cualquier otro valor responde enmascarado.
  */
 export const getMiCuentaBancaria = async (req, res, next) => {
   try {
@@ -35,9 +38,15 @@ export const getMiCuentaBancaria = async (req, res, next) => {
         datos: null,
       });
     }
-    return successResponse(res, "Cuenta bancaria de Commercity obtenida", {
+    if (req.query.revelar === "completa") {
+      return successResponse(res, "Cuenta bancaria de Commercity obtenida", {
+        registrado: true,
+        datos: buildPrivateRecord(fila),
+      });
+    }
+    return successResponse(res, "Cuenta bancaria de Commercity (enmascarada)", {
       registrado: true,
-      datos: buildPrivateRecord(fila),
+      datos: buildPublicRecord(fila),
     });
   } catch (err) {
     next(err);

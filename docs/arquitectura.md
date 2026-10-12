@@ -10,10 +10,10 @@ app.js             pipeline: helmet -> CORS allow-list -> /uploads -> rate limit
 routes/            13 routers, 72 endpoints (ver docs/api/inventario-endpoints.md)
 controllers/       logica de negocio + autorizacion por ownership
 controllers/admin/ panel de administracion (rol administrador)
-middleware/        auth (JWT + lista negra) | role (RBAC) | validate (Zod) | error (central)
+middleware/        auth (JWT + lista negra) | role (RBAC) | validate (Zod) | error (central) | origin (CSRF A-3)
 schemas/           15 archivos, 40 contratos Zod = fuente de la documentacion OpenAPI
 docs/              registry + builder OpenAPI + rutas /api/openapi.json y /api/docs
-config/            db (pool MySQL2), multer (imagenes), multer.chat (desmontado)
+config/            db (pool MySQL2), multer (imagenes; el multer de chat se elimino, B-13)
 utils/             response (envoltorio uniforme), finanzas (IVA 90/10), reembolsos, crypto, ids, mailer
 __tests__/         25 archivos, 413 pruebas (vitest + supertest)
 ```

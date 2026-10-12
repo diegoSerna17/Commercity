@@ -4,6 +4,7 @@ import { validarId } from "../utils/ids.js";
 import {
     enviarMensajeSchema,
     conversacionQuerySchema,
+    conversacionesQuerySchema,
 } from "../schemas/chat.schema.js";
 
 // ============================================================================
@@ -91,6 +92,24 @@ export const listarConversaciones = async (req, res, next) => {
     try {
         const usuarioId = req.userId;
 
+        // B-9: paginacion validada con Zod (default 50, max 100).
+        const parsedQuery = conversacionesQuerySchema.safeParse(req.query ?? {});
+        if (!parsedQuery.success) {
+            return errorResponse(res, "Parámetros de paginación inválidos", 400, parsedQuery.error.issues);
+        }
+        const { pagina, por_pagina: porPagina } = parsedQuery.data;
+        const offset = (pagina - 1) * porPagina;
+
+        const [[totalRow]] = await pool.query(
+            `SELECT COUNT(DISTINCT par) AS total FROM (
+               SELECT receptor_id AS par FROM mensajes_chat WHERE emisor_id = ?
+               UNION
+               SELECT emisor_id AS par FROM mensajes_chat WHERE receptor_id = ?
+             ) interlocutores`,
+            [usuarioId, usuarioId]
+        );
+        const total = Number(totalRow?.total || 0);
+
         const [conversaciones] = await pool.query(
             `SELECT
                otro.id AS usuario_id,
@@ -122,8 +141,9 @@ export const listarConversaciones = async (req, res, next) => {
                ) direcciones
                GROUP BY par
              ) ultimo ON ultimo.mensaje_id = m.id
-             ORDER BY m.enviado_at DESC`,
-            [usuarioId, usuarioId, usuarioId]
+             ORDER BY m.enviado_at DESC
+             LIMIT ? OFFSET ?`,
+            [usuarioId, usuarioId, usuarioId, porPagina, offset]
         );
 
         const [noLeidos] = await pool.query(
@@ -153,7 +173,12 @@ export const listarConversaciones = async (req, res, next) => {
             no_leidos: mapaNoLeidos[c.usuario_id] || 0,
         }));
 
-        return successResponse(res, "Conversaciones obtenidas", data);
+        return res.status(200).json({
+            success: true,
+            message: "Conversaciones obtenidas",
+            data,
+            paginacion: { pagina, por_pagina: porPagina, total, total_paginas: Math.max(1, Math.ceil(total / porPagina)) },
+        });
     } catch (err) {
         next(err);
     }

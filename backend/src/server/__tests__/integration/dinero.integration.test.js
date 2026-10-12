@@ -345,9 +345,54 @@ describe.skipIf(!habilitado)("integracion MySQL real: dinero y concurrencia", ()
     );
     expect(Number(notifs[0].total)).toBeGreaterThanOrEqual(1);
   });
+
+  it("B-5: pedido multi-vendedor: cancelar la linea de un vendedor no toca la del otro", async () => {
+    const vendedorB = await crearUsuario("vendedorB");
+    const pA = await crearProducto(vendedorId, 119000); // 100000 x 1.19
+    const pB = await crearProducto(vendedorB.id, 238000); // 200000 x 1.19
+    await alCarrito(compradorId, pA, 1);
+    await alCarrito(compradorId, pB, 1);
+
+    const pagoRes = await confirmarPago(tokenComprador);
+    expect(pagoRes.status).toBe(201);
+    const pedidoId = pagoRes.body.data.pedido_id;
+
+    const leerDetalle = async () => {
+      const [det] = await raw.query(
+        "SELECT id, vendedor_id, estado_envio FROM detalle_pedidos WHERE pedido_id = ? ORDER BY id",
+        [pedidoId]
+      );
+      return det;
+    };
+    const porVendedor = (det, vid) => det.find((d) => Number(d.vendedor_id) === Number(vid));
+
+    // El pedido quedo con lineas de DOS vendedores distintos.
+    const detInicial = await leerDetalle();
+    expect(detInicial).toHaveLength(2);
+    const lineaA = porVendedor(detInicial, vendedorId);
+    const lineaB = porVendedor(detInicial, vendedorB.id);
+    expect(lineaA).toBeTruthy();
+    expect(lineaB).toBeTruthy();
+
+    // Cancelar SOLO la linea del primer vendedor: reembolso parcial.
+    const r = await cancelarLinea(tokenComprador, pedidoId, lineaA.id);
+    expect(r.status).toBe(200);
+    expect(r.body.data.estado_pago).toBe("Aprobado"); // 119000 de 357000
+    const pago = await leerPago(pedidoId);
+    expect(Number(pago.monto_reembolsado)).toBeCloseTo(119000, 2);
+    expect(pago.estado).toBe("Aprobado");
+
+    // La linea del otro vendedor sigue Pendiente e intacta.
+    const detFinal = await leerDetalle();
+    expect(porVendedor(detFinal, vendedorId).estado_envio).toBe("Cancelado");
+    expect(porVendedor(detFinal, vendedorB.id).estado_envio).toBe("Pendiente");
+  });
 });
 
-// Mensaje util cuando la suite se salta por falta de configuracion.
+// B-5: este bloque solo existe para el modo deshabilitado (sin TEST_DB_*).
+// El skip es intencional: un clon limpio no necesita MySQL local. Con
+// TEST_DB_HOST/USER/NAME definidos corre la suite real de arriba
+// (npm run test:integration contra MySQL local desechable, nunca compartida).
 if (!habilitado) {
   describe("integracion MySQL real (deshabilitada)", () => {
     it.skip("define TEST_DB_HOST/TEST_DB_USER/TEST_DB_NAME para correrla (npm run test:integration)", () => {});

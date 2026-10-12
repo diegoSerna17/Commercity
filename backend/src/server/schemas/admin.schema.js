@@ -16,16 +16,24 @@ export { bancoSchema };
 // ademas la contrasena del administrador (step-up).
 export const upsertCuentaBancariaAdminSchema = bancoPlataformaSchema;
 
-/** Query de GET /api/admin/usuarios. */
+/** Query de GET /api/admin/usuarios (busqueda + paginacion B-9). */
 export const adminUsuariosQuerySchema = z
   .object({
     q: z.string().trim().optional().describe("Busca por nombre o correo"),
+    pagina: z.coerce.number().int().positive().default(1).describe("Pagina (default 1)"),
+    por_pagina: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(100)
+      .default(50)
+      .describe("Usuarios por pagina (default 50, max 100)"),
   })
   .meta({
     id: "AdminUsuariosQuery",
     title: "AdminUsuariosQuery",
-    description: "Query de GET /api/admin/usuarios (RF67/RF73/RF74)",
-    examples: [{ q: "ana" }],
+    description: "Query de GET /api/admin/usuarios (RF67/RF73/RF74, paginado B-9)",
+    examples: [{ q: "ana", pagina: 1, por_pagina: 50 }],
   });
 
 /** Body de PATCH /api/admin/usuarios/:id/estado. */

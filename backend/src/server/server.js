@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 
 import app from "./app.js";
+import pkg from "../../package.json" with { type: "json" };
 
 dotenv.config();
 
@@ -13,6 +14,10 @@ if (!process.env.JWT_SECRET) {
 
 const PORT = process.env.PORT || 3000;
 
+// B-12 (banner dinamico): la version se lee de backend/package.json, nunca a
+// mano, para que el arranque siempre reporte la version real (VER-001).
+const APP_VERSION = pkg.version || "0.0.0";
+
 app.listen(PORT, () => {
-    console.log(`Servidor creado con puerto http://localhost:${PORT}`);
+    console.log(`CommerCity API v${APP_VERSION} escuchando en http://localhost:${PORT}`);
 });
