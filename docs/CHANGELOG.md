@@ -4,6 +4,16 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-12 - FIX: la app movil no conectaba con la API al abrirla en el navegador (config.js M-24)
+
+- **Autor**: Daniel Palacios (lider)
+- **Archivos**: apps/movil/www/config.js (NUEVO); apps/movil/www/index.html
+- **Descripcion**: se creo `apps/movil/www/config.js` que define `window.COMMERCITY_API_URL = "http://localhost:3000"` solo cuando la pagina corre en el navegador de PC (live-server, puerto 8080), y se cargo con un `<script>` antes de `api.js`. En cualquier otro entorno (emulador Android o build nativo) no se define nada y se conserva el default `http://10.0.2.2:3000` de `api.js`, sin romper el emulador. El CSP `connect-src` de `index.html` ya permite `http://localhost:3000`, por lo que no hubo que tocar la politica de seguridad.
+- **Motivo**: el usuario reporto "movil no inicia": la pantalla de login cargaba pero al entrar fallaba la llamada a la API porque, sin `config.js`, `api.js` apunta por defecto a `http://10.0.2.2:3000` (loopback del emulador Android), inexistente en la PC; el README de `apps/movil` ya documentaba que hay que definir `window.COMMERCITY_API_URL` antes de `api.js` pero no existia ningun archivo que lo hiciera.
+- **Requerimientos**: N/A (configuracion de entorno de la app movil; M-24)
+- **Evidencia**: diagnostico en vivo con `Test-NetConnection`: `10.0.2.2:3000 => False`, `127.0.0.1:3000 => True` (backend activo), `127.0.0.1:8080 => True` (live-server activo); `http://127.0.0.1:8080/www/config.js` responde 200 (569 bytes) despues del cambio. Comando de verificacion entregado al usuario: `node apps\movil\tests\contrato.mjs` (la IA no ejecuta tests, regla ahorro-tokens-test-manual).
+- **Estado**: Completado (pendiente del usuario: recargar con Ctrl+F5 y probar el login en `http://localhost:8080/www/`, mas la corrida de `contrato.mjs`)
+
 ## 2026-10-12 - BD: correccion de la migracion 018 (orden FK-safe) y aplicacion de las 12 migraciones a la BD compartida (SEC-003, TASK-7.4)
 
 - **Autor**: Daniel Palacios (lider)
