@@ -160,6 +160,7 @@ docs/*
 docs/informes/*
 # Informes de auditoria de PREVIEW que SI se versionan (los del plan de remediacion):
 !docs/informes/INFORME_AUDITORIA_PREVIEW_*.md
+!docs/informes/INFORME_REAUDITORIA_PREVIEW_*.md
 # Excepción aprobada 2026-10-08 (Daniel): se versiona la documentacion
 # tecnica generada desde Zod/OpenAPI (plan docs-api). El resto de docs/ sigue fuera.
 !docs/api/

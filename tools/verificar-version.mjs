@@ -39,8 +39,21 @@ if (existsSync(gradle)) {
 }
 
 if (anterior) {
+  // Buscar la version anterior solo en textos propios (no en dependencias de lockfiles ni IDs coincidentes).
+  const archivosVersion = [
+    "VERSION",
+    "README.md",
+    "backend/package.json",
+    "apps/escritorio/package.json",
+    "apps/movil/package.json",
+    "frontend/src/constants/buttons.css",
+    "frontend/src/constants/inputs.css",
+    "docs/api/openapi.json",
+    "apps/movil/android/app/build.gradle",
+    "apps/movil/ios/App/App.xcodeproj/project.pbxproj",
+  ];
   try {
-    const out = execFileSync("git", ["grep", "-n", "--", anterior, "--", ".", ":(exclude)package-lock.json", ":(exclude)tools/verificar-version.mjs"], { cwd: ROOT, encoding: "utf8" }).trim();
+    const out = execFileSync("git", ["grep", "-n", "-F", "--", anterior, "--", ...archivosVersion], { cwd: ROOT, encoding: "utf8" }).trim();
     if (out) fail(`queda la version anterior ${anterior} en:\n${out}`);
   } catch {
     // git grep sale 1 cuando no hay coincidencias: OK

@@ -4,6 +4,16 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
+## 2026-10-12 - RELEASE 1.3.0: cierre de la auditoria PREVIEW 2026-10-11 + PREVIEW como unica rama (M-28, Fase 10, VER-001)
+
+- **Autor**: Daniel Palacios (lider) — rama fix/auditoria-preview-2026-10-11
+- **Archivos**: VERSION (1.2.0->1.3.0); backend/package.json + package-lock.json; apps/escritorio/package.json; apps/movil/package.json; apps/movil/android/app/build.gradle (versionName); apps/movil/ios/App/App.xcodeproj/project.pbxproj (MARKETING_VERSION); frontend/src/constants/buttons.css, inputs.css (@version); README.md (bloque Zod v1.3.0); docs/api/openapi.json + docs/api/entidades.md (regenerados v1.3.0); frontend/src/pages/Carrito/PasarelaPago.jsx + PasarelaPago.test.jsx + frontend/src/services/pedidos.service.js (M-28); apps/movil/www/app.js (M-28 movil); tools/ramas-estado.mjs + ramas-permitidas.json + traer-movil.mjs + sync-version.mjs + verificar-version.mjs (NUEVOS); apps/movil/tests/contrato.mjs + apps/escritorio/tests/contrato.mjs (NUEVOS); .github/workflows/rama-unica.yml (NUEVO); .github/CODEOWNERS (NUEVO); .github/workflows/ci.yml (jobs escritorio/movil); docs/guias/contribucion.md (politica PREVIEW unica); docs/informes/INFORME_REAUDITORIA_PREVIEW_2026-10-12.md (NUEVO)
+- **Descripcion**: (1) M-28: el frontend web enviaba `tarjeta_ultimos4`/`tarjeta_marca` con marcas fuera del enum (`American Express`, `Discover`, `Tarjeta`) y el backend `.strict()` los rechazaba; se unifica al contrato `ultimos4_tarjeta`/`marca_tarjeta` (Visa/Mastercard/Amex/Otra) y `detectarMarcaTarjeta` mapea al enum. El movil enviaba el PAN completo (`numero_tarjeta`); ahora solo `ultimos4_tarjeta` + `marca_tarjeta` con direccion minima de 5 caracteres. (2) Fase 10: funcion de inventario `ramas-estado.mjs` (+`--check` contra `ramas-permitidas.json`), auxiliar manual `traer-movil.mjs` (solo lectura, sin PAT), `sync-version.mjs`/`verificar-version.mjs` (VERSION como fuente), politica PREVIEW unica en `contribucion.md` (DEC-008/DEC-010), contratos estaticos movil/escritorio contra OpenAPI, workflow `rama-unica.yml`, CI con 4 jobs y CODEOWNERS por carpeta. Port funcional del movil verificado en el arbol: login JWT, catalogo dinamico, RF4 sin `nuevaPassword`, HTTPS por entorno, `clearSession` total y tarjeta enmascarada; el diff amplio restante de UI se revisa con `traer-movil.mjs` (RISK-010: probar en dispositivo antes del merge). (3) Bump 1.3.0 con `verificar-version.mjs 1.2.0` en verde y OpenAPI/entidades regenerados.
+- **Motivo**: M-28, Fase 10 (GOAL-010) y VER-001 del plan fix-auditoria-preview-2026-10-11.
+- **Requerimientos**: RF4, RF118, RF134, DEC-008, DEC-009, DEC-010
+- **Evidencia**: `PasarelaPago.test.jsx` 5/5; `contrato.mjs` movil (46 rutas) y escritorio OK; `verificar-version.mjs 1.2.0` OK; `docs:api` 63 paths/74 ops/39 esquemas v1.3.0.
+- **Estado**: Completado (pendientes humanos: Fase 0 rotaciones, TASK-10.5/10.10/10.11 con propietarios, TASK-9.3 promocion con autorizacion explicita)
+
 ## 2026-10-11 - DOCS/CI: README veraz, CI raiz, Docker, backup, LICENSE, higiene de ramas y plan de historial (M-DOC-1, M-DOC-2, M-OPS-1, M-GIT-1)
 
 - **Autor**: Daniel Palacios (lider) — carril BD/DOCS/CI del plan fix-auditoria-preview-2026-10-11
