@@ -6,7 +6,8 @@ import SeguidoresModal from "../../components/perfil/SeguidoresModal";
 import { getCurrentUser } from "../../api/client.js";
 import {
   AVATAR_POR_DEFECTO,
-  resolverImagenProducto,
+  calcularPrecioFinal,
+  mapearProducto,
   resolverUrlArchivo,
 } from "../../utils/mapearProducto.js";
 import {
@@ -51,28 +52,6 @@ function formatearPrecio(valor) {
 function extraerListaProductos(respuesta) {
   if (Array.isArray(respuesta?.data)) return respuesta.data;
   return respuesta?.data?.productos ?? [];
-}
-
-/**
- * Traduce el producto de /api/productos/mis-productos al shape de la tarjeta.
- * Conserva el producto original en "raw" para precargar la edicion (RF49).
- * @param {object} producto
- */
-function mapearProducto(producto) {
-  const descuento = Number(producto.descuento_porcentaje) || 0;
-  const precio = Number(producto.precio) || 0;
-  const precioConDescuento = precio * (1 - descuento / 100);
-
-  return {
-    id: producto.id,
-    name: producto.nombre,
-    originalPrice: descuento > 0 ? formatearPrecio(precio) : null,
-    price: formatearPrecio(descuento > 0 ? precioConDescuento : precio),
-    discount: descuento > 0 ? `-${Math.round(descuento)}%` : null,
-    image: resolverImagenProducto(producto.imagen_url, producto.id, producto.categoria_nombre),
-    bgColor: "#f1f1f4",
-    raw: producto,
-  };
 }
 
 /**
@@ -719,7 +698,7 @@ export default function PerfilVendedor() {
                 className="relative overflow-hidden"
                 style={{
                   height: "240px",
-                  backgroundColor: p.bgColor,
+                  backgroundColor: "#f1f1f4",
                 }}
               >
                 {!brokenImages[p.id] && (
@@ -732,7 +711,7 @@ export default function PerfilVendedor() {
                     }
                   />
                 )}
-                {p.discount && (
+                {p.badge && (
                   <div
                     className="absolute top-2 left-2 rounded-full flex items-center justify-center"
                     style={{
@@ -750,7 +729,7 @@ export default function PerfilVendedor() {
                         fontSize: "10px",
                       }}
                     >
-                      {p.discount}
+                      {p.badge}
                     </span>
                   </div>
                 )}
@@ -790,7 +769,7 @@ export default function PerfilVendedor() {
                 >
                   {p.name}
                 </h3>
-                {p.originalPrice && (
+                {p.descuento > 0 && (
                   <p
                     className="mb-1"
                     style={{
@@ -802,7 +781,7 @@ export default function PerfilVendedor() {
                       textDecoration: "line-through",
                     }}
                   >
-                    {p.originalPrice}
+                    {formatearPrecio(p.precioBase)}
                   </p>
                 )}
                 <p
@@ -814,7 +793,7 @@ export default function PerfilVendedor() {
                     color: "var(--color-brand-orange)",
                   }}
                 >
-                  {p.price}
+                  {formatearPrecio(calcularPrecioFinal(p))}
                 </p>
               </div>
             </div>

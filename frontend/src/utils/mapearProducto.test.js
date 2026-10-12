@@ -81,6 +81,40 @@ describe("mapearProducto", () => {
     expect(card.badge).toBeNull();
     expect(card.badgeBg).toBeNull();
   });
+
+  it("C-2: conserva el producto original en raw para precargar la edicion (RF49)", () => {
+    const card = mapearProducto(producto);
+
+    expect(card.raw).toBe(producto);
+  });
+
+  it("C-2: acepta el shape de mis-productos (imagen_url/categoria_nombre)", () => {
+    // Act: fila de GET /api/productos/mis-productos (RF54)
+    const card = mapearProducto({
+      id: 7,
+      nombre: "Mochila",
+      descripcion: "Grande",
+      imagen_url: "/uploads/m.png",
+      precio: "50000",
+      stock: "3",
+      estado: "activo",
+      descuento_porcentaje: "10",
+      categoria_id: 4,
+      categoria_nombre: "Moda",
+    });
+
+    // Assert
+    expect(card).toMatchObject({
+      id: 7,
+      name: "Mochila",
+      category: "Moda",
+      price: 50000,
+      descuento: 10,
+      badge: "-10%",
+    });
+    expect(card.image).toBe(`${API_BASE_URL}/uploads/m.png`);
+    expect(card.raw.imagen_url).toBe("/uploads/m.png");
+  });
 });
 
 describe("calcularPrecioFinal", () => {

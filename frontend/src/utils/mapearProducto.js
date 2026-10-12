@@ -35,23 +35,28 @@ export function resolverImagenProducto(imagenUrl, id, categoria) {
 /**
  * Traduce el producto de /api/productos al shape que consumen las tarjetas
  * (misma forma que usa la pagina principal).
+ * C-2: acepta tambien el shape de /api/productos/mis-productos (RF54), que
+ * trae `imagen_url`/`categoria_nombre` en vez de `imagen`/`categoria`, e
+ * incluye el producto original en `raw` para precargar la edicion (RF49).
  * @param {object} producto Producto crudo del backend
  * @returns {object} Producto listo para la tarjeta
  */
 export function mapearProducto(producto) {
   const descuento = Number(producto.descuento_porcentaje) || 0;
   const precio = Number(producto.precio) || 0;
+  const imagen = producto.imagen ?? producto.imagen_url;
+  const categoria = producto.categoria ?? producto.categoria_nombre ?? null;
 
   return {
     id: producto.id,
     name: producto.nombre,
-    category: producto.categoria,
+    category: categoria,
     // JS Los precios monetarios se muestran sin decimales (COP)
     price: Math.round(precio),
     precioBase: Math.round(precio),
     descuento,
     stock: Number(producto.stock) || 0,
-    image: resolverImagenProducto(producto.imagen, producto.id, producto.categoria),
+    image: resolverImagenProducto(imagen, producto.id, categoria),
     imageAlt: producto.nombre,
     description: producto.descripcion,
     vendedorId: producto.vendedor_id,
@@ -59,6 +64,7 @@ export function mapearProducto(producto) {
     vendedorAvatar: producto.vendedor_foto || AVATAR_POR_DEFECTO,
     badge: descuento > 0 ? `-${descuento}%` : null,
     badgeBg: descuento > 0 ? "bg-figma-accent-blue" : null,
+    raw: producto,
   };
 }
 
