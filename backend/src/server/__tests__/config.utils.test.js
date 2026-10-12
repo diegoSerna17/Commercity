@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 
+// Aislamiento del `.env` del desarrollador: utils/config.js llama a
+// dotenv.config() al importarse, y un `.env` presente reinyectaria
+// CRYPTO_SECRET_KEY/JWT_SECRET aunque el test los borre (dotenv no sobreescribe
+// claves existentes, pero SI rellena las ausentes). Este archivo mockea dotenv
+// para que la validacion dependa SOLO de lo que el test define en process.env;
+// config.js no se relaja, sigue abortando cuando la clave falta.
+vi.mock("dotenv", () => ({
+    __esModule: true,
+    default: { config: vi.fn() },
+}));
+
 const mockFatal = () => {
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -75,7 +86,9 @@ describe("utils/config.js - validacion de secretos (fix 3.1, TASK-2.6)", () => {
         const { exitSpy, errorSpy } = mockFatal();
         process.env.NODE_ENV = "production";
         process.env.JWT_SECRET = "j".repeat(48);
-        delete process.env.CRYPTO_SECRET_KEY;
+        // Clave ausente (vacia): con la clave presente y vacia, dotenv tampoco
+        // la rellena desde un .env; null/undefined harian que dotenv la inyecte.
+        process.env.CRYPTO_SECRET_KEY = "";
         vi.resetModules();
 
         await import("../utils/config.js");
