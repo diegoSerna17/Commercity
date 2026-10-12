@@ -2,8 +2,26 @@ name: CI
 
 on:
   pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "apps/**"
+      - "schema_commercity.sql"
+      - "seed_commercity.sql"
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - ".github/workflows/ci.yml"
   push:
     branches: [PREVIEW, main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "apps/**"
+      - "schema_commercity.sql"
+      - "seed_commercity.sql"
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - ".github/workflows/ci.yml"
 
 permissions:
   contents: read
@@ -20,6 +38,8 @@ jobs:
       mysql:
         image: mysql:8.4
         env:
+          # E-6: literales SOLO del runner efimero (los servicios no ven el
+          # env: del job; espejan DB_PASSWORD/DB_USER de abajo, sin secretos).
           MYSQL_ROOT_PASSWORD: ci_solo_efimero_commercity
           MYSQL_DATABASE: commercity_dev
         ports:
@@ -89,6 +109,7 @@ jobs:
       - name: Lint
         run: npm run lint
       - name: Tests con cobertura
+        # C-1: vite.config.js exige Lines >= 70 % (M-27); este paso falla si baja.
         run: npm run test:coverage
       - name: Build de produccion
         run: npm run build

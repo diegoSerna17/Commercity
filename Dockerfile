@@ -6,10 +6,8 @@
 #   docker build -t commercity-api .
 #   docker run --env-file backend/.env -p 3000:3000 commercity-api
 #
-# Nota TASK-8.4: el HEALTHCHECK usa GET /health, endpoint que implementa el
-# carril backend del lote de auditoria (documentado en OpenAPI). Hasta que ese
-# endpoint exista en src/, el contenedor arranca igual y el healthcheck queda
-# en "unhealthy".
+# Nota E-4: el HEALTHCHECK usa GET /health, endpoint implementado en
+# backend/src/server/app.js (TASK-8.4) y documentado en OpenAPI.
 
 FROM node:22-slim AS dependencias
 WORKDIR /app

@@ -1,0 +1,5 @@
+# E-3: por si alguien construye con backend/ como contexto.
+node_modules/
+src/server/uploads/
+.env*
+coverage/
