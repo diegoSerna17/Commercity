@@ -21,6 +21,7 @@ import seguidoresRouter from "./routes/seguidores.routes.js";
 import docsRouter from "./docs/docs.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { authRequired } from "./middleware/auth.middleware.js";
+import { validarOriginCookies } from "./middleware/origin.middleware.js";
 import pool from "./config/db.js";
 
 const app = express();
@@ -75,6 +76,11 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+// A-3 (CSRF en profundidad): valida Origin/Referer en POST/PUT/PATCH/DELETE
+// con cookie `token`. Corre despues de CORS y antes de los routers; responde
+// 403 sin tocar la BD cuando el origen no esta permitido.
+app.use(validarOriginCookies);
 
 // H2 (P0): /uploads ya no es totalmente publico. Las imagenes de producto
 // (jpg/jpeg/png/webp/gif) siguen publicas para el catalogo (RF45/RF49);

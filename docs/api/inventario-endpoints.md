@@ -66,7 +66,7 @@ Montado directo en `/api` (no en `/api/productos`).
 | # | Metodo + ruta completa | Auth / roles | Entrada | Estado Zod |
 |---|---|---|---|---|
 | 23 | `GET /api/pedidos/resumen` | Bearer | — (carrito del token, RF113/114/117/134) | ❌ (solo lectura) |
-| 24 | `POST /api/pedidos/confirmar-pago` | Bearer (checkout ACID RF134) | body: direccion_envio, metodo_pago enum tarjeta\|transferencia\|pse, numero_tarjeta?, nombre_tarjeta? | ⚠️ `confirmarPagoSchema` inline |
+| 24 | `POST /api/pedidos/confirmar-pago` | Bearer (checkout ACID RF134) | body: direccion_envio, metodo_pago enum tarjeta\|transferencia\|pse, ultimos4_tarjeta? (4 digitos, M-28), marca_tarjeta? enum Visa\|Mastercard\|Amex\|Otra, nombre_tarjeta? (el PAN nunca viaja) | ⚠️ `confirmarPagoSchema` inline |
 | 25 | `PATCH /api/pedidos/:id/estado` | Bearer (RBAC por ownership en controller) | params `id` (`paramsIdSchema` inline) + body: estado enum En camino\|Entregado\|Cancelado, detalle_id? (`estadoSchema` inline) | ⚠️ inline |
 
 ## 4. Tienda vendedor — `/api/tienda` (8, todo `vendedor`)

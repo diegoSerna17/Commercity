@@ -132,7 +132,7 @@ describe("config/db.js - credenciales y defaults de conexion (H5/H9)", () => {
       port: 3306,
       user: "root",
       password: "",
-      database: "commercity_v2",
+      database: "commercity_dev",
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,

@@ -447,39 +447,8 @@ function formatExpiry(inp) {
   inp.value = v;
 }
 
-function confirmarPago() {
-  // RF116: solo número de tarjeta y nombre del titular
-  const num    = document.getElementById('pago-numero')?.value.replace(/\D/g,'');
-  const nombre = document.getElementById('pago-nombre')?.value.trim();
-  const errEl  = document.getElementById('pago-error');
-
-  if (!num || num.length < 16) {
-    if (errEl) { errEl.textContent = 'Ingresa un número de tarjeta válido (16 dígitos).'; errEl.style.display = 'block'; }
-    return;
-  }
-  if (!nombre) {
-    if (errEl) { errEl.textContent = 'Ingresa el nombre del titular de la tarjeta.'; errEl.style.display = 'block'; }
-    return;
-  }
-  if (errEl) errEl.style.display = 'none';
-
-  const { total } = calcCart();
-  const totalStr = fmtCOP(total);
-  const cartItemsSnapshot = [...cartItems]; // guardar para historial
-
-  // Mostrar estado confirmado
-  const formEl = document.getElementById('pago-form-state');
-  const okEl   = document.getElementById('pago-ok-state');
-  const okTot  = document.getElementById('pago-ok-total');
-  if (formEl) formEl.style.display = 'none';
-  if (okEl)   okEl.style.display   = 'block';
-  if (okTot)  okTot.textContent    = totalStr;
-
-  // Vaciar carrito y agregar al historial (RF27)
-  agregarCompraAlHistorial([...cartItemsSnapshot]);
-  cartItems = [];
-  renderCart();
-}
+// A-1 (M-28): definicion local duplicada de confirmarPago eliminada; la unica
+// confirmarPago valida es la async (checkout real con tarjeta enmascarada).
 
 
 
@@ -2322,6 +2291,16 @@ async function rateSeller(stars) {
   showToast(`✅ Calificación de ${stars} estrellas registrada.`);
 }
 
+// M-28: la pasarela es simulada; al backend solo viajan los ultimos 4 digitos
+// y la marca (enum del backend: Visa/Mastercard/Amex/Otra). El PAN nunca sale
+// del dispositivo, igual que web (PasarelaPago.jsx) y movil (app.js processPago).
+function detectarMarcaTarjetaEscritorio(digitos) {
+  if (/^4/.test(digitos)) return 'Visa';
+  if (/^(5[1-5]|2[2-7])/.test(digitos)) return 'Mastercard';
+  if (/^3[47]/.test(digitos)) return 'Amex';
+  return 'Otra';
+}
+
 async function confirmarPago() {
   const num    = document.getElementById('pago-numero')?.value.replace(/\D/g,'');
   const nombre = document.getElementById('pago-nombre')?.value.trim();
@@ -2331,14 +2310,15 @@ async function confirmarPago() {
   }
   if (errEl) errEl.style.display = 'none';
 
-  // Checkout real: direccion_envio + metodo_pago + tarjeta (RF116/RF118).
+  // Checkout real: direccion_envio + metodo_pago + tarjeta enmascarada (M-28).
   const direccion = document.getElementById('ajustes-dir')?.value || 'Calle 123 # 45-67, Cali';
   let pagoBody = null;
   try {
     pagoBody = await api.confirmarPago({
       direccion_envio: direccion,
       metodo_pago: 'tarjeta',
-      numero_tarjeta: num,
+      ultimos4_tarjeta: num.slice(-4),
+      marca_tarjeta: detectarMarcaTarjetaEscritorio(num),
       nombre_tarjeta: nombre,
     });
   } catch (e) {

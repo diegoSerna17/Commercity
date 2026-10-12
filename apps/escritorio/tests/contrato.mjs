@@ -34,5 +34,16 @@ if (/\sonclick\s*=\s*["']/i.test(src)) {
   console.error("contrato-escritorio: no debe quedar onclick inline en el HTML (M-17/M-18)");
   errores += 1;
 }
+// A-1 (M-28): el escritorio nunca debe enviar el PAN. Solo circulan los
+// ultimos 4 digitos y la marca (igual que web y movil). Si reaparece
+// `numero_tarjeta` como clave del payload, el contrato falla.
+if (/\bnumero_tarjeta\s*:/.test(src)) {
+  console.error("contrato-escritorio: numero_tarjeta prohibido (M-28); usar ultimos4_tarjeta + marca_tarjeta");
+  errores += 1;
+}
+if (!/\bultimos4_tarjeta\s*:/.test(src)) {
+  console.error("contrato-escritorio: falta ultimos4_tarjeta en el payload de pago (M-28)");
+  errores += 1;
+}
 if (errores > 0) process.exit(1);
 console.log("contrato-escritorio: OK");
