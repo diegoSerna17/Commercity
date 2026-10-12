@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const backendDir = join(__dirname, "..");
 const rootDir = join(backendDir, "..");
 
-// Version unica: backend/package.json (Fase 8 la sincroniza con VERSION a 1.2.0).
+// Version unica: backend/package.json (sincronizada con VERSION a 1.3.0).
 const { version } = JSON.parse(readFileSync(join(backendDir, "package.json"), "utf8"));
 const doc = buildOpenApi({ version });
 

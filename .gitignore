@@ -176,6 +176,11 @@ docs/informes/*
 # que su mantenimiento no dependa de `git add -f`.
 !docs/DRIVE/
 !docs/DRIVE/**
+# Excepcion 2026-10-12: la subcarpeta nueva trae un dump (commercity_v2.sql) y
+# material del grupo DB; no se versiona (M-GIT-1: sin dumps en el arbol).
+docs/DRIVE/Base de Datos - Commercity 2.0/
+# Directorio local de herramienta (scratch, no parte del repo).
+.commandcode/
 scripts/
 # Excepcion 2026-10-08: generador OpenAPI versionado (plan docs-api).
 !backend/scripts/
