@@ -18,11 +18,11 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
 - **Archivos**: CommerCity_Presentacion_Backend_API_v1.3.2.pptx (raiz del proyecto; copia nueva, ignorada por `*.pptx` en `.gitignore` y no versionada); CommerCity_Presentacion_Backend_API.pptx (original, sin cambios); docs/CHANGELOG.md (este registro)
-- **Descripcion**: se creo una copia del informe de avance con la version 1.3.2 y el estado al corte. Cambios: portada con "Informe tecnico - version 1.3.2"; diapositiva 4 con el commit publicado `4a2832f` y su fecha; diapositiva 19 reescrita como tabla "Tarea / Actividad / Estado al corte" sin nombres de integrantes, con BE-05 en "Backend validado; frontend con observaciones"; diapositiva 20 con el titulo "CI de PREVIEW sin revisar tras la publicacion"; pies de las plantillas 3 y 4 y notas de la diapositiva 1 con la version 1.3.2.
+- **Descripcion**: se creo una copia del informe de avance con la version 1.3.2 y el estado al corte. Cambios: portada con "Informe tecnico - version 1.3.2"; diapositiva 4 con el commit publicado `de83c6c` y su fecha, con el titulo "Alcance y evidencia del avance"; diapositiva 3 con la conclusion en tono positivo; diapositiva 21 movida al final como anexo, con la numeracion de pie de las diapositivas 21 y 22 intercambiada; diapositiva 19 reescrita como tabla "Tarea / Actividad / Estado al corte" sin nombres de integrantes, con BE-05 en "Backend validado; frontend con observaciones"; diapositiva 20 con el titulo "CI de PREVIEW sin revisar tras la publicacion"; pies de las plantillas 3 y 4 y notas de la diapositiva 1 con la version 1.3.2.
 - **Motivo**: tener un informe de avance para el instructor con la version publicada y el estado de cada tarea, sin senalar a personas.
 - **Requerimientos**: N/A (documento de avance; no altera RF)
-- **Evidencia**: el paquete se abre como zip valido (`testzip` sin errores, 169 entradas) y el XML de la diapositiva 19 es valido; la tabla se leyo por texto con el encabezado y 11 filas. Sin revision visual en PowerPoint.
-- **Estado**: En curso. Pendiente: revision visual y actualizar la diapositiva 4 de `4a2832f` a `de83c6c`.
+- **Evidencia**: el paquete se abre como zip valido (`testzip` sin errores, 169 entradas) y el XML de la diapositiva 19 es valido; la tabla se leyo por texto con el encabezado y 11 filas. Tras el ajuste se volvio a leer el texto de las 22 diapositivas y el orden de `ppt/presentation.xml`, con la diapositiva 21 al final. Sin revision visual en PowerPoint.
+- **Estado**: En curso. Pendiente solo la revision visual en PowerPoint (no hay render local).
 
 ---
 
