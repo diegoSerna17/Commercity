@@ -18,7 +18,7 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
 - **Archivos**: CommerCity_Presentacion_Backend_API_v1.3.2.pptx (raiz del proyecto; copia nueva, ignorada por `*.pptx` en `.gitignore` y no versionada); CommerCity_Presentacion_Backend_API.pptx (original, sin cambios); docs/CHANGELOG.md (este registro)
-- **Descripcion**: se creo una copia del informe de avance con la version 1.3.2 y el estado al corte. Cambios: portada con "Informe tecnico - version 1.3.2"; diapositiva 4 con el commit publicado `de83c6c` y su fecha, con el titulo "Alcance y evidencia del avance"; diapositiva 3 con la conclusion en tono positivo; diapositiva 21 movida al final como anexo, con la numeracion de pie de las diapositivas 21 y 22 intercambiada; diapositiva 19 reescrita como tabla "Tarea / Actividad / Estado al corte" sin nombres de integrantes, con BE-05 en "Backend validado; frontend con observaciones"; diapositiva 20 con el titulo "CI de PREVIEW sin revisar tras la publicacion"; pies de las plantillas 3 y 4 y notas de la diapositiva 1 con la version 1.3.2.
+- **Descripcion**: se creo una copia del informe de avance con la version 1.3.2 y el estado al corte. Cambios: portada con "Informe tecnico - version 1.3.2"; diapositiva 4 con el commit publicado `03d6483` y su fecha, con el titulo "Alcance y evidencia del avance"; diapositiva 3 con la conclusion en tono positivo; diapositiva 21 movida al final como anexo, con la numeracion de pie de las diapositivas 21 y 22 intercambiada; diapositiva 19 reescrita como tabla "Tarea / Actividad / Estado al corte" sin nombres de integrantes, con BE-05 en "Backend validado; frontend con observaciones"; diapositiva 20 con el titulo "CI de PREVIEW sin revisar tras la publicacion"; pies de las plantillas 3 y 4 y notas de la diapositiva 1 con la version 1.3.2.
 - **Motivo**: tener un informe de avance para el instructor con la version publicada y el estado de cada tarea, sin senalar a personas.
 - **Requerimientos**: N/A (documento de avance; no altera RF)
 - **Evidencia**: el paquete se abre como zip valido (`testzip` sin errores, 169 entradas) y el XML de la diapositiva 19 es valido; la tabla se leyo por texto con el encabezado y 11 filas. Tras el ajuste se volvio a leer el texto de las 22 diapositivas y el orden de `ppt/presentation.xml`, con la diapositiva 21 al final. Sin revision visual en PowerPoint.
@@ -26,15 +26,15 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 ---
 
-## 2026-10-30 - GIT: publicacion de la rama de trabajo en PREVIEW (5b11ce4 a de83c6c)
+## 2026-10-30 - GIT: publicacion de la rama de trabajo en PREVIEW (5b11ce4 a 03d6483)
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
-- **Archivos**: ninguno nuevo. Se publicaron los commits 10b0ff7, 48476a0, dca9d15, 4a2832f y de83c6c en `commercycity/PREVIEW` (github.com/diegoSerna17/Commercity) y en `commercycity/fix/pendientes-auditoria-2026-10-12`.
-- **Descripcion**: el `PREVIEW` remoto seguia en `5b11ce4` (2026-10-12), sin el trabajo del Sprint 3. Se publico la rama de trabajo hasta `de83c6c` como avance rapido (fast-forward), sin force, y la referencia local `PREVIEW` se movio al mismo commit. En el ultimo push se comprobo que el arbol estaba limpio y que el remoto seguia en `4a2832f`. El commit `4a2832f` restauro la linea introductoria del CHANGELOG que se habia quitado en `10b0ff7`.
+- **Archivos**: ninguno nuevo. Se publicaron los commits 10b0ff7, 48476a0, dca9d15, 4a2832f, de83c6c, 43bc3c2 y 03d6483 en `commercycity/PREVIEW` (github.com/diegoSerna17/Commercity) y en `commercycity/fix/pendientes-auditoria-2026-10-12`.
+- **Descripcion**: el `PREVIEW` remoto seguia en `5b11ce4` (2026-10-12), sin el trabajo del Sprint 3. Se publico la rama de trabajo hasta `de83c6c` como avance rapido (fast-forward), sin force, y la referencia local `PREVIEW` se movio al mismo commit. En el ultimo push se comprobo que el arbol estaba limpio y que el remoto seguia en `4a2832f`. En el segundo push (43bc3c2 y 03d6483, sobre `de83c6c`) se repitieron las mismas comprobaciones: arbol limpio y remoto en el commit esperado. El commit `4a2832f` restauro la linea introductoria del CHANGELOG que se habia quitado en `10b0ff7`.
 - **Motivo**: que la revision del instructor y del equipo parta de un commit publicado. Sin esto, PREVIEW no reproducia la suite de notificaciones ni el fix del chat.
 - **Requerimientos**: N/A (operacion de versionado; sin cambio de comportamiento)
-- **Evidencia**: `git merge-base --is-ancestor 5b11ce4 de83c6c` y `git merge-base --is-ancestor 4a2832f de83c6c` -> exit 0 (ambos fast-forward); `git ls-remote commercycity refs/heads/PREVIEW` -> `de83c6cd6b37e233ae44fc3312cd25b7e779617e`; `git ls-remote commercycity refs/heads/fix/pendientes-auditoria-2026-10-12` -> mismo commit; `git rev-list --left-right --count PREVIEW...commercycity/PREVIEW` -> `0 0`. Sin force push.
-- **Estado**: Completado. El CI de PREVIEW tras este push no se ha revisado.
+- **Evidencia**: `git merge-base --is-ancestor 5b11ce4 de83c6c` y `git merge-base --is-ancestor 4a2832f de83c6c` -> exit 0 (ambos fast-forward); `git ls-remote commercycity refs/heads/PREVIEW` -> `de83c6cd6b37e233ae44fc3312cd25b7e779617e`; `git ls-remote commercycity refs/heads/fix/pendientes-auditoria-2026-10-12` -> mismo commit; `git rev-list --left-right --count PREVIEW...commercycity/PREVIEW` -> `0 0`. Sin force push. Segundo push: `git merge-base --is-ancestor de83c6c 03d6483` -> exit 0 (fast-forward); `git ls-remote commercycity refs/heads/PREVIEW` -> `03d6483e1a3e1e736b20cf1973dad6fed4dc3b33`; `git rev-list --left-right --count PREVIEW...commercycity/PREVIEW` -> `0 0`.
+- **Estado**: Completado en dos pushes. El CI de PREVIEW tras cada push no se ha revisado.
 
 ---
 

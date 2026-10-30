@@ -105,13 +105,13 @@ terminada y no se reporta avance en el consolidado semanal.
 
 ## 7. Estado al 2026-10-30
 
-Base del repositorio: `PREVIEW` remoto = `de83c6c`, publicado el 2026-10-30 (ver CHANGELOG del mismo dia). La rama de trabajo esta en el mismo commit, `VERSION` = `1.3.2` y el arbol esta limpio. El cierre documental del 2026-10-24 ya esta versionado (`dca9d15`), por lo que el riesgo de la seccion 3 queda cerrado.
+Base del repositorio: `PREVIEW` remoto = `03d6483`, publicado el 2026-10-30 (ver CHANGELOG del mismo dia). La rama de trabajo esta en el mismo commit, `VERSION` = `1.3.2` y el arbol esta limpio. El cierre documental del 2026-10-24 ya esta versionado (`dca9d15`), por lo que el riesgo de la seccion 3 queda cerrado.
 
 ### 7.1 Tareas con evidencia en el repositorio
 
 | Tarea | Responsable | Estado al 2026-10-30 | Evidencia |
 |---|---|---|---|
-| Repositorio al dia y publicacion en PREVIEW | Daniel Palacios | Publicado en `de83c6c`. La proteccion de `PREVIEW` (H-6) sigue sin verificar. | CHANGELOG 2026-10-30 (GIT); `git ls-remote` |
+| Repositorio al dia y publicacion en PREVIEW | Daniel Palacios | Publicado en `03d6483`. La proteccion de `PREVIEW` (H-6) sigue sin verificar. | CHANGELOG 2026-10-30 (GIT); `git ls-remote` |
 | Suites backend y frontend con numeros reales | Jary | Entregado y aprobado con observaciones. Backend 536/536 y frontend 124/124 confirmados. El informe debe corregir la cifra de ramas del backend (88.33 % frente a 88.17 %) y el alcance de la cobertura del frontend. | CHANGELOG 2026-10-30 (QA BE-05) |
 | CI, contenedores y `/health` (BE-06) | Cristian Rosero | Cerrado con observaciones: el build de iOS falla en la misma corrida de GitHub Actions (se remite al lider movil) y la BD del contenedor se liga a BE-01. | CHANGELOG 2026-10-29 |
 | Prueba del movil y contrato movil | Jhon Parra | Pendiente la prueba en dispositivo fisico. Roles y totales ya alineados. El chat se corrigio a JSON en movil y escritorio, sin prueba funcional entre dos usuarios. | CHANGELOG 2026-10-25 (FIX y PLAN); seccion 2.1 de este plan |
@@ -137,9 +137,9 @@ El estado de estas tareas se toma de la presentacion de avance v1.3.2 y no esta 
 
 ### 7.3 Pendientes para cerrar el sprint
 
-1. Revisar el resultado del CI de `PREVIEW` tras el push de `de83c6c`.
+1. Revisar el resultado del CI de `PREVIEW` tras el push de `03d6483`.
 2. Corregir el informe de BE-05: cifra de ramas del backend (88.33 % a 88.17 %), alcance de la cobertura del frontend y lenguaje absoluto.
 3. Decidir con el equipo la cobertura del frontend (`coverage.include`); ver el item 11 de la memoria del proyecto.
-4. Actualizar al commit `de83c6c` la diapositiva 4 del informe de avance, que cita `4a2832f`.
+4. Revisar visualmente el informe de avance en PowerPoint; su diapositiva 4 ya cita `03d6483`.
 5. Verificar la proteccion de `PREVIEW` (H-6).
 6. Probar el chat entre dos usuarios en movil y escritorio, y registrar la salida real.

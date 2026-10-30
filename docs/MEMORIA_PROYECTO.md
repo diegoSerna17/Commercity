@@ -22,7 +22,7 @@
 | Requerimientos | Documento oficial del Director, version final 2026-08-20 (numeracion vigente) |
 | Rama de trabajo | `fix/pendientes-auditoria-2026-10-12` |
 | Remotos | `origin` = ECOMMERCE (solo `main`); `commercycity` = PREVIEW (punta de trabajo) |
-| PREVIEW publicado | `de83c6c` el 2026-10-30 (fast-forward desde `5b11ce4`); la rama de trabajo esta en el mismo commit |
+| PREVIEW publicado | `03d6483` el 2026-10-30 (fast-forward desde `5b11ce4`); la rama de trabajo esta en el mismo commit |
 
 La numeracion del 20/08 manda. Cambios relevantes frente a versiones descartadas:
 cancelacion = RF35, perfil publico = RF110, moneda COP = RF141, IVA en RF48/RF120/RF121/RF140.
@@ -91,7 +91,7 @@ la salvedad.
    Pendiente: aval del lider Backend/API y linea base de errores con Node instalado.
 2. **Avance semanal**: cada semana debe exponerse un avance con evidencia fresca (tests,
    endpoints, capturas). El reporte de Backend y API deja de ser opcional.
-   Estado 2026-10-30: informe de avance v1.3.2 en local (el `.pptx` esta ignorado por git), con el estado por tarea. Falta la revision visual y actualizar su diapositiva 4 al commit `de83c6c`.
+   Estado 2026-10-30: informe de avance v1.3.2 en local (el `.pptx` esta ignorado por git), con el estado por tarea. Falta la revision visual en PowerPoint; la diapositiva 4 ya cita el commit `03d6483`.
 3. **Companero bloqueado**: sus pruebas corrieron contra BD local, no la del equipo; los
    archivos del frontend viven en `frontend/src/` y se modifican, no se crean.
 4. **Rotacion de credenciales H-1..H-4** y keystore Android A-4.
@@ -120,7 +120,7 @@ la salvedad.
     rutas contra el OpenAPI; no valida metodo ni `Content-Type`, por lo que no habria
     detectado el defecto del chat. Extension registrada como mejora opcional no asignada.
 11. **Cobertura del frontend (alcance)**: `frontend/vite.config.js` no define `coverage.include`, por lo que el reporte cuenta 39 de unos 72 archivos fuente. Si se incluyen todos, la cobertura real del README (41.30 %) queda por debajo del umbral `lines: 70` y el umbral no se cumpliria. Decision pendiente del equipo antes de tocar la configuracion; M-27 sigue abierto.
-12. **PREVIEW en `de83c6c`**: pendiente revisar el CI del push y verificar la proteccion de la rama (H-6).
+12. **PREVIEW en `03d6483`**: pendiente revisar el CI del push y verificar la proteccion de la rama (H-6).
 
 ## 7. Lecciones
 
