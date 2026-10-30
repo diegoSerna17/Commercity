@@ -1,5 +1,7 @@
 # Changelog de Cambios - CommerCity
 
+Registro central de cambios (según regla `documentacion-cambios.md`). Entradas de la mas reciente a la mas antigua.
+
 ## 2026-10-30 - RELEASE 1.3.2: chat JSON en movil y escritorio, cifras alineadas y suite de notificaciones integrada
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
