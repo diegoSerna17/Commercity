@@ -2,7 +2,7 @@
 
 > Documento portable y versionado. Existe para que **cualquier harness** (Trae, Cursor,
 > Copilot, Codex, Claude) lea el contexto estable del proyecto desde el repositorio y no
-> desde el perfil del usuario. Ultima actualizacion: 2026-10-25.
+> desde el perfil del usuario. Ultima actualizacion: 2026-10-30.
 >
 > Reparto de responsabilidades:
 > - **Aqui** vive lo estable y reutilizable: arquitectura, decisiones cerradas, estado verificado, pendientes y lecciones.
@@ -18,10 +18,11 @@
 |---|---|
 | Proyecto | CommerCity, plataforma de comercio electronico para mercados locales |
 | Contexto | SENA, Tecnologo ADSO, alternativa Proyecto Productivo (FPI, etapa productiva) |
-| Version | 1.3.1 |
+| Version | 1.3.2 |
 | Requerimientos | Documento oficial del Director, version final 2026-08-20 (numeracion vigente) |
 | Rama de trabajo | `fix/pendientes-auditoria-2026-10-12` |
 | Remotos | `origin` = ECOMMERCE (solo `main`); `commercycity` = PREVIEW (punta de trabajo) |
+| PREVIEW publicado | `de83c6c` el 2026-10-30 (fast-forward desde `5b11ce4`); la rama de trabajo esta en el mismo commit |
 
 La numeracion del 20/08 manda. Cambios relevantes frente a versiones descartadas:
 cancelacion = RF35, perfil publico = RF110, moneda COP = RF141, IVA en RF48/RF120/RF121/RF140.
@@ -46,10 +47,11 @@ Documentacion de la API: `/api/openapi.json` y `/api/docs` (63 paths, 74 operaci
 
 | Medicion | Resultado | Fuente |
 |---|---|---|
-| Backend | 536/536 pruebas unitarias OK en 36 archivos | CHANGELOG 1.3.1, corrida 2026-10-12 |
-| Cobertura backend | Lines 97.02 % (umbral 97) | `backend/vitest.config.js` |
-| Frontend | 124/124 pruebas OK en 29 archivos | CHANGELOG 1.3.1 |
+| Backend | 536/536 pruebas unitarias OK en 36 archivos | CHANGELOG 2026-10-30 (QA BE-05) |
+| Cobertura backend | Lines 97.02 %, Statements 96.51 %, Functions 99.57 %, Branches 88.17 % (umbrales Lines 97, Statements 96, Functions 99, Branches 88) | CHANGELOG 2026-10-30 (QA BE-05); `backend/vitest.config.js` |
+| Frontend | 124/124 pruebas OK en 29 archivos | CHANGELOG 2026-10-30 (QA BE-05) |
 | Cobertura frontend real | 41.30 % Lines (888/2150) medido 2026-10-15 | `plan/fix-frontend-pendientes-2026-10-15.md` |
+| Cobertura frontend medida 2026-10-30 | Lines 75.65 %, pero solo cuenta 39 de unos 72 archivos fuente (sin `coverage.include`): no es representativa | CHANGELOG 2026-10-30 (QA BE-05) |
 | Integracion MySQL local | 5/5 dinero; 10/10 notificaciones | CHANGELOG 1.3.1 y 2026-10-30 |
 | Migraciones | 12/12 aplicadas con ledger `schema_migrations` | CHANGELOG 1.3.1 |
 
@@ -80,7 +82,7 @@ la salvedad.
 - Nada de secretos en prompts, logs, commits ni archivos versionados.
 - Sin comandos en servidores remotos: se entregan redactados para copiar.
 
-## 6. Pendientes abiertos (2026-10-25)
+## 6. Pendientes abiertos (2026-10-30)
 
 1. **TypeScript (propuesta externa, sin RF)**: decision documentada el 2026-10-24 en
    `docs/guias/typescript-adopcion-incremental.md`: NO migrar en este ciclo (el proyecto esta
@@ -89,13 +91,14 @@ la salvedad.
    Pendiente: aval del lider Backend/API y linea base de errores con Node instalado.
 2. **Avance semanal**: cada semana debe exponerse un avance con evidencia fresca (tests,
    endpoints, capturas). El reporte de Backend y API deja de ser opcional.
+   Estado 2026-10-30: informe de avance v1.3.2 en local (el `.pptx` esta ignorado por git), con el estado por tarea. Falta la revision visual y actualizar su diapositiva 4 al commit `de83c6c`.
 3. **Companero bloqueado**: sus pruebas corrieron contra BD local, no la del equipo; los
    archivos del frontend viven en `frontend/src/` y se modifican, no se crean.
 4. **Rotacion de credenciales H-1..H-4** y keystore Android A-4.
 5. Cifras desactualizadas: corregidas el 2026-10-24 en `README.md` (salvedad de cobertura
    frontend), `docs/arquitectura.md` (36 archivos unitarios / 536 pruebas) y `apps/README.md`
    (Electron 44.7.0).
-6. Re-medir cobertura de backend y frontend con Node instalado y registrar la salida real.
+6. Re-medir cobertura de backend y frontend con Node instalado y registrar la salida real. **Hecho el 2026-10-30** (Node v24.22.1; salida registrada en `docs/CHANGELOG.md`). Queda abierto el alcance de la cobertura del frontend (item 11).
 7. **Sprint 3 (26 al 30 de octubre, asignado por el lider de movil)**: registro y
    seguimiento en `plan/sprint-3-backend-api-rest-2026-10-26.md`. Cubre repositorio al dia y
    publicacion/proteccion de `PREVIEW` (Daniel), estado de la BD del equipo y aclaracion de
@@ -104,6 +107,7 @@ la salvedad.
    prueba del movil en dispositivo fisico mas correccion del contrato movil (Jhon Parra).
    La tarea de Jhon Parra llego truncada en el mensaje ("resumen de t") y requiere
    confirmacion del lider antes de implementarse.
+   Estado al 2026-10-30 (seccion 7 del plan): BE-06 y BE-12 cerrados, BE-05 aprobado con observaciones; BE-01, BE-07/09, BE-08, BE-10, BE-11, BE-14 y BE-15 sin evidencia en el repositorio.
 8. **Verificacion funcional del chat (movil y escritorio)**: el fix del 2026-10-25 dejo el
    envio en JSON, pero falta la prueba real entre dos usuarios con backend y Node corriendo.
    La entrada del CHANGELOG permanece en `Estado: En curso` hasta que exista esa corrida.
@@ -115,6 +119,8 @@ la salvedad.
 10. **Prueba de contrato del movil incompleta**: `apps/movil/tests/contrato.mjs` solo coteja
     rutas contra el OpenAPI; no valida metodo ni `Content-Type`, por lo que no habria
     detectado el defecto del chat. Extension registrada como mejora opcional no asignada.
+11. **Cobertura del frontend (alcance)**: `frontend/vite.config.js` no define `coverage.include`, por lo que el reporte cuenta 39 de unos 72 archivos fuente. Si se incluyen todos, la cobertura real del README (41.30 %) queda por debajo del umbral `lines: 70` y el umbral no se cumpliria. Decision pendiente del equipo antes de tocar la configuracion; M-27 sigue abierto.
+12. **PREVIEW en `de83c6c`**: pendiente revisar el CI del push y verificar la proteccion de la rama (H-6).
 
 ## 7. Lecciones
 
@@ -126,6 +132,7 @@ la salvedad.
 - Una prueba de contrato que solo coteja rutas da falsa seguridad: hay que validar metodo y `Content-Type`.
 - Antes de proponer una IP-LAN para probar en fisico, revisar las cuatro capas que la bloquean: validacion en `api.js` (error `CONFIG`), CSP de `index.html`, `config.js` que solo actua en el puerto 8080 y cleartext deshabilitado en release. Ruta valida: `adb reverse`.
 - Un APK que funciona en un solo dispositivo no es evidencia reproducible mientras el repositorio no contenga la configuracion de red que ese binario usa.
+- Un informe de integrante puede traer cifras que no reproducen: contrastarlas con una corrida propia y dejar la diferencia en el CHANGELOG antes de usarlas como evidencia (caso BE-05, 2026-10-30).
 
 ## 8. Enlaces
 

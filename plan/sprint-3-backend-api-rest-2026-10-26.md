@@ -1,8 +1,8 @@
 ---
 goal: Registrar el Sprint 3 (Backend y API REST, 26 al 30 de octubre) asignado por el lider de movil, con responsables, entregables, evidencia esperada y el estado real conocido de cada frente
-version: 1.1
+version: 1.2
 date_created: 2026-10-25
-last_updated: 2026-10-25
+last_updated: 2026-10-30
 owner: Daniel Palacios (lider)
 status: 'Assigned'
 tags: [sprint, backend, api, preview, bd, tests, ci, movil]
@@ -102,3 +102,44 @@ terminada y no se reporta avance en el consolidado semanal.
 - Pendientes de frontend: `plan/fix-frontend-pendientes-2026-10-15.md`.
 - Auditoria PREVIEW: `plan/CORRECCIONES_AUDITORIA_PREVIEW_2026-10-12.md`.
 - Inventario de endpoints: `docs/api/inventario-endpoints.md`.
+
+## 7. Estado al 2026-10-30
+
+Base del repositorio: `PREVIEW` remoto = `de83c6c`, publicado el 2026-10-30 (ver CHANGELOG del mismo dia). La rama de trabajo esta en el mismo commit, `VERSION` = `1.3.2` y el arbol esta limpio. El cierre documental del 2026-10-24 ya esta versionado (`dca9d15`), por lo que el riesgo de la seccion 3 queda cerrado.
+
+### 7.1 Tareas con evidencia en el repositorio
+
+| Tarea | Responsable | Estado al 2026-10-30 | Evidencia |
+|---|---|---|---|
+| Repositorio al dia y publicacion en PREVIEW | Daniel Palacios | Publicado en `de83c6c`. La proteccion de `PREVIEW` (H-6) sigue sin verificar. | CHANGELOG 2026-10-30 (GIT); `git ls-remote` |
+| Suites backend y frontend con numeros reales | Jary | Entregado y aprobado con observaciones. Backend 536/536 y frontend 124/124 confirmados. El informe debe corregir la cifra de ramas del backend (88.33 % frente a 88.17 %) y el alcance de la cobertura del frontend. | CHANGELOG 2026-10-30 (QA BE-05) |
+| CI, contenedores y `/health` (BE-06) | Cristian Rosero | Cerrado con observaciones: el build de iOS falla en la misma corrida de GitHub Actions (se remite al lider movil) y la BD del contenedor se liga a BE-01. | CHANGELOG 2026-10-29 |
+| Prueba del movil y contrato movil | Jhon Parra | Pendiente la prueba en dispositivo fisico. Roles y totales ya alineados. El chat se corrigio a JSON en movil y escritorio, sin prueba funcional entre dos usuarios. | CHANGELOG 2026-10-25 (FIX y PLAN); seccion 2.1 de este plan |
+| Estado de la BD del equipo y BD usada en pruebas (B-2) | Meneses | Sin entrega registrada en el repositorio. | Ninguna |
+
+Fuera de la asignacion de la seccion 1, el BE-12 (notificaciones) se registra por su entrega verificada:
+
+| Tarea | Responsable | Estado al 2026-10-30 | Evidencia |
+|---|---|---|---|
+| Notificaciones (BE-12) | Carlos Vidal | Cerrado: 10/10 pruebas de integracion contra MySQL 8.4 desechable. Sigue pendiente la captura citada en los anexos del informe. | CHANGELOG 2026-10-29 y 2026-10-30 (QA BE-12) |
+
+### 7.2 Tareas sin evidencia en el repositorio
+
+El estado de estas tareas se toma de la presentacion de avance v1.3.2 y no esta confirmado con cada responsable:
+
+- BE-01: conectividad, esquema y ledger de la BD del equipo.
+- BE-07/09: prueba del dispositivo y del contrato movil, con fallo de iOS.
+- BE-08: E2E web.
+- BE-10: escritorio; ejecutable publicado, calidad E2E pendiente.
+- BE-11: calificaciones, administracion y reportes.
+- BE-14: seguidores.
+- BE-15: Mi Tienda y consolidacion QA.
+
+### 7.3 Pendientes para cerrar el sprint
+
+1. Revisar el resultado del CI de `PREVIEW` tras el push de `de83c6c`.
+2. Corregir el informe de BE-05: cifra de ramas del backend (88.33 % a 88.17 %), alcance de la cobertura del frontend y lenguaje absoluto.
+3. Decidir con el equipo la cobertura del frontend (`coverage.include`); ver el item 11 de la memoria del proyecto.
+4. Actualizar al commit `de83c6c` la diapositiva 4 del informe de avance, que cita `4a2832f`.
+5. Verificar la proteccion de `PREVIEW` (H-6).
+6. Probar el chat entre dos usuarios en movil y escritorio, y registrar la salida real.

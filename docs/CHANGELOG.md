@@ -2,6 +2,42 @@
 
 Registro central de cambios (según regla `documentacion-cambios.md`). Entradas de la mas reciente a la mas antigua.
 
+## 2026-10-30 - DOCS: estado del proyecto y del Sprint 3 al 30 de octubre
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: docs/MEMORIA_PROYECTO.md (version 1.3.2, PREVIEW en de83c6c, cifras con su fuente del 2026-10-30, pendientes al 2026-10-30 y una leccion nueva); plan/sprint-3-backend-api-rest-2026-10-26.md (seccion 7 nueva con el estado por tarea y sus evidencias); docs/CHANGELOG.md (este registro)
+- **Descripcion**: se actualizaron la memoria del proyecto y el plan del Sprint 3 al estado real del repositorio. La memoria pasa a version 1.3.2 y registra PREVIEW en `de83c6c`; agrega las cifras de backend y frontend con su fuente del 2026-10-30, la salvedad de que la cobertura del frontend mide 39 de unos 72 archivos, y los pendientes fechados al 2026-10-30. El plan agrega la seccion 7 con el estado de cada tarea y su evidencia, sin borrar el registro del 2026-10-25. El riesgo de cierre documental sin commit queda cerrado (commit `dca9d15`).
+- **Motivo**: que la memoria y el plan no contradigan el CHANGELOG ni el estado de PREVIEW, para que la siguiente sesion parta del estado real.
+- **Requerimientos**: N/A (documentacion de estado; sin cambio de comportamiento)
+- **Evidencia**: cifras tomadas solo de las entradas del CHANGELOG del 2026-10-29 y 2026-10-30; comprobaciones de publicacion registradas en la entrada GIT de este mismo dia. Sin corrida de pruebas nueva en esta entrada.
+- **Estado**: Completado en los documentos. Pendiente confirmar con cada responsable los estados que no tienen evidencia en el repositorio (BE-01, BE-07/09, BE-08, BE-10, BE-11, BE-14 y BE-15).
+
+---
+
+## 2026-10-30 - DOCS: informe de avance v1.3.2 (presentacion local, no versionada)
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: CommerCity_Presentacion_Backend_API_v1.3.2.pptx (raiz del proyecto; copia nueva, ignorada por `*.pptx` en `.gitignore` y no versionada); CommerCity_Presentacion_Backend_API.pptx (original, sin cambios); docs/CHANGELOG.md (este registro)
+- **Descripcion**: se creo una copia del informe de avance con la version 1.3.2 y el estado al corte. Cambios: portada con "Informe tecnico - version 1.3.2"; diapositiva 4 con el commit publicado `4a2832f` y su fecha; diapositiva 19 reescrita como tabla "Tarea / Actividad / Estado al corte" sin nombres de integrantes, con BE-05 en "Backend validado; frontend con observaciones"; diapositiva 20 con el titulo "CI de PREVIEW sin revisar tras la publicacion"; pies de las plantillas 3 y 4 y notas de la diapositiva 1 con la version 1.3.2.
+- **Motivo**: tener un informe de avance para el instructor con la version publicada y el estado de cada tarea, sin senalar a personas.
+- **Requerimientos**: N/A (documento de avance; no altera RF)
+- **Evidencia**: el paquete se abre como zip valido (`testzip` sin errores, 169 entradas) y el XML de la diapositiva 19 es valido; la tabla se leyo por texto con el encabezado y 11 filas. Sin revision visual en PowerPoint.
+- **Estado**: En curso. Pendiente: revision visual y actualizar la diapositiva 4 de `4a2832f` a `de83c6c`.
+
+---
+
+## 2026-10-30 - GIT: publicacion de la rama de trabajo en PREVIEW (5b11ce4 a de83c6c)
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: ninguno nuevo. Se publicaron los commits 10b0ff7, 48476a0, dca9d15, 4a2832f y de83c6c en `commercycity/PREVIEW` (github.com/diegoSerna17/Commercity) y en `commercycity/fix/pendientes-auditoria-2026-10-12`.
+- **Descripcion**: el `PREVIEW` remoto seguia en `5b11ce4` (2026-10-12), sin el trabajo del Sprint 3. Se publico la rama de trabajo hasta `de83c6c` como avance rapido (fast-forward), sin force, y la referencia local `PREVIEW` se movio al mismo commit. En el ultimo push se comprobo que el arbol estaba limpio y que el remoto seguia en `4a2832f`. El commit `4a2832f` restauro la linea introductoria del CHANGELOG que se habia quitado en `10b0ff7`.
+- **Motivo**: que la revision del instructor y del equipo parta de un commit publicado. Sin esto, PREVIEW no reproducia la suite de notificaciones ni el fix del chat.
+- **Requerimientos**: N/A (operacion de versionado; sin cambio de comportamiento)
+- **Evidencia**: `git merge-base --is-ancestor 5b11ce4 de83c6c` y `git merge-base --is-ancestor 4a2832f de83c6c` -> exit 0 (ambos fast-forward); `git ls-remote commercycity refs/heads/PREVIEW` -> `de83c6cd6b37e233ae44fc3312cd25b7e779617e`; `git ls-remote commercycity refs/heads/fix/pendientes-auditoria-2026-10-12` -> mismo commit; `git rev-list --left-right --count PREVIEW...commercycity/PREVIEW` -> `0 0`. Sin force push.
+- **Estado**: Completado. El CI de PREVIEW tras este push no se ha revisado.
+
+---
+
 ## 2026-10-30 - QA: revision de la entrega BE-05 de Jary (pruebas y cobertura)
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
