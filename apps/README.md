@@ -4,8 +4,8 @@ Copia trackeable (aprobada por Daniel 2026-09-28) de las dos aplicaciones client
 
 | App | Carpeta | Stack | Conexión a la API |
 |---|---|---|---|
-| Móvil (Android/iOS) | `apps/movil/` | Ionic **Capacitor 8.4**, HTML/CSS/JS puro (`www/`) | `www/api.js` → `http://10.0.2.2:3000` (emulador) o IP-LAN; 72 endpoints |
-| Escritorio (Windows) | `apps/escritorio/` | **Electron 35** + electron-builder, `src/` | `src/api.js` → `http://localhost:3000`; 72 endpoints |
+| Móvil (Android/iOS) | `apps/movil/` | Ionic **Capacitor 8.4**, HTML/CSS/JS puro (`www/`) | `www/api.js` → `http://10.0.2.2:3000` (emulador) o IP-LAN; 74 endpoints |
+| Escritorio (Windows) | `apps/escritorio/` | **Electron 44.7.0** + electron-builder, `src/` | `src/api.js` → `http://localhost:3000`; 74 endpoints |
 
 En ambas apps, `index.html` carga `api.js` **antes** de `app.js`; todos los handlers mock (auth, catálogo, carrito, pago, perfil, vendedor, admin, social, chat, notificaciones) migraron a llamadas reales con JWT (`commercity_token`). Credenciales hardcodeadas eliminadas (`admin@gmail.com/admin123`, `admin/admin123`, `juan_giraldo/1234`, `rem_pass` en claro).
 
@@ -60,7 +60,7 @@ El listado completo (20 usuarios) está en `seed_commercity.sql` y en el `README
 - **Runner de endpoints (69 en esa fecha): 129/129 OK** — `docs/AVANCES/PRUEBAS/ejecutar_pruebas.mjs` (carpeta local, gitignorada)
 - **Capa de red de ambos `api.js`: 102/102 OK** — `docs/AVANCES/PRUEBAS/harness_capa_red.mjs` (carpeta local, gitignorada)
 - Evidencia en `docs/CHANGELOG.md` (entradas del 2026-09-28); los scripts de la corrida viven en `docs/AVANCES/PRUEBAS/`.
-- Backend al cierre de esa integracion: 328/328 tests; estado vigente: 413/413 en 25 archivos (corrida 2026-10-08).
+- Backend al cierre de esa integracion: 328/328 tests; estado vigente: 536/536 (corrida registrada 2026-10-12, CHANGELOG 1.3.1).
 
 ## Build
 

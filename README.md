@@ -1,6 +1,6 @@
 # CommerCity
 
-**Estado:** Proyecto académico en etapa productiva | Backend: 413/413 pruebas OK (25 archivos, última corrida completa 2026-10-08) | Frontend: 25/25 pruebas OK (7 archivos) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API y verificados (capa de red 102/102, RF4 12/12) | Cobertura backend: 95.37% líneas
+**Estado:** Proyecto académico en etapa productiva | Backend: 536/536 pruebas unitarias OK (36 archivos) | Frontend: 124/124 pruebas OK (29 archivos) | Integración MySQL local: 5/5 (dinero) y 10/10 (notificaciones, 2026-10-30) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.02 % líneas; frontend: 41.30 % líneas reales (888/2150, medición 2026-10-15) | Última corrida registrada: 2026-10-12 (CHANGELOG 1.3.1)
 
 CommerCity es una plataforma de comercio electrónico para mercados locales con roles de comprador, vendedor y administrador. Incluye catálogo de productos con imágenes, carrito de compras, pedidos, pasarela de pago simulada, tiendas de vendedores, chat, notificaciones, seguidores, calificaciones, reportes de contenido y panel de administración.
 
@@ -85,7 +85,7 @@ Petición entrante
 COMMER CITY/
 ├── backend/
 │   └── src/server/
-│       ├── __tests__/      # 25 archivos de pruebas (Vitest + supertest)
+│       ├── __tests__/      # 38 archivos de pruebas: 36 unitarios y 2 de integración (Vitest + supertest)
 │       ├── config/         # db.js, multer.js
 │       ├── controllers/    # Controladores por módulo (incluye subcarpeta admin/)
 │       ├── db/             # Migraciones SQL incrementales (000 y 008-018, idempotentes, con rollback en comentarios)
@@ -109,7 +109,7 @@ COMMER CITY/
 │   ├── .nvmrc              # Node 22.23.2
 │   └── package.json
 ├── apps/
-│   ├── movil/              # Snapshot versionado de la app Capacitor (www/ con api.js de los 72 endpoints)
+│   ├── movil/              # Snapshot versionado de la app Capacitor (www/ con api.js de los 74 endpoints)
 │   ├── escritorio/         # Snapshot versionado de la app Electron (src/ con api.js)
 │   └── README.md           # Builds (APK/EXE), exclusiones y notas de firma (keystore)
 ├── docs/                   # Requerimientos, entregas, informes y evidencias
@@ -304,17 +304,19 @@ Resultados actuales:
 
 | Suite                           | Comando                   | Resultado                                 |
 | ------------------------------- | ------------------------- | ----------------------------------------- |
-| Backend (Vitest + supertest)    | `cd backend && npm test`  | 413 pruebas en 25 archivos, todas pasando (corrida 2026-10-08) |
-| Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 25 pruebas en 7 archivos, todas pasando (corrida 2026-10-08)  |
+| Backend (Vitest + supertest)    | `cd backend && npm test`  | 536 pruebas, todas pasando (última corrida registrada 2026-10-12) |
+| Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 124 pruebas en 29 archivos, todas pasando (última corrida registrada 2026-10-12) |
 
-Cobertura del backend (`npm run test:coverage`, proveedor v8; última corrida completa registrada 2026-10-07):
+Cobertura del backend (`npm run test:coverage`, proveedor v8; Lines medido en la corrida registrada 2026-10-12, el resto pendiente de re-medir):
 
-| Métrica    | Valor  | Umbral configurado |
-| ---------- | ------ | ------------------ |
-| Statements | 94.91% | 60%                |
-| Branches   | 86.30% | 60%                |
-| Functions  | 100%   | 60%                |
-| Lines      | 95.37% | 60%                |
+| Métrica    | Valor medido | Umbral configurado |
+| ---------- | ------------ | ------------------ |
+| Statements | pendiente    | 96%                |
+| Branches   | pendiente    | 88%                |
+| Functions  | pendiente    | 99%                |
+| Lines      | 97.02%       | 97%                |
+
+Cobertura del frontend: la cifra **75.31 %** que aparece en el CHANGELOG 1.3.1 es una métrica histórica del proveedor v8 y no refleja el estado actual. La medición real del 2026-10-15 es **41.30 % Lines (888/2150 en 70 archivos)**, por debajo del umbral de 70 % configurado en `frontend/vite.config.js` (M-27 pendiente). Ver `plan/fix-frontend-pendientes-2026-10-15.md`.
 
 E2E con backend vivo (2026-09-28): runner de los endpoints de entonces (69) = **129/129** y capa de red de los `api.js` reales de móvil/escritorio = **102/102** (incluye RF4 recover/reset 12/12). Evidencia conservada por el equipo en `docs/AVANCES/PRUEBAS/` (local, fuera del repositorio) y en `docs/CHANGELOG.md`.
 
@@ -322,7 +324,7 @@ E2E con backend vivo (2026-09-28): runner de los endpoints de entonces (69) = **
 
 La API es REST, escucha en `http://localhost:3000` y responde siempre con el contrato uniforme `{ success, data }` en caso de éxito o `{ success, error }` ante un fallo. Las rutas protegidas exigen la cabecera `Authorization: Bearer <token>`.
 
-Los 72 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`):
+Los 74 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`):
 
 | Prefijo                 | Módulo                                                            |
 | ----------------------- | ----------------------------------------------------------------- |
@@ -341,7 +343,7 @@ Los 72 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`
 
 Los nombres exactos, verbos y cuerpos de cada endpoint están en los archivos de rutas del backend.
 
-> **Referencia generada desde Zod (v1.3.1):** interactiva en `http://localhost:3000/api/docs` (Scalar) y JSON en `/api/openapi.json` — ver `docs/api/openapi.json`, `docs/api/entidades.md` (40 contratos), `docs/api/inventario-endpoints.md`, `docs/bd/modelo-datos.md`, `docs/arquitectura.md` y `docs/guias/`. Se regenera con `npm run docs:api` y `npm run docs:entidades` desde `backend/`.
+> **Referencia generada desde Zod (v1.3.2):** interactiva en `http://localhost:3000/api/docs` (Scalar) y JSON en `/api/openapi.json` — ver `docs/api/openapi.json`, `docs/api/entidades.md` (40 contratos), `docs/api/inventario-endpoints.md`, `docs/bd/modelo-datos.md`, `docs/arquitectura.md` y `docs/guias/`. Se regenera con `npm run docs:api` y `npm run docs:entidades` desde `backend/`.
 
 ## Roles del sistema
 

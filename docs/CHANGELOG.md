@@ -12,6 +12,115 @@
 
 ---
 
+## 2026-10-30 - QA: suite unitaria del backend en verde y hallazgo de entorno en el caso H6 de CORS
+
+- **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: docs/CHANGELOG.md (este registro; sin cambios de codigo)
+- **Descripcion**: se ejecuto la suite unitaria completa del backend con cobertura para confirmar que la integracion de la suite de notificaciones no altero el conteo ni los umbrales. Primera corrida: 535 de 536, con un unico fallo en el caso M-16/H6 de CORS porque el archivo local de variables de entorno tiene ALLOW_DESKTOP_ORIGINS=true (necesario para probar escritorio y movil en navegador). Segunda corrida con la variable neutralizada: 536 de 536 aprobadas y cobertura Lines 97.02 %, dentro de los umbrales configurados (97/99/88/96).
+- **Motivo**: verificar que la suite de integracion incorporada no afecta la suite normal y dejar documentado que el unico fallo observado es de entorno, no una regresion de codigo.
+- **Requerimientos**: N/A (verificacion de calidad; sin cambio de comportamiento)
+- **Evidencia**: Vitest 4.1.11; corrida 1 = "Tests 1 failed | 535 passed (536)" con el caso H6; corrida 2 = "Tests 536 passed (536)" y cobertura Statements 96.51 %, Branches 88.17 %, Functions 99.57 %, Lines 97.02 %. Sin credenciales en la evidencia.
+- **Estado**: Completado. Recomendacion abierta (sin implementar): aislar el caso H6 de la variable de entorno o documentar el comando de corrida con la variable neutralizada, para que cualquier integrante obtenga 536 de 536 sin ajustes manuales.
+
+---
+
+## 2026-10-30 - QA: corrida real de la suite de notificaciones contra MySQL desechable (cierre de BE-12)
+
+- **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: backend/src/server/__tests__/integration/notificaciones.integration.test.js (ejecutado sin cambios); docs/CHANGELOG.md (este registro)
+- **Descripcion**: se ejecuto la suite de integracion de notificaciones entregada por Carlos Vidal contra una instancia MySQL real y desechable. Para el entorno se descargo MySQL Community Server 8.4.13 LTS (ZIP Windows x64) desde el CDN oficial, se verifico el MD5 publicado por Oracle (`7b94489d5524dea9b27097068bea25a8`, coincidencia exacta) y se levanto una instancia aislada en el puerto 3307 con directorio de datos dentro de la carpeta temporal del equipo, sin tocar servicios del sistema ni la base compartida. Se aplicaron el esquema y la semilla del repositorio y las 12 migraciones con el script del proyecto (todas registradas en el ledger). Resultado: 10 de 10 casos aprobados, primera corrida general y segunda con detalle por caso. La suite limpio sus propios usuarios temporales y la instancia se cerro con apagado normal.
+- **Motivo**: cerrar la unica evidencia pendiente de BE-12 con una corrida real, reproducible y sin exponer credenciales, ante la ausencia de Docker y de MySQL local en el equipo.
+- **Requerimientos**: RF99-RF105 (notificaciones y chat interno); tarea BE-12 del Sprint 3.
+- **Evidencia**: Vitest 4.1.11; corrida 1 = 1 archivo aprobado, 10 pruebas aprobadas (18.64 s); corrida 2 con reporter detallado = 10 casos nombrados, todos aprobados (2.34 s); verificacion posterior = 0 usuarios de prueba residuales; apagado del servidor con `mysqladmin shutdown` y puerto 3307 cerrado. Sin contrasenas, tokens ni cadenas de conexion en la evidencia.
+- **Estado**: Completado. BE-12 cerrado.
+
+---
+
+## 2026-10-29 - QA: integracion de la suite de notificaciones al runner del backend (BE-12)
+
+- **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: backend/src/server/__tests__/integration/notificaciones.integration.test.js (integrado desde la entrega de Carlos Vidal); docs/CHANGELOG.md (este registro)
+- **Descripcion**: se incorporo la suite de pruebas de integracion de notificaciones entregada por Carlos Vidal en la ruta que cita su informe y se verifico su carga con el runner de integracion del proyecto. Resultado del comando `npm run test:integration` acotado al archivo: 1 archivo de pruebas registrado y 10 casos registrados, todos saltados porque no hay variables de base de datos definidas, comportamiento previsto por el propio archivo (un clon limpio no necesita MySQL). Se confirmo ademas que la configuracion unitaria excluye la carpeta de integracion, por lo que la suite normal no cambia su conteo. No se pudo ejecutar contra base de datos: en el equipo no hay Docker disponible ni un MySQL local escuchando en el puerto estandar, y la suite exige una instancia desechable con esquema, semilla y migraciones.
+- **Motivo**: dejar la suite en el lugar correcto del arbol para que sea ejecutable por cualquier integrante y verificar que el runner la reconoce, antes de exigir la corrida real como evidencia de cierre.
+- **Requerimientos**: RF99-RF105 (notificaciones y chat interno); tarea BE-12 del Sprint 3.
+- **Evidencia**: salida del runner Vitest 4.1.11: "Test Files 1 skipped (1)" y "Tests 10 skipped (10)"; backend/vitest.config.js excluye `**/__tests__/integration/**`; sintaxis del archivo verificada antes con `node --check`. Sin credenciales ni cadenas de conexion en la evidencia.
+- **Estado**: Completado en integracion y verificacion de carga. Pendiente la corrida real sobre base desechable para cerrar BE-12.
+
+---
+
+## 2026-10-29 - QA: verificacion de entregas del Sprint 3 (BE-06 y BE-12) y correccion del informe de notificaciones
+
+- **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: docs/AVANCES/SPRINT 3/CRISTIAN ROSERO/Documentacion BE-06 2.0.docx (verificado, sin cambios); docs/AVANCES/SPRINT 3/CARLOS VIDAL/INFORME_PRUEBAS_NOTIFICACIONES_2026-10-27.docx (correccion del autor); docs/AVANCES/SPRINT 3/CARLOS VIDAL/notificaciones.integration.test.js (revisado, sin cambios); docs/CHANGELOG.md (este registro)
+- **Descripcion**: se verificaron las dos entregas recibidas del Sprint 3 y se corrigio la atribucion del informe de notificaciones. (1) BE-06, segunda version del informe de Cristian Rosero: incluye capturas de la construccion de la imagen de la API y del levantamiento con Docker Compose (imagen MySQL 8.4, red y volumenes, servicios creados), del chequeo de salud respondiendo con estado ok y conexion a BD ok, y de la verificacion del backend en GitHub Actions (pruebas, cobertura y auditoria) en verde. Se registraron dos observaciones: en la misma corrida de GitHub Actions la verificacion de construccion iOS falla (se remite al lider movil) y el informe no identifica que base de datos uso el contenedor (se liga a BE-01). (2) BE-12, informe de Carlos Vidal: se confirmaron los conteos declarados (10/10 casos E2E automatizados, 17/17 verificaciones en vivo, integracion 15/15, backend 536/536, frontend 124/124 y cobertura Lines 97.02 %) y se corrigio el autor del documento, que decia "Daniel Palacios", por "Carlos Vidal". La correccion se hizo sobre word/document.xml con un unico reemplazo de texto, y el paquete resultante se valido contra el original (231 parrafos antes y despues, todas las validaciones en verde). Se reviso ademas la suite entregada notificaciones.integration.test.js: sintaxis verificada con Node v24.22.1 sin errores y contrato cruzado contra el backend real (las seis rutas del modulo existen, los campos de paginacion, contador, actualizadas y eliminadas coinciden, y el envio por chat responde 201 creando la notificacion con tipo mensajes, estado no leido y redireccion a mensajes). No se ejecuto contra base de datos porque requiere una instancia desechable y las variables de prueba.
+- **Motivo**: cierre de las tareas del Sprint 3 verificando la evidencia real entregada, y correccion de la atribucion del informe para que la autoria quede en el responsable de la tarea.
+- **Requerimientos**: RF99-RF105 (notificaciones y chat interno); tareas BE-06 y BE-12 del Sprint 3 Backend y API REST.
+- **Evidencia**: capturas de Docker Compose, health check y CI referenciadas en el informe BE-06 2.0; validacion del docx corregido ("All validations PASSED", 231 parrafos sin cambio estructural); `node --check` sobre la suite entregada sin errores; cruce de rutas y campos contra backend/src/server/routes/notificaciones.routes.js y notificaciones.controllers.js; conversion del docx corregido a markdown mostrando "Autor: Carlos Vidal". Sin secretos en la evidencia.
+- **Estado**: Completado en verificacion. BE-06 cerrado. BE-12 aprobado con observaciones: falta la captura de evidencia citada en los anexos y la corrida real de la suite sobre una base de datos desechable.
+
+---
+
+## 2026-10-25 - DOCS: revision del repositorio movil y decision de ruta de prueba en dispositivo
+
+- **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: plan/sprint-3-backend-api-rest-2026-10-26.md; docs/MEMORIA_PROYECTO.md; docs/CHANGELOG.md (este registro)
+- **Descripcion**: se documento la revision completa de `apps/movil` (110 archivos versionados): versiones alineadas (`versionName` 1.3.1, `versionCode` 33, iOS `MARKETING_VERSION` 1.3.1 y `CURRENT_PROJECT_VERSION` 1); sin binarios ni secretos versionados; hardening vigente (manifest principal sin respaldos, cleartext solo en la variante debug, CSP en `index.html`, firma release obligatoria); roles en minuscula ya cumplidos y contrato de totales del resumen de pedidos ya alineado. Se documento como decision la unica ruta viable de prueba en dispositivo fisico (USB con `adb reverse tcp:3000 tcp:3000` mas un `config.js` de desarrollo) y se registro como brecha abierta que el APK de Releases no es reproducible desde `PREVIEW` porque el repositorio no contiene ninguna URL de API alcanzable desde un dispositivo fisico. Se actualizaron la seccion 2.1 del plan del Sprint 3, la fila de Jhon Parra, el conteo real del arbol (17 rutas sin versionar) y `docs/MEMORIA_PROYECTO.md` (URL base del movil, decision RF105, pendientes 8 a 10 y lecciones).
+- **Motivo**: la tarea del Sprint 3 asignada a Jhon Parra incluye la prueba del movil en dispositivo fisico y la revision del contrato del movil; hacia falta dejar por escrito que los dos puntos verificables del contrato ya estan cumplidos, cual es la ruta de prueba que realmente funciona y que el binario publicado no se puede reconstruir desde el repositorio. Sin este registro, la prueba en otros celulares podria reportarse como validacion del codigo de `PREVIEW` cuando el APK pudo haberse construido con otra configuracion de red.
+- **Requerimientos**: N/A (revision y decisiones de proceso sobre los clientes movil y escritorio; no altera RF del documento 2026-08-20. El comportamiento corregido se registra en la entrada FIX del mismo dia)
+- **Evidencia**: `git ls-files apps/movil` -> 110 archivos y 0 coincidencias de `.apk`, `.aab`, `.jks`, `keystore.properties`, `google-services.json`, `.p12` y `.mobileprovision`; `android/app/build.gradle` -> `versionCode 33` / `versionName "1.3.1"`; `ios/App/App/Info.plist` y `project.pbxproj` -> `MARKETING_VERSION = 1.3.1` / `CURRENT_PROJECT_VERSION = 1`; `res/xml/network_security_config.xml` -> `cleartextTrafficPermitted="false"` en main y cleartext solo en debug; `applyRoles` de `apps/movil/www/app.js` y `calcularTotales` de `backend/src/server/utils/finanzas.js` contrastados con `schema_commercity.sql`; `git status --short` -> 12 modificados y 5 sin seguimiento. Sin corrida de pruebas (no hay Node en la sesion y el cambio es solo documental).
+- **Estado**: Completado
+
+---
+
+## 2026-10-25 - FIX: contrato del chat en movil y escritorio (JSON en vez de multipart)
+
+- **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: apps/movil/www/api.js; apps/movil/www/app.js; apps/escritorio/src/api.js; apps/escritorio/src/app.js; apps/movil/README.md; plan/sprint-3-backend-api-rest-2026-10-26.md; docs/CHANGELOG.md (este registro)
+- **Descripcion**: se cambio `api.enviarMensaje` en movil y escritorio para enviar JSON `{ receptor_id, mensaje }` en lugar de `FormData` con `isForm`, y se ajustaron sus llamadores (`sendChatMessage` en movil, `sendMsg` en escritorio). En escritorio, si el usuario selecciona un archivo, se avisa que el chat no admite adjuntos y el texto se envia igual. Se corrigio la nota del README del movil (la IP-LAN por HTTP no es una ruta valida) y se documento la prueba en dispositivo fisico por USB con `adb reverse`.
+- **Motivo**: `POST /api/chat` aplica `rechazarMultipartChat` y responde 400 a cualquier multipart porque la BD no tiene columna de persistencia de adjuntos (RF105: chat solo texto). El chat no funcionaba en ninguno de los dos clientes y el toast mostraba el error del backend.
+- **Requerimientos**: RF101 (chat interno), RF105 (chat solo texto, decision 2026-10-11)
+- **Evidencia**: revision estatica de `apps/movil/www/api.js` (linea 87), `apps/escritorio/src/api.js` (linea 88) y `backend/src/server/routes/chat.routes.js` (`rechazarMultipartChat`); contrato JSON confirmado en `backend/src/server/schemas/chat.schema.js` (`receptor_id`, `mensaje` 1-2000). Sin corrida de pruebas ni prueba E2E: queda pendiente que el equipo pegue la salida real.
+- **Estado**: En curso (cambio aplicado; falta la verificacion funcional del envio de chat entre dos usuarios)
+
+---
+
+## 2026-10-25 - PLAN: Sprint 3 Backend y API REST (26 al 30 de octubre) registrado
+
+- **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: plan/sprint-3-backend-api-rest-2026-10-26.md (nuevo); docs/MEMORIA_PROYECTO.md; docs/CHANGELOG.md (este registro)
+- **Descripcion**: se registro el Sprint 3 asignado por el lider de movil con las cinco tareas, su entregable esperado, el estado real conocido de cada frente, la base del repositorio al momento del registro (`PREVIEW` local = `commercycity/PREVIEW` = `5b11ce4`, `VERSION` 1.3.1, divergencia 0/0, arbol con 10 rutas sin versionar) y los riesgos detectados. Se dejo constancia de que la tarea de Jhon Parra llego truncada en el mensaje original ("resumen de t") y no se completa por inferencia. Tambien se registro el contexto movil reportado: Android funciona en el dispositivo del lider y falta probarlo en otros celulares Android, la version Apple esta preparada pero no probada, el APK firmado esta en Releases de GitHub y siguen en curso los ajustes de publicacion y actualizacion.
+- **Motivo**: el lider de movil asigno el sprint de validaciones pendientes y se requiere un registro trazable con evidencia exigida por tarea, para que los pendientes ya abiertos (H-6 proteccion de `PREVIEW`, B-2 BD compartida, primera corrida de CI/Docker, prueba en dispositivo fisico, cifras reales de las suites) queden cubiertos por un responsable y una fecha.
+- **Requerimientos**: N/A (registro de planificacion y seguimiento; no altera comportamiento, API, datos ni el alcance de ningun RF del documento 2026-08-20)
+- **Evidencia**: `git rev-list --left-right --count PREVIEW...HEAD` -> `0 0`; `git log --oneline -3 commercycity/PREVIEW` -> `5b11ce4`; `Get-Content VERSION` -> `1.3.1`; `git status --short` -> 6 modificados y 4 sin seguimiento; `Glob plan/sprint-3*` -> archivo creado y verificado por lectura. Sin corrida de pruebas (cambio solo documental y no hay Node en la sesion).
+- **Estado**: Completado (registro documental; la ejecucion de las cinco tareas queda en curso hasta que cada responsable pegue su evidencia)
+
+---
+
+## 2026-10-24 - DECISION: adopcion incremental de TypeScript documentada, sin implementar
+
+- **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: docs/guias/typescript-adopcion-incremental.md (nuevo); docs/MEMORIA_PROYECTO.md; docs/CHANGELOG.md (este registro)
+- **Descripcion**: se documento la decision de NO migrar el proyecto a TypeScript en este ciclo y de adoptar, si el lider lo aprueba, una ruta incremental por niveles. El documento fija la decision, los hechos verificados (no existe tsconfig/jsconfig, typescript no esta instalado, `@types/react` ya presente pero sin uso real, ESLint lintea solo `**/*.{js,jsx}`, backend ESM con arranque directo por node), el motivo de descartar la migracion ahora, la configuracion concreta del nivel 0 y 1 para evaluar costo sin aplicarla, la lista de lo que no se debe hacer (renombrar `.jsx` a `.tsx` en lote, `checkJs` global de entrada, `strict: true`, tocar el backend) y el encuadre SENA como herramienta sin RF y no como funcionalidad. No se instalo ninguna dependencia ni se modifico codigo de producto.
+- **Motivo**: la propuesta de TypeScript llego como recomendacion externa sin RF que la respalde y el proyecto esta en cierre (72 endpoints, 13 routers, 19 tablas, contrato congelado con tres clientes). Se necesitaba una respuesta defendible ante el lider y el instructor que separara "herramienta" de "funcionalidad" y que dejara por escrito que hoy no se puede medir el costo real porque `tsc` nunca se ejecuto.
+- **Requerimientos**: N/A (decision de herramienta, sin RF en el documento 2026-08-20; se agenda como P2 segun la regla de gobernanza)
+- **Evidencia**: busqueda en todo el arbol de `tsconfig*.json` y `jsconfig*.json` -> sin resultados; `backend/package.json` y `frontend/package.json` -> `typescript` ausente en dependencies y devDependencies; `frontend/eslint.config.js` -> `files: ['**/*.{js,jsx}']`; `git check-ignore -v docs/guias/typescript-adopcion-incremental.md` -> gana la excepcion `!docs/guias/**` y el archivo aparece como `??` en `git status`, por lo que si se versiona; sin corrida de pruebas (cambio solo documental y no hay Node instalado en esta sesion).
+- **Estado**: Completado
+
+---
+
+## 2026-10-24 - DOCS: memoria portable del proyecto y alineacion de cifras reales
+
+- **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: AGENTS.md (nuevo); docs/MEMORIA_PROYECTO.md (nuevo, se versiona con excepcion en .gitignore); .gitignore; README.md; apps/README.md; docs/arquitectura.md; docs/guias/despliegue.md; plan/fix-frontend-pendientes-2026-10-15.md; docs/CHANGELOG.md (este registro)
+- **Descripcion**: se creo la memoria portable del proyecto en `docs/MEMORIA_PROYECTO.md` (arquitectura "una sola API, tres clientes", decisiones cerradas RF140/RF141/RF48/RF46/RF47/RF36/RF129/RF105, estado verificado, pendientes y lecciones) y un `AGENTS.md` en la raiz que la declara como punto de entrada para cualquier harness (Trae, Cursor, Copilot, Codex, Claude). Se alinearon las cifras: README.md declara la cobertura real del frontend (41.30 % Lines, 888/2150, medicion 2026-10-15) con la salvedad de que 75.31 % es metrica historica de v8 y que M-27 sigue pendiente; docs/arquitectura.md pasa de 25 archivos/413 pruebas a 37/536; apps/README.md pasa de Electron 35 a Electron 44.7.0. Se agrego la excepcion `!docs/MEMORIA_PROYECTO.md` en `.gitignore` porque la regla `docs/*` dejaba la memoria fuera del versionado y, por tanto, invisible para cualquier otro harness.
+- **Motivo**: la memoria del proyecto vivia solo en el perfil del usuario (`~/.trae/memory/projects/<clave>/project_memory.md`), cuya clave se deriva de la ruta del workspace; otros harness no podian leerla y existian dos claves para el mismo proyecto. Ademas el README presentaba 75.31 % de cobertura frontend sin salvedad, cifra indefendible ante el instructor.
+- **Requerimientos**: N/A (documentacion y memoria; alineacion con las decisiones del documento 2026-08-20 ya registradas, sin cambio de comportamiento)
+- **Evidencia**: `Glob backend/**/__tests__/**/*.js` -> 37 archivos; `apps/escritorio/package.json` -> `"electron": "44.7.0"`; CHANGELOG 1.3.1 (linea de la entrada RELEASE) conserva 536/536 y 97.02 Lines como origen de las cifras; `Grep "## Estado 2026-10-24"` en `~/.trae/memory/projects` -> presente en las dos claves del workspace; sin corrida de pruebas (no hay Node instalado en esta sesion y el cambio es solo documental).
+- **Estado**: Completado
+
+---
+
+
 ## 2026-10-12 - CONFIG: allowlist CORS local habilitada para la app movil en el navegador (backend/.env)
 
 - **Autor**: Daniel Palacios (lider) — rama fix/pendientes-auditoria-2026-10-12

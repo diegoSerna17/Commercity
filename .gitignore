@@ -171,6 +171,10 @@ docs/informes/*
 !docs/guias/**
 !docs/arquitectura.md
 !docs/CHANGELOG.md
+# Excepcion 2026-10-24: memoria portable del proyecto. Se versiona para que
+# cualquier harness (Trae, Cursor, Copilot, Codex, Claude) la lea desde el repo
+# y no desde la clave derivada de la ruta en el perfil del usuario.
+!docs/MEMORIA_PROYECTO.md
 # Excepción 2026-10-11 (M-GIT-1): docs/DRIVE ya esta versionado (315 archivos,
 # 32,5 MB; sus rutas largas rompen el checkout en Windows). Se un-ignora para
 # que su mantenimiento no dependa de `git add -f`.

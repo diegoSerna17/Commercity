@@ -7,7 +7,7 @@
 ```text
 server.js          arranca Express (puerto 3000)
 app.js             pipeline: helmet -> CORS allow-list -> /uploads -> rate limits -> routers -> 404 -> errorHandler
-routes/            13 routers, 72 endpoints (ver docs/api/inventario-endpoints.md)
+routes/            13 routers, 74 endpoints (ver docs/api/inventario-endpoints.md)
 controllers/       logica de negocio + autorizacion por ownership
 controllers/admin/ panel de administracion (rol administrador)
 middleware/        auth (JWT + lista negra) | role (RBAC) | validate (Zod) | error (central) | origin (CSRF A-3)
@@ -15,7 +15,7 @@ schemas/           15 archivos, 40 contratos Zod = fuente de la documentacion Op
 docs/              registry + builder OpenAPI + rutas /api/openapi.json y /api/docs
 config/            db (pool MySQL2), multer (imagenes; el multer de chat se elimino, B-13)
 utils/             response (envoltorio uniforme), finanzas (IVA 90/10), reembolsos, crypto, ids, mailer
-__tests__/         25 archivos, 413 pruebas (vitest + supertest)
+__tests__/         36 archivos unitarios + 2 de integracion, 536 pruebas unitarias (vitest + supertest)
 ```
 
 ## Ciclo de una peticion autenticada
@@ -36,7 +36,7 @@ Peticion
 
 ```text
 schemas/*.schema.js  (.meta/.describe)
-  -> docs/openapi.registry.js  (72 operaciones: metodo, ruta, auth, roles, body/query/params, responses)
+  -> docs/openapi.registry.js  (74 operaciones: metodo, ruta, auth, roles, body/query/params, responses)
   -> docs/openapi.builder.js   (z.toJSONSchema -> OpenAPI 3.1, $defs a components.schemas)
   -> backend/scripts/gen-openapi.mjs  (npm run docs:api -> docs/api/openapi.json, validado, idempotente)
   -> backend/scripts/gen-entidades.mjs (npm run docs:entidades -> docs/api/entidades.md)
@@ -58,7 +58,7 @@ Regla: el esquema Zod es la unica fuente de verdad. Si cambia un contrato, se re
 ## Referencias
 
 - `README.md` — vision, stack, pipeline resumido, multicanal (web/movil/escritorio).
-- `docs/api/inventario-endpoints.md` — verdad terreno de los 72 endpoints.
+- `docs/api/inventario-endpoints.md` — verdad terreno de los 74 endpoints.
 - `docs/api/openapi.json` + `docs/api/entidades.md` — contratos generados.
 - `docs/bd/modelo-datos.md` — las 19 tablas y regla de dinero.
 - `docs/guias/` — contribucion, pruebas, despliegue.
