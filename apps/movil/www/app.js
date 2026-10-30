@@ -1944,10 +1944,7 @@ async function sendChatMessage() {
   if (conAPI) {
     input.value = '';
     try {
-      const fd = new FormData();
-      fd.append('receptor_id', String(currentChatUserId));
-      fd.append('mensaje', val);
-      await api.enviarMensaje(fd);
+      await api.enviarMensaje(Number(currentChatUserId), val);
       await cargarMensajes(currentChatUserId); // la burbuja la pinta el servidor
       return;
     } catch (err) {

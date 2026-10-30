@@ -85,7 +85,7 @@ const api = {
   seguir: (seguido_id) => apiRequest("/api/seguidores", { method: "POST", body: JSON.stringify({ seguido_id }) }),
   dejarSeguir: (id) => apiRequest("/api/seguidores/" + id, { method: "DELETE" }),
   calificarVendedor: (d) => apiRequest("/api/calificaciones/vendedor", { method: "POST", body: JSON.stringify(d) }),
-  enviarMensaje: (fd) => apiRequest("/api/chat", { method: "POST", body: fd, isForm: true }),
+  enviarMensaje: (receptor_id, mensaje) => apiRequest("/api/chat", { method: "POST", body: JSON.stringify({ receptor_id, mensaje }) }),
   conversaciones: () => apiRequest("/api/chat/conversaciones?por_pagina=100"),
   mensajes: (usuarioId) => apiRequest("/api/chat/mensajes/" + usuarioId),
   marcarLeido: (id) => apiRequest("/api/chat/mensajes/" + id + "/leido", { method: "PATCH" }),

@@ -1034,15 +1034,14 @@ async function openChat(name, avatar, img, prod, price, userId) {
 async function sendMsg() {
   const inp = document.getElementById('chat-input');
   const txt = inp.value.trim(); if (!txt) return;
-  // Envío real (multipart; el backend deriva texto/imagen y notifica).
+  // RF105: el chat es solo texto (sin adjuntos); el backend rechaza multipart.
   if (window._chatReceptorId != null) {
     try {
-      const fd = new FormData();
-      fd.append('receptor_id', String(window._chatReceptorId));
-      fd.append('mensaje', txt);
       const fileInput = document.getElementById('chat-archivo');
-      if (fileInput && fileInput.files && fileInput.files[0]) fd.append('archivo', fileInput.files[0]);
-      await api.enviarMensaje(fd);
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        showToast('⚠️ El chat no admite archivos en esta versión');
+      }
+      await api.enviarMensaje(Number(window._chatReceptorId), txt);
     } catch (e) {
       showToast('⚠️ ' + ((e && e.message) || 'No se pudo enviar el mensaje.'));
       if (e && e.status === 401) navigate('login');

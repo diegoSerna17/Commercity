@@ -1,6 +1,14 @@
 # Changelog de Cambios - CommerCity
 
-Registro central de cambios (según regla `documentacion-cambios.md`). Entradas de la mas reciente a la mas antigua.
+## 2026-10-30 - RELEASE 1.3.2: chat JSON en movil y escritorio, cifras alineadas y suite de notificaciones integrada
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: VERSION; backend/package.json y backend/package-lock.json; apps/escritorio/package.json y package-lock.json; apps/movil/package.json, package-lock.json, android/app/build.gradle y ios/App/App.xcodeproj/project.pbxproj; frontend/src/constants/buttons.css e inputs.css (comentario @version); docs/api/openapi.json (regenerado); apps/movil/www/api.js y app.js; apps/escritorio/src/api.js y app.js; apps/movil/README.md; README.md; docs/MEMORIA_PROYECTO.md; docs/arquitectura.md; apps/README.md; docs/guias/despliegue.md; docs/CHANGELOG.md
+- **Descripcion**: bump de version 1.3.1 a 1.3.2. VERSION es la fuente: `node tools/sync-version.mjs` actualizo package.json de backend, escritorio y movil, MARKETING_VERSION (iOS) y versionName (Android). Los lockfiles (solo la version raiz), los comentarios `@version` de frontend y la referencia de README se actualizaron a mano; `npm run docs:api` regenero openapi.json (solo cambia la version). Incluye la correccion del chat (JSON en lugar de multipart, entrada 2026-10-25), la integracion de la suite de notificaciones (entrada 2026-10-29) y la alineacion de cifras: 36 archivos unitarios mas 2 de integracion, 536 pruebas unitarias y 74 operaciones HTTP (73 en routers mas /health).
+- **Motivo**: cerrar el Sprint 3 con una version que contenga los cambios locales que aun no estaban en PREVIEW, y dejar un unico conteo de endpoints y archivos en la documentacion. La regla de version exige el bump en el mismo cambio que toca las apps.
+- **Requerimientos**: RF101 y RF105 (chat interno, solo texto); RF99-RF105 (notificaciones); tareas BE-06 y BE-12 del Sprint 3.
+- **Evidencia**: `cd backend && ALLOW_DESKTOP_ORIGINS=false npm test` -> "Test Files 36 passed (36)" y "Tests 536 passed (536)"; `node tools/verificar-version.mjs 1.3.1` -> solo quedan las referencias historicas al CHANGELOG 1.3.1 en README.md (lineas 3 y 319); `npm run docs:api` -> "openapi.json v1.3.2: 63 paths, 74 operaciones, 40 esquemas". Sin credenciales en la evidencia.
+- **Estado**: Completado en version y documentacion. Quedan sin incrementar por decision de publicacion en tiendas: `versionCode` de Android (33) y `CURRENT_PROJECT_VERSION` de iOS (1). El envio de chat sigue sin verificacion E2E entre dos usuarios.
 
 ---
 
