@@ -2,6 +2,18 @@
 
 Registro central de cambios (según regla `documentacion-cambios.md`). Entradas de la mas reciente a la mas antigua.
 
+## 2026-10-30 - QA: revision de la entrega BE-05 de Jary (pruebas y cobertura)
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: docs/AVANCES/SPRINT 3/JARY/Documentacion BE-05.pdf (revisado, sin cambios; la carpeta esta fuera del repositorio); docs/CHANGELOG.md (este registro)
+- **Descripcion**: se reviso el informe de 4 paginas y 5 imagenes y se contrasto con corridas propias de `npm run test:coverage` en backend y frontend. Se confirman: backend 536/536 pruebas en 36 archivos con statements 96.51 %, funciones 99.57 % y lineas 97.02 % (sobre los umbrales 96/99/97), y frontend 124/124 pruebas en 29 archivos. Observaciones: (1) la cobertura de ramas del backend se reporta como 88.33 % y la corrida da 88.17 % (umbral 88 %); (2) "supero holgadamente los umbrales" no se sostiene, los margenes son de 0.5, 0.2, 0.6 y 0.02 puntos; (3) "unitarias e integracion aisladas" es incorrecto: las 536 son unitarias y las suites de integracion (dinero 5, notificaciones 10) estan excluidas del `npm test`; (4) las cifras del frontend (72.17 / 59.30 / 68.52 / 75.31) no reproducen (hoy 72.48 / 59.3 / 69.11 / 75.65) y el 75.31 coincide con la cifra historica del CHANGELOG 1.3.1; (5) la cobertura del frontend solo cuenta los 39 archivos que cargan las pruebas, de unos 72 archivos fuente, porque `frontend/vite.config.js` no define `coverage.include`; el README documenta 41.30 % reales (888/2150, 2026-10-15) y M-27 sigue abierto, por lo que afirmar que "tres cuartas partes del codigo" estan probadas es incorrecto; (6) lenguaje absoluto ("estabilidad absoluta", "exito absoluto", "blindaje") sin respaldo; (7) faltan commit o rama, version de Node, fecha y hora de la corrida y el comando con `ALLOW_DESKTOP_ORIGINS=false`, necesario porque el caso H6 de CORS falla con la configuracion local (535/536). Las 5 imagenes del informe no se revisaron (lectura de texto en capturas sin autorizacion).
+- **Motivo**: cerrar la verificacion de BE-05 con numeros propios y dejar por escrito que la cobertura del frontend del informe no es comparable con la medicion real del README.
+- **Requerimientos**: N/A (verificacion de calidad; sin cambio de comportamiento). Tarea BE-05 del Sprint 3.
+- **Evidencia**: Node v24.22.1; `ALLOW_DESKTOP_ORIGINS=false npm run test:coverage` en backend -> "Test Files 36 passed (36)", "Tests 536 passed (536)", "All files | 96.51 | 88.17 | 99.57 | 97.02"; `npm run test:coverage` en frontend -> "Test Files 29 passed (29)", "Tests 124 passed (124)", "All files | 72.48 | 59.3 | 69.11 | 75.65"; 39 archivos en el reporte frente a 72 archivos js/jsx fuente sin pruebas; `git status` sin cambios tras las corridas. Sin credenciales en la evidencia.
+- **Estado**: Aprobado con observaciones. Backend validado. Frontend pendiente de correccion del informe: usar la cobertura real o aclarar que cuenta 39 de 72 archivos, corregir ramas del backend, quitar "holgadamente" e "integracion", anadir datos de trazabilidad y moderar el tono.
+
+---
+
 ## 2026-10-30 - RELEASE 1.3.2: chat JSON en movil y escritorio, cifras alineadas y suite de notificaciones integrada
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
