@@ -121,7 +121,7 @@ la salvedad.
     detectado el defecto del chat. Extension registrada como mejora opcional no asignada.
 11. **Cobertura del frontend (alcance)**: `frontend/vite.config.js` no define `coverage.include`, por lo que el reporte cuenta 39 de unos 72 archivos fuente. Si se incluyen todos, la cobertura real del README (41.30 %) queda por debajo del umbral `lines: 70` y el umbral no se cumpliria. Decision pendiente del equipo antes de tocar la configuracion; M-27 sigue abierto.
 12. **PREVIEW en `03d6483`**: pendiente revisar el CI del push y verificar la proteccion de la rama (H-6).
-13. **Sustentacion del backend (2026-10-30)**: material listo en local: presentacion de 13 diapositivas (`docs/CommerCity_Sustentacion_Backend_API.pptx`, ignorada por git), guion con demo y preguntas (`docs/guias/guion-sustentacion-backend.md`), matriz RF (`docs/informes/MATRIZ_RF_ENDPOINTS_2026-10-30.md`) y coleccion Postman de los 74 endpoints (`docs/api/postman/`, generada con `tools/generar-postman.mjs`). Pendiente: ensayo, corrida del runner E2E de 69 pasos contra base de desarrollo y revision visual del `.pptx`.
+13. **Sustentacion del backend (2026-10-30)**: material listo en local: presentacion de 13 diapositivas (`docs/presentaciones/CommerCity_Sustentacion_Backend_API.pptx`, ignorada por git), guion con demo y preguntas (`docs/guias/guion-sustentacion-backend.md`), matriz RF (`docs/informes/MATRIZ_RF_ENDPOINTS_2026-10-30.md`) y coleccion Postman de los 74 endpoints (`docs/api/postman/`, generada con `tools/generar-postman.mjs`). Pendiente: ensayo, corrida del runner E2E de 69 pasos contra base de desarrollo y revision visual del `.pptx`.
 
 ## 7. Lecciones
 
