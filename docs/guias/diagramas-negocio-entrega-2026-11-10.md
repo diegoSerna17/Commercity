@@ -34,6 +34,8 @@ Este documento no modifica el README ni los diagramas existentes. Agrega la vers
 | 17 | Consultas, transacciones y eventos | `README.md:470` | Requiere version de negocio | Es un diagrama tecnico de base de datos. No se propone reemplazo; se excluye de la carpeta de negocio. |
 | 18 | Compra desde el carrito | `docs/informes/FLUJO_UML_EJEMPLO_COMPRA.md:13` | Requiere version de negocio | Expone endpoint, JWT, middleware, transacciones SQL, tablas y formulas. Usar la secuencia 2.4. |
 
+El bloque de texto `README.md:36-48` (pipeline de middlewares) y el de `docs/arquitectura.md:21-33` tampoco son diagramas, pero tienen el mismo detalle tecnico y no van en la carpeta de negocio. Se conservan como anexo tecnico.
+
 ## 2. Diagramas de negocio para la carpeta del 10-nov
 
 Los siguientes diagramas reemplazan, a nivel de negocio, los diagramas tecnicos que no cumplen el criterio. No repiten endpoints, middleware ni nombres de tablas.
