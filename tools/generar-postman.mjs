@@ -94,9 +94,9 @@ const PARAMETROS = {
   "PATCH /api/pedidos/{id}/estado": { id: "pedidoId" },
   "DELETE /api/carrito/{productoId}": { productoId: "productoId" },
   "PATCH /api/carrito/{productoId}": { productoId: "productoId" },
-  "POST /api/historial/compras/{id}/cancelar": { id: "pedidoId" },
-  "PATCH /api/admin/usuarios/{id}/estado": { id: "usuarioTemporalId" },
-  "DELETE /api/admin/usuarios/{id}": { id: "usuarioTemporalId" },
+  "POST /api/historial/compras/{id}/cancelar": { id: "detalleId" },
+  "PATCH /api/admin/usuarios/{id}/estado": { id: "usuarioVendedorId" },
+  "DELETE /api/admin/usuarios/{id}": { id: "usuarioVendedorId" },
   "DELETE /api/admin/productos/{id}": { id: "productoId" },
   "PATCH /api/admin/productos/{id}/restaurar": { id: "productoId" },
   "GET /api/admin/reportes/{id}": { id: "reporteId" },
@@ -106,13 +106,24 @@ const PARAMETROS = {
   "PATCH /api/chat/mensajes/{id}/leido": { id: "mensajeId" },
   "PATCH /api/notificaciones/{id}/leida": { id: "notificacionId" },
   "DELETE /api/notificaciones/{id}": { id: "notificacionId" },
-  "DELETE /api/seguidores/{id}": { id: "seguimientoId" },
+  "DELETE /api/seguidores/{id}": { id: "vendedorId" },
   "GET /api/seguidores/{id}/contadores": { id: "vendedorId" },
 };
 
 // ---------------------------------------------------------------------------
 // 3. Cuerpos con variables (el resto se toma del ejemplo del esquema)
 // ---------------------------------------------------------------------------
+
+// Peticiones que deben viajar con el token del vendedor temporal, no con el
+// del comprador: avanzar estado, marcar leido y gestionar sus productos.
+const TOKENS = {
+  "POST /api/productos": "{{tokenVendedor}}",
+  "GET /api/productos/mis-productos": "{{tokenVendedor}}",
+  "PUT /api/productos/{id}": "{{tokenVendedor}}",
+  "PATCH /api/pedidos/{id}/estado": "{{tokenVendedor}}",
+  "PATCH /api/chat/mensajes/{id}/leido": "{{tokenVendedor}}",
+  "GET /api/usuarios/admin": "{{tokenAdmin}}",
+};
 
 const CUERPOS = {
   "POST /api/usuarios/register": {
@@ -135,6 +146,7 @@ const CUERPOS = {
   "POST /api/chat/": { receptor_id: "{{vendedorId}}", mensaje: "Mensaje de prueba" },
   "POST /api/seguidores/": { seguido_id: "{{vendedorId}}" },
   "PATCH /api/admin/usuarios/{id}/estado": { estado: "activo" },
+  "DELETE /api/usuarios/cuenta": { password: "{{passwordTemporal}}" },
 };
 
 // Campos multipart (los endpoints de archivo no tienen esquema JSON en OpenAPI).
@@ -223,7 +235,7 @@ const CAPTURAS = {
     "const d = b && b.data ? b.data : {};",
     "const lista = Array.isArray(d) ? d : (d.vendedores || d.items || []);",
     "const v = lista[0];",
-    'if (v && v.id) pm.collectionVariables.set("vendedorId", String(v.id));',
+    'if (v && v.id && !pm.collectionVariables.get("vendedorId")) pm.collectionVariables.set("vendedorId", String(v.id));',
   ],
   "POST /api/productos": [
     "const d = b && b.data ? b.data : {};",
@@ -235,7 +247,18 @@ const CAPTURAS = {
     "const lista = Array.isArray(d) ? d : (d.vendedores || []);",
     "const v = lista[0] || {};",
     "const vid = v.vendedor_id || v.id;",
-    'if (vid) pm.collectionVariables.set("vendedorId", String(vid));',
+    'if (vid && !pm.collectionVariables.get("vendedorId")) pm.collectionVariables.set("vendedorId", String(vid));',
+  ],
+  "GET /api/historial/compras": [
+    "const d = b && b.data ? b.data : [];",
+    "const pedidos = Array.isArray(d) ? d : [];",
+    "let detalle = null;",
+    "for (const p of pedidos) {",
+    "  const items = Array.isArray(p.items) ? p.items : [];",
+    "  const pendiente = items.find((i) => i.estado === 'Pendiente');",
+    "  if (pendiente) { detalle = pendiente; break; }",
+    "}",
+    'if (detalle && detalle.detalle_id) pm.collectionVariables.set("detalleId", String(detalle.detalle_id));',
   ],
   "POST /api/pedidos/confirmar-pago": [
     "const d = b && b.data ? b.data : {};",
@@ -350,6 +373,14 @@ const ORDEN_ESPECIAL = {
     "GET /api/tienda/dashboard/stats",
     "GET /api/tienda/validacion",
   ],
+  "10 - Notificaciones": [
+    "GET /api/notificaciones/",
+    "GET /api/notificaciones/no-leidas",
+    "PATCH /api/notificaciones/leidas",
+    "PATCH /api/notificaciones/{id}/leida",
+    "DELETE /api/notificaciones/{id}",
+    "DELETE /api/notificaciones/",
+  ],
   "13 - Admin": [
     "GET /api/admin/stats",
     "GET /api/admin/usuarios",
@@ -358,11 +389,11 @@ const ORDEN_ESPECIAL = {
     "GET /api/admin/busqueda",
     "GET /api/admin/reportes/{id}",
     "GET /api/usuarios/admin",
-    "PATCH /api/admin/productos/{id}/restaurar",
     "PATCH /api/admin/reportes/{id}/resolver",
     "PATCH /api/admin/usuarios/{id}/estado",
     "DELETE /api/admin/reportes/{id}",
     "DELETE /api/admin/productos/{id}",
+    "PATCH /api/admin/productos/{id}/restaurar",
     "DELETE /api/admin/usuarios/{id}",
   ],
 };
@@ -471,20 +502,28 @@ function construirRequest(ruta, metodo, operacion) {
 
   const esAdmin = ruta.startsWith("/api/admin");
   const conSeguridad = Array.isArray(operacion.security) && operacion.security.length > 0;
-  if (esAdmin) {
+  if (TOKENS[clave]) {
+    request.auth = { type: "bearer", bearer: [{ key: "token", value: TOKENS[clave], type: "string" }] };
+  } else if (esAdmin) {
     request.auth = { type: "bearer", bearer: [{ key: "token", value: "{{tokenAdmin}}", type: "string" }] };
   } else if (!conSeguridad) {
     request.auth = { type: "noauth" };
   }
 
   const contenido = operacion.requestBody?.content || {};
-  if (contenido["application/json"]) {
-    const esquema = contenido["application/json"].schema || {};
+  if (
+    contenido["application/json"] ||
+    (CUERPOS[clave] && !contenido["multipart/form-data"] && !MULTIPART[clave])
+  ) {
+    const esquema = contenido["application/json"]?.schema || {};
     const ejemplo = CUERPOS[clave] || ejemploDesdeEsquema(esquema) || {};
     request.header.push({ key: "Content-Type", value: "application/json" });
     request.body = {
       mode: "raw",
-      raw: JSON.stringify(ejemplo, null, 2),
+      raw: JSON.stringify(ejemplo, null, 2).replace(
+        /"\{\{(pedidoId|vendedorId|productoId|usuarioVendedorId|detalleId|notificacionId|mensajeId|seguimientoId|reporteId)\}\}"/g,
+        "{{$1}}",
+      ),
       options: { raw: { language: "json" } },
     };
   } else if (contenido["multipart/form-data"] || MULTIPART[clave]) {
@@ -530,17 +569,24 @@ function construirRequest(ruta, metodo, operacion) {
 // 7. Requests hechos a mano (login admin, docs y negativos)
 // ---------------------------------------------------------------------------
 
-function requestSimple({ nombre, metodo, ruta, auth, cuerpo, codigo, pruebas, descripcion }) {
+function requestSimple({ nombre, metodo, ruta, auth, cuerpo, codigo, pruebas, descripcion, baseUrl }) {
+  const host = baseUrl || "{{baseUrl}}";
   const url = {
-    raw: `{{baseUrl}}${ruta}`,
-    host: ["{{baseUrl}}"],
+    raw: `${host}${ruta}`,
+    host: [host],
     path: ruta.split("/").filter(Boolean),
   };
   const request = { method: metodo, header: [], url };
   if (auth === "admin") {
     request.auth = { type: "bearer", bearer: [{ key: "token", value: "{{tokenAdmin}}", type: "string" }] };
+  } else if (auth === "vendedor") {
+    request.auth = { type: "bearer", bearer: [{ key: "token", value: "{{tokenVendedor}}", type: "string" }] };
+  } else if (auth === "tercero") {
+    request.auth = { type: "bearer", bearer: [{ key: "token", value: "{{tokenTercero}}", type: "string" }] };
   } else if (auth === "comprador") {
     request.auth = { type: "bearer", bearer: [{ key: "token", value: "{{tokenComprador}}", type: "string" }] };
+  } else if (auth === "heredada") {
+    // sin auth explicita: hereda el Bearer de la coleccion (usuario A)
   } else {
     request.auth = { type: "noauth" };
   }
@@ -565,7 +611,7 @@ function itemLoginAdmin() {
     cuerpo: { email: "{{adminEmail}}", password: "{{adminPassword}}" },
     codigo: 200,
     descripcion:
-      "Helper para la carpeta Admin. Completar adminEmail y adminPassword en el entorno; " +
+      "Helper al inicio de la carpeta Admin. Completar adminEmail y adminPassword en el entorno; " +
       "la coleccion NO incluye credenciales reales. Si no se completa, la carpeta 13 fallara con 401.",
     pruebas: [
       'pm.test("HTTP 200", function () { pm.response.to.have.status(200); });',
@@ -576,6 +622,266 @@ function itemLoginAdmin() {
       "} else {",
       '  pm.test("login de administrador pendiente de configurar", function () { pm.expect.fail("Complete adminEmail y adminPassword en el entorno"); });',
       "}",
+    ],
+  });
+}
+
+function itemRegistroVendedor() {
+  const item = requestSimple({
+    nombre: "POST /api/usuarios/register (vendedor)",
+    metodo: "POST",
+    ruta: "/api/usuarios/register",
+    auth: "none",
+    cuerpo: {
+      email: "{{emailVendedor}}",
+      password: "{{passwordVendedor}}",
+      nombre_completo: "Vendedor temporal QA",
+    },
+    codigo: 201,
+    descripcion:
+      "Crea el vendedor temporal que publica el producto comprado en la carpeta 05. " +
+      "No usa cuentas del seed ni credenciales reales.",
+    pruebas: [
+      'pm.test("HTTP 201", function () { pm.response.to.have.status(201); });',
+      "const b = pm.response.json();",
+      'pm.test("success true", function () { pm.expect(b.success).to.equal(true); });',
+    ],
+  });
+  item.event.unshift({
+    listen: "prerequest",
+    script: {
+      type: "text/javascript",
+      exec: [
+        'pm.collectionVariables.set("emailVendedor", "qa.v" + Date.now() + "@ejemplo.com");',
+        'const clave = pm.collectionVariables.get("passwordVendedor") || pm.environment.get("passwordVendedor");',
+        "if (!clave) {",
+        '  pm.collectionVariables.set("passwordVendedor", "Qv" + Date.now() + "!");',
+        "}",
+      ],
+    },
+  });
+  return item;
+}
+
+function itemLoginVendedor() {
+  return requestSimple({
+    nombre: "POST /api/usuarios/login (vendedor)",
+    metodo: "POST",
+    ruta: "/api/usuarios/login",
+    auth: "none",
+    cuerpo: { email: "{{emailVendedor}}", password: "{{passwordVendedor}}" },
+    codigo: 200,
+    descripcion:
+      "Guarda tokenVendedor y vendedorId. Es el dueno del producto que compra el usuario A, " +
+      "por eso es quien avanza el estado y marca el mensaje como leido.",
+    pruebas: [
+      'pm.test("HTTP 200", function () { pm.response.to.have.status(200); });',
+      "const b = pm.response.json();",
+      "if (b.success && b.data && b.data.token) {",
+      '  pm.collectionVariables.set("tokenVendedor", b.data.token);',
+      "  const u = b.data.user || {};",
+      "  if (u.id) {",
+      '    pm.collectionVariables.set("usuarioVendedorId", String(u.id));',
+      '    pm.collectionVariables.set("vendedorId", String(u.id));',
+      "  }",
+      '  pm.test("token de vendedor capturado", function () { pm.expect(b.data.token).to.be.a("string"); });',
+      "} else {",
+      '  pm.test("login de vendedor", function () { pm.expect.fail("No se obtuvo token del vendedor temporal"); });',
+      "}",
+    ],
+  });
+}
+
+function itemRolVendedor() {
+  return requestSimple({
+    nombre: "PATCH /api/usuarios/me/rol (vendedor)",
+    metodo: "PATCH",
+    ruta: "/api/usuarios/me/rol",
+    auth: "vendedor",
+    cuerpo: { rol: "vendedor" },
+    codigo: 200,
+    descripcion: "Habilita al vendedor temporal para publicar y gestionar su producto.",
+    pruebas: [
+      'pm.test("HTTP 200", function () { pm.response.to.have.status(200); });',
+      "const b = pm.response.json();",
+      'pm.test("success true", function () { pm.expect(b.success).to.equal(true); });',
+    ],
+  });
+}
+
+function itemReagregarCarrito() {
+  return requestSimple({
+    nombre: "POST /api/carrito/ (re-agregar para el checkout)",
+    metodo: "POST",
+    ruta: "/api/carrito/",
+    auth: "heredada",
+    cuerpo: { producto_id: "{{productoId}}", cantidad: 1 },
+    codigo: 201,
+    descripcion:
+      "Vuelve a dejar un articulo en el carrito despues de probar DELETE, para que la " +
+      "carpeta 05 pueda confirmar el pago. Es un paso de apoyo, no una operacion nueva.",
+    pruebas: [
+      'pm.test("HTTP 201", function () { pm.response.to.have.status(201); });',
+      "const b = pm.response.json();",
+      'pm.test("success true", function () { pm.expect(b.success).to.equal(true); });',
+    ],
+  });
+}
+
+function itemEstadoEntregado() {
+  return requestSimple({
+    nombre: "PATCH /api/pedidos/{id}/estado (entregado)",
+    metodo: "PATCH",
+    ruta: "/api/pedidos/{{pedidoId}}/estado",
+    auth: "vendedor",
+    cuerpo: { estado: "Entregado" },
+    codigo: 200,
+    descripcion:
+      "Segundo avance del vendedor (En camino -> Entregado). Sin este paso la calificacion " +
+      "de la carpeta 12 responde 400 porque la linea no esta entregada.",
+    pruebas: [
+      'pm.test("HTTP 200", function () { pm.response.to.have.status(200); });',
+      "const b = pm.response.json();",
+      'pm.test("success true", function () { pm.expect(b.success).to.equal(true); });',
+    ],
+  });
+}
+
+function itemLoginComprador(nombre) {
+  return requestSimple({
+    nombre,
+    metodo: "POST",
+    ruta: "/api/usuarios/login",
+    auth: "none",
+    cuerpo: { email: "{{emailTemporal}}", password: "{{passwordTemporal}}" },
+    codigo: 200,
+    descripcion:
+      "Renueva el token del comprador despues de cerrar sesion. Necesario porque logout y " +
+      "logout-todas revocan el token anterior.",
+    pruebas: [
+      'pm.test("HTTP 200", function () { pm.response.to.have.status(200); });',
+      "const b = pm.response.json();",
+      "if (b.success && b.data && b.data.token) {",
+      '  pm.collectionVariables.set("token", b.data.token);',
+      '  pm.collectionVariables.set("tokenComprador", b.data.token);',
+      '  pm.test("token renovado", function () { pm.expect(b.data.token).to.be.a("string"); });',
+      "} else {",
+      '  pm.test("login del comprador", function () { pm.expect.fail("No se obtuvo token"); });',
+      "}",
+    ],
+  });
+}
+
+function itemCheckout2() {
+  return requestSimple({
+    nombre: "POST /api/pedidos/confirmar-pago (segundo pedido)",
+    metodo: "POST",
+    ruta: "/api/pedidos/confirmar-pago",
+    auth: "heredada",
+    cuerpo: { direccion_envio: "Calle 10 #20-30, Medellin", metodo_pago: "transferencia" },
+    codigo: 201,
+    descripcion:
+      "Crea un segundo pedido en estado Pendiente para probar la cancelacion. No sobrescribe " +
+      "pedidoId: el primero se usa en la calificacion.",
+    pruebas: [
+      'pm.test("HTTP 201", function () { pm.response.to.have.status(201); });',
+      "const b = pm.response.json();",
+      'pm.test("success true", function () { pm.expect(b.success).to.equal(true); });',
+    ],
+  });
+}
+
+function itemAgregarCarrito2() {
+  return requestSimple({
+    nombre: "POST /api/carrito/ (articulo para el segundo pedido)",
+    metodo: "POST",
+    ruta: "/api/carrito/",
+    auth: "heredada",
+    cuerpo: { producto_id: "{{productoId}}", cantidad: 1 },
+    codigo: 201,
+    descripcion:
+      "Deja un articulo en el carrito para crear el segundo pedido y probar la cancelacion por linea.",
+    pruebas: [
+      'pm.test("HTTP 201", function () { pm.response.to.have.status(201); });',
+      "const b = pm.response.json();",
+      'pm.test("success true", function () { pm.expect(b.success).to.equal(true); });',
+    ],
+  });
+}
+
+function itemRegistroTercero() {
+  const item = requestSimple({
+    nombre: "POST /api/usuarios/register (tercero)",
+    metodo: "POST",
+    ruta: "/api/usuarios/register",
+    auth: "none",
+    cuerpo: {
+      email: "{{emailTercero}}",
+      password: "{{passwordTercero}}",
+      nombre_completo: "Tercero temporal QA",
+    },
+    codigo: 201,
+    descripcion:
+      "Tercer usuario temporal, usado solo para probar logout al final. Evita el choque de " +
+      "dos logins en el mismo segundo despues de revocar el token.",
+    pruebas: [
+      'pm.test("HTTP 201", function () { pm.response.to.have.status(201); });',
+      "const b = pm.response.json();",
+      'pm.test("success true", function () { pm.expect(b.success).to.equal(true); });',
+    ],
+  });
+  item.event.unshift({
+    listen: "prerequest",
+    script: {
+      type: "text/javascript",
+      exec: [
+        'pm.collectionVariables.set("emailTercero", "qa.c" + Date.now() + "@ejemplo.com");',
+        'const clave = pm.collectionVariables.get("passwordTercero") || pm.environment.get("passwordTercero");',
+        "if (!clave) {",
+        '  pm.collectionVariables.set("passwordTercero", "Qc" + Date.now() + "!");',
+        "}",
+      ],
+    },
+  });
+  return item;
+}
+
+function itemLoginTercero() {
+  return requestSimple({
+    nombre: "POST /api/usuarios/login (tercero)",
+    metodo: "POST",
+    ruta: "/api/usuarios/login",
+    auth: "none",
+    cuerpo: { email: "{{emailTercero}}", password: "{{passwordTercero}}" },
+    codigo: 200,
+    descripcion: "Guarda tokenTercero para el logout del cierre.",
+    pruebas: [
+      'pm.test("HTTP 200", function () { pm.response.to.have.status(200); });',
+      "const b = pm.response.json();",
+      "if (b.success && b.data && b.data.token) {",
+      '  pm.collectionVariables.set("tokenTercero", b.data.token);',
+      '  pm.test("token tercero capturado", function () { pm.expect(b.data.token).to.be.a("string"); });',
+      "} else {",
+      '  pm.test("login tercero", function () { pm.expect.fail("No se obtuvo token"); });',
+      "}",
+    ],
+  });
+}
+
+function itemLogoutTercero() {
+  return requestSimple({
+    nombre: "POST /api/usuarios/logout",
+    metodo: "POST",
+    ruta: "/api/usuarios/logout",
+    auth: "tercero",
+    codigo: 200,
+    descripcion:
+      "Prueba logout con una sesion distinta a la del comprador. Cierra el ciclo de sesiones " +
+      "sin reutilizar un token revocado.",
+    pruebas: [
+      'pm.test("HTTP 200", function () { pm.response.to.have.status(200); });',
+      "const b = pm.response.json();",
+      'pm.test("success true", function () { pm.expect(b.success).to.equal(true); });',
     ],
   });
 }
@@ -641,8 +947,11 @@ function itemsNegativos() {
       metodo: "GET",
       ruta: "/api/usuarios/me",
       auth: "none",
+      baseUrl: "{{baseUrlAlt}}",
       codigo: 401,
-      descripcion: "Ruta protegida sin cabecera Authorization: el middleware responde 401 UNAUTHORIZED.",
+      descripcion:
+        "Ruta protegida sin cabecera Authorization. Usa 127.0.0.1 en lugar de localhost " +
+        "para que Postman no envie la cookie de sesion que dejo el login.",
       pruebas: pruebaError(401, "UNAUTHORIZED"),
     }),
     requestSimple({
@@ -719,6 +1028,8 @@ for (const [nombre, descripcion] of ETAPAS) {
     items = ordenar(porEtapa.get(nombre) || [], nombre).map((op) =>
       construirRequest(op.ruta, op.metodo, op.operacion),
     );
+    items.push(itemRegistroVendedor(), itemLoginVendedor(), itemRolVendedor());
+    items.push(itemRegistroTercero(), itemLoginTercero());
   } else if (nombre === "01 - Casos negativos") {
     items = itemsNegativos();
   } else if (nombre === "14 - Base y documentacion") {
@@ -726,13 +1037,38 @@ for (const [nombre, descripcion] of ETAPAS) {
       .filter((op) => !["/", "/health"].includes(op.ruta))
       .map((op) => construirRequest(op.ruta, op.metodo, op.operacion));
     items = [itemRaiz(), itemHealth(), itemDocs(), ...resto];
+  } else if (nombre === "06 - Historial") {
+    const gen = ordenar(porEtapa.get(nombre) || [], nombre).map((op) =>
+      construirRequest(op.ruta, op.metodo, op.operacion),
+    );
+    const porNombre = new Map(gen.map((i) => [i.name, i]));
+    items = [
+      itemAgregarCarrito2(),
+      itemCheckout2(),
+      porNombre.get("GET /api/historial/compras"),
+      porNombre.get("POST /api/historial/compras/{id}/cancelar"),
+    ].filter(Boolean);
+  } else if (nombre === "99 - Cierre y limpieza") {
+    const gen = ordenar(porEtapa.get(nombre) || [], nombre).map((op) =>
+      construirRequest(op.ruta, op.metodo, op.operacion),
+    );
+    const porNombre = new Map(gen.map((i) => [i.name, i]));
+    items = [
+      porNombre.get("POST /api/usuarios/logout-todas"),
+      itemLoginComprador("POST /api/usuarios/login (renovar tras logout-todas)"),
+      porNombre.get("DELETE /api/usuarios/cuenta"),
+      itemLogoutTercero(),
+    ].filter(Boolean);
   } else {
     items = ordenar(porEtapa.get(nombre) || [], nombre).map((op) =>
       construirRequest(op.ruta, op.metodo, op.operacion),
     );
+    // Pasos de apoyo que no son operaciones nuevas del OpenAPI.
+    if (nombre === "04 - Carrito") items.push(itemReagregarCarrito());
+    if (nombre === "05 - Pedidos") items.push(itemEstadoEntregado());
     // El login de administrador es opcional y requiere credenciales reales:
-    // no debe correr en el flujo principal ni en el lote automatico.
-    if (nombre === "98 - No ejecutar en lote") items.push(itemLoginAdmin());
+    // va al inicio de Admin para que la carpeta sea ejecutable si se completa.
+    if (nombre === "13 - Admin") items.unshift(itemLoginAdmin());
   }
 
   if (items.length === 0) continue;
@@ -749,21 +1085,34 @@ const coleccion = {
       `Coleccion generada desde docs/api/openapi.json (v${spec.info?.version || "?"}).\n\n` +
       `Contiene ${totalOperaciones} operaciones documentadas, el visor de documentacion, ` +
       `un login de administrador opcional y 5 casos negativos: ${totalRequests} requests en total.\n\n` +
-      "Orden de ejecucion: 00 Preparacion crea un usuario temporal y guarda su token; las carpetas " +
-      "02 a 13 trabajan sobre ese usuario y sobre lo que la propia coleccion crea; 99 cierra sesiones " +
-      "y desactiva la cuenta temporal. La carpeta 98 agrupa lo que NO debe correr en lote.\n\n" +
-      "Requisito: backend corriendo contra una base de DESARROLLO (nunca la compartida) y las variables " +
-      "del entorno CommerCity local completadas. La clave de administrador no viene incluida y la del usuario temporal se genera en el pre-request del registro.",
+      "Orden de ejecucion: 00 Preparacion crea un comprador temporal (A) y un vendedor temporal (B), " +
+      "guarda ambos tokens y habilita los roles; 02 a 13 trabajan sobre lo que la propia coleccion crea; " +
+      "99 cierra sesiones y desactiva la cuenta de A. Las carpetas 04 y 05 incluyen pasos de apoyo " +
+      "(re-agregar carrito y segundo avance de estado) para que el flujo sea ejecutable. La carpeta 98 " +
+      "agrupa lo que NO debe correr en lote.\n\n" +
+      "Requisito: backend corriendo contra una base de DESARROLLO (nunca la compartida). Las claves de " +
+      "A y B se generan en los pre-request; la de administrador no viene incluida y se completa " +
+      "en el inicio de la carpeta 13. Los requests multipart (crear o editar producto y crear reporte) " +
+      "piden seleccionar un archivo de imagen.",
     schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
   },
   auth: { type: "bearer", bearer: [{ key: "token", value: "{{token}}", type: "string" }] },
   variable: [
     { key: "baseUrl", value: "http://localhost:3000" },
+    { key: "baseUrlAlt", value: "http://127.0.0.1:3000" },
     { key: "token", value: "" },
     { key: "tokenComprador", value: "" },
     { key: "tokenAdmin", value: "" },
     { key: "emailTemporal", value: "" },
     { key: "passwordTemporal", value: "" },
+    { key: "emailVendedor", value: "" },
+    { key: "passwordVendedor", value: "" },
+    { key: "tokenVendedor", value: "" },
+    { key: "usuarioVendedorId", value: "" },
+    { key: "emailTercero", value: "" },
+    { key: "passwordTercero", value: "" },
+    { key: "tokenTercero", value: "" },
+    { key: "detalleId", value: "" },
     { key: "adminEmail", value: "" },
     { key: "adminPassword", value: "" },
     { key: "productoId", value: "" },
@@ -783,11 +1132,20 @@ const entorno = {
   name: "CommerCity local",
   values: [
     { key: "baseUrl", value: "http://localhost:3000", type: "default", enabled: true },
+    { key: "baseUrlAlt", value: "http://127.0.0.1:3000", type: "default", enabled: true },
     { key: "token", value: "", type: "secret", enabled: true },
     { key: "tokenComprador", value: "", type: "secret", enabled: true },
     { key: "tokenAdmin", value: "", type: "secret", enabled: true },
     { key: "emailTemporal", value: "", type: "default", enabled: true },
     { key: "passwordTemporal", value: "", type: "secret", enabled: true },
+    { key: "emailVendedor", value: "", type: "default", enabled: true },
+    { key: "passwordVendedor", value: "", type: "secret", enabled: true },
+    { key: "tokenVendedor", value: "", type: "secret", enabled: true },
+    { key: "usuarioVendedorId", value: "", type: "default", enabled: true },
+    { key: "emailTercero", value: "", type: "default", enabled: true },
+    { key: "passwordTercero", value: "", type: "secret", enabled: true },
+    { key: "tokenTercero", value: "", type: "secret", enabled: true },
+    { key: "detalleId", value: "", type: "default", enabled: true },
     { key: "adminEmail", value: "", type: "default", enabled: true },
     { key: "adminPassword", value: "", type: "secret", enabled: true },
     { key: "productoId", value: "", type: "default", enabled: true },

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "CommerCity API - Backend y API REST",
-    "description": "Coleccion generada desde docs/api/openapi.json (v1.3.2).\n\nContiene 74 operaciones documentadas, el visor de documentacion, un login de administrador opcional y 5 casos negativos: 81 requests en total.\n\nOrden de ejecucion: 00 Preparacion crea un usuario temporal y guarda su token; las carpetas 02 a 13 trabajan sobre ese usuario y sobre lo que la propia coleccion crea; 99 cierra sesiones y desactiva la cuenta temporal. La carpeta 98 agrupa lo que NO debe correr en lote.\n\nRequisito: backend corriendo contra una base de DESARROLLO (nunca la compartida) y las variables del entorno CommerCity local completadas. La clave de administrador no viene incluida y la del usuario temporal se genera en el pre-request del registro.",
+    "description": "Coleccion generada desde docs/api/openapi.json (v1.3.2).\n\nContiene 74 operaciones documentadas, el visor de documentacion, un login de administrador opcional y 5 casos negativos: 91 requests en total.\n\nOrden de ejecucion: 00 Preparacion crea un comprador temporal (A) y un vendedor temporal (B), guarda ambos tokens y habilita los roles; 02 a 13 trabajan sobre lo que la propia coleccion crea; 99 cierra sesiones y desactiva la cuenta de A. Las carpetas 04 y 05 incluyen pasos de apoyo (re-agregar carrito y segundo avance de estado) para que el flujo sea ejecutable. La carpeta 98 agrupa lo que NO debe correr en lote.\n\nRequisito: backend corriendo contra una base de DESARROLLO (nunca la compartida). Las claves de A y B se generan en los pre-request; la de administrador no viene incluida y se completa en el inicio de la carpeta 13. Los requests multipart (crear o editar producto y crear reporte) piden seleccionar un archivo de imagen.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -18,6 +18,10 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:3000"
+    },
+    {
+      "key": "baseUrlAlt",
+      "value": "http://127.0.0.1:3000"
     },
     {
       "key": "token",
@@ -37,6 +41,38 @@
     },
     {
       "key": "passwordTemporal",
+      "value": ""
+    },
+    {
+      "key": "emailVendedor",
+      "value": ""
+    },
+    {
+      "key": "passwordVendedor",
+      "value": ""
+    },
+    {
+      "key": "tokenVendedor",
+      "value": ""
+    },
+    {
+      "key": "usuarioVendedorId",
+      "value": ""
+    },
+    {
+      "key": "emailTercero",
+      "value": ""
+    },
+    {
+      "key": "passwordTercero",
+      "value": ""
+    },
+    {
+      "key": "tokenTercero",
+      "value": ""
+    },
+    {
+      "key": "detalleId",
       "value": ""
     },
     {
@@ -287,6 +323,300 @@
               }
             }
           ]
+        },
+        {
+          "name": "POST /api/usuarios/register (vendedor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "register"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailVendedor}}\",\n  \"password\": \"{{passwordVendedor}}\",\n  \"nombre_completo\": \"Vendedor temporal QA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Crea el vendedor temporal que publica el producto comprado en la carpeta 05. No usa cuentas del seed ni credenciales reales."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"emailVendedor\", \"qa.v\" + Date.now() + \"@ejemplo.com\");",
+                  "const clave = pm.collectionVariables.get(\"passwordVendedor\") || pm.environment.get(\"passwordVendedor\");",
+                  "if (!clave) {",
+                  "  pm.collectionVariables.set(\"passwordVendedor\", \"Qv\" + Date.now() + \"!\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "const b = pm.response.json();",
+                  "pm.test(\"success true\", function () { pm.expect(b.success).to.equal(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/usuarios/login (vendedor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailVendedor}}\",\n  \"password\": \"{{passwordVendedor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Guarda tokenVendedor y vendedorId. Es el dueno del producto que compra el usuario A, por eso es quien avanza el estado y marca el mensaje como leido."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "if (b.success && b.data && b.data.token) {",
+                  "  pm.collectionVariables.set(\"tokenVendedor\", b.data.token);",
+                  "  const u = b.data.user || {};",
+                  "  if (u.id) {",
+                  "    pm.collectionVariables.set(\"usuarioVendedorId\", String(u.id));",
+                  "    pm.collectionVariables.set(\"vendedorId\", String(u.id));",
+                  "  }",
+                  "  pm.test(\"token de vendedor capturado\", function () { pm.expect(b.data.token).to.be.a(\"string\"); });",
+                  "} else {",
+                  "  pm.test(\"login de vendedor\", function () { pm.expect.fail(\"No se obtuvo token del vendedor temporal\"); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /api/usuarios/me/rol (vendedor)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/me/rol",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "me",
+                "rol"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenVendedor}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rol\": \"vendedor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Habilita al vendedor temporal para publicar y gestionar su producto."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test(\"success true\", function () { pm.expect(b.success).to.equal(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/usuarios/register (tercero)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "register"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailTercero}}\",\n  \"password\": \"{{passwordTercero}}\",\n  \"nombre_completo\": \"Tercero temporal QA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Tercer usuario temporal, usado solo para probar logout al final. Evita el choque de dos logins en el mismo segundo despues de revocar el token."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"emailTercero\", \"qa.c\" + Date.now() + \"@ejemplo.com\");",
+                  "const clave = pm.collectionVariables.get(\"passwordTercero\") || pm.environment.get(\"passwordTercero\");",
+                  "if (!clave) {",
+                  "  pm.collectionVariables.set(\"passwordTercero\", \"Qc\" + Date.now() + \"!\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "const b = pm.response.json();",
+                  "pm.test(\"success true\", function () { pm.expect(b.success).to.equal(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/usuarios/login (tercero)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailTercero}}\",\n  \"password\": \"{{passwordTercero}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Guarda tokenTercero para el logout del cierre."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "if (b.success && b.data && b.data.token) {",
+                  "  pm.collectionVariables.set(\"tokenTercero\", b.data.token);",
+                  "  pm.test(\"token tercero capturado\", function () { pm.expect(b.data.token).to.be.a(\"string\"); });",
+                  "} else {",
+                  "  pm.test(\"login tercero\", function () { pm.expect.fail(\"No se obtuvo token\"); });",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -300,9 +630,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/usuarios/me",
+              "raw": "{{baseUrlAlt}}/api/usuarios/me",
               "host": [
-                "{{baseUrl}}"
+                "{{baseUrlAlt}}"
               ],
               "path": [
                 "api",
@@ -313,7 +643,7 @@
             "auth": {
               "type": "noauth"
             },
-            "description": "Ruta protegida sin cabecera Authorization: el middleware responde 401 UNAUTHORIZED."
+            "description": "Ruta protegida sin cabecera Authorization. Usa 127.0.0.1 en lugar de localhost para que Postman no envie la cookie de sesion que dejo el login."
           },
           "event": [
             {
@@ -1027,6 +1357,16 @@
                 "mis-productos"
               ]
             },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenVendedor}}",
+                  "type": "string"
+                }
+              ]
+            },
             "description": "Listar mis productos (vendedor)\n\nProductos del vendedor autenticado (el ID sale del JWT, Fix 4.1).\n\nCodigo esperado: 200.\n\nRequiere {{token}} (JWT)."
           },
           "event": [
@@ -1098,7 +1438,7 @@
                   "const d = b && b.data ? b.data : {};",
                   "const lista = Array.isArray(d) ? d : (d.vendedores || d.items || []);",
                   "const v = lista[0];",
-                  "if (v && v.id) pm.collectionVariables.set(\"vendedorId\", String(v.id));"
+                  "if (v && v.id && !pm.collectionVariables.get(\"vendedorId\")) pm.collectionVariables.set(\"vendedorId\", String(v.id));"
                 ]
               }
             }
@@ -1117,6 +1457,16 @@
               "path": [
                 "api",
                 "productos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenVendedor}}",
+                  "type": "string"
+                }
               ]
             },
             "body": {
@@ -1206,6 +1556,16 @@
                 "{{productoId}}"
               ]
             },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenVendedor}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "formdata",
               "formdata": [
@@ -1281,7 +1641,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"cantidad\": 1\n}",
+              "raw": "{\n  \"producto_id\": {{productoId}},\n  \"cantidad\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1357,7 +1717,7 @@
                   "const lista = Array.isArray(d) ? d : (d.vendedores || []);",
                   "const v = lista[0] || {};",
                   "const vid = v.vendedor_id || v.id;",
-                  "if (vid) pm.collectionVariables.set(\"vendedorId\", String(vid));"
+                  "if (vid && !pm.collectionVariables.get(\"vendedorId\")) pm.collectionVariables.set(\"vendedorId\", String(vid));"
                 ]
               }
             }
@@ -1458,6 +1818,51 @@
                   "    pm.expect(b.error).to.have.property(\"code\");",
                   "  }",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/carrito/ (re-agregar para el checkout)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/carrito/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "carrito"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Vuelve a dejar un articulo en el carrito despues de probar DELETE, para que la carpeta 05 pueda confirmar el pago. Es un paso de apoyo, no una operacion nueva."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "const b = pm.response.json();",
+                  "pm.test(\"success true\", function () { pm.expect(b.success).to.equal(true); });"
                 ]
               }
             }
@@ -1596,6 +2001,16 @@
                 "estado"
               ]
             },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenVendedor}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"estado\": \"En camino\"\n}",
@@ -1631,6 +2046,63 @@
               }
             }
           ]
+        },
+        {
+          "name": "PATCH /api/pedidos/{id}/estado (entregado)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pedidos/{{pedidoId}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pedidos",
+                "{{pedidoId}}",
+                "estado"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenVendedor}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"Entregado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Segundo avance del vendedor (En camino -> Entregado). Sin este paso la calificacion de la carpeta 12 responde 400 porque la linea no esta entregada."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test(\"success true\", function () { pm.expect(b.success).to.equal(true); });"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -1638,6 +2110,97 @@
       "name": "06 - Historial",
       "description": "Compras del comprador y cancelacion con restitucion de stock.",
       "item": [
+        {
+          "name": "POST /api/carrito/ (articulo para el segundo pedido)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/carrito/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "carrito"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto_id\": \"{{productoId}}\",\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Deja un articulo en el carrito para crear el segundo pedido y probar la cancelacion por linea."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "const b = pm.response.json();",
+                  "pm.test(\"success true\", function () { pm.expect(b.success).to.equal(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/pedidos/confirmar-pago (segundo pedido)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pedidos/confirmar-pago",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pedidos",
+                "confirmar-pago"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"direccion_envio\": \"Calle 10 #20-30, Medellin\",\n  \"metodo_pago\": \"transferencia\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Crea un segundo pedido en estado Pendiente para probar la cancelacion. No sobrescribe pedidoId: el primero se usa en la calificacion."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "const b = pm.response.json();",
+                  "pm.test(\"success true\", function () { pm.expect(b.success).to.equal(true); });"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "GET /api/historial/compras",
           "request": {
@@ -1675,7 +2238,17 @@
                   "    pm.expect(b, \"respuesta de error sin objeto error\").to.have.property(\"error\");",
                   "    pm.expect(b.error).to.have.property(\"code\");",
                   "  }",
-                  "});"
+                  "});",
+                  "const b = pm.response.json();",
+                  "const d = b && b.data ? b.data : [];",
+                  "const pedidos = Array.isArray(d) ? d : [];",
+                  "let detalle = null;",
+                  "for (const p of pedidos) {",
+                  "  const items = Array.isArray(p.items) ? p.items : [];",
+                  "  const pendiente = items.find((i) => i.estado === 'Pendiente');",
+                  "  if (pendiente) { detalle = pendiente; break; }",
+                  "}",
+                  "if (detalle && detalle.detalle_id) pm.collectionVariables.set(\"detalleId\", String(detalle.detalle_id));"
                 ]
               }
             }
@@ -1687,7 +2260,7 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/historial/compras/{{pedidoId}}/cancelar",
+              "raw": "{{baseUrl}}/api/historial/compras/{{detalleId}}/cancelar",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1695,7 +2268,7 @@
                 "api",
                 "historial",
                 "compras",
-                "{{pedidoId}}",
+                "{{detalleId}}",
                 "cancelar"
               ]
             },
@@ -2267,7 +2840,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"seguido_id\": \"{{vendedorId}}\"\n}",
+              "raw": "{\n  \"seguido_id\": {{vendedorId}}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2311,14 +2884,14 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/seguidores/{{seguimientoId}}",
+              "raw": "{{baseUrl}}/api/seguidores/{{vendedorId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "seguidores",
-                "{{seguimientoId}}"
+                "{{vendedorId}}"
               ]
             },
             "description": "Dejar de seguir\n\nElimina el seguimiento a un usuario.\n\nCodigo esperado: 200.\n\nRequiere {{token}} (JWT)."
@@ -2463,7 +3036,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"receptor_id\": \"{{vendedorId}}\",\n  \"mensaje\": \"Mensaje de prueba\"\n}",
+              "raw": "{\n  \"receptor_id\": {{vendedorId}},\n  \"mensaje\": \"Mensaje de prueba\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2517,6 +3090,16 @@
                 "mensajes",
                 "{{mensajeId}}",
                 "leido"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenVendedor}}",
+                  "type": "string"
+                }
               ]
             },
             "description": "Marcar mensaje como leido\n\nMarca como leido un mensaje recibido por el autenticado.\n\nCodigo esperado: 200.\n\nRequiere {{token}} (JWT)."
@@ -2643,6 +3226,49 @@
           ]
         },
         {
+          "name": "PATCH /api/notificaciones/leidas",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notificaciones/leidas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notificaciones",
+                "leidas"
+              ]
+            },
+            "description": "Marcar todas como leidas\n\nMarca todas las notificaciones del usuario como leidas.\n\nCodigo esperado: 200.\n\nRequiere {{token}} (JWT)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ESPERADO = 200;",
+                  "pm.test(\"HTTP \" + ESPERADO, function () {",
+                  "  pm.response.to.have.status(ESPERADO);",
+                  "});",
+                  "pm.test(\"contrato { success, data | error }\", function () {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b, \"falta el campo success\").to.have.property(\"success\");",
+                  "  if (b.success === true) {",
+                  "    pm.expect(b, \"respuesta exitosa sin data\").to.have.property(\"data\");",
+                  "  } else {",
+                  "    pm.expect(b, \"respuesta de error sin objeto error\").to.have.property(\"error\");",
+                  "    pm.expect(b.error).to.have.property(\"code\");",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "PATCH /api/notificaciones/{id}/leida",
           "request": {
             "method": "PATCH",
@@ -2687,22 +3313,22 @@
           ]
         },
         {
-          "name": "PATCH /api/notificaciones/leidas",
+          "name": "DELETE /api/notificaciones/{id}",
           "request": {
-            "method": "PATCH",
+            "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/notificaciones/leidas",
+              "raw": "{{baseUrl}}/api/notificaciones/{{notificacionId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "notificaciones",
-                "leidas"
+                "{{notificacionId}}"
               ]
             },
-            "description": "Marcar todas como leidas\n\nMarca todas las notificaciones del usuario como leidas.\n\nCodigo esperado: 200.\n\nRequiere {{token}} (JWT)."
+            "description": "Eliminar una notificacion\n\nElimina una notificacion del usuario.\n\nCodigo esperado: 200.\n\nRequiere {{token}} (JWT)."
           },
           "event": [
             {
@@ -2745,49 +3371,6 @@
               ]
             },
             "description": "Eliminar todas\n\nElimina todas las notificaciones del usuario.\n\nCodigo esperado: 200.\n\nRequiere {{token}} (JWT)."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const ESPERADO = 200;",
-                  "pm.test(\"HTTP \" + ESPERADO, function () {",
-                  "  pm.response.to.have.status(ESPERADO);",
-                  "});",
-                  "pm.test(\"contrato { success, data | error }\", function () {",
-                  "  const b = pm.response.json();",
-                  "  pm.expect(b, \"falta el campo success\").to.have.property(\"success\");",
-                  "  if (b.success === true) {",
-                  "    pm.expect(b, \"respuesta exitosa sin data\").to.have.property(\"data\");",
-                  "  } else {",
-                  "    pm.expect(b, \"respuesta de error sin objeto error\").to.have.property(\"error\");",
-                  "    pm.expect(b.error).to.have.property(\"code\");",
-                  "  }",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "DELETE /api/notificaciones/{id}",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/notificaciones/{{notificacionId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "notificaciones",
-                "{{notificacionId}}"
-              ]
-            },
-            "description": "Eliminar una notificacion\n\nElimina una notificacion del usuario.\n\nCodigo esperado: 200.\n\nRequiere {{token}} (JWT)."
           },
           "event": [
             {
@@ -2920,7 +3503,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"pedido_id\": \"{{pedidoId}}\",\n  \"vendedor_id\": \"{{vendedorId}}\",\n  \"estrellas\": 5,\n  \"comentario\": \"Prueba de sustentacion\"\n}",
+              "raw": "{\n  \"pedido_id\": {{pedidoId}},\n  \"vendedor_id\": {{vendedorId}},\n  \"estrellas\": 5,\n  \"comentario\": \"Prueba de sustentacion\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2960,6 +3543,60 @@
       "name": "13 - Admin",
       "description": "Requiere tokenAdmin. Gestiona solo lo creado por la coleccion.",
       "item": [
+        {
+          "name": "POST /api/usuarios/login (administrador, opcional)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Helper al inicio de la carpeta Admin. Completar adminEmail y adminPassword en el entorno; la coleccion NO incluye credenciales reales. Si no se completa, la carpeta 13 fallara con 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "if (b.success && b.data && b.data.token) {",
+                  "  pm.collectionVariables.set(\"tokenAdmin\", b.data.token);",
+                  "  pm.test(\"token de administrador capturado\", function () { pm.expect(b.data.token).to.be.a(\"string\"); });",
+                  "} else {",
+                  "  pm.test(\"login de administrador pendiente de configurar\", function () { pm.expect.fail(\"Complete adminEmail y adminPassword en el entorno\"); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "GET /api/admin/stats",
           "request": {
@@ -3301,51 +3938,6 @@
                 "admin"
               ]
             },
-            "description": "Datos del panel admin (atajo)\n\nAtajo al panel de administracion; exige rol administrador.\n\nCodigo esperado: 200.\n\nRequiere {{token}} (JWT)."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const ESPERADO = 200;",
-                  "pm.test(\"HTTP \" + ESPERADO, function () {",
-                  "  pm.response.to.have.status(ESPERADO);",
-                  "});",
-                  "pm.test(\"contrato { success, data | error }\", function () {",
-                  "  const b = pm.response.json();",
-                  "  pm.expect(b, \"falta el campo success\").to.have.property(\"success\");",
-                  "  if (b.success === true) {",
-                  "    pm.expect(b, \"respuesta exitosa sin data\").to.have.property(\"data\");",
-                  "  } else {",
-                  "    pm.expect(b, \"respuesta de error sin objeto error\").to.have.property(\"error\");",
-                  "    pm.expect(b.error).to.have.property(\"code\");",
-                  "  }",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "PATCH /api/admin/productos/{id}/restaurar",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/productos/{{productoId}}/restaurar",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "productos",
-                "{{productoId}}",
-                "restaurar"
-              ]
-            },
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3356,7 +3948,7 @@
                 }
               ]
             },
-            "description": "Restaurar producto\n\nLevanta la suspension de un producto.\n\nCodigo esperado: 200.\n\nRequiere {{tokenAdmin}} (rol administrador)."
+            "description": "Datos del panel admin (atajo)\n\nAtajo al panel de administracion; exige rol administrador.\n\nCodigo esperado: 200.\n\nRequiere {{token}} (JWT)."
           },
           "event": [
             {
@@ -3463,7 +4055,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/usuarios/{{usuarioTemporalId}}/estado",
+              "raw": "{{baseUrl}}/api/admin/usuarios/{{usuarioVendedorId}}/estado",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -3471,7 +4063,7 @@
                 "api",
                 "admin",
                 "usuarios",
-                "{{usuarioTemporalId}}",
+                "{{usuarioVendedorId}}",
                 "estado"
               ]
             },
@@ -3630,12 +4222,67 @@
           ]
         },
         {
+          "name": "PATCH /api/admin/productos/{id}/restaurar",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/productos/{{productoId}}/restaurar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "productos",
+                "{{productoId}}",
+                "restaurar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Restaurar producto\n\nLevanta la suspension de un producto.\n\nCodigo esperado: 200.\n\nRequiere {{tokenAdmin}} (rol administrador)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ESPERADO = 200;",
+                  "pm.test(\"HTTP \" + ESPERADO, function () {",
+                  "  pm.response.to.have.status(ESPERADO);",
+                  "});",
+                  "pm.test(\"contrato { success, data | error }\", function () {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b, \"falta el campo success\").to.have.property(\"success\");",
+                  "  if (b.success === true) {",
+                  "    pm.expect(b, \"respuesta exitosa sin data\").to.have.property(\"data\");",
+                  "  } else {",
+                  "    pm.expect(b, \"respuesta de error sin objeto error\").to.have.property(\"error\");",
+                  "    pm.expect(b.error).to.have.property(\"code\");",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "DELETE /api/admin/usuarios/{id}",
           "request": {
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/usuarios/{{usuarioTemporalId}}",
+              "raw": "{{baseUrl}}/api/admin/usuarios/{{usuarioVendedorId}}",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -3643,7 +4290,7 @@
                 "api",
                 "admin",
                 "usuarios",
-                "{{usuarioTemporalId}}"
+                "{{usuarioVendedorId}}"
               ]
             },
             "auth": {
@@ -4092,60 +4739,6 @@
               }
             }
           ]
-        },
-        {
-          "name": "POST /api/usuarios/login (administrador, opcional)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/usuarios/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "usuarios",
-                "login"
-              ]
-            },
-            "auth": {
-              "type": "noauth"
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Helper para la carpeta Admin. Completar adminEmail y adminPassword en el entorno; la coleccion NO incluye credenciales reales. Si no se completa, la carpeta 13 fallara con 401."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
-                  "const b = pm.response.json();",
-                  "if (b.success && b.data && b.data.token) {",
-                  "  pm.collectionVariables.set(\"tokenAdmin\", b.data.token);",
-                  "  pm.test(\"token de administrador capturado\", function () { pm.expect(b.data.token).to.be.a(\"string\"); });",
-                  "} else {",
-                  "  pm.test(\"login de administrador pendiente de configurar\", function () { pm.expect.fail(\"Complete adminEmail y adminPassword en el entorno\"); });",
-                  "}"
-                ]
-              }
-            }
-          ]
         }
       ]
     },
@@ -4153,49 +4746,6 @@
       "name": "99 - Cierre y limpieza",
       "description": "Cierra sesiones y desactiva el usuario temporal. Ejecutar al final.",
       "item": [
-        {
-          "name": "POST /api/usuarios/logout",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/usuarios/logout",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "usuarios",
-                "logout"
-              ]
-            },
-            "description": "Cerrar sesion\n\nRevoca el token actual en la lista negra de la base (RF2). Exige token.\n\nCodigo esperado: 200.\n\nRequiere {{token}} (JWT)."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const ESPERADO = 200;",
-                  "pm.test(\"HTTP \" + ESPERADO, function () {",
-                  "  pm.response.to.have.status(ESPERADO);",
-                  "});",
-                  "pm.test(\"contrato { success, data | error }\", function () {",
-                  "  const b = pm.response.json();",
-                  "  pm.expect(b, \"falta el campo success\").to.have.property(\"success\");",
-                  "  if (b.success === true) {",
-                  "    pm.expect(b, \"respuesta exitosa sin data\").to.have.property(\"data\");",
-                  "  } else {",
-                  "    pm.expect(b, \"respuesta de error sin objeto error\").to.have.property(\"error\");",
-                  "    pm.expect(b.error).to.have.property(\"code\");",
-                  "  }",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
         {
           "name": "POST /api/usuarios/logout-todas",
           "request": {
@@ -4240,10 +4790,70 @@
           ]
         },
         {
+          "name": "POST /api/usuarios/login (renovar tras logout-todas)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailTemporal}}\",\n  \"password\": \"{{passwordTemporal}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Renueva el token del comprador despues de cerrar sesion. Necesario porque logout y logout-todas revocan el token anterior."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "if (b.success && b.data && b.data.token) {",
+                  "  pm.collectionVariables.set(\"token\", b.data.token);",
+                  "  pm.collectionVariables.set(\"tokenComprador\", b.data.token);",
+                  "  pm.test(\"token renovado\", function () { pm.expect(b.data.token).to.be.a(\"string\"); });",
+                  "} else {",
+                  "  pm.test(\"login del comprador\", function () { pm.expect.fail(\"No se obtuvo token\"); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "DELETE /api/usuarios/cuenta",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/api/usuarios/cuenta",
               "host": [
@@ -4254,6 +4864,15 @@
                 "usuarios",
                 "cuenta"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"{{passwordTemporal}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "Eliminar mi cuenta (comprador)\n\nDesactivacion logica de la cuenta propia; el usuario sale del token (RF42, RF56).\n\nCodigo esperado: 200.\n\nRequiere {{token}} (JWT)."
           },
@@ -4277,6 +4896,48 @@
                   "    pm.expect(b.error).to.have.property(\"code\");",
                   "  }",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/usuarios/logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "logout"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenTercero}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Prueba logout con una sesion distinta a la del comprador. Cierra el ciclo de sesiones sin reutilizar un token revocado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test(\"success true\", function () { pm.expect(b.success).to.equal(true); });"
                 ]
               }
             }

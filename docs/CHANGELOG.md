@@ -2,6 +2,19 @@
 
 Registro central de cambios (según regla `documentacion-cambios.md`). Entradas de la mas reciente a la mas antigua.
 
+## 2026-10-30 - FIX: coleccion Postman ejecutable de punta a punta
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `tools/generar-postman.mjs`; `docs/api/postman/CommerCity.postman_collection.json`; `docs/api/postman/CommerCity.local.postman_environment.json`; `docs/CHANGELOG.md` (este registro); `docs/MEMORIA_PROYECTO.md` (leccion)
+- **Descripcion**: la coleccion generada no era ejecutable completa. Se corrigio: (1) un vendedor temporal B crea el producto que compra el comprador A; (2) el avance de estado y el marcado de mensaje leido usan el token de B, con un segundo avance a Entregado para habilitar la calificacion; (3) la cancelacion usa el `detalle_id` capturado del historial y se crea un segundo pedido para probarla; (4) el carrito se reabastece despues de probar DELETE; (5) la baja de cuenta envia la contrasena; (6) el admin elimina al vendedor B, no al comprador A; (7) los identificadores numericos viajan sin comillas en la calificacion; (8) las notificaciones se borran una antes de borrar todas; (9) dejar de seguir usa el id del usuario seguido; (10) el caso 401 sin token usa 127.0.0.1 para evitar la cookie de sesion; (11) el login de administrador va al inicio de la carpeta 13; (12) se agrego un tercer usuario C para probar logout sin reutilizar un token revocado.
+- **Motivo**: la API respondia bien, pero el Runner fallaba por orden de peticiones, tokens y contratos; el material de sustentacion necesitaba una coleccion que corriera completa.
+- **Requerimientos**: N/A (herramienta de pruebas; sin cambio de contrato)
+- **Evidencia**: 91 requests y las 74 operaciones del OpenAPI; ejecucion de la coleccion completa excepto la carpeta 98 contra `commercity_dev` local: 86/86 comprobaciones OK; `node --check` sin errores; generador idempotente; sin contrasenas fijas en el JSON ni en el entorno.
+- **Hallazgo**: dos logins en el mismo segundo emiten el mismo JWT (el `iat` tiene precision de segundos). Si el token anterior se revoco, el nuevo nace revocado. La coleccion lo evita con un tercer usuario; la correccion de API (agregar `jti`) queda pendiente.
+- **Estado**: Completado en local. Sin push.
+
+---
+
 ## 2026-10-30 - FIX: orden de la coleccion Postman (registro antes del login)
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
