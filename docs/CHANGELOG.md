@@ -2,6 +2,18 @@
 
 Registro central de cambios (según regla `documentacion-cambios.md`). Entradas de la mas reciente a la mas antigua.
 
+## 2026-10-30 - DOCS: Swagger UI estatico de la API
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `docs/api/swagger.html` (nuevo); `docs/api/index.html` (enlace a Swagger); `docs/CHANGELOG.md` (este registro)
+- **Descripcion**: se agrega una pagina Swagger UI autocontenida que incrusta el contrato `openapi.json` 1.3.3 (63 rutas, 40 esquemas) y lo renderiza con Swagger UI 5.17.14 fijado por CDN y SRI. Se enlaza desde la referencia Scalar. No requiere backend, dependencias nuevas ni servidor: se abre como archivo local.
+- **Motivo**: el instructor pidio la documentacion con Swagger; el proyecto ya generaba OpenAPI, pero solo lo mostraba con Scalar.
+- **Requerimientos**: N/A (documentacion de la API)
+- **Evidencia**: el bloque embebido se parsea como JSON valido (63 rutas, 40 esquemas, version 1.3.3); SRI de CSS y JS calculados sobre los archivos de jsDelivr; 172.7 KB; sin credenciales.
+- **Estado**: Completado en local. Sin push.
+
+---
+
 ## 2026-10-30 - FIX: jti unico en los JWT de registro y login
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
