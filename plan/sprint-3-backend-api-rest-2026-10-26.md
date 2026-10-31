@@ -105,7 +105,7 @@ terminada y no se reporta avance en el consolidado semanal.
 
 ## 7. Estado al 2026-10-31
 
-Base del repositorio: `PREVIEW` remoto actualizado el 2026-10-30 (publicado el 30-oct, ver CHANGELOG del mismo dia); la rama de trabajo tiene commits posteriores a esa publicacion. `VERSION` = `1.3.3` y el arbol esta limpio. El cierre documental del 2026-10-24 ya esta versionado (`dca9d15`), por lo que el riesgo de la seccion 3 queda cerrado.
+Base del repositorio: `PREVIEW` remoto actualizado el 2026-10-30 (publicado el 30-oct, ver CHANGELOG del mismo dia); la rama de trabajo tiene commits posteriores a esa publicacion. `VERSION` = `1.3.4` (bump del frontend del 2026-10-31, sin cambio de contrato ni de backend) y el arbol esta limpio. El cierre documental del 2026-10-24 ya esta versionado (`dca9d15`), por lo que el riesgo de la seccion 3 queda cerrado.
 
 ### 7.1 Tareas con evidencia en el repositorio
 

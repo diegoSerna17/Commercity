@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 > **Nota de correccion (2026-10-31)**: las entradas historicas que citan presentaciones en `docs/` corresponden a `docs/presentaciones/` desde el movimiento del 2026-10-30. Las entradas originales no se reescriben; esta nota solo corrige la ruta para quien consulte el historial.
 
+## 2026-10-31 - DOCS: alinea la version 1.3.4 en la sustentacion y en el plan del Sprint 3
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `docs/presentaciones/CommerCity_Sustentacion_Backend_API_10.pptx` (ignorado por `*.pptx`, no versionado); `docs/presentaciones/CommerCity_Sustentacion_Backend_API.pptx` (respaldo, no versionado); `plan/sprint-3-backend-api-rest-2026-10-26.md`; `frontend/.gitignore`; `docs/CHANGELOG.md` (este registro)
+- **Descripcion**: se cambia 1.3.3 -> 1.3.4 en la portada y las notas de la diapositiva 1 de ambos decks: el de 10 diapositivas es el material de sustentacion y el de 13 queda como respaldo (solo portada). Se corrige la linea de estado del plan del Sprint 3 para reflejar `VERSION` = 1.3.4, aclarando que es el bump de frontend del 2026-10-31, sin cambio de contrato ni de backend. Se agrega `.coverage-tmp` al `.gitignore` del frontend para que el JSON temporal de cobertura no entre a un `git add` amplio.
+- **Motivo**: la version vigente es 1.3.4 y la portada del material de sustentacion no debia quedar en 1.3.3; el plan del Sprint 3 conservaba una foto de estado anterior.
+- **Requerimientos**: VER-001, CON-004
+- **Evidencia**: ambos pptx con `testzip` OK, 10 y 13 diapositivas con sus notas, cero XML con 1.3.3 y 1.3.4 solo en `slide1.xml` y `notesSlide1.xml`; `git grep -F 1.3.3` en `docs/guias`, `docs/informes` y `plan/sprint-3-backend-api-rest-2026-10-26.md` sin coincidencias; `git status` ya no muestra `frontend/.coverage-tmp/`; `node tools/verificar-version.mjs 1.3.3` -> `VERSION-CHECK: OK (1.3.4 sincronizada)`. Sin push.
+- **Estado**: Completado en local. Sin push.
+
+---
+
 ## 2026-10-31 - RELEASE 1.3.4: bump con CHANGELOG (pruebas frontend y cobertura real)
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
