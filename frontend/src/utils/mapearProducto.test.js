@@ -4,6 +4,7 @@ import {
   AVATAR_POR_DEFECTO,
   calcularPrecioFinal,
   mapearProducto,
+  resolverAvatar,
   resolverImagenProducto,
   resolverUrlArchivo,
 } from "./mapearProducto.js";
@@ -21,6 +22,19 @@ describe("resolverUrlArchivo", () => {
     );
     expect(resolverUrlArchivo(null)).toBeNull();
     expect(resolverUrlArchivo("")).toBeNull();
+  });
+});
+
+describe("resolverAvatar", () => {
+  it("normaliza el placeholder externo al avatar local", () => {
+    // Act / Assert
+    expect(resolverAvatar("https://via.placeholder.com/150")).toBe(
+      AVATAR_POR_DEFECTO
+    );
+    expect(resolverAvatar(null)).toBe(AVATAR_POR_DEFECTO);
+    expect(resolverAvatar("/uploads/ana.png")).toBe(
+      `${API_BASE_URL}/uploads/ana.png`
+    );
   });
 });
 
@@ -80,6 +94,17 @@ describe("mapearProducto", () => {
     // Assert
     expect(card.badge).toBeNull();
     expect(card.badgeBg).toBeNull();
+  });
+
+  it("normaliza el avatar placeholder del vendedor", () => {
+    // Act
+    const card = mapearProducto({
+      ...producto,
+      vendedor_foto: "https://via.placeholder.com/150",
+    });
+
+    // Assert
+    expect(card.vendedorAvatar).toBe(AVATAR_POR_DEFECTO);
   });
 
   it("C-2: conserva el producto original en raw para precargar la edicion (RF49)", () => {

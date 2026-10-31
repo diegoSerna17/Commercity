@@ -23,13 +23,15 @@ export default function AdminModalReporte({
   onPedirEliminarProducto,
 }) {
   const [textareaRespuesta, setTextareaRespuesta] = useState("");
+  const [errorRespuesta, setErrorRespuesta] = useState("");
 
   function handleEnviar() {
     const texto = textareaRespuesta.trim();
     if (!texto) {
-      alert("Por favor escribe una respuesta.");
+      setErrorRespuesta("Por favor escribe una respuesta.");
       return;
     }
+    setErrorRespuesta("");
     onEnviarRespuesta(texto);
   }
 
@@ -196,10 +198,21 @@ export default function AdminModalReporte({
                 </p>
                 <textarea
                   value={textareaRespuesta}
-                  onChange={(e) => setTextareaRespuesta(e.target.value)}
+                  onChange={(e) => {
+                    setTextareaRespuesta(e.target.value);
+                    if (errorRespuesta) setErrorRespuesta("");
+                  }}
                   placeholder="Escribe tu respuesta al reporte..."
                   className="w-full text-sm rounded-xl p-3 outline-none resize-none font-jakarta h-24 text-white bg-[#1C1C22] border border-[#1C1C22] focus:border-[#EF9918] focus:ring-1 focus:ring-[rgba(239,153,24,0.5)] transition-all"
                 />
+                {errorRespuesta && (
+                  <p
+                    role="alert"
+                    className="text-xs font-semibold font-jakarta text-[#f87171]"
+                  >
+                    {errorRespuesta}
+                  </p>
+                )}
                 <div className="flex gap-3">
                   <button
                     onClick={onCerrar}

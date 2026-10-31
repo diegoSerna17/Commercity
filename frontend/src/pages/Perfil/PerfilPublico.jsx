@@ -10,7 +10,7 @@ import {
   AVATAR_POR_DEFECTO,
   calcularPrecioFinal,
   mapearProducto,
-  resolverUrlArchivo,
+  resolverAvatar,
 } from "../../utils/mapearProducto.js";
 import { listarProductos, listarVendedores } from "../../services/productos.service.js";
 import {
@@ -36,7 +36,7 @@ export default function PerfilPublico() {
   const [vendedor, setVendedor] = useState({
     id: Number(id),
     nombre: state.nombre || "",
-    avatar: resolverUrlArchivo(state.avatar) ?? AVATAR_POR_DEFECTO,
+    avatar: resolverAvatar(state.avatar),
   });
   const [productos, setProductos] = useState([]);
   const [contadores, setContadores] = useState({ seguidores: 0, siguiendo: 0 });
@@ -54,7 +54,7 @@ export default function PerfilPublico() {
         // Resuelve nombre/avatar del vendedor. Prioridad al state de navegacion;
         // si el usuario recarga la URL, se recupera desde /api/vendedores.
         let nombre = state.nombre || "";
-        let avatar = resolverUrlArchivo(state.avatar) ?? AVATAR_POR_DEFECTO;
+        let avatar = resolverAvatar(state.avatar);
 
         if (!nombre) {
           const res = await listarVendedores();

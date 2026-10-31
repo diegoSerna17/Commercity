@@ -21,6 +21,17 @@ export function resolverUrlArchivo(ruta) {
 }
 
 /**
+ * Resuelve el avatar del backend y normaliza el placeholder externo
+ * (via.placeholder.com) al avatar local del proyecto.
+ * @param {string|null|undefined} ruta Ruta relativa o URL absoluta
+ * @returns {string} URL lista para usar en un src
+ */
+export function resolverAvatar(ruta) {
+  if (!ruta || /via\.placeholder\.com/i.test(ruta)) return AVATAR_POR_DEFECTO;
+  return resolverUrlArchivo(ruta);
+}
+
+/**
  * Imagen del producto: usa la del backend o una foto real de respaldo acorde
  * a la categoria del producto (estable por id).
  * @param {string|null|undefined} imagenUrl
@@ -61,7 +72,7 @@ export function mapearProducto(producto) {
     description: producto.descripcion,
     vendedorId: producto.vendedor_id,
     vendedorNombre: producto.vendedor,
-    vendedorAvatar: producto.vendedor_foto || AVATAR_POR_DEFECTO,
+    vendedorAvatar: resolverAvatar(producto.vendedor_foto),
     badge: descuento > 0 ? `-${descuento}%` : null,
     badgeBg: descuento > 0 ? "bg-figma-accent-blue" : null,
     raw: producto,
