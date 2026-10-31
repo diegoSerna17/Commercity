@@ -509,6 +509,10 @@ function construirRequest(ruta, metodo, operacion) {
         type: "text/javascript",
         exec: [
           'pm.collectionVariables.set("emailTemporal", "qa+" + Date.now() + "@ejemplo.com");',
+          'const claveActual = pm.collectionVariables.get("passwordTemporal") || pm.environment.get("passwordTemporal");',
+          'if (!claveActual) {',
+          '  pm.collectionVariables.set("passwordTemporal", "Qa" + Date.now() + "!");',
+          '}',
         ],
       },
     });
@@ -742,7 +746,7 @@ const coleccion = {
       "02 a 13 trabajan sobre ese usuario y sobre lo que la propia coleccion crea; 99 cierra sesiones " +
       "y desactiva la cuenta temporal. La carpeta 98 agrupa lo que NO debe correr en lote.\n\n" +
       "Requisito: backend corriendo contra una base de DESARROLLO (nunca la compartida) y las variables " +
-      "del entorno CommerCity local completadas. La clave de administrador no viene incluida.",
+      "del entorno CommerCity local completadas. La clave de administrador no viene incluida y la del usuario temporal se genera en el pre-request del registro.",
     schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
   },
   auth: { type: "bearer", bearer: [{ key: "token", value: "{{token}}", type: "string" }] },
@@ -752,7 +756,7 @@ const coleccion = {
     { key: "tokenComprador", value: "" },
     { key: "tokenAdmin", value: "" },
     { key: "emailTemporal", value: "" },
-    { key: "passwordTemporal", value: "Clave1234" },
+    { key: "passwordTemporal", value: "" },
     { key: "adminEmail", value: "" },
     { key: "adminPassword", value: "" },
     { key: "productoId", value: "" },
@@ -776,7 +780,7 @@ const entorno = {
     { key: "tokenComprador", value: "", type: "secret", enabled: true },
     { key: "tokenAdmin", value: "", type: "secret", enabled: true },
     { key: "emailTemporal", value: "", type: "default", enabled: true },
-    { key: "passwordTemporal", value: "Clave1234", type: "secret", enabled: true },
+    { key: "passwordTemporal", value: "", type: "secret", enabled: true },
     { key: "adminEmail", value: "", type: "default", enabled: true },
     { key: "adminPassword", value: "", type: "secret", enabled: true },
     { key: "productoId", value: "", type: "default", enabled: true },

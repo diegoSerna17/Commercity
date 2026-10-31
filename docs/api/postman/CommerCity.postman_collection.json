@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "CommerCity API - Backend y API REST",
-    "description": "Coleccion generada desde docs/api/openapi.json (v1.3.2).\n\nContiene 74 operaciones documentadas, el visor de documentacion, un login de administrador opcional y 5 casos negativos: 81 requests en total.\n\nOrden de ejecucion: 00 Preparacion crea un usuario temporal y guarda su token; las carpetas 02 a 13 trabajan sobre ese usuario y sobre lo que la propia coleccion crea; 99 cierra sesiones y desactiva la cuenta temporal. La carpeta 98 agrupa lo que NO debe correr en lote.\n\nRequisito: backend corriendo contra una base de DESARROLLO (nunca la compartida) y las variables del entorno CommerCity local completadas. La clave de administrador no viene incluida.",
+    "description": "Coleccion generada desde docs/api/openapi.json (v1.3.2).\n\nContiene 74 operaciones documentadas, el visor de documentacion, un login de administrador opcional y 5 casos negativos: 81 requests en total.\n\nOrden de ejecucion: 00 Preparacion crea un usuario temporal y guarda su token; las carpetas 02 a 13 trabajan sobre ese usuario y sobre lo que la propia coleccion crea; 99 cierra sesiones y desactiva la cuenta temporal. La carpeta 98 agrupa lo que NO debe correr en lote.\n\nRequisito: backend corriendo contra una base de DESARROLLO (nunca la compartida) y las variables del entorno CommerCity local completadas. La clave de administrador no viene incluida y la del usuario temporal se genera en el pre-request del registro.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -37,7 +37,7 @@
     },
     {
       "key": "passwordTemporal",
-      "value": "Clave1234"
+      "value": ""
     },
     {
       "key": "adminEmail",
@@ -194,7 +194,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.collectionVariables.set(\"emailTemporal\", \"qa+\" + Date.now() + \"@ejemplo.com\");"
+                  "pm.collectionVariables.set(\"emailTemporal\", \"qa+\" + Date.now() + \"@ejemplo.com\");",
+                  "const claveActual = pm.collectionVariables.get(\"passwordTemporal\") || pm.environment.get(\"passwordTemporal\");",
+                  "if (!claveActual) {",
+                  "  pm.collectionVariables.set(\"passwordTemporal\", \"Qa\" + Date.now() + \"!\");",
+                  "}"
                 ]
               }
             },
