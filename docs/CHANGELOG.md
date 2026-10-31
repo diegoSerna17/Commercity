@@ -2,6 +2,20 @@
 
 Registro central de cambios (según regla `documentacion-cambios.md`). Entradas de la mas reciente a la mas antigua.
 
+> **Nota de correccion (2026-10-31)**: las entradas historicas que citan presentaciones en `docs/` corresponden a `docs/presentaciones/` desde el movimiento del 2026-10-30. Las entradas originales no se reescriben; esta nota solo corrige la ruta para quien consulte el historial.
+
+## 2026-10-31 - DOCS: preparacion de la entrega documental del 10-nov y revision de conexiones
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `docs/guias/diagramas-negocio-entrega-2026-11-10.md` (nuevo); `plan/sprint-3-backend-api-rest-2026-10-26.md` (estado al 2026-10-31 y referencias por fecha); `docs/CHANGELOG.md` (esta entrada y nota de correccion)
+- **Descripcion**: se preparo la documentacion pendiente de la reunion del 30-oct. (1) Se clasificaron los 17 bloques Mermaid del README y el diagrama de `docs/informes/FLUJO_UML_EJEMPLO_COMPRA.md` contra el criterio del profesor: arquitectura con base de datos, API y front conectados por HTTP; secuencia de negocio sin middleware, endpoints ni detalle de base de datos. (2) Se creo una guia nueva con una arquitectura de negocio para web, movil y escritorio, y siete secuencias de negocio: operacion autenticada, registro y acceso, compra, cancelacion y reembolso, vendedor, administrador, chat y notificaciones. No se modifico el README. (3) Se revisaron las 11 llamadas a `getConnection()` del backend: las 11 liberan la conexion en `finally`; no hubo cambios de codigo. (4) Se actualizaron las referencias del plan del Sprint 3 de hash a fecha y se retiraron las referencias a la memoria retirada. (5) Se agrego la nota de correccion de rutas de presentaciones. (6) La lista de tareas por responsable para el martes 3-nov quedo en `docs/informes/TAREAS_POR_RESPONSABLE_2026-11-03.md`, sin versionar por contener nombres y estado de evaluacion.
+- **Motivo**: cumplir los pendientes de la reunion del 30-oct y dejar lista la carpeta documental del 10-nov sin duplicar los diagramas tecnicos del README ni reescribir entradas historicas.
+- **Requerimientos**: N/A (documentacion y verificacion; sin cambio de comportamiento ni de contrato)
+- **Evidencia**: 17 bloques Mermaid del README y 1 diagrama de FLUJO_UML clasificados con ubicacion y motivo; guia nueva con 1 arquitectura de negocio y 7 secuencias de negocio; 11 de 11 conexiones con `release()` en `finally` (tabla archivo:linea en `docs/informes/REVISION_CONEXIONES_POOL_2026-10-31.md`, no versionado); `git diff --check` sin errores; `git status` limpio tras el commit; sin corrida de pruebas (no se modifico codigo).
+- **Estado**: Completado en local. Sin push.
+
+---
+
 ## 2026-10-30 - DOCS: retiro de la documentacion para agentes de IA
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
