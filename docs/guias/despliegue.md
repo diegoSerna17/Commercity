@@ -52,7 +52,7 @@ Plantilla en `backend/.env.example` (nunca commitear `.env` real):
 - Los respaldos **NUNCA** se versionan (`backups/` esta en `.gitignore`): contienen hashes bcrypt y datos personales (R-2/M-GIT-1). Conservarlos cifrados y fuera del repositorio; retencion sugerida 30 dias.
 
 ## Checklist previo a release
-1. Suites verde (backend 536/536 en 36 archivos unitarios; frontend 124/124 en 29 archivos; última corrida registrada 2026-10-12) y cobertura sobre el umbral (backend Lines ≥ 97 %, frontend Lines ≥ 70 %).
+1. Suites verde (backend 539/539 en 36 archivos unitarios; frontend 450/450 en 59 archivos; última corrida registrada backend 2026-10-30, frontend 2026-10-31) y cobertura sobre el umbral (backend Lines ≥ 97 %, frontend Lines ≥ 93 %).
 2. `VERSION` y `backend/package.json` sincronizados; sin textos con la version anterior en el repo.
 3. Entrada en `docs/CHANGELOG.md`.
 4. Sin secretos en el repo (`git status` limpio de `.env`, dumps con bcrypt, `uploads/`, keystores).

@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 > **Nota de correccion (2026-10-31)**: las entradas historicas que citan presentaciones en `docs/` corresponden a `docs/presentaciones/` desde el movimiento del 2026-10-30. Las entradas originales no se reescriben; esta nota solo corrige la ruta para quien consulte el historial.
 
+## 2026-10-31 - DOCS: unifica la cifra 539/539 del backend en README y despliegue
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `README.md`; `docs/guias/despliegue.md`; `docs/CHANGELOG.md` (este registro)
+- **Descripcion**: se reemplaza 536/536 por 539/539 en la linea de estado, la tabla de resultados y el checklist de despliegue, con la corrida del 2026-10-30 registrada en el CHANGELOG. Se actualizan tambien las cifras del frontend (450/450 en 59 archivos, 2026-10-31), la tabla de cobertura del backend (Statements 96.51 %, Branches 88.17 %, Functions 99.57 %, Lines 97.02 %) y el umbral de frontend del checklist (Lines >= 93 %).
+- **Motivo**: la cifra 536/536 quedo desactualizada frente al deck, el guion y el CHANGELOG (539/539); el jurado puede detectar la discrepancia al abrir el README.
+- **Requerimientos**: CON-004, CON-006
+- **Evidencia**: `git grep "536/536\|536 pruebas" -- README.md docs/guias/despliegue.md` sin resultados; `node tools/verificar-version.mjs 1.3.3` -> `VERSION-CHECK: OK (1.3.4 sincronizada)`; `git status` limpio tras el commit. No se toco `docs/guias/typescript-adopcion-incremental.md` (analisis historico).
+- **Estado**: Completado en local. Sin push.
+
+---
+
 ## 2026-10-31 - DOCS: alinea la version 1.3.4 en la sustentacion y en el plan del Sprint 3
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
