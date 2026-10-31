@@ -1,0 +1,287 @@
+import pool from "../../config/database.js";
+import { round2 } from "../../shared/finanzas.js";
+import { historialComprasQuerySchema } from "../schemas/compras.schema.js";
+import {
+    estadoPagoVendedorTrasCancelacion,
+    importeReembolsoLinea,
+    reembolsarPago,
+} from "../../shared/reembolsos.js";
+
+// ============================================================================
+// MODULO HISTORIAL DE COMPRAS (integrado desde AVANCES/SPRING 1/JARY)
+// RF26-RF32 completados por el lider (2026-08-08):
+//   - RF31: direccion de envio, IVA 19% en vuelo, precio unitario, total por
+//           linea/pedido e imagen (ahora se devuelven todos los campos).
+//   - RF32: los pedidos se agrupan por cabecera con resumen (subtotal, IVA,
+//           total) y el detalle de sus items.
+//   - RF28/RF30: el estado es por linea (detalle_pedidos.estado_envio); el
+//           filtro ?estado= sigue funcionando sobre el ENUM oficial.
+// ============================================================================
+
+const IVA_RATE = 0.19;
+
+/** Estado textual por linea (RF29). */
+const NORMALIZAR_ESTADO = (e) => (e === "Cancelado" ? "Cancelado" : e || "Pendiente");
+
+/**
+ * Historial de compras del comprador autenticado (RF26-RF32).
+ * Agrupa las lineas por pedido (RF32) y expone todos los campos del RF31:
+ * vendedor, productos, direccion, fecha, estado por linea, cantidad, precio
+ * unitario, IVA 19%, total e imagen.
+ * Filtro opcional: ?estado=Pendiente|En camino|Entregado|Cancelado (RF30).
+ */
+export const getHistorialComprasComprador = async (req, res) => {
+    const compradorId = req.userId;
+
+    // B-9: paginacion validada con Zod (default 20, max 100). ?estado sigue
+    // con allowlist manual: otro valor = sin filtro (RF30, no 400).
+    const parsed = historialComprasQuerySchema.safeParse(req.query ?? {});
+    if (!parsed.success) {
+        return res.status(400).json({
+            success: false,
+            error: { code: "VALIDATION_ERROR", message: "Parámetros de paginación inválidos" }
+        });
+    }
+    const { estado, pagina, por_pagina: porPagina } = parsed.data;
+    const offset = (pagina - 1) * porPagina;
+
+    // Filtro por estado (RF30). El ENUM de la BD usa: 'Pendiente', 'En camino', 'Entregado'
+    const estadosValidos = ["Pendiente", "En camino", "Entregado", "Cancelado"];
+    const filtroEstado = estado && estadosValidos.includes(estado) ? estado : null;
+    const wherePedido = filtroEstado
+        ? "p.comprador_id = ? AND EXISTS (SELECT 1 FROM detalle_pedidos dp2 WHERE dp2.pedido_id = p.id AND dp2.estado_envio = ?)"
+        : "p.comprador_id = ?";
+    const paramsPedido = filtroEstado ? [compradorId, filtroEstado] : [compradorId];
+
+    try {
+        const [[totalRow]] = await pool.query(
+            `SELECT COUNT(DISTINCT p.id) AS total FROM pedidos p WHERE ${wherePedido}`,
+            paramsPedido
+        );
+        const total = Number(totalRow?.total || 0);
+
+        const [idsRows] = await pool.query(
+            `SELECT p.id FROM pedidos p WHERE ${wherePedido} ORDER BY p.fecha_pedido DESC, p.id DESC LIMIT ? OFFSET ?`,
+            [...paramsPedido, porPagina, offset]
+        );
+        const ids = idsRows.map((r) => Number(r.id)).filter((id) => Number.isInteger(id));
+        if (ids.length === 0) {
+            return res.status(200).json({
+                success: true,
+                data: [],
+                paginacion: { pagina, por_pagina: porPagina, total, total_paginas: Math.max(1, Math.ceil(total / porPagina)) }
+            });
+        }
+
+        let query = `
+        SELECT
+            p.id AS pedido_id,
+            p.fecha_pedido AS fecha,
+            p.direccion_envio AS direccion,
+            dp.id AS detalle_id,
+            dp.estado_envio AS estado,
+            dp.cantidad AS cantidad,
+            dp.precio_unitario_historico AS precio_unitario,
+            dp.descuento_aplicado AS descuento_aplicado,
+            dp.subtotal AS subtotal,
+            prod.nombre AS producto,
+            prod.imagen_url AS imagen,
+            v.nombre_completo AS vendedor
+        FROM pedidos p
+        JOIN detalle_pedidos dp ON p.id = dp.pedido_id
+        JOIN productos prod ON dp.producto_id = prod.id
+        JOIN usuarios v ON dp.vendedor_id = v.id
+        WHERE p.comprador_id = ?
+    `;
+
+        const params = [compradorId];
+
+        if (filtroEstado) {
+            query += ` AND dp.estado_envio = ?`;
+            params.push(filtroEstado);
+        }
+
+        query += ` AND p.id IN (${ids.map(() => "?").join(",")})`;
+        params.push(...ids);
+
+        query += ` ORDER BY p.fecha_pedido DESC, dp.id ASC;`;
+
+        const [rows] = await pool.query(query, params);
+
+        // RF32: agrupar lineas por pedido y calcular IVA/totales en vuelo (RF31).
+        const pedidosMap = new Map();
+        for (const r of rows) {
+            const subtotalLinea = Number(r.subtotal || 0);
+            const ivaLinea = round2(subtotalLinea * IVA_RATE);
+            const totalLinea = round2(subtotalLinea + ivaLinea);
+            const precioUnitario = Number(r.precio_unitario || 0);
+            const descuento = Number(r.descuento_aplicado || 0);
+            const cantidad = Number(r.cantidad || 0);
+
+            if (!pedidosMap.has(r.pedido_id)) {
+                pedidosMap.set(r.pedido_id, {
+                    pedido_id: r.pedido_id,
+                    fecha: r.fecha,
+                    direccion: r.direccion,
+                    vendedores: new Set(),
+                    items: [],
+                    resumen: { subtotal: 0, iva: 0, total: 0 },
+                });
+            }
+            const pedido = pedidosMap.get(r.pedido_id);
+            pedido.vendedores.add(r.vendedor);
+
+            pedido.items.push({
+                detalle_id: r.detalle_id,
+                producto: r.producto,
+                imagen: r.imagen,
+                vendedor: r.vendedor,
+                estado: NORMALIZAR_ESTADO(r.estado),
+                cantidad,
+                precio_unitario: precioUnitario,
+                descuento_aplicado: descuento,
+                subtotal: subtotalLinea,
+                iva: ivaLinea,
+                total: totalLinea,
+            });
+            pedido.resumen.subtotal = round2(pedido.resumen.subtotal + subtotalLinea);
+            pedido.resumen.iva = round2(pedido.resumen.iva + ivaLinea);
+            pedido.resumen.total = round2(pedido.resumen.total + totalLinea);
+        }
+
+        // Serializar: estado del pedido = estado predominante de sus lineas.
+        const pedidos = Array.from(pedidosMap.values()).map((p) => ({
+            ...p,
+            vendedores: Array.from(p.vendedores),
+            estado: estadoPredominante(p.items),
+            resumen: {
+                subtotal: p.resumen.subtotal,
+                iva: p.resumen.iva,
+                total: p.resumen.total,
+            },
+        }));
+
+        return res.status(200).json({
+            success: true,
+            data: pedidos,
+            paginacion: { pagina, por_pagina: porPagina, total, total_paginas: Math.max(1, Math.ceil(total / porPagina)) }
+        });
+    } catch (error) {
+        console.error("Error al obtener el historial de compras:", error.message);
+        return res.status(500).json({
+            success: false,
+            error: { code: "INTERNAL_ERROR", message: "Error al obtener el historial" }
+        });
+    }
+};
+
+/**
+ * Devuelve el estado que domina las lineas de un pedido (RF28/RF29).
+ * Si conviven varios estados, se prioriza el menos avanzado (Pendiente).
+ * @param {Array<{estado: string}>} items
+ * @returns {string}
+ */
+function estadoPredominante(items) {
+    if (items.length === 0) return "Pendiente";
+    const prioridad = { Cancelado: 0, Pendiente: 1, "En camino": 2, Entregado: 3 };
+    return items.reduce((acc, i) =>
+        prioridad[i.estado] < prioridad[acc] ? i.estado : acc, items[0].estado
+    );
+}
+
+/**
+ * RF135: el comprador cancela un pedido en estado Pendiente.
+ * Transaccion ACID: cancela la linea y restituye el stock al producto. Solo el
+ * dueno del pedido y solo en estado Pendiente.
+ * S1 (mig 013): acumula el reembolso PROPORCIONAL por monto (importe de la
+ * linea = round2(subtotal * 1.19), IVA incluido) en pagos_simulados.monto_reembolsado
+ * y deriva el estado ('Reembolsado' solo si el acumulado cubre el monto).
+ * H2: si el pago no estaba Aprobado/Reembolsado, la linea se cancela igual pero
+ * la respuesta reporta reembolsado=false (no se inventa dinero no registrado).
+ */
+export const cancelarPedidoComprador = async (req, res) => {
+    const compradorId = req.userId;
+    const detalleId = Number(req.params.id);
+
+    if (!Number.isInteger(detalleId) || detalleId <= 0) {
+        return res.status(400).json({
+            success: false,
+            error: { code: "VALIDATION_ERROR", message: "ID inválido" }
+        });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        // 1. Bloquear la linea y validar propietario + estado Pendiente.
+        // comprador_id vive en pedidos, no en detalle_pedidos (fix RF135).
+        const [lineas] = await conn.query(
+            `SELECT dp.id, dp.producto_id, dp.cantidad, dp.pedido_id,
+                    dp.subtotal, dp.estado_pago_vendedor
+               FROM detalle_pedidos dp
+               JOIN pedidos p ON p.id = dp.pedido_id
+              WHERE dp.id = ? AND p.comprador_id = ? AND dp.estado_envio = 'Pendiente'
+              FOR UPDATE`,
+            [detalleId, compradorId]
+        );
+        if (lineas.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({
+                success: false,
+                error: { code: "NOT_FOUND", message: "Pedido no encontrado o no cancelable" }
+            });
+        }
+
+        const linea = lineas[0];
+
+        // 2. Cancelar la linea
+        await conn.query(
+            "UPDATE detalle_pedidos SET estado_envio = 'Cancelado' WHERE id = ?",
+            [detalleId]
+        );
+        // 3. Restituir stock al producto
+        await conn.query(
+            "UPDATE productos SET stock = stock + ? WHERE id = ?",
+            [linea.cantidad, linea.producto_id]
+        );
+        // 4. S1 (mig 013) + A-2: reembolso PROPORCIONAL por monto con la regla
+        // unica de utils/reembolsos.js: el estado se evalua ANTES de incrementar
+        // el acumulado, con tolerancia de redondeo (+-0.01, B-10) y el acumulado
+        // se acota al monto pagado. El guard de estado evita mutar pagos
+        // 'Rechazado'/'Pendiente'; sin early-return, sobre un pago ya marcado
+        // 'Reembolsado' por error previo la acumulacion sigue siendo valida.
+        const importeLinea = importeReembolsoLinea(linea.subtotal);
+        const { actualizado: pagoReembolsado } = await reembolsarPago(
+            conn,
+            linea.pedido_id,
+            importeLinea
+        );
+        // 5. S1: estado de pago del vendedor de la linea, misma regla que RF35
+        // (si ya se desembolso al vendedor se conserva; si no, 'Pendiente').
+        await conn.query(
+            "UPDATE detalle_pedidos SET estado_pago_vendedor = ? WHERE id = ?",
+            [estadoPagoVendedorTrasCancelacion(linea.estado_pago_vendedor), detalleId]
+        );
+
+        await conn.commit();
+        return res.status(200).json({
+            success: true,
+            data: {
+                id: detalleId,
+                estado: "Cancelado",
+                reembolsado: pagoReembolsado,
+                monto_reembolsado: pagoReembolsado ? importeLinea : 0,
+            }
+        });
+    } catch (error) {
+        await conn.rollback();
+        console.error("Error al cancelar el pedido:", error.message);
+        return res.status(500).json({
+            success: false,
+            error: { code: "INTERNAL_ERROR", message: "Error al cancelar el pedido" }
+        });
+    } finally {
+        conn.release();
+    }
+};
