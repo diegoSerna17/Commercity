@@ -1,9 +1,9 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const pool = require("../config/database");
-const { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } = require("../utils/config");
-const { successResponse, errorResponse } = require("../utils/response");
+const pool = require("../../config/database");
+const { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } = require("../../config/jwt");
+const { successResponse, errorResponse } = require("../../shared/response");
 
 function firmarToken(usuario) {
   return jwt.sign(

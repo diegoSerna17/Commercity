@@ -1,4 +1,4 @@
-const { errorResponse } = require("../utils/response");
+const { errorResponse } = require("../../shared/response");
 
 // Valida el cuerpo con un esquema Zod antes de llegar al controlador.
 function validate(schema) {

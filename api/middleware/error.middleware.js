@@ -1,4 +1,4 @@
-const { errorResponse } = require("../utils/response");
+const { errorResponse } = require("../../shared/response");
 
 // Ultimo middleware: nunca devuelve el detalle interno al cliente.
 function errorHandler(err, _req, res, _next) {

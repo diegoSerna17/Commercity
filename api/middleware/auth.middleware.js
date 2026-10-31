@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
-const pool = require("../config/database");
-const { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } = require("../utils/config");
-const { errorResponse } = require("../utils/response");
+const pool = require("../../config/database");
+const { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } = require("../../config/jwt");
+const { errorResponse } = require("../../shared/response");
 
 // Verifica el token y el estado del usuario en una sola consulta.
 async function authRequired(req, res, next) {
