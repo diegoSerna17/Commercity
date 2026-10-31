@@ -47,6 +47,467 @@ Petición entrante
   -> respuesta uniforme { success, data } o errorHandler centralizado
 ```
 
+## Flujos y diagramas de secuencia
+
+Esta sección documenta el recorrido completo de las operaciones en las tres apps
+(web, móvil y escritorio) y en la base de datos. Los diagramas usan **Mermaid** y
+GitHub los renderiza directamente. El código es la fuente de verdad: rutas en
+`backend/src/server/routes/`, lógica en `controllers/` y contratos en `schemas/`.
+
+### 1. Multicanal: una sola API, tres clientes
+
+```mermaid
+flowchart LR
+    subgraph Clientes
+        WEB["Web React 19<br/>http://localhost:5173"]
+        MOV["Móvil Capacitor<br/>10.0.2.2:3000 en emulador<br/>localhost:3000 con adb reverse"]
+        ESC["Escritorio Electron<br/>file:// + http://localhost:3000"]
+    end
+    WEB -->|"fetch credentials: include<br/>cookie httpOnly"| API["API REST Express<br/>http://localhost:3000"]
+    MOV -->|"fetch + Authorization: Bearer<br/>token en localStorage"| API
+    ESC -->|"fetch + Authorization: Bearer<br/>token en localStorage"| API
+    API --> POOL["Pool MySQL2<br/>connectionLimit 10"]
+    POOL --> DB[("MySQL 8<br/>commercity_dev / commercity_v2")]
+    API --> UPLOADS["/uploads<br/>imágenes y evidencias"]
+    API -.->|"correo fail-soft"| RESEND["Resend"]
+```
+
+| Aspecto | Web | Móvil | Escritorio |
+|---|---|---|---|
+| Arranque | `npm run dev` (Vite, 5173) | live-server 8080, emulador o APK | `npm start` (Electron 44.7) |
+| URL de la API | `VITE_API_URL` o `http://localhost:3000` | `10.0.2.2:3000`; en físico `localhost:3000` con `adb reverse tcp:3000 tcp:3000` | `http://localhost:3000` |
+| Sesión | Cookie `httpOnly` (`credentials: include`); no guarda JWT en `localStorage` | `Authorization: Bearer` con `localStorage.commercity_token` | Igual que móvil |
+| CORS | `FRONTEND_URL` / `http://localhost:5173` | Orígenes Capacitor de desarrollo | `null`/`file://` solo con `ALLOW_DESKTOP_ORIGINS=true` |
+| Navegación | React Router (`/login`, `/cart`, `/store`, `/admin`) | Páginas `page-*` en `index.html` | Páginas `page-*` en `index.html` |
+| Notificaciones | Polling cada 7 s con `NotificacionesEnVivo` | Se cargan al abrir el panel | Se cargan al abrir el panel |
+
+### 2. Ciclo de una petición autenticada
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Cliente
+    participant API as API Express
+    participant MW as Middlewares
+    participant CT as Controller
+    participant DB as MySQL
+    C->>API: Petición HTTP + credencial
+    API->>MW: helmet, CORS y express.json
+    MW->>MW: rate limit y validarOriginCookies
+    MW->>DB: authRequired: JWT + tokens_invalidados + usuarios.activo
+    DB-->>MW: usuario y roles vigentes
+    MW->>MW: requireRoles y validación Zod
+    MW->>CT: req.userId + req.userRoles + body validado
+    CT->>DB: consultas parametrizadas en el pool
+    DB-->>CT: filas o resultado de la transacción
+    CT-->>C: { success, data } o errorHandler { success:false, error }
+```
+
+Regla transversal: el ID del usuario sale siempre del token (`req.userId`), nunca
+del body. El contrato de respuesta es uniforme y los errores los centraliza
+`error.middleware.js`.
+
+### 3. Autenticación (RF1-RF13)
+
+#### 3.1 Registro
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as Usuario
+    participant APP as App
+    participant API as API Express
+    participant DB as MySQL
+    U->>APP: nombre, email y contraseña
+    APP->>API: POST /api/usuarios/register
+    API->>API: rate limit 5/hora + Zod
+    API->>DB: SELECT usuario por email
+    alt Email ya registrado
+        API->>API: hash ficticio para igualar el tiempo + aviso al titular
+        API-->>APP: 201 respuesta uniforme con token null
+    else Email nuevo
+        API->>API: bcrypt.hash(password, 10)
+        API->>DB: BEGIN, INSERT usuarios, INSERT usuario_roles(comprador), COMMIT
+        API->>API: jwt.sign HS256 7d con jti y token_version 0
+        API-->>APP: 201 { token, user } + Set-Cookie httpOnly
+    end
+```
+
+#### 3.2 Login
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as Usuario
+    participant APP as App
+    participant API as API Express
+    participant DB as MySQL
+    U->>APP: email y contraseña
+    APP->>API: POST /api/usuarios/login
+    API->>API: rate limit 10/min + Zod
+    API->>DB: SELECT usuario por email
+    alt No existe o credenciales inválidas
+        API->>API: bcrypt.compare contra hash ficticio
+        API-->>APP: 401 Credenciales inválidas
+    else Credenciales válidas
+        API->>DB: SELECT roles del usuario
+        API->>API: jwt.sign HS256 7d con iss, aud, jti y token_version
+        API-->>APP: 200 { token, user } + Set-Cookie httpOnly
+        Note over APP: Web guarda solo user, móvil y escritorio guardan el token en localStorage
+    end
+```
+
+#### 3.3 Recuperación de contraseña (RF4)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as Usuario
+    participant APP as App
+    participant API as API Express
+    participant DB as MySQL
+    participant MAIL as Resend
+    U->>APP: solicita recuperación
+    APP->>API: POST /api/usuarios/recover { email }
+    API->>API: rate limit 10/min + Zod
+    API->>DB: SELECT usuario por email
+    alt Correo inexistente o inactivo
+        API-->>APP: 200 mensaje uniforme
+    else Correo válido
+        API->>API: token aleatorio de 32 bytes + SHA-256
+        API->>DB: guarda hash y expiración de 5 min (cooldown de 4 min)
+        API->>MAIL: enlace /restore?token=...
+        API-->>APP: 200 mensaje uniforme
+    end
+    U->>APP: abre el enlace y define la nueva contraseña
+    APP->>API: POST /api/usuarios/reset-password { token, password }
+    API->>DB: UPDATE atómico por hash y vigencia, token_version + 1
+    alt Token usado o vencido
+        API-->>APP: 400 enlace inválido
+    else Token vigente
+        API-->>APP: 200 contraseña restablecida
+    end
+```
+
+#### 3.4 Logout y cierre de todas las sesiones (RF2)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant APP as App
+    participant API as API Express
+    participant DB as MySQL
+    APP->>API: POST /api/usuarios/logout (Bearer o cookie)
+    API->>API: authRequired valida el JWT
+    API->>DB: INSERT IGNORE tokens_invalidados (SHA-256, 7 días)
+    API-->>APP: 200 + cookie token borrada
+    Note over APP,API: logout-todas además incrementa usuarios.token_version e invalida todos los JWT previos
+```
+
+### 4. Compra (comprador)
+
+#### 4.1 Catálogo y carrito (RF81-RF94, RF111-RF116)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Comprador
+    participant APP as App
+    participant API as API Express
+    participant DB as MySQL
+    C->>APP: explora el catálogo o busca
+    APP->>API: GET /api/productos?page&limit&nombre&categoria&vendedor
+    API->>DB: productos no eliminados y en estado Disponible
+    DB-->>API: página de productos
+    API-->>APP: { success, data, paginacion }
+    C->>APP: agrega un producto al carrito
+    APP->>API: POST /api/carrito { producto_id, cantidad }
+    API->>DB: valida producto activo, stock y no autocompra
+    API->>DB: UPSERT por UNIQUE (comprador_id, producto_id)
+    API-->>APP: 201 ítem agregado
+    C->>APP: ajusta la cantidad o elimina el ítem
+    APP->>API: PATCH /api/carrito/:productoId o DELETE /api/carrito/:productoId
+    API->>DB: actualiza o elimina la línea
+```
+
+#### 4.2 Checkout ACID (RF117-RF121, RF134, RF140)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Comprador
+    participant APP as App
+    participant API as API Express
+    participant DB as MySQL
+    C->>APP: revisa el resumen del carrito
+    APP->>API: GET /api/pedidos/resumen
+    API->>DB: carrito + productos + vendedor
+    API-->>APP: subtotal, IVA 19 %, total y reparto 90/10
+    C->>APP: dirección, método de pago y datos enmascarados de tarjeta
+    APP->>API: POST /api/pedidos/confirmar-pago
+    API->>DB: BEGIN
+    API->>DB: SELECT carrito FOR UPDATE
+    API->>DB: SELECT productos FOR UPDATE (stock, precio y vendedor activo)
+    alt Carrito vacío, stock insuficiente o autocompra
+        API->>DB: ROLLBACK
+        API-->>APP: 400 / 409
+    else Datos válidos
+        API->>DB: INSERT pedidos
+        API->>DB: INSERT detalle_pedidos (subtotal sin IVA y reparto 90/10)
+        API->>DB: UPDATE stock
+        API->>DB: INSERT pagos_simulados Aprobado (monto con IVA)
+        API->>DB: DELETE carrito_items
+        API->>DB: INSERT notificación de compra (fail-soft)
+        API->>DB: COMMIT
+        API-->>APP: 201 pedido_id, referencia y totales
+    end
+```
+
+El backend solo recibe `ultimos4_tarjeta`, `marca_tarjeta` y `nombre_tarjeta`:
+el número completo nunca viaja ni se guarda (M-28). El reparto es 90 % vendedor
+y 10 % CommerCity sobre el subtotal sin IVA.
+
+#### 4.3 Estados de la línea y del pago
+
+```mermaid
+stateDiagram-v2
+    state "Pendiente" as Pendiente
+    state "En camino" as EnCamino
+    state "Entregado" as Entregado
+    state "Cancelado" as Cancelado
+    [*] --> Pendiente: checkout confirmado
+    Pendiente --> EnCamino: vendedor PATCH /api/pedidos/:id/estado
+    EnCamino --> Entregado: vendedor PATCH /api/pedidos/:id/estado
+    Pendiente --> Cancelado: comprador cancela línea o pedido
+    Cancelado --> [*]
+    Entregado --> [*]
+    note right of Cancelado
+        Restituye stock y acumula reembolso.
+        Una línea "En camino" no la cancela el comprador.
+    end note
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> Aprobado: POST /api/pedidos/confirmar-pago
+    Aprobado --> Reembolsado: monto_reembolsado cubre el monto
+    Reembolsado --> Reembolsado: nuevas cancelaciones acumulan
+    note right of Aprobado
+        El ENUM admite Pendiente y Rechazado para datos históricos.
+        El checkout de esta versión solo crea Aprobado.
+    end note
+```
+
+`pedidos` no tiene estado propio: el estado vive por línea en
+`detalle_pedidos.estado_envio` (RF119).
+
+### 5. Cancelación y reembolso (RF35, RF135)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Comprador
+    participant APP as App
+    participant API as API Express
+    participant DB as MySQL
+    C->>APP: cancela una línea o el pedido
+    alt Una línea
+        APP->>API: POST /api/historial/compras/:detalleId/cancelar
+    else Pedido completo o línea
+        APP->>API: PATCH /api/pedidos/:id/estado { estado: "Cancelado", detalle_id? }
+    end
+    API->>DB: BEGIN y SELECT línea FOR UPDATE
+    alt No pertenece al comprador o no está Pendiente
+        API->>DB: ROLLBACK
+        API-->>APP: 404 / 409
+    else Línea cancelable
+        API->>DB: UPDATE detalle_pedidos estado_envio = Cancelado
+        API->>DB: UPDATE productos stock + cantidad
+        API->>DB: reembolsarPago acumula subtotal * 1.19 (IVA incluido)
+        API->>DB: estado_pago_vendedor según regla Pendiente/Desembolsado
+        API->>DB: INSERT notificaciones al comprador y a los vendedores
+        API->>DB: COMMIT
+        API-->>APP: 200 con reembolso y estado del pago
+    end
+```
+
+El pago pasa a `Reembolsado` solo cuando el acumulado cubre el monto, con
+tolerancia de ±0.01. El acumulado se limita con `LEAST` para no devolver más de
+lo cobrado, y las líneas ya entregadas no se cancelan por esta vía.
+
+### 6. Vendedor (RF44-RF49, RF122-RF139)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant V as Vendedor
+    participant APP as App
+    participant API as API Express
+    participant DB as MySQL
+    V->>APP: publica o edita un producto (multipart)
+    APP->>API: POST /api/productos o PUT /api/productos/:id
+    API->>API: authRequired + requireRoles(vendedor) + multer
+    API->>DB: valida categoría, precio, stock y descuento
+    API->>DB: INSERT o UPDATE productos (estado GENERATED)
+    API-->>APP: 201 / 200 con la imagen en /uploads
+    V->>APP: consulta su tienda, ventas e ingresos
+    APP->>API: GET /api/tienda/dashboard/stats, /ventas, /ingresos y /validacion
+    API->>DB: agregados que excluyen líneas Cancelado
+    API-->>APP: métricas, ventas y comisiones 90/10
+    V->>APP: avanza el envío de sus líneas
+    APP->>API: PATCH /api/pedidos/:id/estado { estado: "En camino" | "Entregado" }
+    API->>DB: valida la transición de un nivel por vendedor
+    API->>DB: UPDATE detalle_pedidos + notificación al comprador
+    API-->>APP: 200 estado actualizado
+```
+
+La cuenta bancaria se registra con `POST`/`PUT /api/tienda/mi-cuenta-bancaria`:
+el backend cifra titular y número (AES-GCM, formato `iv:tag:dato`), audita el
+cambio sin datos sensibles y devuelve la cuenta enmascarada por defecto.
+
+### 7. Administrador (RF55-RF80)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Administrador
+    participant APP as Panel admin
+    participant API as API Express
+    participant DB as MySQL
+    A->>APP: inicia sesión con rol administrador
+    APP->>API: GET /api/admin/stats
+    API->>API: authRequired + requireRoles(administrador)
+    API->>DB: contadores y comisiones sin líneas canceladas
+    API-->>APP: métricas
+    A->>APP: gestiona usuarios, productos o reportes
+    alt Usuario
+        APP->>API: PATCH /api/admin/usuarios/:id/estado o DELETE /api/admin/usuarios/:id
+        API->>DB: activo 0/1, token_version + 1 y suspensión de productos
+    else Producto
+        APP->>API: DELETE /api/admin/productos/:id o PATCH /api/admin/productos/:id/restaurar
+        API->>DB: eliminado_por_admin 1/0 (borrado lógico)
+    else Reporte
+        APP->>API: PATCH /api/admin/reportes/:id/resolver o DELETE /api/admin/reportes/:id
+        API->>DB: estado_reporte o archivado + auditoría
+    end
+    API-->>APP: resultado de la acción
+```
+
+Todo `/api/admin` exige token y rol administrador. El baneo de un usuario
+incrementa `token_version` (cierra sus sesiones), suspende sus productos y
+resuelve el destino de sus pedidos como vendedor.
+
+### 8. Chat, notificaciones y reputación (RF101-RF110)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as Usuario
+    participant APP as App
+    participant API as API Express
+    participant DB as MySQL
+    U->>APP: escribe un mensaje de texto
+    APP->>API: POST /api/chat { receptor_id, mensaje } en JSON
+    API->>API: rechaza multipart y limita a 60/min
+    API->>DB: valida que el receptor exista y esté activo
+    API->>DB: INSERT mensajes_chat
+    API->>DB: INSERT notificación tipo mensajes (fail-soft)
+    API-->>APP: 201 mensaje enviado
+    loop Web cada 7 s, móvil y escritorio al abrir el panel
+        APP->>API: GET /api/notificaciones?limite=10
+        API-->>APP: no leídas y nuevas
+    end
+    APP->>API: PATCH /api/notificaciones/:id/leida o PATCH /api/notificaciones/leidas
+```
+
+- **Chat:** solo texto; no existe `archivo_url` y el multipart se rechaza con 400.
+- **Notificaciones:** listar, contar no leídas, marcar una o todas y eliminar una
+  o todas. En web se consultan cada 7 s para mostrar el toast.
+- **Seguidores:** `POST /api/seguidores` con `{ seguido_id }`, `DELETE
+  /api/seguidores/:id` y contadores públicos en `GET /api/seguidores/:id/contadores`.
+- **Calificaciones:** `POST /api/calificaciones/vendedor` con 1-5 estrellas,
+  solo sobre una línea `Entregado` del comprador y una vez por pedido.
+
+### 9. Base de datos (MySQL 8)
+
+El esquema vigente tiene 16 tablas de negocio más el ledger
+`schema_migrations`; el detalle de columnas y el diagrama entidad-relación
+están en `docs/bd/modelo-datos.md`.
+
+#### 9.1 Migraciones y ledger
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant DEV as Desarrollador
+    participant MIG as aplicar-migraciones.mjs
+    participant DB as MySQL
+    DEV->>MIG: npm run db:migrate (desde backend/)
+    MIG->>MIG: DB_NAME (default commercity_dev) + guarda A-6/SEC-003
+    MIG->>DB: crea schema_migrations si no existe
+    MIG->>DB: SELECT id, checksum
+    loop Migraciones en orden (000 y 008-018)
+        MIG->>MIG: SHA-256 del archivo
+        alt Ya aplicada con el mismo checksum
+            MIG->>MIG: SKIP
+        else Aplicada con checksum distinto
+            MIG-->>DEV: FATAL, revisar manualmente
+        else Pendiente
+            MIG->>DB: ejecuta SQL idempotente
+            MIG->>DB: INSERT en schema_migrations
+        end
+    end
+    MIG-->>DEV: migraciones al día o pendientes con --check
+```
+
+Contra una base compartida (`commercity_v2`, `commercycity_v2`, `commercy_v2`)
+el script se niega a aplicar sin `--permitir-compartida`; la decisión es humana
+y explícita. `schema_commercity.sql` y `seed_commercity.sql` crean y cargan la
+base local `commercity_dev` con la misma guarda.
+
+#### 9.2 Consultas, transacciones y eventos
+
+```mermaid
+flowchart LR
+    CT["Controller"] -->|"pool.query / getConnection"| POOL["Pool MySQL2"]
+    POOL -->|"BEGIN"| TX["Transacción"]
+    TX -->|"SELECT ... FOR UPDATE"| TABLES[("productos, carrito_items,<br/>pedidos, pagos_simulados")]
+    TX -->|"INSERT / UPDATE"| TABLES
+    TX -->|"COMMIT o ROLLBACK"| POOL
+    SCHED["Event scheduler"] -->|"02:00 diario"| EV1["limpiar_carritos_inactivos"]
+    SCHED -->|"03:00 diario"| EV2["purgar_tokens_invalidados"]
+```
+
+- **Pool:** 10 conexiones, `waitForConnections` y cola sin límite.
+- **Dinero:** `productos.precio` incluye IVA; `detalle_pedidos.subtotal` se guarda
+  sin IVA; `monto_vendedor` y `monto_comision` se calculan en el backend (90/10).
+- **Borrado lógico:** `usuarios.activo`, `productos.eliminado_por_admin`,
+  `reportes.archivado`; no se hace DELETE físico de históricos.
+- **Estado derivado:** `productos.estado` es `STORED GENERATED` y depende del
+  stock; el backend solo lo lee.
+- **Eventos:** requieren `event_scheduler = ON`; limpian carritos inactivos a los
+  7 días y purgan tokens JWT vencidos.
+
+### 10. Mapa de flujos por app
+
+| Flujo | Web | Móvil | Escritorio | Endpoints principales |
+|---|---|---|---|---|
+| Registro, login y recuperación | `/login`, `/register`, `/recover`, `/restore` | `page-login`, `page-registro`, `page-recuperar`, `page-restablecer` | `page-login`, `page-registro`, `page-recuperar`, `page-restablecer` | `/api/usuarios/*` |
+| Catálogo y búsqueda | `/` | `page-home` | `page-home` | `GET /api/productos`, `/api/categorias`, `/api/vendedores` |
+| Detalle y perfil público | `/vendedor/:id` | `page-perfil` | `page-perfil`, `page-perfil-vendedor` | `GET /api/productos/:id`, `/api/usuarios/perfil-publico/:id` |
+| Carrito | `/cart` | `page-carrito` | `page-carrito` | `GET/POST/PATCH/DELETE /api/carrito` |
+| Checkout | Pasarela en `/cart` | Modal en `page-carrito` | Modal en `page-carrito` | `GET /api/pedidos/resumen`, `POST /api/pedidos/confirmar-pago` |
+| Historial y cancelación | `/history` | `page-historial` | `page-historial` | `GET /api/historial/compras`, `POST /api/historial/compras/:id/cancelar` |
+| Tienda del vendedor | `/store`, `/orders`, `/profile` | `page-tienda`, `page-pedidos`, `page-perfil` | `page-tienda`, `page-pedidos`, `page-perfil` | `/api/tienda/*`, `POST/PUT /api/productos`, `PATCH /api/pedidos/:id/estado` |
+| Chat | `/messages`, `/messages/chat` | `page-mensajes`, `page-chat` | `page-mensajes`, `page-chat` | `/api/chat/*`, `/api/usuarios/directorio` |
+| Notificaciones | Toast global cada 7 s | Panel de notificaciones | Panel de notificaciones | `/api/notificaciones/*` |
+| Administración | `/admin`, `/admin/dashboard` | `page-admin`, `page-ajustes-admin` | `page-admin`, `page-admin-ajustes` | `/api/admin/*` |
+| Social | Perfil público y calificaciones | `page-perfil`, `page-home` | `page-perfil`, `page-home` | `/api/seguidores/*`, `/api/calificaciones/vendedor` |
+
+Para el detalle de cada contrato (método, body, query y códigos de respuesta)
+usa `docs/api/inventario-endpoints.md`, `docs/api/openapi.json` o la referencia
+interactiva en `http://localhost:3000/api/docs` con el backend en ejecución.
+
 ## Stack tecnológico
 
 ### Backend (`backend/package.json`)
