@@ -49,10 +49,12 @@ El listado completo (20 usuarios) está en `seed_commercity.sql` y en el `README
 ## Pruebas
 
 ```bash
-npm test              # suite completa (Vitest + jsdom + Testing Library)
+npm test              # suite completa: 450 pruebas en 59 archivos (Vitest + jsdom + Testing Library)
 npm run test:watch    # modo observador
-npm run test:coverage # cobertura
+npm run test:coverage # cobertura de src/**/*.{js,jsx} con umbrales en vite.config.js
 ```
+
+Cobertura real medida el 2026-10-31: Lines 95.69 %, Statements 94.20 %, Functions 92.02 %, Branches 84.85 %.
 
 > \[!IMPORTANT]
 > Las pruebas se ejecutan **siempre desde `frontend/`**. Lanzadas desde la raíz del repositorio fallan.

@@ -31,8 +31,12 @@
 ## Frontend (`frontend/`, vitest + jsdom)
 | Comando | Uso |
 |---|---|
-| `npm test` | Suite: 17 pruebas |
-| `npm run test:coverage` | Cobertura |
+| `npm test` | Suite completa: 450 pruebas en 59 archivos |
+| `npm run test:coverage` | Cobertura de `src/**/*.{js,jsx}` con umbrales en `vite.config.js` (Lines 93 %, Statements 92 %, Functions 89 %, Branches 82 %) |
+| `npm run test:coverage:real` | Alias del comando anterior |
+
+- Cobertura real medida el 2026-10-31: Lines 95,69 %, Statements 94,20 %, Functions 92,02 %, Branches 84,85 %.
+- La cifra histórica de 75,31 % de Lines medía solo los archivos que ya tenían pruebas; la línea base real de todo `src/` era 41,30 %. Ambas quedaron superadas por este lote.
 
 ## Movil / escritorio
 Apps Capacitor (movil) y Electron (escritorio) contra la misma API; capa de red verificada (102/102) y RF4 (12/12). Ver `docs/informes/PLAN_INTEGRACION_API_MOVIL_ESCRITORIO_2026-09-27.md`.

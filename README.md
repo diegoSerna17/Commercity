@@ -1,6 +1,6 @@
 # CommerCity
 
-**Estado:** Proyecto académico en etapa productiva | Backend: 536/536 pruebas unitarias OK (36 archivos) | Frontend: 124/124 pruebas OK (29 archivos) | Integración MySQL local: 5/5 (dinero) y 10/10 (notificaciones, 2026-10-30) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.02 % líneas; frontend: 41.30 % líneas reales (888/2150, medición 2026-10-15) | Última corrida registrada: 2026-10-12 (CHANGELOG 1.3.1)
+**Estado:** Proyecto académico en etapa productiva | Backend: 536/536 pruebas unitarias OK (36 archivos) | Frontend: 450/450 pruebas OK (59 archivos) | Integración MySQL local: 5/5 (dinero) y 10/10 (notificaciones, 2026-10-30) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.02 % líneas; frontend: 95.69 % líneas reales (2066/2159, medición 2026-10-31) | Última corrida registrada: 2026-10-31 (CHANGELOG 1.3.4)
 
 CommerCity es una plataforma de comercio electrónico para mercados locales con roles de comprador, vendedor y administrador. Incluye catálogo de productos con imágenes, carrito de compras, pedidos, pasarela de pago simulada, tiendas de vendedores, chat, notificaciones, seguidores, calificaciones, reportes de contenido y panel de administración.
 
@@ -777,7 +777,7 @@ Cobertura del backend (`npm run test:coverage`, proveedor v8; Lines medido en la
 | Functions  | pendiente    | 99%                |
 | Lines      | 97.02%       | 97%                |
 
-Cobertura del frontend: la cifra **75.31 %** que aparece en el CHANGELOG 1.3.1 es una métrica histórica del proveedor v8 y no refleja el estado actual. La medición real del 2026-10-15 es **41.30 % Lines (888/2150 en 70 archivos)**, por debajo del umbral de 70 % configurado en `frontend/vite.config.js` (M-27 pendiente). Ver `plan/fix-frontend-pendientes-2026-10-15.md`.
+Cobertura del frontend: la cifra **75.31 %** del CHANGELOG 1.3.1 era una métrica histórica que solo medía los archivos con pruebas. La línea base real de todo `src/` era **41.30 % Lines (888/2150, medición 2026-10-15)**; tras el lote de pruebas del 2026-10-31 es **95.69 % Lines (2066/2159)**, con umbrales en `frontend/vite.config.js` (Lines 93, Statements 92, Functions 89, Branches 82) y M-27 cerrado. Ver `plan/fix-frontend-pendientes-2026-10-15.md`.
 
 E2E con backend vivo (2026-09-28): runner de los endpoints de entonces (69) = **129/129** y capa de red de los `api.js` reales de móvil/escritorio = **102/102** (incluye RF4 recover/reset 12/12). Evidencia conservada por el equipo en `docs/AVANCES/PRUEBAS/` (local, fuera del repositorio) y en `docs/CHANGELOG.md`.
 
@@ -804,7 +804,7 @@ Los 74 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`
 
 Los nombres exactos, verbos y cuerpos de cada endpoint están en los archivos de rutas del backend.
 
-> **Referencia generada desde Zod (v1.3.3):** interactiva en `http://localhost:3000/api/docs` (Scalar) y JSON en `/api/openapi.json` — ver `docs/api/openapi.json`, `docs/api/entidades.md` (40 contratos), `docs/api/inventario-endpoints.md`, `docs/bd/modelo-datos.md`, `docs/arquitectura.md` y `docs/guias/`. Se regenera con `npm run docs:api` y `npm run docs:entidades` desde `backend/`.
+> **Referencia generada desde Zod (ver `VERSION`):** interactiva en `http://localhost:3000/api/docs` (Scalar) y JSON en `/api/openapi.json` — ver `docs/api/openapi.json`, `docs/api/entidades.md` (43 contratos), `docs/api/inventario-endpoints.md`, `docs/bd/modelo-datos.md`, `docs/arquitectura.md` y `docs/guias/`. Se regenera con `npm run docs:api` y `npm run docs:entidades` desde `backend/`.
 
 ## Roles del sistema
 

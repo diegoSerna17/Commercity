@@ -109,7 +109,8 @@ jobs:
       - name: Lint
         run: npm run lint
       - name: Tests con cobertura
-        # C-1: vite.config.js exige Lines >= 70 % (M-27); este paso falla si baja.
+        # TASK-4.2: vite.config.js exige umbrales medidos menos 2 puntos
+        # (Lines 93, Stmts 92, Funcs 89, Branches 82); este paso falla si bajan.
         run: npm run test:coverage
       - name: Build de produccion
         run: npm run build

@@ -16,9 +16,16 @@ export default defineConfig({
     testTimeout: 15000,
     coverage: {
       provider: 'v8',
-      // C-1: umbral de 70 % Lines (M-27); CI lo exige via `npm run test:coverage`.
+      // Medición real del 2026-10-31 (TASK-4.1): Lines 95,58 %, Statements
+      // 94,13 %, Functions 91,87 %, Branches 84,85 %. Los umbrales quedan en
+      // el valor medido menos 2 puntos, para no congelar ruido de medición.
+      include: ['src/**/*.{js,jsx}'],
+      exclude: ['src/**/*.test.*', 'src/test/**', 'src/main.jsx'],
       thresholds: {
-        lines: 70,
+        lines: 93,
+        statements: 92,
+        functions: 89,
+        branches: 82,
       },
     },
   },

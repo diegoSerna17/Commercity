@@ -66,11 +66,17 @@ describe("Carrito", () => {
     modificarCantidad.mockResolvedValue({});
     eliminarProducto.mockResolvedValue({});
     obtenerResumenPedido.mockResolvedValue({ data: { totales: null } });
-    mockPasarelaPago.mockImplementation(({ totales }) =>
+    mockPasarelaPago.mockImplementation(({ totales, onCancelar, onPagoExitoso }) =>
       createElement(
         "div",
         { "data-testid": "pasarela-pago" },
-        JSON.stringify(totales)
+        createElement("p", null, JSON.stringify(totales)),
+        createElement(
+          "button",
+          { type: "button", onClick: onCancelar },
+          "Cancelar pago"
+        ),
+        createElement("button", { type: "button", onClick: onPagoExitoso }, "Pagar")
       )
     );
   });
@@ -188,5 +194,145 @@ describe("Carrito", () => {
     expect(await screen.findByTestId("pasarela-pago")).toHaveTextContent(
       JSON.stringify(totales)
     );
+  });
+
+  it("pide iniciar sesion y no consulta el carrito sin usuario", async () => {
+    // Arrange
+    getCurrentUser.mockReturnValue(null);
+
+    // Act
+    render(<Carrito />);
+
+    // Assert
+    expect(
+      await screen.findByText("Inicia sesión para ver tu carrito")
+    ).toBeInTheDocument();
+    expect(listarCarrito).not.toHaveBeenCalled();
+  });
+
+  it("usa el mensaje por defecto al fallar la carga", async () => {
+    // Arrange
+    listarCarrito.mockRejectedValueOnce({});
+
+    // Act
+    render(<Carrito />);
+
+    // Assert
+    expect(
+      await screen.findByText("No se pudo cargar el carrito")
+    ).toBeInTheDocument();
+  });
+
+  it("muestra la imagen del producto cuando existe", async () => {
+    // Arrange
+    listarCarrito.mockResolvedValueOnce({
+      data: {
+        vendedores: [
+          {
+            vendedor_nombre: "Tienda Demo",
+            items: [
+              {
+                producto_id: 7,
+                nombre: "Teclado",
+                precio_final: 50000,
+                precio: 60000,
+                descuento_porcentaje: 0,
+                cantidad: 1,
+                imagen_url: "/uploads/teclado.png",
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    // Act
+    render(<Carrito />);
+
+    // Assert
+    expect(await screen.findByAltText("Teclado")).toHaveAttribute(
+      "src",
+      "/uploads/teclado.png"
+    );
+    expect(screen.queryByText("Descuentos aplicados")).not.toBeInTheDocument();
+  });
+
+  it("muestra los errores al cambiar cantidad y al eliminar", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<Carrito />);
+    await screen.findByText("Audífonos");
+
+    // Act
+    modificarCantidad.mockRejectedValueOnce(new Error("Cuota excedida"));
+    await user.click(screen.getByRole("button", { name: "+" }));
+
+    // Assert
+    expect(await screen.findByText("Cuota excedida")).toBeInTheDocument();
+
+    // Act
+    modificarCantidad.mockRejectedValueOnce({});
+    await user.click(screen.getByRole("button", { name: "+" }));
+
+    // Assert
+    expect(
+      await screen.findByText("No se pudo actualizar la cantidad")
+    ).toBeInTheDocument();
+
+    // Act
+    eliminarProducto.mockRejectedValueOnce({});
+    await user.click(screen.getByRole("button", { name: "Eliminar producto" }));
+
+    // Assert
+    expect(
+      await screen.findByText("No se pudo eliminar el producto")
+    ).toBeInTheDocument();
+  });
+
+  it("cancela la pasarela y recarga el carrito tras pagar", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<Carrito />);
+    await screen.findByText("Audífonos");
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Comprar" }));
+    await screen.findByTestId("pasarela-pago");
+    await user.click(screen.getByRole("button", { name: "Cancelar pago" }));
+
+    // Assert
+    expect(screen.queryByTestId("pasarela-pago")).not.toBeInTheDocument();
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Comprar" }));
+    await user.click(await screen.findByRole("button", { name: "Pagar" }));
+
+    // Assert
+    await waitFor(() => expect(listarCarrito).toHaveBeenCalledTimes(2));
+    expect(screen.queryByTestId("pasarela-pago")).not.toBeInTheDocument();
+  });
+
+  it("muestra el error del resumen y su mensaje por defecto", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<Carrito />);
+    await screen.findByText("Audífonos");
+
+    // Act
+    obtenerResumenPedido.mockRejectedValueOnce(new Error("Resumen caido"));
+    await user.click(screen.getByRole("button", { name: "Comprar" }));
+
+    // Assert
+    expect(await screen.findByText("Resumen caido")).toBeInTheDocument();
+    expect(screen.queryByTestId("pasarela-pago")).not.toBeInTheDocument();
+
+    // Act
+    obtenerResumenPedido.mockRejectedValueOnce({});
+    await user.click(screen.getByRole("button", { name: "Comprar" }));
+
+    // Assert
+    expect(
+      await screen.findByText("No se pudo obtener el resumen del pedido")
+    ).toBeInTheDocument();
   });
 });
