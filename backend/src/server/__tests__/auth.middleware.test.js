@@ -87,6 +87,34 @@ describe("authRequired (JWT por header o cookie)", () => {
         );
     });
 
+    it("acepta un token con jti (formato nuevo)", async () => {
+        const conJti = jwt.sign(
+            { id: 7, email: "test@test.com", token_version: 0 },
+            SECRETO,
+            {
+                issuer: "commercity-api",
+                audience: "commercity-clients",
+                expiresIn: "1h",
+                jwtid: "7f3c2b1a-1111-4222-8333-444455556666",
+            }
+        );
+        const res = await request(app)
+            .get("/protegido")
+            .set("Authorization", `Bearer ${conJti}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.userId).toBe(7);
+    });
+
+    it("sigue aceptando un token sin jti (emitido antes del cambio)", async () => {
+        const res = await request(app)
+            .get("/protegido")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.userId).toBe(7);
+    });
+
     it("autentica un token valido llegado por COOKIE httpOnly (200)", async () => {
         const res = await request(app)
             .get("/protegido")

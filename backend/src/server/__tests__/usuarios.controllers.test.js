@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
@@ -61,6 +61,10 @@ const token = jwt.sign({ id: 7, email: "test@test.com" , token_version: 0},
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("GET /api/usuarios/perfil-publico/:id", () => {
@@ -193,6 +197,13 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
     expect(res.body.data.user.email).toBe("nuevo@test.com");
     expect(res.body.data.user.roles).toContain("comprador");
 
+    // RF1/RNF1: el token de registro tambien lleva un jti unico (UUID v4).
+    const payloadRegistro = jwt.decode(res.body.data.token);
+    expect(payloadRegistro.jti).toBeTruthy();
+    expect(payloadRegistro.jti).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
+
     // Fix 3.2: usuario + rol en la misma transaccion
     expect(conn.query).toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO usuarios"),
@@ -324,6 +335,33 @@ describe("POST /api/usuarios/login (RF2 - fix 3.1)", () => {
     expect(payload.token_version).toBe(3);
     expect(payload.iss).toBe("commercity-api");
     expect(payload.aud).toBe("commercity-clients");
+  });
+
+  it("dos logins en el mismo segundo emiten tokens distintos (jti)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-30T12:00:00.000Z"));
+
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("FROM usuarios u WHERE u.email"))
+        return [[{ id: 7, email: "compra@test.com", password: "$2b$10$x", nombre_completo: "Comprador", foto_perfil: null, activo: 1, token_version: 0 }], undefined];
+      if (sql.includes("FROM roles r"))
+        return [[{ nombre: "comprador" }], undefined];
+      return [[], undefined];
+    });
+
+    const a = await request(app)
+      .post("/api/usuarios/login")
+      .send({ email: "compra@test.com", password: "SuperPass123" });
+    const b = await request(app)
+      .post("/api/usuarios/login")
+      .send({ email: "compra@test.com", password: "SuperPass123" });
+
+    expect(a.body.data.token).not.toBe(b.body.data.token);
+    const ja = jwt.decode(a.body.data.token);
+    const jb = jwt.decode(b.body.data.token);
+    expect(ja.jti).toBeTruthy();
+    expect(jb.jti).toBeTruthy();
+    expect(ja.jti).not.toBe(jb.jti);
   });
 
   it("rechaza email inexistente (401)", async () => {

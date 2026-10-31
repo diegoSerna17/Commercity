@@ -127,6 +127,10 @@ export const register = async (req, res) => {
                     expiresIn: "7d",
                     issuer: JWT_ISSUER,
                     audience: JWT_AUDIENCE,
+                    // jti unico (UUID v4): dos registros en el mismo segundo no
+                    // emiten el mismo token. No se valida en verify para no
+                    // rechazar los tokens emitidos antes de este cambio.
+                    jwtid: crypto.randomUUID(),
                 }
             );
 
@@ -216,6 +220,10 @@ export const login = async (req, res) => {
                 expiresIn: "7d",
                 issuer: JWT_ISSUER,
                 audience: JWT_AUDIENCE,
+                // jti unico (UUID v4): dos logins en el mismo segundo no emiten
+                // el mismo token. No se valida en verify: los tokens previos
+                // (sin jti) siguen validos hasta expirar.
+                jwtid: crypto.randomUUID(),
             }
         );
 
