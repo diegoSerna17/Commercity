@@ -71,6 +71,7 @@ la salvedad.
 | RF36 | Cubierto por frontend: se oculta la linea cancelada en el historial del comprador. |
 | RF129 | `getHistorialVentas` excluye por defecto las lineas canceladas (solo con filtro explicito). |
 | RF105 | Chat SIN adjuntos: no existe `archivo_url`; el backend rechaza multipart con 400. Los tres clientes deben enviar JSON `{ receptor_id, mensaje }`; movil y escritorio se corrigieron el 2026-10-25 (antes enviaban `FormData` y el chat fallaba). |
+| JWT | Cada token lleva `jti` UUID v4; no se valida un `jti` concreto y los tokens previos siguen validos hasta expirar. |
 | Estados | `detalle_pedidos.estado_envio` por linea; `pedidos.estado_pedido` no existe. |
 | Borrado | Prohibido el DELETE fisico de historicos: borrado logico (`activo`, `suspendido`, `deleted_at`). |
 
@@ -121,7 +122,7 @@ la salvedad.
     detectado el defecto del chat. Extension registrada como mejora opcional no asignada.
 11. **Cobertura del frontend (alcance)**: `frontend/vite.config.js` no define `coverage.include`, por lo que el reporte cuenta 39 de unos 72 archivos fuente. Si se incluyen todos, la cobertura real del README (41.30 %) queda por debajo del umbral `lines: 70` y el umbral no se cumpliria. Decision pendiente del equipo antes de tocar la configuracion; M-27 sigue abierto.
 12. **PREVIEW en `03d6483`**: pendiente revisar el CI del push y verificar la proteccion de la rama (H-6).
-13. **Sustentacion del backend (2026-10-30)**: material listo en local: presentacion de 13 diapositivas (`docs/presentaciones/CommerCity_Sustentacion_Backend_API.pptx`, ignorada por git), guion con demo y preguntas (`docs/guias/guion-sustentacion-backend.md`), matriz RF (`docs/informes/MATRIZ_RF_ENDPOINTS_2026-10-30.md`) y coleccion Postman de los 74 endpoints (`docs/api/postman/`, generada con `tools/generar-postman.mjs` y validada 86/86 contra `commercity_dev` local). Pendiente: ensayo, corrida del runner E2E de 69 pasos contra base de desarrollo, revision visual del `.pptx` y correccion del JWT con `jti`.
+13. **Sustentacion del backend (2026-10-30)**: material listo en local: presentacion de 13 diapositivas (`docs/presentaciones/CommerCity_Sustentacion_Backend_API.pptx`, ignorada por git), guion con demo y preguntas (`docs/guias/guion-sustentacion-backend.md`), matriz RF (`docs/informes/MATRIZ_RF_ENDPOINTS_2026-10-30.md`) y coleccion Postman de los 74 endpoints (`docs/api/postman/`, generada con `tools/generar-postman.mjs` y validada 86/86 contra `commercity_dev` local). Pendiente: ensayo, corrida del runner E2E de 69 pasos contra base de desarrollo, revision visual del `.pptx`.
 
 ## 7. Lecciones
 
@@ -134,7 +135,7 @@ la salvedad.
 - Antes de proponer una IP-LAN para probar en fisico, revisar las cuatro capas que la bloquean: validacion en `api.js` (error `CONFIG`), CSP de `index.html`, `config.js` que solo actua en el puerto 8080 y cleartext deshabilitado en release. Ruta valida: `adb reverse`.
 - Un APK que funciona en un solo dispositivo no es evidencia reproducible mientras el repositorio no contenga la configuracion de red que ese binario usa.
 - Un informe de integrante puede traer cifras que no reproducen: contrastarlas con una corrida propia y dejar la diferencia en el CHANGELOG antes de usarlas como evidencia (caso BE-05, 2026-10-30).
-- Dos logins en el mismo segundo emiten el mismo JWT (`iat` en segundos); si el anterior se revoco, el nuevo nace revocado. En pruebas, usar un usuario distinto para logout o agregar `jti` en la API.
+- Dos logins en el mismo segundo emitian el mismo JWT (`iat` en segundos) y, tras un logout, el nuevo nacia revocado. Se corrigio con `jti` UUID v4 en cada emision; la lista negra sigue siendo por hash del token completo.
 - Los comentarios de RF dentro de los routers y del OpenAPI no coinciden con el documento oficial 2026-08-20 (por ejemplo, el checkout cita RF134, que en el documento es "el vendedor podra ver estadisticas"). La fuente de trazabilidad es `docs/informes/MATRIZ_RF_ENDPOINTS_2026-10-30.md`; los comentarios se corrigen en un cambio aparte.
 
 ## 8. Enlaces

@@ -2,6 +2,18 @@
 
 Registro central de cambios (según regla `documentacion-cambios.md`). Entradas de la mas reciente a la mas antigua.
 
+## 2026-10-30 - FIX: jti unico en los JWT de registro y login
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `backend/src/server/controllers/usuarios.controllers.js`; `backend/src/server/__tests__/usuarios.controllers.test.js`; `backend/src/server/__tests__/auth.middleware.test.js`; `docs/CHANGELOG.md` (este registro); `docs/MEMORIA_PROYECTO.md`
+- **Descripcion**: se agrega el claim `jti` (UUID v4) a los JWT emitidos en registro y login con la opcion `jwtid` de jsonwebtoken. La verificacion no cambia: no se exige un `jti` concreto, por lo que los tokens emitidos antes siguen validos hasta expirar. Sin migracion y sin dependencias nuevas.
+- **Motivo**: dos logins del mismo usuario en el mismo segundo emitian el mismo token (`iat` en segundos). Tras un logout, el token nuevo coincidia con el hash revocado y la API respondia 401.
+- **Requerimientos**: RF1, RF2, RNF1
+- **Evidencia**: `npm run test:coverage` con `ALLOW_DESKTOP_ORIGINS=false` -> 36 archivos, 539/539 pruebas; cobertura Statements 96.51 %, Branches 88.17 %, Functions 99.57 %, Lines 97.02 %. Verificacion manual con backend local: registro 201 con `jti`; dos logins con el mismo `iat` -> tokens y `jti` distintos; logout del token A 200; `GET /api/usuarios/me` con B 200 y con A 401.
+- **Estado**: Completado en local. Sin push.
+
+---
+
 ## 2026-10-30 - FIX: coleccion Postman ejecutable de punta a punta
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
