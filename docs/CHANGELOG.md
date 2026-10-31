@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 > **Nota de correccion (2026-10-31)**: las entradas historicas que citan presentaciones en `docs/` corresponden a `docs/presentaciones/` desde el movimiento del 2026-10-30. Las entradas originales no se reescriben; esta nota solo corrige la ruta para quien consulte el historial.
 
+## 2026-10-31 - DOCS: retiro de la cifra 538/539 sin respaldo
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `docs/guias/guion-sustentacion-backend.md`; `docs/presentaciones/CommerCity_Sustentacion_Backend_API_10.pptx` (no versionado); `docs/CHANGELOG.md` (este registro)
+- **Descripcion**: se retira del guion y de la diapositiva 8 (Calidad, `slide9.xml` y sus notas) la cifra "538/539", que no estaba registrada en este CHANGELOG. Se conserva la afirmacion respaldada: el caso H6 de CORS depende del entorno y con la configuracion normal da 539/539. Sin cambio de version (1.3.3 vigente) ni de codigo.
+- **Motivo**: toda cifra de la sustentacion debe tener respaldo registrado; la corrida con `ALLOW_DESKTOP_ORIGINS=true` no quedo en el historial.
+- **Requerimientos**: N/A (documentacion)
+- **Evidencia**: `grep 538` sin coincidencias en el guion ni en los textos del pptx (solo queda un 538 dentro de una coordenada XML de `slide13.xml`, sin relacion con la cifra); `zipfile.testzip()` sin errores; 10 diapositivas; textos de las diapositivas y sus notas sin cambios salvo los dos runs corregidos (diapositiva 8 y su nota).
+- **Estado**: Completado en local. Sin push.
+
+---
+
 ## 2026-10-31 - DOCS: preparacion de la entrega documental del 10-nov y revision de conexiones
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12

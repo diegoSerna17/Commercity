@@ -1,9 +1,10 @@
 # Guion de sustentacion - Backend y API REST de CommerCity
 
-**Version del producto:** 1.3.2
-**Fecha:** 2026-10-30
+**Version del producto:** 1.3.3
+**Fecha:** 2026-10-31 (corte de la evidencia: 2026-10-30)
 **Duracion objetivo:** 12 a 15 minutos (10 de exposicion + 5 de demo)
 **Audiencia:** instructor SENA
+**Presentacion:** `docs/presentaciones/CommerCity_Sustentacion_Backend_API_10.pptx` (10 diapositivas)
 **Documento de apoyo:** `docs/informes/MATRIZ_RF_ENDPOINTS_2026-10-30.md`
 
 ---
@@ -21,6 +22,25 @@ Cinco cosas, en este orden:
 Lo que **no** se va a demostrar: que el sistema este listo para produccion, que los tres
 clientes esten integrados o que exista una certificacion de seguridad. Si el jurado lo
 pregunta, se responde con la seccion 7.
+
+## 1.1 Mapa de las 10 diapositivas
+
+| # | Diapositiva | Idea que sostiene | Apoyo en este guion |
+|---|---|---|---|
+| 1 | Portada | Version 1.3.3 y corte del 30-oct | - |
+| 2 | Resumen | 74 operaciones, 13 routers, 539 pruebas, 97,02 % de lineas y 10/10 de notificaciones | Seccion 1 |
+| 3 | Arquitectura | Monolito modular con un router por dominio | Paradas 1 y 2 |
+| 4 | Contrato de la API | Respuesta uniforme, codigos HTTP y paginacion declarada | Parada 5 |
+| 5 | Seguridad | Sesion revocable, roles, propiedad del recurso y datos cifrados | Parada 3 |
+| 6 | Reglas de negocio | Checkout transaccional, IVA y comision 90/10 | Parada 6 |
+| 7 | Persistencia | 19 tablas, 12 migraciones y ledger SHA-256 | Parada 7 |
+| 8 | Calidad | 539/539, cobertura sobre umbrales y E2E pendiente en las notas | Seccion 5 |
+| 9 | Trazabilidad | 112 de 141 RF con endpoint identificado | Seccion 7.6 |
+| 10 | Cierre | Pendientes priorizados y demo de 5 minutos | Secciones 4, 5 y 8 |
+
+Las diapositivas de inventario por modulo, evidencia por modulo y estado del sprint se
+retiraron para dejar diez. El detalle por modulo sigue en la matriz RF y en el CHANGELOG;
+la evidencia E2E pendiente y la coleccion Postman quedaron en las notas de la diapositiva 8.
 
 ## 2. Antes de empezar (checklist de 5 minutos)
 
@@ -164,18 +184,17 @@ $env:ALLOW_DESKTOP_ORIGINS='false'
 npm test
 ```
 
-Resultado esperado (registrado en CHANGELOG 1.3.2):
+Resultado esperado (539/539, confirmado el 2026-10-31; cifra registrada en el CHANGELOG 1.3.3):
 
 ```text
 Test Files  36 passed (36)
-     Tests  536 passed (536)
+     Tests  539 passed (539)
 ```
 
-> "Son 536 pruebas unitarias en 36 archivos, mas dos archivos de integracion que se ejecutan
-> aparte contra MySQL real. La variable `ALLOW_DESKTOP_ORIGINS` se fija en `false` porque el
-> caso H6 de CORS depende de la configuracion local; con el valor por defecto del archivo
-> local, ese caso falla y el resultado es 535 de 536. Es una dependencia de entorno conocida y
-> documentada, no una prueba desactivada."
+> "Son 539 pruebas unitarias en 36 archivos, mas dos archivos de integracion que se ejecutan
+> aparte contra MySQL real. El caso H6 de CORS depende de la configuracion local; por eso
+> `ALLOW_DESKTOP_ORIGINS` se fija en `false` para la corrida. Es una dependencia de entorno
+> conocida, no una prueba desactivada."
 
 Si el jurado pide cobertura, mostrar la corrida registrada: lineas 97,02 %, ramas 88,17 %,
 funciones 99,57 %, sentencias 96,51 %, todas por encima de los umbrales 97/88/99/96.
@@ -215,8 +234,8 @@ Que hace con los datos: crea usuarios efimeros con correo con marca de tiempo, u
 prueba (que suspende al final), un reporte y un pedido. No renombra, no cambia el rol y no
 desactiva cuentas reales. Aun asi, **solo se ejecuta contra una base desechable**.
 
-Si no se ejecuta antes de la sustentacion, la diapositiva 10 dice "pendiente" y la demo se
-apoya en Postman. No se inventa un resultado.
+Si no se ejecuta antes de la sustentacion, las notas de la diapositiva 8 (CALIDAD) declaran
+el E2E como pendiente y la demo se apoya en Postman. No se inventa un resultado.
 
 ## 6. Mapa de archivos para responder rapido
 
@@ -335,7 +354,7 @@ apoya en Postman. No se inventa un resultado.
 ### 7.5 Sobre pruebas y calidad
 
 **"Cuantas pruebas tienen?"**
-> "536 unitarias en 36 archivos. Ademas hay dos archivos de integracion: dinero, con 5 casos, y
+> "539 unitarias en 36 archivos. Ademas hay dos archivos de integracion: dinero, con 5 casos, y
 > notificaciones, con 10. Las de integracion no corren con `npm test`; se ejecutan aparte y
 > requieren MySQL real."
 
@@ -352,7 +371,7 @@ apoya en Postman. No se inventa un resultado.
 **"Por que falla un caso de CORS con la configuracion local?"**
 > "Porque el archivo local tiene `ALLOW_DESKTOP_ORIGINS=true` para probar los clientes de
 > escritorio, y el caso H6 espera el valor por defecto. No se desactivo el control: se fija la
-> variable en `false` solo para el proceso de prueba. El resultado es 536 de 536."
+> variable en `false` solo para el proceso de prueba. El resultado es 539 de 539."
 
 ### 7.6 Preguntas incomodas
 
@@ -381,7 +400,7 @@ apoya en Postman. No se inventa un resultado.
 
 > "En resumen: CommerCity tiene un backend modular con 74 operaciones, un contrato uniforme,
 > autenticacion y permisos verificables, compras transaccionales y una base de datos versionada.
-> Tiene 536 pruebas unitarias aprobadas y evidencia de integracion real en notificaciones y
+> Tiene 539 pruebas unitarias aprobadas y evidencia de integracion real en notificaciones y
 > dinero. Lo que falta esta identificado y priorizado. Gracias."
 
 ## 9. Plan B si algo no funciona
