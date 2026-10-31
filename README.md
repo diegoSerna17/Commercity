@@ -144,10 +144,10 @@ sequenceDiagram
     participant DB as MySQL
     U->>APP: email y contraseña
     APP->>API: POST /api/usuarios/login
-    API->>API: rate limit 10/min + Zod
+    API->>API: rate limit 10/min por IP y 5/15 min por cuenta + Zod
     API->>DB: SELECT usuario por email
     alt No existe o credenciales inválidas
-        API->>API: bcrypt.compare contra hash ficticio
+        API->>API: bcrypt.compare contra hash real o ficticio
         API-->>APP: 401 Credenciales inválidas
     else Credenciales válidas
         API->>DB: SELECT roles del usuario
@@ -169,7 +169,7 @@ sequenceDiagram
     participant MAIL as Resend
     U->>APP: solicita recuperación
     APP->>API: POST /api/usuarios/recover { email }
-    API->>API: rate limit 10/min + Zod
+    API->>API: rate limit 10/min por IP y 5/15 min por cuenta + Zod
     API->>DB: SELECT usuario por email
     alt Correo inexistente o inactivo
         API-->>APP: 200 mensaje uniforme
@@ -222,7 +222,7 @@ sequenceDiagram
     API-->>APP: { success, data, paginacion }
     C->>APP: agrega un producto al carrito
     APP->>API: POST /api/carrito { producto_id, cantidad }
-    API->>DB: valida producto activo, stock y no autocompra
+    API->>DB: valida producto no eliminado, stock y no autocompra
     API->>DB: UPSERT por UNIQUE (comprador_id, producto_id)
     API-->>APP: 201 ítem agregado
     C->>APP: ajusta la cantidad o elimina el ítem
@@ -352,7 +352,7 @@ sequenceDiagram
     API-->>APP: 201 / 200 con la imagen en /uploads
     V->>APP: consulta su tienda, ventas e ingresos
     APP->>API: GET /api/tienda/dashboard/stats, /ventas, /ingresos y /validacion
-    API->>DB: agregados que excluyen líneas Cancelado
+    API->>DB: agregados de dinero que excluyen líneas Cancelado
     API-->>APP: métricas, ventas y comisiones 90/10
     V->>APP: avanza el envío de sus líneas
     APP->>API: PATCH /api/pedidos/:id/estado { estado: "En camino" | "Entregado" }
@@ -377,12 +377,12 @@ sequenceDiagram
     A->>APP: inicia sesión con rol administrador
     APP->>API: GET /api/admin/stats
     API->>API: authRequired + requireRoles(administrador)
-    API->>DB: contadores y comisiones sin líneas canceladas
+    API->>DB: contadores y comisiones (estas últimas sin líneas canceladas)
     API-->>APP: métricas
     A->>APP: gestiona usuarios, productos o reportes
     alt Usuario
         APP->>API: PATCH /api/admin/usuarios/:id/estado o DELETE /api/admin/usuarios/:id
-        API->>DB: activo 0/1, token_version + 1 y suspensión de productos
+        API->>DB: baneo: activo=0, token_version + 1 y suspensión de productos; reactivación: activo=1
     else Producto
         APP->>API: DELETE /api/admin/productos/:id o PATCH /api/admin/productos/:id/restaurar
         API->>DB: eliminado_por_admin 1/0 (borrado lógico)
@@ -440,7 +440,7 @@ están en `docs/bd/modelo-datos.md`.
 sequenceDiagram
     autonumber
     participant DEV as Desarrollador
-    participant MIG as aplicar-migraciones.mjs
+    participant MIG as Script de migraciones
     participant DB as MySQL
     DEV->>MIG: npm run db:migrate (desde backend/)
     MIG->>MIG: DB_NAME (default commercity_dev) + guarda A-6/SEC-003
