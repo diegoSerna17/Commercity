@@ -26,7 +26,7 @@ respalde. Hoy no existe: TypeScript no aparece en el documento oficial del 2026-
 | El backend arranca con `node src/server/server.js` en ESM puro | `backend/package.json`, `"type": "module"` |
 | El frontend usa Vite 8 y Vitest 5 | `frontend/package.json`; ambos procesan `.ts` y `.tsx` de forma nativa |
 | El frontend vive en `frontend/src/` con `api/`, `services/`, `utils/`, `pages/`, `components/` | estructura del arbol |
-| Tamanos del sistema | 72 endpoints, 13 routers, 19 tablas (segun `docs/MEMORIA_PROYECTO.md`) |
+| Tamanos del sistema | 72 endpoints, 13 routers, 19 tablas (segun el estado verificado de `docs/CHANGELOG.md`) |
 
 ## 3. Por que no migrar ahora
 
@@ -136,7 +136,7 @@ En cualquiera de esos casos se retoma desde el nivel 0 con la linea base del pun
 
 ## 10. Referencias
 
-- Gobernanza del proyecto: `docs/MEMORIA_PROYECTO.md`, seccion 5.
+- Estado verificado y decisiones cerradas: `docs/CHANGELOG.md`.
 - Convenciones obligatorias: `.trae/rules/`.
 - Auditoria que origino la propuesta (hallazgo CQ-03): `docs/informes/INFORME_AUDITORIA_TECNICA_COMMERCITY_2026-07-30.md`.
 - Requerimientos vigentes: `LAST VERSION/Commercity (optimizado)/Commercity (optimizado).docx.md` (version 2026-08-20).

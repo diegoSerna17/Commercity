@@ -2,6 +2,18 @@
 
 Registro central de cambios (según regla `documentacion-cambios.md`). Entradas de la mas reciente a la mas antigua.
 
+## 2026-10-30 - DOCS: retiro de la documentacion para agentes de IA
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `AGENTS.md` (eliminado); `docs/MEMORIA_PROYECTO.md` (eliminado); `.gitignore` (se retira la excepcion `!docs/MEMORIA_PROYECTO.md`); `docs/guias/typescript-adopcion-incremental.md` (referencias actualizadas); `docs/CHANGELOG.md` (este registro)
+- **Descripcion**: se retira del repositorio la documentacion dirigida a agentes de IA: el `AGENTS.md` de la raiz y la memoria portable para harness (`docs/MEMORIA_PROYECTO.md`). Las convenciones siguen vigentes fuera del versionado (`.trae/rules/`, gitignorado) y la bitacora oficial queda en este CHANGELOG. Ambos archivos se recuperan desde el historial de git si se requieren.
+- **Motivo**: decision del lider; el repositorio publico de PREVIEW no debe publicar instrucciones internas de trabajo para asistentes de codigo.
+- **Requerimientos**: N/A (documentacion interna)
+- **Evidencia**: `git rm` de los dos archivos; `git grep` sin referencias colgantes a `AGENTS.md` ni a `docs/MEMORIA_PROYECTO.md` en archivos versionados (el propio CHANGELOG conserva la mencion historica); sin cambios de codigo ni de pruebas.
+- **Estado**: Completado en local. Sin push.
+
+---
+
 ## 2026-10-30 - DOCS: Swagger UI estatico de la API
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
