@@ -1,0 +1,18 @@
+# E-3: la imagen solo necesita backend/src + package.json; el contexto de build
+# (raiz del repo) no debe subir dependencias, datos de runtime ni secretos.
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+apps/escritorio/node_modules/
+apps/movil/node_modules/
+**/uploads/
+.env*
+!backend/.env.example
+docs/DRIVE/
+*.sql.gz
+*.dump
+backups/
+coverage/
+dist/
+build/
+.git/
