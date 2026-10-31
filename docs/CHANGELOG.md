@@ -4,6 +4,42 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 > **Nota de correccion (2026-10-31)**: las entradas historicas que citan presentaciones en `docs/` corresponden a `docs/presentaciones/` desde el movimiento del 2026-10-30. Las entradas originales no se reescriben; esta nota solo corrige la ruta para quien consulte el historial.
 
+## 2026-10-31 - RELEASE 1.3.4: bump con CHANGELOG (pruebas frontend y cobertura real)
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `VERSION`; `backend/package.json`; `apps/escritorio/package.json`; `apps/movil/package.json`; los tres `package-lock.json` (solo los campos de version); `apps/movil/ios/App/App.xcodeproj/project.pbxproj`; `apps/movil/android/app/build.gradle`; `frontend/src/constants/buttons.css`; `frontend/src/constants/inputs.css`; `README.md` (referencia a `VERSION` y conteo de contratos); `docs/guias/guion-sustentacion-backend.md`; `docs/api/openapi.json`; `docs/api/swagger.html`; `docs/CHANGELOG.md` (este registro)
+- **Descripcion**: se cierra el Lote A con el bump 1.3.3 -> 1.3.4. `tools/sync-version.mjs` propaga la version a los manifiestos, `MARKETING_VERSION` (iOS) y `versionName` (Android); se actualizan a mano los dos campos de version de cada lockfile y el `@version` de los CSS; se regeneran OpenAPI 1.3.4 (63 rutas, 74 operaciones, 40 esquemas) y la referencia de entidades (43 contratos, sin cambios de contenido); el bloque embebido de `swagger.html` se sincroniza con `openapi.json`; el guion de sustentacion pasa a 1.3.4 y el README deja de copiar la version. Sin cambio de comportamiento ni de contrato.
+- **Motivo**: cumplir VER-001 en el mismo commit del cierre del lote y garantizar que no quede ningun texto con la version anterior.
+- **Requerimientos**: VER-001, CON-004, M-27
+- **Evidencia**: `node tools/verificar-version.mjs 1.3.3` -> `VERSION-CHECK: OK (1.3.4 sincronizada)`, exit 0; `git grep -F 1.3.3` fuera de CHANGELOG, lockfiles y planes sin coincidencias (los lockfiles solo conservan 1.3.3 como version de dependencias como `parseurl` y `@electron/osx-sign`; los planes son registros fechados); `docs/api/swagger.html` sin 1.3.3 tras sincronizar el bloque embebido; banners de backend y escritorio leen la version desde `package.json` y el frontend no muestra version fija; frontend `npm run lint`, `npm test` (450/450), `npm run test:coverage` y `npm run build` con exit 0. Sin push.
+- **Estado**: Completado en local. Sin push.
+
+---
+
+## 2026-10-31 - FIX: honestidad de la UI del perfil y avatar por defecto normalizado
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `frontend/src/pages/Perfil/PerfilVendedor.jsx` y `PerfilVendedor.test.jsx`; `frontend/src/components/admin/AdminModalReporte.jsx` y `AdminModalReporte.test.jsx`; `frontend/src/utils/mapearProducto.js` y `mapearProducto.test.js`; `frontend/src/pages/Perfil/PerfilPublico.jsx` y `PerfilPublico.test.jsx`; `docs/CHANGELOG.md` (este registro)
+- **Descripcion**: (1) `PerfilVendedor` muestra un aviso accesible ("Vista previa: aun no se guarda en tu cuenta.") al previsualizar el avatar y al guardar la biografia, y un mensaje en linea cuando el archivo no es una imagen; se elimina el `window.alert`. (2) `AdminModalReporte` reemplaza el `window.alert` de respuesta vacia por un error en linea con `role="alert"`. (3) `resolverAvatar` normaliza `https://via.placeholder.com/...` y las rutas vacias a `AVATAR_POR_DEFECTO` (archivo local); se usa en las tarjetas de producto y en `PerfilPublico`.
+- **Motivo**: GOAL-006 del lote: ninguna pantalla debe aparentar guardar algo que no se guarda. Ademas, el avatar por defecto del backend apuntaba a un servicio externo ajeno al proyecto. El seguimiento de backend (ampliar `PATCH /api/usuarios/me` con `descripcion_personal` y `direccion_envio`, endpoint de avatar, esquema Zod, OpenAPI y pruebas) queda para otro lote.
+- **Requerimientos**: GOAL-006, TASK-6.1, TASK-6.2, CON-004
+- **Evidencia**: pruebas RED->GREEN: `PerfilVendedor.test.jsx` 17/17, `AdminModalReporte.test.jsx` 13/13, `mapearProducto.test.js` 11/11 y `PerfilPublico.test.jsx` 22/22 (63/63 en conjunto); suite completa 450/450 en 59 archivos; `npm run lint` y `npm run build` exit 0.
+- **Estado**: Completado en local. Sin push.
+
+---
+
+## 2026-10-31 - TESTS: cobertura real del frontend y pruebas faltantes (M-27)
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `frontend/src/test/utils.jsx` y `utils.test.jsx` (nuevos); 31 archivos de prueba nuevos en `src/components`, `src/pages`, `src/services`, `src/utils` y `src/data`; 12 archivos de prueba ampliados; `frontend/package.json` (script `test:coverage:real`); `frontend/vite.config.js` (`coverage.include`/`exclude` y umbrales); `.github/workflows/ci.yml` (comentario del job frontend); `docs/guias/pruebas.md`; `README.md`; `frontend/README.md`; `frontend/src/pages/Inicio/EstadisticasHero.jsx` (eliminado: stub de una linea sin uso); `docs/CHANGELOG.md` (este registro)
+- **Descripcion**: se agregan 31 archivos de prueba (incluye las utilidades compartidas de `src/test/`) y se amplian 12 existentes para servicios, componentes y paginas sin cobertura. La cobertura se mide sobre todo `src/**/*.{js,jsx}` (antes solo sobre los archivos que algun test cargaba) y los umbrales quedan en `vite.config.js` (Lines 93, Statements 92, Functions 89, Branches 82). Se elimina el stub sin uso `EstadisticasHero.jsx`; los cinco componentes admin sin referencias se conservan como deuda tecnica por decision del lider.
+- **Motivo**: M-27 figuraba como cumplido con 75,31 % de Lines, pero esa cifra omitia los archivos que ningun test importa; la medicion real era 41,30 % Lines, 39,11 % Statements, 32,09 % Functions y 29,66 % Branches.
+- **Requerimientos**: M-27, CON-004
+- **Evidencia**: `npm test` -> 450/450 pruebas en 59 archivos; `npm run test:coverage` -> 450/450 y cobertura real Lines 95,69 % (2066/2159), Statements 94,20 % (2291/2432), Functions 92,02 % (669/727), Branches 84,85 % (1664/1961); antes: 41,30 / 39,11 / 32,09 / 29,66. `npm run lint` y `npm run build` exit 0. Logs: `task-7-lint.log`, `task-7-test.log`, `task-7-coverage.log` y `task-7-build.log`.
+- **Estado**: Completado en local. Sin push.
+
+---
+
 ## 2026-10-31 - DOCS: retiro de la cifra 538/539 sin respaldo
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12

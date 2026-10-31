@@ -1,6 +1,6 @@
 # Guion de sustentacion - Backend y API REST de CommerCity
 
-**Version del producto:** 1.3.3
+**Version del producto:** 1.3.4
 **Fecha:** 2026-10-31 (corte de la evidencia: 2026-10-30)
 **Duracion objetivo:** 12 a 15 minutos (10 de exposicion + 5 de demo)
 **Audiencia:** instructor SENA
@@ -27,7 +27,7 @@ pregunta, se responde con la seccion 7.
 
 | # | Diapositiva | Idea que sostiene | Apoyo en este guion |
 |---|---|---|---|
-| 1 | Portada | Version 1.3.3 y corte del 30-oct | - |
+| 1 | Portada | Version 1.3.4 y corte del 30-oct | - |
 | 2 | Resumen | 74 operaciones, 13 routers, 539 pruebas, 97,02 % de lineas y 10/10 de notificaciones | Seccion 1 |
 | 3 | Arquitectura | Monolito modular con un router por dominio | Paradas 1 y 2 |
 | 4 | Contrato de la API | Respuesta uniforme, codigos HTTP y paginacion declarada | Parada 5 |
@@ -184,7 +184,7 @@ $env:ALLOW_DESKTOP_ORIGINS='false'
 npm test
 ```
 
-Resultado esperado (539/539, confirmado el 2026-10-31; cifra registrada en el CHANGELOG 1.3.3):
+Resultado esperado (539/539, confirmado el 2026-10-31; cifra registrada en el CHANGELOG de la version publicada el 30-oct):
 
 ```text
 Test Files  36 passed (36)
