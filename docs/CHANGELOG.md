@@ -2,6 +2,18 @@
 
 Registro central de cambios (según regla `documentacion-cambios.md`). Entradas de la mas reciente a la mas antigua.
 
+## 2026-10-30 - FIX: orden de la coleccion Postman (registro antes del login)
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `tools/generar-postman.mjs`; `docs/api/postman/CommerCity.postman_collection.json` (regenerada); `docs/CHANGELOG.md` (este registro)
+- **Descripcion**: la carpeta "00 - Preparacion" ordenaba las peticiones por metodo y luego por ruta, por lo que el login corria antes del registro y el Runner fallaba con 401. Se fijo el orden registro -> login -> cambio de rol. El login de administrador opcional salio del flujo principal y quedo al final de "98 - No ejecutar en lote", porque exige credenciales reales.
+- **Motivo**: el Runner no podia ejecutar la coleccion sin editar el orden a mano.
+- **Requerimientos**: N/A (herramienta de pruebas; sin cambio de contrato)
+- **Evidencia**: `node --check tools/generar-postman.mjs` sin errores; 81 requests y 74 operaciones del OpenAPI; orden verificado (register, login, me/rol); flujo contra `commercity_dev` local: registro 201, login 200 con token, cambio de rol 200, `/me` con rol vendedor y `/api/tienda/ventas` 200; generador idempotente.
+- **Estado**: Completado en local. Sin push.
+
+---
+
 ## 2026-10-30 - DOCS: organizacion de documentos sueltos en docs/
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12

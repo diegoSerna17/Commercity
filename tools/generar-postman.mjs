@@ -334,6 +334,11 @@ const ORDEN_ETAPAS = new Map(ETAPAS.map(([nombre], i) => [nombre, i]));
 
 // Orden interno: lectura antes de escritura, salvo secuencias que dependen del estado.
 const ORDEN_ESPECIAL = {
+  "00 - Preparacion": [
+    "POST /api/usuarios/register",
+    "POST /api/usuarios/login",
+    "PATCH /api/usuarios/me/rol",
+  ],
   "04 - Carrito": ["POST /api/carrito/", "GET /api/carrito/", "PATCH /api/carrito/{productoId}", "DELETE /api/carrito/{productoId}"],
   "07 - Tienda": [
     "POST /api/tienda/mi-cuenta-bancaria",
@@ -711,10 +716,9 @@ for (const [nombre, descripcion] of ETAPAS) {
   let items = [];
 
   if (nombre === "00 - Preparacion") {
-    const base = ordenar(porEtapa.get(nombre) || [], nombre).map((op) =>
+    items = ordenar(porEtapa.get(nombre) || [], nombre).map((op) =>
       construirRequest(op.ruta, op.metodo, op.operacion),
     );
-    items = [...base, itemLoginAdmin()];
   } else if (nombre === "01 - Casos negativos") {
     items = itemsNegativos();
   } else if (nombre === "14 - Base y documentacion") {
@@ -726,6 +730,9 @@ for (const [nombre, descripcion] of ETAPAS) {
     items = ordenar(porEtapa.get(nombre) || [], nombre).map((op) =>
       construirRequest(op.ruta, op.metodo, op.operacion),
     );
+    // El login de administrador es opcional y requiere credenciales reales:
+    // no debe correr en el flujo principal ni en el lote automatico.
+    if (nombre === "98 - No ejecutar en lote") items.push(itemLoginAdmin());
   }
 
   if (items.length === 0) continue;

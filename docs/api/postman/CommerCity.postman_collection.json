@@ -86,74 +86,6 @@
       "description": "Crea el usuario temporal, inicia sesion y lo habilita como vendedor. Ejecutar siempre primero.",
       "item": [
         {
-          "name": "POST /api/usuarios/login",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/usuarios/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "usuarios",
-                "login"
-              ]
-            },
-            "auth": {
-              "type": "noauth"
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{emailTemporal}}\",\n  \"password\": \"{{passwordTemporal}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Iniciar sesion\n\nEmite el JWT Bearer. Rate limit 10/min. Valida con loginSchema.\n\nCodigo esperado: 200.\n\nPublico: no requiere token."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const ESPERADO = 200;",
-                  "pm.test(\"HTTP \" + ESPERADO, function () {",
-                  "  pm.response.to.have.status(ESPERADO);",
-                  "});",
-                  "pm.test(\"contrato { success, data | error }\", function () {",
-                  "  const b = pm.response.json();",
-                  "  pm.expect(b, \"falta el campo success\").to.have.property(\"success\");",
-                  "  if (b.success === true) {",
-                  "    pm.expect(b, \"respuesta exitosa sin data\").to.have.property(\"data\");",
-                  "  } else {",
-                  "    pm.expect(b, \"respuesta de error sin objeto error\").to.have.property(\"error\");",
-                  "    pm.expect(b.error).to.have.property(\"code\");",
-                  "  }",
-                  "});",
-                  "const b = pm.response.json();",
-                  "const d = b && b.data ? b.data : {};",
-                  "if (d.token) {",
-                  "  pm.collectionVariables.set(\"token\", d.token);",
-                  "  pm.collectionVariables.set(\"tokenComprador\", d.token);",
-                  "}",
-                  "const u = d.user || d.usuario || {};",
-                  "if (u.id) pm.collectionVariables.set(\"usuarioTemporalId\", String(u.id));"
-                ]
-              }
-            }
-          ]
-        },
-        {
           "name": "POST /api/usuarios/register",
           "request": {
             "method": "POST",
@@ -231,6 +163,74 @@
           ]
         },
         {
+          "name": "POST /api/usuarios/login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailTemporal}}\",\n  \"password\": \"{{passwordTemporal}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Iniciar sesion\n\nEmite el JWT Bearer. Rate limit 10/min. Valida con loginSchema.\n\nCodigo esperado: 200.\n\nPublico: no requiere token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ESPERADO = 200;",
+                  "pm.test(\"HTTP \" + ESPERADO, function () {",
+                  "  pm.response.to.have.status(ESPERADO);",
+                  "});",
+                  "pm.test(\"contrato { success, data | error }\", function () {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b, \"falta el campo success\").to.have.property(\"success\");",
+                  "  if (b.success === true) {",
+                  "    pm.expect(b, \"respuesta exitosa sin data\").to.have.property(\"data\");",
+                  "  } else {",
+                  "    pm.expect(b, \"respuesta de error sin objeto error\").to.have.property(\"error\");",
+                  "    pm.expect(b.error).to.have.property(\"code\");",
+                  "  }",
+                  "});",
+                  "const b = pm.response.json();",
+                  "const d = b && b.data ? b.data : {};",
+                  "if (d.token) {",
+                  "  pm.collectionVariables.set(\"token\", d.token);",
+                  "  pm.collectionVariables.set(\"tokenComprador\", d.token);",
+                  "}",
+                  "const u = d.user || d.usuario || {};",
+                  "if (u.id) pm.collectionVariables.set(\"usuarioTemporalId\", String(u.id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "PATCH /api/usuarios/me/rol",
           "request": {
             "method": "PATCH",
@@ -283,60 +283,6 @@
                   "    pm.expect(b.error).to.have.property(\"code\");",
                   "  }",
                   "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "POST /api/usuarios/login (administrador, opcional)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/usuarios/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "usuarios",
-                "login"
-              ]
-            },
-            "auth": {
-              "type": "noauth"
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Helper para la carpeta Admin. Completar adminEmail y adminPassword en el entorno; la coleccion NO incluye credenciales reales. Si no se completa, la carpeta 13 fallara con 401."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
-                  "const b = pm.response.json();",
-                  "if (b.success && b.data && b.data.token) {",
-                  "  pm.collectionVariables.set(\"tokenAdmin\", b.data.token);",
-                  "  pm.test(\"token de administrador capturado\", function () { pm.expect(b.data.token).to.be.a(\"string\"); });",
-                  "} else {",
-                  "  pm.test(\"login de administrador pendiente de configurar\", function () { pm.expect.fail(\"Complete adminEmail y adminPassword en el entorno\"); });",
-                  "}"
                 ]
               }
             }
@@ -4142,6 +4088,60 @@
                   "    pm.expect(b.error).to.have.property(\"code\");",
                   "  }",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/usuarios/login (administrador, opcional)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Helper para la carpeta Admin. Completar adminEmail y adminPassword en el entorno; la coleccion NO incluye credenciales reales. Si no se completa, la carpeta 13 fallara con 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "if (b.success && b.data && b.data.token) {",
+                  "  pm.collectionVariables.set(\"tokenAdmin\", b.data.token);",
+                  "  pm.test(\"token de administrador capturado\", function () { pm.expect(b.data.token).to.be.a(\"string\"); });",
+                  "} else {",
+                  "  pm.test(\"login de administrador pendiente de configurar\", function () { pm.expect.fail(\"Complete adminEmail y adminPassword en el entorno\"); });",
+                  "}"
                 ]
               }
             }
