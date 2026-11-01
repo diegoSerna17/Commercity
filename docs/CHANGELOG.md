@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 > **Nota de correccion (2026-10-31)**: las entradas historicas que citan presentaciones en `docs/` corresponden a `docs/presentaciones/` desde el movimiento del 2026-10-30. Las entradas originales no se reescriben; esta nota solo corrige la ruta para quien consulte el historial.
 
+## 2026-11-01 - DOCS: alinea el plan del frontend tras el cierre del Lote A (1.3.4)
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `plan/fix-frontend-pendientes-2026-10-15.md`; `docs/CHANGELOG.md` (este registro)
+- **Descripcion**: se corrige la numeracion y el estado del plan de pendientes del frontend, que seguia redactado sobre 1.3.2/1.3.3. Se agrega la seccion "Estado al 2026-11-01" (Lote A cerrado en 1.3.4 con 450/450 pruebas y 95,69 % de Lines reales; Lote B renumerado a 1.3.5; Lote C se mantiene en 1.4.0), se actualizan DEC-F01, DEC-F02, los titulos de los Lotes A y B, las fases 7, 9 y 11, ASSUMPTION-002, DEP-003 y el Apendice B, y se marcan como cumplidas TASK-7.1 a TASK-7.3. En DEC-F02 se deja registrada la decision del lider del 2026-11-01: los 5 componentes admin sin referencias **no** son equivalentes a las secciones inline de `PanelControl.jsx` (les falta restaurar producto suspendido, archivar reporte, el email del usuario y los estados de carga) y se eliminan en el Lote B, extrayendo los subcomponentes reales del codigo inline. Sin cambio de codigo ni de version.
+- **Motivo**: el plan citaba 1.3.2 y 1.3.3, versiones ya publicadas en local antes del cierre del Lote A, por lo que su numeracion no describia el estado real del repositorio; ademas DEC-F02 seguia abierta cuando la comparacion ya estaba hecha.
+- **Requerimientos**: N/A (documentacion), CON-004
+- **Evidencia**: `grep "1\.3\.[123]"` sobre el plan solo devuelve contextos historicos (nota de renumeracion, cifras del CHANGELOG 1.3.1 y "anterior: 1.3.3" del release 1.3.4); el frontmatter queda en `version: 1.1` y `last_updated: 2026-11-01`; sin corrida de pruebas (no se modifico codigo). Sin push.
+- **Estado**: Completado en local. Sin push.
+
+---
+
 ## 2026-10-31 - DOCS: unifica la cifra 539/539 del backend en README y despliegue
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12

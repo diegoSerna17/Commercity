@@ -1,20 +1,27 @@
 ---
 goal: Cerrar los pendientes del frontend web de PREVIEW (cobertura real, pruebas faltantes, módulos sin referencias, funciones sin persistencia, endpoints sin consumidor y componentes demasiado grandes), empezando por las pruebas
-version: 1.0
+version: 1.1
 date_created: 2026-10-15
-last_updated: 2026-10-15
+last_updated: 2026-11-01
 owner: Daniel Palacios (líder)
-status: 'Planned'
+status: 'In progress'
 tags: [fix, frontend, web, tests, cobertura, refactor, versionado]
 ---
 
 # Introduction
 
-![Status: Planned](https://img.shields.io/badge/status-Planned-blue)
+![Status: In progress](https://img.shields.io/badge/status-In%20progress-yellow)
 
 Plan de ejecución para cerrar lo que falta en `frontend/` (React 19 + Vite + Vitest). **Este documento es solo el plan: no modifica código, versión ni CHANGELOG.** Se ejecuta por lotes, y cada lote termina con su propio bump de versión y entrada de CHANGELOG (VER-001).
 
-**Base**: `PREVIEW` = `commercycity/PREVIEW` = `5b11ce4` (verificado con `git ls-remote`, solo lectura). La rama de trabajo es la actual `fix/pendientes-auditoria-2026-10-12`, que está en ese mismo commit y con el árbol limpio.
+## Estado al 2026-11-01
+
+- **Lote A: cerrado** en la versión **1.3.4** (commit `ea9828a`). Cobertura real medida: Lines 95,69 % (2066/2159), Statements 94,20 %, Functions 92,02 %, Branches 84,85 %, con 450/450 pruebas en 59 archivos. La numeración original de este documento (Lote A = 1.3.2) quedó obsoleta porque entre el 1.3.2 y el cierre se publicaron 1.3.3 y 1.3.4.
+- **Lote B: renumbered a 1.3.5** (antes 1.3.3). Se ejecuta sobre la base 1.3.4.
+- **Lote C: se mantiene en 1.4.0**, con versión anterior 1.3.5.
+- Las cifras de la sección 0 y las fases del Lote A se conservan como registro histórico fechado (2026-10-15); no describen el estado actual.
+
+**Base**: `PREVIEW` = `commercycity/PREVIEW` = `5b11ce4` (verificado con `git ls-remote`, solo lectura). La rama de trabajo es la actual `fix/pendientes-auditoria-2026-10-12`, que está en ese mismo commit y con el árbol limpio. Al 2026-11-01 la rama acumula los lotes A publicados en local hasta `ea9828a` (sin push).
 
 **Fuentes**:
 - `plan/CORRECCIONES_AUDITORIA_PREVIEW_2026-10-12.md` y `docs/informes/INFORME_REAUDITORIA_PREVIEW_2026-10-12.md` (M-27 quedó "parcial").
@@ -61,8 +68,8 @@ Plan de ejecución para cerrar lo que falta en `frontend/` (React 19 + Vite + Vi
 - **CON-006**: los conteos passed/total del CHANGELOG salen de una corrida real (la de la sesión o la que pegue el usuario). Para cada paquete se entregan los comandos de las suites afectadas.
 
 ### Decisiones pendientes (default recomendado; el usuario puede cambiarlas)
-- **DEC-F01** Alcance de versión: **default**: Lote A = **1.3.2** (pruebas, medición real, documentación, módulos sin referencias, honestidad de UI), Lote B = **1.3.3** (refactor sin cambio de contrato), Lote C = **1.4.0** (funciones nuevas de la Fase 10). Un bump por lote cerrado, nunca mezclar lotes.
-- **DEC-F02** Los 5 componentes admin sin referencias (`AdminStatCard`, `AdminTopBar`, `AdminTablaUsuarios`, `AdminTablaProductos`, `AdminTablaReportes`) corresponden **exactamente** a secciones inline de `PanelControl.jsx` (barra superior, tarjetas, gestión de usuarios, productos y reportes). **Default**: compararlos con el código inline en TASK-5.1; si son compatibles, **adoptarlos** en el refactor del Lote B en lugar de borrarlos; si no, borrarlos con aprobación. `pages/Inicio/EstadisticasHero.jsx` (1 línea) se borra.
+- **DEC-F01** Alcance de versión (**decidido el 2026-11-01**): Lote A = **1.3.4** (cerrado; pruebas, medición real, documentación, honestidad de UI), Lote B = **1.3.5** (refactor sin cambio de contrato), Lote C = **1.4.0** (funciones nuevas de la Fase 10). Un bump por lote cerrado, nunca mezclar lotes. Las versiones 1.3.2 y 1.3.3 que citaba la redacción original ya se publicaron en local, por lo que la numeración se corrió.
+- **DEC-F02** Los 5 componentes admin sin referencias (`AdminStatCard`, `AdminTopBar`, `AdminTablaUsuarios`, `AdminTablaProductos`, `AdminTablaReportes`) **no** corresponden exactamente a las secciones inline de `PanelControl.jsx`: les falta restaurar producto suspendido, archivar reporte, el email del usuario y los estados de carga, y usan tokens (`bg-auth-card-bg`) donde el inline usa hex. **Decidido el 2026-11-01 con aprobación explícita: se borran los 5**; los subcomponentes reales se extraen del código inline en TASK-8.3, sin reescribir a ciegas los huérfanos. `pages/Inicio/EstadisticasHero.jsx` (1 línea) se borra.
 - **DEC-F03** Medición de cobertura: **default (opción B)**: crear el script `test:coverage:real` (sin umbral) para usarlo durante el lote y, al llegar a la meta, mover `include`/`exclude` y umbrales a `vite.config.js` (TASK-4.2). Alternativa (A): cambiar `vite.config.js` ya y bajar el umbral a la línea base real, subiéndolo por etapas; deja CI rojo o con el umbral aparentemente rebajado.
 - **DEC-F04** `Reportar.jsx` acepta un solo archivo con aviso: **default**: mantenerlo así (ya implementado).
 - **DEC-F05** Avatar, biografía y dirección no se guardan (el backend solo actualiza `nombre_completo` en `PATCH /api/usuarios/me`): **default A**: en este lote la UI avisa que es vista previa (TASK-6.1); **B**: ampliar el backend (`descripcion_personal`, `direccion_envio`, subida de avatar) en un lote aparte y luego conectar el frontend.
@@ -75,7 +82,7 @@ Plan de ejecución para cerrar lo que falta en `frontend/` (React 19 + Vite + Vi
 
 > Orden: medir -> probar -> documentar -> limpiar -> refactorizar -> funciones nuevas. Las pruebas van primero porque son la red de seguridad del refactor. Convención de esfuerzo (estimación): S = menos de 1 h, M = 1 a 3 h, L = más de 3 h.
 
-### LOTE A (versión 1.3.2): pruebas, medición real, documentación y limpieza
+### LOTE A (versión 1.3.4, cerrado): pruebas, medición real, documentación y limpieza
 
 #### Implementation Phase 0 - Preparación y utilidades de prueba
 
@@ -167,17 +174,17 @@ Plan de ejecución para cerrar lo que falta en `frontend/` (React 19 + Vite + Vi
 | TASK-6.2 | El backend devuelve `https://via.placeholder.com/150` como avatar por defecto en `perfil-publico` (`usuarios.controllers.js:527`), un servicio externo ajeno al proyecto. En el frontend normalizar esa URL a `AVATAR_POR_DEFECTO` (`utils/mapearProducto.js:10`, archivo local `public/avatar-placeholder.svg`) con prueba; dejar anotado el seguimiento de backend (devolver `null`). | | |
 | TASK-6.3 | Registrar el seguimiento de backend (otro lote, DEC-F05 opción B): ampliar `PATCH /api/usuarios/me` (hoy solo `nombre_completo`, `usuarios.controllers.js:663-676`) con `descripcion_personal` y `direccion_envio`, endpoint de avatar, esquema Zod, OpenAPI y pruebas. `GET /api/usuarios/me` ya devuelve `descripcion_personal`, `direccion_envio` y `foto_perfil` (`usuarios.controllers.js:294-295`). | | |
 
-#### Implementation Phase 7 - Release 1.3.2 (bump de versión + banner + CHANGELOG)
+#### Implementation Phase 7 - Release 1.3.4 (bump de versión + banner + CHANGELOG)
 
 - GOAL-007: cumplir VER-001 para el Lote A. Todo en el **mismo commit** final del lote (DEC-F08).
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-7.1 | Ejecutar el "Procedimiento de release" del Apéndice A con la versión nueva **1.3.2** (anterior: 1.3.1). | | |
-| TASK-7.2 | Cerrar las entradas de CHANGELOG `TESTS` y `FIX` del lote con la evidencia real y crear la entrada `RELEASE 1.3.2`. Estado "Completado" solo si todo está verde; si queda algo pendiente, indicarlo. | | |
-| TASK-7.3 | Commit final `chore(release): bump 1.3.2 con CHANGELOG (pruebas frontend y cobertura real)`. Sin push; reportar SHA corto y rama. | | |
+| TASK-7.1 | Ejecutar el "Procedimiento de release" del Apéndice A con la versión nueva **1.3.4** (anterior: 1.3.3). | Sí | 2026-10-31 |
+| TASK-7.2 | Cerrar las entradas de CHANGELOG `TESTS` y `FIX` del lote con la evidencia real y crear la entrada `RELEASE 1.3.4`. Estado "Completado" solo si todo está verde; si queda algo pendiente, indicarlo. | Sí | 2026-10-31 |
+| TASK-7.3 | Commit final `chore(release): bump 1.3.4 con CHANGELOG (pruebas frontend y cobertura real)`. Sin push; reportar SHA corto y rama. | Sí (`547e837`; cierre en `ea9828a`) | 2026-10-31 |
 
-### LOTE B (versión 1.3.3): consolidación y división de componentes
+### LOTE B (versión 1.3.5): consolidación y división de componentes
 
 > Depende del Lote A: ningún refactor se inicia sin las pruebas de la Fase 3 en verde. Regla: **no se cambia comportamiento**; las pruebas existentes no se editan salvo rutas de importación.
 
@@ -195,11 +202,11 @@ Plan de ejecución para cerrar lo que falta en `frontend/` (React 19 + Vite + Vi
 | TASK-8.6 | `Ajustes.jsx` (517): separar `AjustesPersonales`, `AjustesDireccion`, `AjustesTema`, `AjustesRol` y `AjustesCuenta`. `FichaProducto.jsx` (448): extraer `useCalificacion` y `SelectorCantidad`. `AgregarProducto.jsx` (446): extraer `utils/precioProducto.js` (`limpiarPrecio`, `formatearPrecio`) y `useFormularioProducto`. | | |
 | TASK-8.7 | Verificar el tamaño del bundle después de cada extracción (`vite build`): `index` no debe crecer más de 5 % y ningún chunk de página debe superar su tamaño actual. Meta de forma: ningún archivo de componente por encima de 350 líneas. | | |
 
-#### Implementation Phase 9 - Release 1.3.3
+#### Implementation Phase 9 - Release 1.3.5
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-9.1 | Procedimiento de release del Apéndice A con la versión **1.3.3** (anterior: 1.3.2) y entrada `RELEASE` con la evidencia del Lote B (misma cobertura o mayor; bundle medido). Commit `chore(release): bump 1.3.3 con CHANGELOG (refactor frontend)`. | | |
+| TASK-9.1 | Procedimiento de release del Apéndice A con la versión **1.3.5** (anterior: 1.3.4) y entrada `RELEASE` con la evidencia del Lote B (misma cobertura o mayor; bundle medido). Commit `chore(release): bump 1.3.5 con CHANGELOG (refactor frontend)`. | | |
 
 ### LOTE C (versión 1.4.0): funciones nuevas para endpoints sin consumidor
 
@@ -231,7 +238,7 @@ Comparación de rutas entre `docs/api/openapi.json` (61 rutas `/api`) y el códi
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-11.1 | Procedimiento de release del Apéndice A con la versión **1.4.0** (anterior: 1.3.3 o 1.3.2 si el Lote B no se ejecutó). Entrada `RELEASE` con los endpoints conectados, pruebas nuevas y OpenAPI regenerado. Commit `chore(release): bump 1.4.0 con CHANGELOG (funciones nuevas frontend)`. | | |
+| TASK-11.1 | Procedimiento de release del Apéndice A con la versión **1.4.0** (anterior: 1.3.5). Entrada `RELEASE` con los endpoints conectados, pruebas nuevas y OpenAPI regenerado. Commit `chore(release): bump 1.4.0 con CHANGELOG (funciones nuevas frontend)`. | | |
 
 ### Transversal
 
@@ -258,7 +265,7 @@ Comparación de rutas entre `docs/api/openapi.json` (61 rutas `/api`) y el códi
 
 - **DEP-001**: pruebas y medición no dependen de backend ni de BD (todo mockeado).
 - **DEP-002**: Fase 6.3 y DEC-F05 B dependen de un lote de backend (ampliar `PATCH /api/usuarios/me`, endpoint de avatar, Zod, OpenAPI, pruebas).
-- **DEP-003**: Fase 10 depende de los contratos de `docs/api/openapi.json` (v1.3.1) y de la decisión DEC-F06.
+- **DEP-003**: Fase 10 depende de los contratos de `docs/api/openapi.json` (v1.3.4 al cierre del Lote A; usar la versión vigente al ejecutar la fase) y de la decisión DEC-F06.
 - **DEP-004**: Lote B depende de que el Lote A deje la Fase 3 en verde.
 - **DEP-005**: la revisión de `GET /api/usuarios` sin `authRequired` y el placeholder externo del avatar son tareas de backend para su responsable.
 - **DEP-006**: el job `frontend` de `.github/workflows/ci.yml` ejecuta `lint`, `test:coverage` y `build`; cualquier cambio en `vite.config.js` debe mantenerlo verde.
@@ -307,7 +314,7 @@ npm run build
 - **RISK-008**: las líneas del `package-lock.json` pueden cambiar más de lo previsto al sincronizar la versión. Mitigación: editar solo los dos campos de versión del lockfile y comprobar con `git diff --stat` que cada lockfile cambia 2 líneas.
 - **RISK-009**: datos personales en pruebas. Mitigación: usar solo datos ficticios de las fábricas de `src/test/utils.jsx`.
 - **ASSUMPTION-001**: `PREVIEW` no cambia durante el lote; si cambia, se integra con `git merge` desde `PREVIEW` antes del release.
-- **ASSUMPTION-002**: la versión vigente es 1.3.1 (`VERSION`) y los Lotes se numeran 1.3.2, 1.3.3 y 1.4.0 salvo que DEC-F01 cambie.
+- **ASSUMPTION-002**: la versión vigente es **1.3.4** (`VERSION`); el Lote A quedó cerrado en 1.3.4 y los lotes restantes se numeran 1.3.5 (Lote B) y 1.4.0 (Lote C) según DEC-F01.
 - **ASSUMPTION-003**: el frontend no muestra la versión en la interfaz (sin `APP_VERSION` en `src/`); el banner dinámico existe solo en backend (y escritorio) y se verifica, no se modifica.
 - **ASSUMPTION-004**: los números de Lines de v8 representan líneas ejecutables, no líneas físicas; por eso los porcentajes por archivo no equivalen al número de líneas del archivo.
 
@@ -357,7 +364,7 @@ Se ejecuta con `VERSION_NUEVA` y `VERSION_ANTERIOR` del lote. Todo va en el **mi
 
 ## Apéndice B - Definición de terminado por lote
 
-- **Lote A (1.3.2)**: Fases 0 a 7 hechas; lint, pruebas, cobertura real y build en verde; metas de TASK-4.1 alcanzadas o desviaciones documentadas; README y guía de pruebas con cifras reales; módulos sin referencias resueltos (con aprobación); avisos de vista previa en `PerfilVendedor`; `verificar-version.mjs 1.3.1` en OK; entradas `TESTS`, `FIX` y `RELEASE 1.3.2` en el CHANGELOG; commit final sin push.
-- **Lote B (1.3.3)**: ningún componente de página por encima de 350 líneas; pruebas del Lote A sin editar (salvo importaciones); bundle dentro de los límites de TASK-8.7; entrada `RELEASE 1.3.3`.
+- **Lote A (1.3.4, cerrado el 2026-10-31)**: Fases 0 a 7 hechas; lint, pruebas, cobertura real y build en verde; metas de TASK-4.1 superadas (Lines 95,69 %); README y guía de pruebas con cifras reales; avisos de vista previa en `PerfilVendedor`; `verificar-version.mjs 1.3.3` en OK; entradas `TESTS`, `FIX` y `RELEASE 1.3.4` en el CHANGELOG; commit final sin push. Los 5 componentes admin huérfanos se conservaron como deuda por decisión del líder y se resuelven en el Lote B.
+- **Lote B (1.3.5)**: los 5 componentes admin sin referencias eliminados; formateadores de precio unificados con prueba de caracterización; toasts unificados; ningún componente de página por encima de 350 líneas; pruebas del Lote A sin editar (salvo importaciones); bundle dentro de los límites de TASK-8.7; entrada `RELEASE 1.3.5`.
 - **Lote C (1.4.0)**: cada endpoint decidido como "conectar" tiene servicio, pantalla y pruebas; OpenAPI regenerado; `inventario-endpoints.md` actualizado; entrada `RELEASE 1.4.0`.
 - **Transversal**: pendientes humanos (TASK-12.3 y TASK-12.4) entregados al líder con la lista exacta; nada se publica sin autorización.
