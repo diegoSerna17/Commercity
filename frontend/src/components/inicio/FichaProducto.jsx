@@ -10,10 +10,7 @@ import {
   replaceInvalidProductImage,
   resolverImagenRespaldoProducto,
 } from "../../utils/productImageFallback.js";
-
-function formatearPrecio(numero) {
-  return `$${Math.round(numero).toLocaleString("es-CO")}`;
-}
+import { formatPriceRounded } from "../../utils/formatPrice.js";
 
 /**
  * Busca en el historial de compras del comprador el pedido mas reciente con una
@@ -240,11 +237,11 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
               <p className="text-xs font-extrabold uppercase tracking-wide text-brand-muted-text">Precio</p>
               {tieneDescuento && (
                 <p className="text-body-sm font-medium text-figma-accent-blue/70 line-through">
-                  {formatearPrecio(precioBase)}
+                  {formatPriceRounded(precioBase)}
                 </p>
               )}
               <p className="mb-3 text-headline-sm font-bold text-brand-orange">
-                {formatearPrecio(precioFinal)}
+                {formatPriceRounded(precioFinal)}
               </p>
 
               <div className="mt-auto grid grid-cols-1 gap-2 sm:grid-cols-2">

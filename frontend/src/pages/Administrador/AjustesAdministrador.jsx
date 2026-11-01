@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import {
   guardarMiCuentaBancaria,
   obtenerMiCuentaBancaria,
 } from "../../services/admin.service.js";
+import { useToast } from "../../hooks/useToast.js";
 
 // Bancos ofrecidos en el selector; el valor es el que se guarda en la BD.
 const BANCOS = [
@@ -29,21 +30,6 @@ function mensajeDeError(error) {
     if (mensajes.length > 0) return mensajes.join(" ");
   }
   return error?.message || "No se pudo guardar la cuenta bancaria.";
-}
-
-function useToast() {
-  const [toast, setToast] = useState({ visible: false, msg: "", isError: false });
-  const timerRef = useRef(null);
-
-  const showToast = useCallback((msg, isError = false) => {
-    clearTimeout(timerRef.current);
-    setToast({ visible: true, msg, isError });
-    timerRef.current = setTimeout(() => {
-      setToast((t) => ({ ...t, visible: false }));
-    }, 3000);
-  }, []);
-
-  return { toast, showToast };
 }
 
 export default function AjustesAdministrador({ onClose }) {

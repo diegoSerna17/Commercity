@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Monitor, SunDim, MoonIcon,} from "lucide-react";
 import Header from "../../components/globales/Header";
@@ -13,25 +13,7 @@ import {
   eliminarCuenta,
 } from "../../services/usuarios.service.js";
 import { obtenerTemaGuardado, guardarTema } from "../../utils/tema.js";
-
-function useToast() {
-  const [toast, setToast] = useState({ visible: false, msg: "", isError: false });
-  const timerRef = useRef(null);
-
-  function showToast(msg, isError = false) {
-    clearTimeout(timerRef.current);
-    setToast({ visible: true, msg, isError });
-    timerRef.current = setTimeout(() => {
-      setToast((current) => ({ ...current, visible: false }));
-    }, 3500);
-  }
-
-  useEffect(() => {
-    return () => clearTimeout(timerRef.current);
-  }, []);
-
-  return { toast, showToast };
-}
+import { useToast } from "../../hooks/useToast.js";
 
 function Toast({ toast }) {
   if (!toast.visible) return null;
@@ -80,8 +62,8 @@ export default function Ajustes() {
   const [eliminandoCuenta, setEliminandoCuenta] = useState(false);
   const [tema, setTema] = useState(() => obtenerTemaGuardado());
 
-  const { toast: toastPersonal, showToast: showToastPersonal } = useToast();
-  const { toast: toastDir, showToast: showToastDir } = useToast();
+  const { toast: toastPersonal, showToast: showToastPersonal } = useToast(3500);
+  const { toast: toastDir, showToast: showToastDir } = useToast(3500);
 
   // JS Rol actual y rol destino del cambio (el backend solo acepta comprador/vendedor)
   const esVendedor = roles.includes("vendedor");

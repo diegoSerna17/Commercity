@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { listarCategorias } from "../../services/productos.service.js";
-
-function formatearPrecio(numero) {
-  return numero.toLocaleString("es-CO");
-}
+import { formatNumber } from "../../utils/formatPrice.js";
 
 function limpiarPrecio(valor) {
   const soloNumeros = (valor || "").replace(/\./g, "").replace(/[^0-9]/g, "");
@@ -21,7 +18,7 @@ function valoresIniciales(producto) {
     descripcion: producto?.descripcion ?? "",
     precioTexto:
       producto?.precio != null
-        ? formatearPrecio(Math.round(Number(producto.precio)))
+        ? formatNumber(Math.round(Number(producto.precio)))
         : "",
     stock: producto?.stock != null ? String(producto.stock) : "",
     descuento: producto?.descuento_porcentaje
@@ -101,7 +98,7 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
       return;
     }
 
-    setPrecioTexto(formatearPrecio(numero));
+    setPrecioTexto(formatNumber(numero));
 
     if (cursorAlFinal) {
       requestAnimationFrame(() => {

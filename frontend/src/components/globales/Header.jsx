@@ -6,10 +6,7 @@ import { getCurrentUser } from "../../api/client.js";
 import { contarNoLeidas } from "../../services/notificaciones.service.js";
 import { listarProductos } from "../../services/productos.service.js";
 import { resolverImagenProducto } from "../../utils/mapearProducto.js";
-
-function formatearPrecio(numero) {
-  return `$${Math.round(numero).toLocaleString("es-CO")}`;
-}
+import { formatPriceRounded } from "../../utils/formatPrice.js";
 
 const Header = ({ title, showSearch = true, onSelectProduct }) => {
   const navigate = useNavigate();
@@ -226,11 +223,11 @@ const Header = ({ title, showSearch = true, onSelectProduct }) => {
                         <div className="text-right shrink-0">
                           {descuento > 0 && (
                             <p className="text-xs line-through text-brand-muted-text">
-                              {formatearPrecio(precio)}
+                              {formatPriceRounded(precio)}
                             </p>
                           )}
                           <p className="text-body-sm font-bold text-brand-orange">
-                            {formatearPrecio(precioFinal)}
+                            {formatPriceRounded(precioFinal)}
                           </p>
                         </div>
                       </button>
