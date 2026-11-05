@@ -1,6 +1,17 @@
 import { Router } from "express";
 import { authRequired } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
+import { validate } from "../middleware/validate.middleware.js";
+import { paramsIdSchema } from "../schemas/common.schema.js";
+import {
+  adminUsuariosQuerySchema,
+  cambiarEstadoUsuarioSchema,
+  adminProductosQuerySchema,
+  adminReportesQuerySchema,
+  resolverReporteSchema,
+  busquedaAdminQuerySchema,
+  upsertCuentaBancariaAdminSchema,
+} from "../schemas/admin.schema.js";
 import { getStats } from "../controllers/admin/stats.controllers.js";
 import {
   getUsuarios,
@@ -31,32 +42,54 @@ const router = Router();
 // administrador. Sin esto, cualquiera podria banear/suspender/eliminar.
 router.use(authRequired, requireRoles(["administrador"]));
 
-// Estadisticas (RF55-RF59)
+// Estadisticas (RF57-RF62)
 router.get("/stats", getStats);
 
-// Usuarios (RF67, RF73, RF74)
-router.get("/usuarios", getUsuarios);
-router.patch("/usuarios/:id/estado", cambiarEstadoUsuario);
-router.delete("/usuarios/:id", eliminarUsuario);
+// Usuarios (RF70, RF73, RF76)
+router.get("/usuarios", validate(adminUsuariosQuerySchema, "query"), getUsuarios);
+router.patch(
+  "/usuarios/:id/estado",
+  validate(paramsIdSchema, "params"),
+  validate(cambiarEstadoUsuarioSchema),
+  cambiarEstadoUsuario
+);
+router.delete("/usuarios/:id", validate(paramsIdSchema, "params"), eliminarUsuario);
 
-// Productos (RF68, RF72)
-router.get("/productos", getProductos);
-router.delete("/productos/:id", eliminarProducto);
-router.patch("/productos/:id/restaurar", restaurarProducto);
+// Productos (RF71, RF74, RF75)
+router.get("/productos", validate(adminProductosQuerySchema, "query"), getProductos);
+router.delete("/productos/:id", validate(paramsIdSchema, "params"), eliminarProducto);
+router.patch(
+  "/productos/:id/restaurar",
+  validate(paramsIdSchema, "params"),
+  restaurarProducto
+);
 
-// Reportes (RF60-RF66)
-router.get("/reportes", getReportes);
-router.get("/reportes/:id", getReporte);
-router.delete("/reportes/:id", eliminarReporte);
-router.patch("/reportes/:id/resolver", resolverReporte);
+// Reportes (RF63-RF69)
+router.get("/reportes", validate(adminReportesQuerySchema, "query"), getReportes);
+router.get("/reportes/:id", validate(paramsIdSchema, "params"), getReporte);
+router.delete("/reportes/:id", validate(paramsIdSchema, "params"), eliminarReporte);
+router.patch(
+  "/reportes/:id/resolver",
+  validate(paramsIdSchema, "params"),
+  validate(resolverReporteSchema),
+  resolverReporte
+);
 
-// Buscador (RF69-RF71)
-router.get("/busqueda", buscarAdmin);
+// Buscador (RF72-RF74)
+router.get("/busqueda", validate(busquedaAdminQuerySchema, "query"), buscarAdmin);
 
-// Cuenta bancaria de Commercity (RF75/RF76, RNF11 cifrado)
+// Cuenta bancaria de Commercity (RF79, RNF11 cifrado)
 router.get("/mi-cuenta-bancaria", getMiCuentaBancaria);
 router.get("/mi-cuenta-bancaria/masked", getMiCuentaBancariaMasked);
-router.post("/mi-cuenta-bancaria", upsertMiCuentaBancaria);
-router.put("/mi-cuenta-bancaria", upsertMiCuentaBancaria);
+router.post(
+  "/mi-cuenta-bancaria",
+  validate(upsertCuentaBancariaAdminSchema),
+  upsertMiCuentaBancaria
+);
+router.put(
+  "/mi-cuenta-bancaria",
+  validate(upsertCuentaBancariaAdminSchema),
+  upsertMiCuentaBancaria
+);
 
 export default router;

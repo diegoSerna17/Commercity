@@ -98,18 +98,6 @@ function conexionSinItem() {
   );
 }
 
-describe("GET /", () => {
-  it("responde 200 con el mensaje del servidor en contrato JSON (DEF-02/DEF-03)", async () => {
-    const res = await request(app).get("/");
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.message).toContain("servidor creado");
-    expect(res.body.data.status).toBe("ok");
-    expect(res.body.data.version).toBeDefined();
-    expect(res.body.data.timestamp).toBeDefined();
-  });
-});
-
 describe("POST /api/carrito (agregarProducto)", () => {
   beforeEach(() => {
     vi.clearAllMocks();

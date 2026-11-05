@@ -92,13 +92,7 @@ const creado = (description, extra = {}) => ({ 201: { description }, ...extra })
 
 /** @type {Operacion[]} */
 export const operaciones = [
-  // ── Base (2) ──────────────────────────────────────────────
-  {
-    method: "get", path: "/", operationId: "verificarServidor", tag: "Base",
-    summary: "Verificacion del servidor",
-    description: "Endpoint raiz de verificacion (responde el modulo usuarios).",
-    responses: ok("Servidor en linea."),
-  },
+  // ── Base (1) ──────────────────────────────────────────────
   {
     method: "get", path: "/health", operationId: "healthCheck", tag: "Base",
     summary: "Healthcheck",

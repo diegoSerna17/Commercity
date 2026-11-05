@@ -142,7 +142,7 @@ describe("Subidas: ramas de validacion (TASK-4.6)", () => {
       .attach("imagen", IMAGEN_JPEG, "foto.jpg");
 
     expect(res.status).toBe(400);
-    expect(res.body.error.message).toContain("ID inválido");
+    expect(res.body.error.message).toContain("El id debe ser un entero positivo");
   });
 
   it("editar un producto ajeno/inexistente con imagen -> 404 (limpia el archivo)", async () => {

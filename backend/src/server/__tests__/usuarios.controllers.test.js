@@ -72,7 +72,7 @@ describe("GET /api/usuarios/perfil-publico/:id", () => {
     const res = await request(app).get("/api/usuarios/perfil-publico/abc");
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       success: false,
       error: { code: "VALIDATION_ERROR", message: "El id debe ser un entero positivo" },
     });
@@ -315,6 +315,17 @@ describe("POST /api/usuarios/login (RF2 - fix 3.1)", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.token).toBeTruthy();
     expect(res.body.data.user.roles).toEqual(["comprador"]);
+  });
+
+  it("B2: una contrasena corta no se rechaza por complejidad; el login responde 401 uniforme", async () => {
+    pool.query.mockResolvedValue([[], undefined]);
+
+    const res = await request(app)
+      .post("/api/usuarios/login")
+      .send({ email: "no-existe@test.com", password: "abc" });
+
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
   });
 
   it("M-8/B-4: el token de login lleva token_version y iss/aud (revocable)", async () => {
@@ -610,6 +621,61 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.roles).toEqual(["vendedor"]);
     expect(conn.commit).toHaveBeenCalled();
+  });
+
+  it("B2: no permite bajar a comprador con productos activos o pedidos abiertos (409)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 1 }], undefined];
+      if (sql.includes("FROM roles r")) return [[{ nombre: "vendedor" }], undefined];
+      return [[], undefined];
+    });
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT") && sql.includes("productos_activos")) {
+        return [[{ productos_activos: 2, pedidos_abiertos: 0 }], undefined];
+      }
+      return [{ affectedRows: 1 }, undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/usuarios/me/rol")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ rol: "comprador" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("CONFLICT");
+    expect(conn.rollback).toHaveBeenCalled();
+    expect(
+      conn.query.mock.calls.some(([sql]) => String(sql).includes("DELETE FROM usuario_roles"))
+    ).toBe(false);
+  });
+
+  it("B2: baja a comprador sin compromisos y audita el cambio de rol", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 1 }], undefined];
+      if (sql.includes("FROM roles r")) return [[{ nombre: "vendedor" }], undefined];
+      return [[], undefined];
+    });
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT") && sql.includes("productos_activos")) {
+        return [[{ productos_activos: 0, pedidos_abiertos: 0 }], undefined];
+      }
+      return [{ affectedRows: 1 }, undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/usuarios/me/rol")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ rol: "comprador" });
+
+    expect(res.status).toBe(200);
+    expect(conn.commit).toHaveBeenCalled();
+    const auditoria = conn.query.mock.calls.find(([sql]) =>
+      String(sql).includes("INSERT INTO auditoria_acciones")
+    );
+    expect(auditoria).toBeDefined();
+    expect(auditoria[1]).toContain("usuario.rol_cambiado");
   });
 
   it("devuelve 404 si el rol solicitado no existe en la BD", async () => {
@@ -1198,7 +1264,7 @@ describe("PATCH /api/usuarios/me (actualiza nombre de perfil)", () => {
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       success: false,
       error: { code: "VALIDATION_ERROR", message: "El nombre de perfil es obligatorio" },
     });

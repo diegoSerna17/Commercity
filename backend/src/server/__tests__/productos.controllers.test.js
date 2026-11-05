@@ -9,10 +9,12 @@ vi.mock("../config/db.js", () => ({
 
 import pool from "../config/db.js";
 import productosRouter from "../routes/productos.routes.js";
+import { errorHandler } from "../middleware/error.middleware.js";
 
 const app = express();
 app.use(express.json());
 app.use("/api", productosRouter);
+app.use(errorHandler);
 
 const filaProducto = {
   id: 1,
@@ -91,15 +93,12 @@ describe("GET /api/productos (Panel Principal RF87-RF94)", () => {
     expect(consulta[0]).toContain("p.estado = 'Disponible'");
   });
 
-  it("protege contra paginas negativas o limites desmedidos", async () => {
-    pool.query.mockResolvedValue([[], undefined]);
+  it("rechaza paginas negativas o limites desmedidos (400, schema Zod)", async () => {
+    const res = await request(app).get("/api/productos?page=-5&limit=9999");
 
-    await request(app).get("/api/productos?page=-5&limit=9999");
-
-    const consultaProductos = pool.query.mock.calls.find(([sql]) =>
-      sql.includes("LIMIT ? OFFSET ?")
-    );
-    expect(consultaProductos[1]).toEqual([100, 0]); // limite tope 100, pagina minima 1
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(pool.query).not.toHaveBeenCalled();
   });
 
   it("devuelve 500 con error estructurado si la BD falla", async () => {
@@ -133,9 +132,9 @@ describe("GET /api/categorias", () => {
     const res = await request(app).get("/api/categorias");
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       success: false,
-      error: { code: "INTERNAL_ERROR", message: "Error al obtener las categorías" },
+      error: { code: "INTERNAL_ERROR", message: "Error interno del servidor" },
     });
   });
 });
@@ -154,15 +153,29 @@ describe("GET /api/vendedores", () => {
     );
   });
 
+  it("B2: pagina el listado de vendedores con LIMIT/OFFSET", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("COUNT(*)")) return [[{ total: 3 }], undefined];
+      return [[{ id: 2, nombre: "Vendedor Alex" }], undefined];
+    });
+
+    const res = await request(app).get("/api/vendedores?page=2&limit=2");
+
+    expect(res.status).toBe(200);
+    expect(res.body.paginacion).toMatchObject({ pagina: 2, por_pagina: 2, total: 3 });
+    const listado = pool.query.mock.calls.find(([sql]) => String(sql).includes("LIMIT ? OFFSET ?"));
+    expect(listado[1]).toEqual([2, 2]);
+  });
+
   it("devuelve 500 con error estructurado si la BD falla", async () => {
     pool.query.mockRejectedValue(new Error("BD caida"));
 
     const res = await request(app).get("/api/vendedores");
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       success: false,
-      error: { code: "INTERNAL_ERROR", message: "Error al obtener los vendedores" },
+      error: { code: "INTERNAL_ERROR", message: "Error interno del servidor" },
     });
   });
 });
@@ -244,13 +257,14 @@ describe("GET /api/productos/:id (RF78/RF79)", () => {
       if (sql.includes("calificaciones_vendedores")) {
         return [[{ promedio: null, total: 0 }], undefined];
       }
-      return [[{ ...filaDetalle, vendedor_foto: null }], undefined];
+      return [[{ ...filaDetalle, vendedor_nombre: null, vendedor_foto: null }], undefined];
     });
 
     const res = await request(app).get("/api/productos/584");
 
     expect(res.status).toBe(200);
     expect(res.body.data.vendedor.foto).toContain("ui-avatars.com");
+    expect(res.body.data.vendedor.foto).toContain("Vendedor");
     expect(res.body.data.vendedor.calificacion_promedio).toBeNull();
     expect(res.body.data.vendedor.total_calificaciones).toBe(0);
   });
@@ -338,18 +352,13 @@ describe("GET /api/productos/:id/validar-stock (RF86)", () => {
     expect(res.body.data.mensaje).toContain("Solo hay 3");
   });
 
-  it("acepta cantidad por body como respaldo", async () => {
-    pool.query.mockResolvedValue([
-      [{ stock: 10, estado: "Disponible" }],
-      undefined,
-    ]);
-
+  it("rechaza la cantidad enviada solo por body (el contrato es query)", async () => {
     const res = await request(app)
       .get("/api/productos/584/validar-stock")
       .send({ cantidad: 1 });
 
-    expect(res.status).toBe(200);
-    expect(res.body.data.valido).toBe(true);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("devuelve 400 si la cantidad no es entero positivo", async () => {

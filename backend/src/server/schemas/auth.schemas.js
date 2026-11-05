@@ -36,7 +36,17 @@ export const registerSchema = z
   });
 
 export const loginSchema = z
-  .object({ email, password })
+  .object({
+    email,
+    // B2 (auditoria 2026-11-04): el login NO exige la complejidad del registro
+    // (una cuenta antigua con clave corta debe poder entrar); solo no vacio.
+    // Cualquier credencial invalida responde el mismo 401 uniforme.
+    password: z
+      .string()
+      .min(1, "La contraseña es obligatoria")
+      .max(200, "La contraseña es demasiado larga")
+      .describe("Contraseña del usuario (no vacia)"),
+  })
   .strict()
   .meta({
     id: "Login",

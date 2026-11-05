@@ -3,10 +3,9 @@ import { idParam } from "./common.schema.js";
 
 // ============================================================================
 // Contratos del modulo carrito (H1: comprador_id siempre del JWT).
-// Espejan la validacion manual de carrito.controllers.js (esEnteroPositivo):
-// z.coerce.number().int().positive() acepta/rechaza exactamente los mismos
-// valores (Number('3')=3 ok; Number('')=0 y NaN rechazados).
-// Fuente documental (OpenAPI); sin cablear validate() todavia (Fase 1).
+// Cableados con validate() en routes/carrito.routes.js:
+// z.coerce.number().int().positive() acepta/rechaza los mismos valores que la
+// validacion manual anterior (Number('3')=3 ok; Number('')=0 y NaN rechazados).
 // ============================================================================
 
 /** Body de POST /api/carrito/ (agregar; cantidad default 1). */

@@ -88,6 +88,10 @@ describe("CORS (origenes permitidos: frontend web + WebView Capacitor)", () => {
 
     const resFile = await preflight("file://", appDesktop);
     expect(resFile.headers["access-control-allow-origin"]).toBe("file://");
+
+    // Electron empaquetado suele enviar una ruta file:///...
+    const resRuta = await preflight("file:///C:/app/index.html", appDesktop);
+    expect(resRuta.headers["access-control-allow-origin"]).toBe("file:///C:/app/index.html");
   });
 
   it("M-16/H6: en produccion solo entran FRONTEND_URL y CORS_ALLOWLIST (sin localhost ni desktop)", async () => {

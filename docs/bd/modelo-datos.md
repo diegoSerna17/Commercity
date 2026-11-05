@@ -1,7 +1,7 @@
 # Modelo de datos — CommerCity (BD compartida `commercity_v2`; el esquema local crea `commercity_dev`)
 
 > Fuente: `schema_commercity.sql` (MySQL 8, InnoDB, `utf8mb4_unicode_ci`). Semilla: `seed_commercity.sql`.
-> 16 tablas vigentes en 6 modulos + `schema_migrations` (ledger de migraciones). Notas de negocio verificadas contra el codigo (`utils/finanzas.js`, `utils/reembolsos.js`, controllers).
+> 17 tablas vigentes en 7 modulos + `schema_migrations` (ledger de migraciones). Notas de negocio verificadas contra el codigo (`utils/finanzas.js`, `utils/reembolsos.js`, controllers).
 > Tablas en desuso RETIRADAS del esquema canonico el 2026-10-11 (siguen en la BD real, sin uso por el codigo): `etiquetas`, `producto_etiquetas`, `calificaciones_productos` (TASK-7.6/TASK-7.7).
 
 ## Diagrama entidad-relacion
@@ -21,6 +21,7 @@ erDiagram
     USUARIOS ||--o{ MENSAJES_CHAT : "envia/recibe"
     USUARIOS ||--o{ NOTIFICACIONES : recibe
     USUARIOS ||--o{ REPORTES : informa
+    USUARIOS ||--o{ AUDITORIA_ACCIONES : ejecuta
     CATEGORIAS ||--o{ CATEGORIAS : "padre (SET NULL)"
     CATEGORIAS ||--o{ PRODUCTOS : clasifica
     PRODUCTOS ||--o{ CARRITO_ITEMS : contiene
@@ -51,7 +52,9 @@ erDiagram
 | descripcion_personal | TEXT | si | — | Perfil publico |
 | direccion_envio | TEXT | si | — | — |
 | activo | TINYINT(1) DEFAULT 1 | no | — | 0 = baneado/desactivado; el auth es fail-closed |
-| token_recuperacion | VARCHAR(100) | si | — | Flujo recover/reset (RF4) |
+| token_version | INT NOT NULL DEFAULT 0 | no | — | M-8 (mig 015): incrementarlo revoca todos los JWT emitidos (reset, baneo, logout-todas) |
+| password_changed_at | DATETIME | si | — | Mig 015: fecha del ultimo cambio de contrasena |
+| token_recuperacion | VARCHAR(100) | si | — | Flujo recover/reset (RF4); indice `idx_usuarios_token_recuperacion` (mig 015) |
 | token_recuperacion_expiracion | DATETIME | si | — | Expira a los 5 min; se guarda SHA-256 |
 | created_at / updated_at | TIMESTAMP | no | — | updated_at ON UPDATE |
 
@@ -142,7 +145,25 @@ emisor_id + receptor_id (FK CASCADE), mensaje TEXT, enviado_at, leido default 0.
 usuario_id (CASCADE), tipo VARCHAR(50) (`compra`, `pedido enviado`, `en camino`, `entregado`, `devolucion`, `mensajes`, `reporte`; VARCHAR porque el ENUM truncaba), descripcion TEXT, estado VARCHAR(20) DEFAULT 'no leido' (sin acentos, como escribe el codigo), url_redireccion NULL, fecha_hora.
 
 ### `reportes`
-informante_id NULL (FK usuarios **SET NULL**: el reporte sobrevive aunque se borre el informante), tipo_reporte ENUM('Producto','Usuario'), producto_id NULL / usuario_reportado_id NULL (FK **RESTRICT**: no se borra la entidad reportada mientras exista el reporte) con CHECK de exclusividad (uno y solo uno segun el tipo), motivo TEXT, evidencia_url NULL (multipart `evidencia`), estado_reporte ENUM('Pendiente','Resuelto') DEFAULT 'Pendiente', archivado default 0 (borrado logico), respuesta_admin NULL, respondido_at NULL, fecha_reporte. RF60-RF66. FKs ajustadas en TASK-7.7 (los reportes no se borran).
+informante_id NULL (FK usuarios **SET NULL**: el reporte sobrevive aunque se borre el informante), tipo_reporte ENUM('Producto','Usuario'), producto_id NULL / usuario_reportado_id NULL (FK **RESTRICT**: no se borra la entidad reportada mientras exista el reporte) con CHECK de exclusividad (uno y solo uno segun el tipo), motivo TEXT, evidencia_url NULL (multipart `evidencia`, guardada en `uploads/reportes/` y privada: exige JWT), estado_reporte ENUM('Pendiente','Resuelto') DEFAULT 'Pendiente', archivado default 0 (borrado logico), respuesta_admin NULL, respondido_at NULL, fecha_reporte. RF60-RF66. FKs ajustadas en TASK-7.7 (los reportes no se borran).
 
 ### `tokens_invalidados` (lista negra JWT, RF2)
 token_hash CHAR(64) PK (SHA-256 del token revocado en logout), expira_en DATETIME (limpieza), creado_en. Indice en expira_en.
+
+## Modulo 7 — Auditoria
+
+### `auditoria_acciones` (mig 016)
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | INT AUTO_INCREMENT PK | — |
+| actor_id | INT NULL, FK usuarios SET NULL | Quien ejecuto la accion (si la cuenta se borra, la fila sobrevive) |
+| accion | VARCHAR(60) | Clave estable (`usuario.baneado`, `usuario.rol_cambiado`, `producto.suspendido`, etc.) |
+| objetivo_tipo | VARCHAR(30) NULL | `usuario`, `producto`, `reporte`, `datos_bancarios`, `pedido` |
+| objetivo_id | INT NULL | Id del objetivo |
+| detalle | JSON NULL | Contexto SIN datos sensibles (nunca cuentas, contrasenas ni tokens) |
+| ip | VARCHAR(45) NULL | IP del actor |
+| fecha | TIMESTAMP DEFAULT now | Indice (accion, fecha) |
+
+`utils/auditoria.js` inserta con fail-soft: un fallo al auditar no revierte la accion de
+negocio. Se auditan baneos/reactivaciones, bajas de cuenta, cambios de rol, suspension y
+restauracion de productos, reportes y cambios de cuenta bancaria.

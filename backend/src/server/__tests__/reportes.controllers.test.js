@@ -194,7 +194,7 @@ describe("Creacion de reportes (RF62/RF63, RF79, RF101)", () => {
 
     expect(res.status).toBe(201);
     const insert = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO reportes"));
-    expect(insert[1][5]).toMatch(/^\/uploads\/[0-9a-f]{32}\.jpg$/);
+    expect(insert[1][5]).toMatch(/^\/uploads\/reportes\/[0-9a-f]{32}\.jpg$/);
   });
 
   it("M-14: deduplica un reporte abierto del mismo informante sobre el mismo objetivo (409)", async () => {

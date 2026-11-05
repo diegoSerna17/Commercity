@@ -13,6 +13,11 @@
 > Addendum TASK-8.4 (rama `fix/aud-p1-backend`): se agrega `GET /health`
 > (publico; `SELECT 1` a la BD, 503 si no responde). Total vigente:
 > **74 endpoints**.
+>
+> Addendum Lote 2 (auditoria 2026-11-04, version 1.3.7): se retira el `GET /`
+> duplicado (repetia `GET /api/usuarios/`) y se documenta `GET /health`, que ya
+> existia. Total vigente: **73 endpoints**. La numeracion historica 1-72 se
+> conserva; `openapi.json` es la fuente de verdad del conteo.
 
 Leyenda de estado Zod:
 
@@ -22,11 +27,12 @@ Leyenda de estado Zod:
 
 Montajes (`app.js`): `/` → router base · `/api/carrito` · `/api/usuarios` · `/api/historial` · `/api/pedidos` · `/api/tienda` · `/api/admin` · `/api/reportes` · `/api/calificaciones` · `/api/chat` · `/api/notificaciones` · `/api/seguidores` · `/api` → productos.
 
-## 0. Base — `GET /` (1)
+## 0. Base — `GET /health` (1)
 
 | # | Metodo + ruta completa | Auth / roles | Entrada | Estado Zod |
 |---|---|---|---|---|
-| 1 | `GET /` | publico | — | ❌ |
+| 1 | ~~`GET /`~~ (retirado 2026-11-04) | publico | — | ❌ |
+| 73 | `GET /health` | publico | — (`SELECT 1` a la BD; 503 si falla) | ❌ |
 
 ## 1. Usuarios — `/api/usuarios` (13)
 

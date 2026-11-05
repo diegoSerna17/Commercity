@@ -3,10 +3,8 @@ import { paramsIdSchema } from "./common.schema.js";
 
 // ============================================================================
 // Contratos del modulo usuarios ( RF2, RF40 ).
-// Espejan la validacion real de usuarios.controllers.js: los endpoints de
-// auth usan validate() con auth.schemas.js; el resto valida a mano.
-// Estos esquemas son la fuente documental (OpenAPI) y la base para cablear
-// validate() en el futuro sin cambiar comportamiento hoy.
+// Los endpoints de auth usan validate() con auth.schemas.js; perfil,
+// directorio y params se cablean con validate() en routes/usuarios.routes.js.
 // ============================================================================
 
 /** Params de GET /api/usuarios/perfil-publico/:id. */
@@ -28,7 +26,7 @@ export const directorioQuerySchema = z
 export const actualizarPerfilSchema = z
   .object({
     nombre_completo: z
-      .string()
+      .string({ error: "El nombre de perfil es obligatorio" })
       .trim()
       .min(1, "El nombre de perfil es obligatorio")
       .max(100, "El nombre de perfil no puede superar 100 caracteres")

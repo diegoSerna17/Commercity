@@ -1,18 +1,13 @@
 import pool from "../../config/db.js";
 import { successResponse, errorResponse } from "../../utils/response.js";
-import { validarId, capitalizar, escapeLike } from "./admin.utils.js";
-import { adminUsuariosQuerySchema } from "../../schemas/admin.schema.js";
+import { capitalizar, escapeLike } from "./admin.utils.js";
 import { destinoPedidosVendedor } from "./pedidos.controllers.js";
 import { registrarAuditoria, ACCIONES } from "../../utils/auditoria.js";
 
 export const getUsuarios = async (req, res, next) => {
   try {
-    // B-9: paginacion validada con Zod (default 50, max 100).
-    const parsed = adminUsuariosQuerySchema.safeParse(req.query ?? {});
-    if (!parsed.success) {
-      return errorResponse(res, "Parámetros de paginación inválidos", 400);
-    }
-    const { pagina, por_pagina: porPagina } = parsed.data;
+    // B-9: paginacion validada con Zod en la ruta (default 50, max 100).
+    const { pagina, por_pagina: porPagina } = req.query;
     const offset = (pagina - 1) * porPagina;
 
     const q = req.query.q ? escapeLike(String(req.query.q).trim()) : null;
@@ -136,10 +131,7 @@ export const desactivarUsuario = async (id) => {
 export const cambiarEstadoUsuario = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const { estado } = req.body ?? {};
-    if (!validarId(id)) return errorResponse(res, "ID inválido", 400);
-    if (!["activo", "baneado"].includes(estado))
-      return errorResponse(res, "Estado inválido (activo|baneado)", 400);
+    const { estado } = req.body;
 
     if (estado === "activo") {
       // RF74: reactivar SOLO cambia activo=1; no restaura productos suspendidos.
@@ -188,7 +180,6 @@ export const cambiarEstadoUsuario = async (req, res, next) => {
 export const eliminarUsuario = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    if (!validarId(id)) return errorResponse(res, "ID inválido", 400);
 
     // M-11: mismas protecciones que el baneo (self / otros admins / ultimo admin).
     const proteccion = await validarObjetivoBaneable(id, req.userId);

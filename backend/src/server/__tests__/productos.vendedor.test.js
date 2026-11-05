@@ -83,7 +83,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
-      if (sql.includes("SELECT id FROM categorias")) return [[{ id: 5 }], undefined];
+      if (sql.includes("INSERT INTO categorias")) return [{ insertId: 5 }, undefined];
       if (sql.includes("INSERT INTO productos")) return [{ insertId: 999 }, undefined];
       return [[], undefined];
     });
@@ -221,6 +221,46 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("POST /api/productos valida longitudes y DECIMAL(12,2)/INT (B2)", async () => {
+    const base = () =>
+      request(app)
+        .post("/api/productos")
+        .set("Authorization", `Bearer ${tokenVendedor}`)
+        .field("descripcion", "Desc")
+        .field("precio", "1000")
+        .field("stock", "1")
+        .field("categoria", "Tecnologia")
+        .attach("imagen", IMAGEN_JPEG, "foto.jpg");
+
+    const nombreLargo = await base().field("nombre", "x".repeat(151));
+    expect(nombreLargo.status).toBe(400);
+    expect(nombreLargo.body.error.message).toContain("150");
+
+    const precioFuera = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Precio fuera")
+      .field("descripcion", "Desc")
+      .field("precio", "10000000000")
+      .field("stock", "1")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
+    expect(precioFuera.status).toBe(400);
+    expect(precioFuera.body.error.message).toContain("DECIMAL");
+
+    const stockFuera = await request(app)
+      .post("/api/productos")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Stock fuera")
+      .field("descripcion", "Desc")
+      .field("precio", "1000")
+      .field("stock", "2147483648")
+      .field("categoria", "Tecnologia")
+      .attach("imagen", IMAGEN_JPEG, "foto.jpg");
+    expect(stockFuera.status).toBe(400);
+    expect(stockFuera.body.error.message).toContain("INT");
   });
 
   it("POST /api/productos con descuento negativo -> 400", async () => {
@@ -389,6 +429,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       if (sql.includes("SELECT id, categoria_id")) {
         return [[{ id: 1, categoria_id: 5, imagen_url: "/uploads/vieja.jpg", vendedor_id: 2 }], undefined];
       }
+      if (sql.includes("INSERT INTO categorias")) return [{ insertId: 5 }, undefined];
       if (sql.includes("UPDATE productos")) return [[], undefined];
       return [[], undefined];
     });
@@ -397,7 +438,8 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
       .put("/api/productos/1")
       .set("Authorization", `Bearer ${tokenVendedor}`)
       .field("nombre", "Nombre editado")
-      .field("precio", "30000");
+      .field("precio", "30000")
+      .field("categoria", "Tecnologia");
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -474,14 +516,13 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
     });
     // Se filtra por el id del JWT
     const select = pool.query.mock.calls.find(([sql]) => sql.includes("WHERE p.vendedor_id = ?"));
-    expect(select[1]).toEqual([2]);
+    expect(select[1]).toEqual([2, 4, 0]);
   });
 
   it("POST /api/productos crea categoria nueva automaticamente (INSERT categorias)", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
-      if (sql.includes("SELECT id FROM categorias")) return [[], undefined]; // no existe
       if (sql.includes("INSERT INTO categorias")) return [{ insertId: 77 }, undefined];
       if (sql.includes("INSERT INTO productos")) return [{ insertId: 555 }, undefined];
       return [[], undefined];
@@ -499,6 +540,7 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
     expect(res.status).toBe(201);
     const insertCategoria = pool.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO categorias"));
+    expect(insertCategoria[0]).toContain("ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)");
     expect(insertCategoria[1]).toEqual(["Nueva Categoria"]);
   });
 

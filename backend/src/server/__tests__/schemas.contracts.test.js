@@ -42,14 +42,14 @@ describe("contratos Zod y registro OpenAPI (smoke)", () => {
     expect(revisados).toBeGreaterThan(30);
   });
 
-  it("el documento OpenAPI se construye desde el registro con las 74 operaciones", () => {
+  it("el documento OpenAPI se construye desde el registro con las 73 operaciones", () => {
     const doc = buildOpenApi({ version: "0.0.0-test" });
 
     expect(doc.openapi).toBe("3.1.0");
     expect(doc.info.version).toBe("0.0.0-test");
     const numOps = Object.values(doc.paths).reduce((n, item) => n + Object.keys(item).length, 0);
     expect(numOps).toBe(operaciones.length);
-    expect(numOps).toBe(74);
+    expect(numOps).toBe(73);
 
     // Endpoints clave del lote
     expect(doc.paths["/health"].get.operationId).toBe("healthCheck");

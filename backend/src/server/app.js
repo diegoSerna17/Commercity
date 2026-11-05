@@ -5,9 +5,7 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import router from "./routes/routes.js";
-import carritoRouter from "./routes/carrito.routes.js";
-import usuariosRouter from "./routes/usuarios.routes.js";
+import carritoRouter from "./routes/carrito.routes.js";import usuariosRouter from "./routes/usuarios.routes.js";
 import historialRouter from "./routes/historial.routes.js";
 import productosRouter from "./routes/productos.routes.js";
 import pedidosRouter from "./routes/pedidos.routes.js";
@@ -83,13 +81,22 @@ app.use(cors({
 app.use(validarOriginCookies);
 
 // H2 (P0): /uploads ya no es totalmente publico. Las imagenes de producto
-// (jpg/jpeg/png/webp/gif) siguen publicas para el catalogo (RF45/RF49);
-// cualquier otro archivo (pdf/doc/xls/zip del chat, evidencias) exige JWT.
+// (jpg/jpeg/png/webp/gif) de la raiz siguen publicas para el catalogo
+// (RF45/RF49); las evidencias de reportes viven en /uploads/reportes/ y son
+// privadas (B2, auditoria 2026-11-04). Cualquier otro archivo (pdf/doc/xls/zip
+// del chat, evidencias) exige JWT.
 const IMAGEN_PUBLICA = /\.(jpg|jpeg|png|webp|gif)$/i;
+const ES_EVIDENCIA_PRIVADA = (ruta) => ruta.startsWith("/reportes/");
 app.use(
   "/uploads",
   (req, res, next) => {
-    if (req.method === "GET" && IMAGEN_PUBLICA.test(req.path)) return next();
+    if (
+      req.method === "GET" &&
+      IMAGEN_PUBLICA.test(req.path) &&
+      !ES_EVIDENCIA_PRIVADA(req.path)
+    ) {
+      return next();
+    }
     return authRequired(req, res, next);
   },
   express.static(path.join(__dirname, "uploads"), { dotfiles: "deny", index: false })
@@ -135,6 +142,21 @@ app.use("/api/usuarios/reset-password", limitePorVentana({ windowMs: 15 * 60 * 1
 app.use("/api/chat", limitePorVentana({ windowMs: 60 * 1000, max: 60 }));
 app.use("/api/reportes", limitePorVentana({ windowMs: 60 * 60 * 1000, max: 20 }));
 app.use("/api/seguidores", limitePorVentana({ windowMs: 60 * 1000, max: 30 }));
+
+// B2 (auditoria 2026-11-04): cupos propios para operaciones de dinero/cuenta.
+// Se montan por ruta+metodo para no afectar los GET del mismo prefijo.
+const limiteConfirmarPago = limitePorVentana({ windowMs: 15 * 60 * 1000, max: 30 });
+const limiteCalificaciones = limitePorVentana({ windowMs: 60 * 60 * 1000, max: 20 });
+const limiteCambioRol = limitePorVentana({ windowMs: 60 * 60 * 1000, max: 5 });
+app.use("/api/pedidos/confirmar-pago", (req, res, next) =>
+    req.method === "POST" ? limiteConfirmarPago(req, res, next) : next()
+);
+app.use("/api/calificaciones", (req, res, next) =>
+    req.method === "POST" ? limiteCalificaciones(req, res, next) : next()
+);
+app.use("/api/usuarios/me/rol", (req, res, next) =>
+    req.method === "PATCH" ? limiteCambioRol(req, res, next) : next()
+);
 
 // Subidas multipart (productos/reportes): cupo propio; el limite por usuario
 // se aplica ademas en config/multer.js (TASK-4.6).
@@ -183,7 +205,6 @@ app.get("/health", async (_req, res) => {
 });
 
 // Routers por modulo
-app.use("/", router);
 app.use("/api/carrito", carritoRouter);
 app.use("/api/usuarios", usuariosRouter);
 app.use("/api/historial", historialRouter);

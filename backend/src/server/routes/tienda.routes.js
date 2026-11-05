@@ -22,7 +22,7 @@ router.get("/mi-cuenta-bancaria/masked", ...vendedor, getMiCuentaBancariaMasked)
 router.post("/mi-cuenta-bancaria", ...vendedor, upsertMiCuentaBancaria);
 router.put("/mi-cuenta-bancaria", ...vendedor, upsertMiCuentaBancaria);
 
-// Historial de ventas e ingresos (RF119-RF123)
+// Historial de ventas e ingresos (RF135-RF139)
 router.get("/ventas", ...vendedor, getHistorialVentas);
 router.get("/ingresos", ...vendedor, getHistorialIngresos);
 router.get("/dashboard/stats", ...vendedor, getDashboardStats);

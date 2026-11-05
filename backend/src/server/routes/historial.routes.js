@@ -7,7 +7,7 @@ const router = Router();
 // Historial de compras del comprador autenticado (protegido con JWT)
 router.get("/compras", authRequired, getHistorialComprasComprador);
 
-// RF135: cancelar un pedido en estado Pendiente (restituye stock y reembolsa)
+// RF35/RF89: cancelar un pedido en estado Pendiente (restituye stock y reembolsa)
 router.post("/compras/:id/cancelar", authRequired, cancelarPedidoComprador);
 
 export default router;

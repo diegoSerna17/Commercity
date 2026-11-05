@@ -14,12 +14,14 @@ export const ACCIONES = Object.freeze({
   USUARIO_BANEADO: "usuario.baneado",
   USUARIO_REACTIVADO: "usuario.reactivado",
   USUARIO_BAJA_CUENTA: "usuario.baja_cuenta",
+  USUARIO_ROL_CAMBIADO: "usuario.rol_cambiado",
+  PRODUCTO_SUSPENDIDO: "producto.suspendido",
+  PRODUCTO_RESTAURADO: "producto.restaurado",
   CUENTA_BANCARIA_CAMBIADA: "cuenta_bancaria.cambiada",
   CUENTA_PLATAFORMA_CAMBIADA: "cuenta_bancaria_plataforma.cambiada",
   REPORTE_CREADO: "reporte.creado",
   REPORTE_RESUELTO: "reporte.resuelto",
   REPORTE_ARCHIVADO: "reporte.archivado",
-  DESEMBOLSO: "pedido.desembolso",
 });
 
 /**

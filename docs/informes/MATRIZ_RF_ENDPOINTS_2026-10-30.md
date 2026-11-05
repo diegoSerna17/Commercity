@@ -55,7 +55,7 @@ toda la sustentacion.
 
 | Indicador | Valor |
 |---|---|
-| Operaciones HTTP | 74 |
+| Operaciones HTTP | 73 (el `GET /` duplicado se retiro el 2026-11-04, version 1.3.7) |
 | Routers montados | 13 |
 | RF del documento oficial | 141 |
 | RF con al menos un endpoint identificado | 112 (4 de ellos parciales: RF6, RF40, RF84, RF118) |
@@ -63,19 +63,22 @@ toda la sustentacion.
 | RF con evidencia de integracion real | 4 (RF100, RF101, RF102, RF104, via BE-12) |
 | RF con corrida E2E HTTP registrada | 0 al corte |
 
-Las 74 operaciones se reparten asi: Admin 16, Usuarios 14, Productos 8, Tienda 8,
+Las 73 operaciones vigentes se reparten asi: Admin 16, Usuarios 14, Productos 8, Tienda 8,
 Notificaciones 6, Seguidores 5, Carrito 4, Chat 4, Pedidos 3, Historial 2,
-Reportes 1, Calificaciones 1, Base 2.
+Reportes 1, Calificaciones 1, Base 1.
 
 ## 4. Matriz por modulo
 
-### 4.1 Base (2 operaciones)
+### 4.1 Base (1 operacion)
 
 Evidencia del modulo: `app.health.test.js`, `app.cors.test.js`, `app.rate-limit.test.js` (SU).
 
+> El `GET /` diagnostico se retiro en 1.3.7 (duplicaba `GET /api/usuarios/`); la fila 1 se
+> conserva como registro historico y la numeracion 2-74 no se reescribe.
+
 | # | Metodo y ruta | RF | Auth | Evidencia |
 |---|---|---|---|---|
-| 1 | `GET /` | N/A (diagnostico) | Publico | SU |
+| 1 | ~~`GET /`~~ (retirado 2026-11-04) | N/A (diagnostico) | Publico | SU |
 | 74 | `GET /health` | RNF13 (disponibilidad) | Publico | SU |
 
 Observacion: `GET /` devuelve el estado del servidor (mensaje, estado, marca de tiempo y
@@ -328,9 +331,13 @@ comentario con el documento encontrara la inconsistencia.
 Recomendacion: corregir los comentarios en un cambio aparte, sin tocar comportamiento y con
 la suite en verde. No se hace antes de la sustentacion para no introducir riesgo.
 
+> **Actualizacion 2026-11-04 (version 1.3.7):** las 16 discrepancias de la tabla se
+> corrigieron en los routers durante el Lote 2 de la auditoria. La tabla queda como registro
+> de lo detectado y corregido.
+
 ## 7. Como usarlo en la sustentacion
 
-1. Abrir esta matriz y decir: "cada RF tiene su endpoint; estos 110 lo tienen y estos 31 no
+1. Abrir esta matriz y decir: "cada RF tiene su endpoint; estos 112 lo tienen y estos 29 no
    lo necesitan o son brecha declarada".
 2. Si preguntan por un RF puntual, buscar el numero y mostrar la fila.
 3. Si preguntan por cobertura: "trazabilidad documentada, no certificacion". La evidencia de

@@ -11,11 +11,11 @@ const router = Router();
 // Resumen del carrito con desglose de IVA y 90/10 (solo lectura)
 router.get("/resumen", authRequired, getResumenCarrito);
 
-// Checkout ACID: pedido + lineas + stock + pago en UNA transaccion (RF134)
+// Checkout ACID: pedido + lineas + stock + pago en UNA transaccion (RF116-RF124/RF140)
 router.post("/confirmar-pago", authRequired, confirmarPago);
 
 // PATCH /:id/estado — DOS caminos (RBAC por ownership DENTRO del controller):
-//  - Vendedor/Admin (RF122/RF124): avanza 1 nivel (Pendiente → En camino → Entregado).
+//  - Vendedor/Admin (RF127): avanza 1 nivel (Pendiente → En camino → Entregado).
 //  - Comprador (RF35): cancela por detalle_id o general (restituye stock + reembolso).
 router.patch("/:id/estado", authRequired, actualizarEstado);
 
