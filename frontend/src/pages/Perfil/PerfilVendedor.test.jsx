@@ -177,7 +177,6 @@ describe("PerfilVendedor", () => {
 
   it("tolera fallos parciales y mantiene el perfil visible", async () => {
     // Arrange
-    const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const usuario = userEvent.setup();
     listarMisProductos.mockRejectedValue(new Error("productos caidos"));
     listarSiguiendo.mockResolvedValue({ data: [usuarioSocial()] });
@@ -187,25 +186,15 @@ describe("PerfilVendedor", () => {
     renderPerfil();
     await usuario.click(screen.getByRole("button", { name: /Seguidores/ }));
 
-    // Assert
+    // Assert: las listas caidas quedan vacias y el perfil sigue visible.
     expect(
       await screen.findByText("Modal seguidores: Ana Perez 0/1")
     ).toBeInTheDocument();
-    expect(error).toHaveBeenCalledWith(
-      "No se pudieron cargar los productos del vendedor:",
-      expect.any(Error)
-    );
-    expect(error).toHaveBeenCalledWith(
-      "No se pudo cargar la lista de seguidores:",
-      expect.any(Error)
-    );
     expect(screen.getAllByText("Ana Perez")).toHaveLength(2);
-    error.mockRestore();
   });
 
   it("deja las listas vacias cuando fallan todas las peticiones", async () => {
     // Arrange
-    const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const usuario = userEvent.setup();
     listarMisProductos.mockRejectedValue(new Error("a"));
     listarSiguiendo.mockRejectedValue(new Error("b"));
@@ -219,12 +208,6 @@ describe("PerfilVendedor", () => {
     expect(
       await screen.findByText("Modal siguiendo: Ana Perez 0/0")
     ).toBeInTheDocument();
-    expect(error).toHaveBeenCalledTimes(3);
-    expect(error).toHaveBeenCalledWith(
-      "No se pudo cargar la lista de seguidos:",
-      expect.any(Error)
-    );
-    error.mockRestore();
   });
 
   it("no actualiza el estado cuando el componente ya se desmonto", async () => {

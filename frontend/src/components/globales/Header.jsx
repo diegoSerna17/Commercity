@@ -36,7 +36,8 @@ const Header = ({ title, showSearch = true, onSelectProduct }) => {
       const res = await contarNoLeidas();
       setNoLeidas(res.data?.total_no_leidas ?? 0);
     } catch {
-      // silencio
+      // El contador es accesorio: si falla se conserva el valor anterior y la
+      // campana sigue usable; no se muestra un error global por esto.
     }
   }, []);
 
@@ -48,7 +49,7 @@ const Header = ({ title, showSearch = true, onSelectProduct }) => {
         const res = await contarNoLeidas();
         if (!cancelado) setNoLeidas(res.data?.total_no_leidas ?? 0);
       } catch {
-        // silencio
+        // Mismo criterio: un fallo del contador no bloquea la navegacion.
       }
     })();
     return () => {
@@ -89,6 +90,8 @@ const Header = ({ title, showSearch = true, onSelectProduct }) => {
         setResultados(data.productos || []);
         setMostrarResultados(true);
       } catch {
+        // Error de red en el buscador: se muestra "sin resultados" para que el
+        // usuario pueda seguir escribiendo (no se rompe la pagina).
         setResultados([]);
         setMostrarResultados(true);
       } finally {

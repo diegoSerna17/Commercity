@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { confirmarPago } from "../../services/pedidos.service.js";
+import { formatPriceRounded } from "../../utils/formatPrice.js";
 
 function IconoTarjeta() {
   return (
@@ -19,9 +20,7 @@ function IconoUsuario() {
   );
 }
 
-function formatPeso(valor) {
-  return "$" + Math.round(valor).toLocaleString("es-CO");
-}
+const formatPeso = formatPriceRounded;
 
 // M-28: la pasarela es simulada; al backend solo viajan los ultimos 4 digitos
 // y la marca. El numero completo nunca se envia ni se registra.

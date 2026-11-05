@@ -1,51 +1,35 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, Flag, Minus, Plus, Star, X } from "lucide-react";
+import { ArrowLeft, Flag, Star, X } from "lucide-react";
 
-import { getCurrentUser } from "../../api/client.js";
-import { calificarVendedor } from "../../services/calificaciones.service.js";
-import { listarHistorialCompras } from "../../services/historial.service.js";
 import {
   aplicarFallbackImagenProducto,
   replaceInvalidProductImage,
   resolverImagenRespaldoProducto,
 } from "../../utils/productImageFallback.js";
 import { formatPriceRounded } from "../../utils/formatPrice.js";
-
-/**
- * Busca en el historial de compras del comprador el pedido mas reciente con una
- * linea no cancelada hacia el vendedor indicado. RF107 exige calificar despues
- * de una compra: el endpoint POST /api/calificaciones/vendedor recibe pedido_id
- * y vendedor_id, y el historial expone el nombre del vendedor por linea (no su
- * id), por lo que el emparejamiento se hace por nombre.
- * @param {string} nombreVendedor
- * @returns {Promise<number|null>} pedido_id o null si el comprador no le ha comprado
- */
-async function buscarPedidoDelVendedor(nombreVendedor) {
-  const res = await listarHistorialCompras();
-  const pedidos = res?.data || [];
-
-  for (const pedido of pedidos) {
-    const linea = (pedido.items || []).find(
-      (item) => item.vendedor === nombreVendedor && item.estado !== "Cancelado"
-    );
-    if (linea) return pedido.pedido_id;
-  }
-
-  return null;
-}
+import { useToast } from "../../hooks/useToast.js";
+import { useCalificacion } from "./useCalificacion.js";
+import SelectorCantidad from "./SelectorCantidad.jsx";
 
 export default function FichaProducto({ product, onClose, onReportar, onIrPerfilVendedor, onAgregarCarrito }) {
   const [quantity, setQuantity] = useState(1);
   const [zoomAbierto, setZoomAbierto] = useState(false);
-  const [toastMsg, setToastMsg] = useState(null);
-  // RF107: calificacion del vendedor del producto que se esta viendo.
-  const [calificacionAbierta, setCalificacionAbierta] = useState(false);
-  const [estrellas, setEstrellas] = useState(0);
-  const [comentario, setComentario] = useState("");
-  const [enviandoCalificacion, setEnviandoCalificacion] = useState(false);
-  const [errorCalificacion, setErrorCalificacion] = useState("");
-  const [exitoCalificacion, setExitoCalificacion] = useState("");
+  const { toast, showToast } = useToast(2600);
+  const vendedorId = product?.vendedorId ?? null;
+  const {
+    abierta: calificacionAbierta,
+    alternar: alternarCalificacion,
+    estrellas,
+    setEstrellas,
+    comentario,
+    setComentario,
+    enviando: enviandoCalificacion,
+    error: errorCalificacion,
+    exito: exitoCalificacion,
+    motivoDeshabilitada: motivoCalificacionDeshabilitada,
+    enviar: enviarCalificacion,
+  } = useCalificacion({ product, vendedorId });
 
   const stock = product?.stock ?? 0;
   const descuento = product?.descuento ?? 0;
@@ -65,12 +49,6 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
   }, []);
 
   useEffect(() => {
-    if (!toastMsg) return undefined;
-    const timer = setTimeout(() => setToastMsg(null), 2600);
-    return () => clearTimeout(timer);
-  }, [toastMsg]);
-
-  useEffect(() => {
     function onKeyDown(event) {
       if (event.key === "Escape") {
         if (zoomAbierto) setZoomAbierto(false);
@@ -84,19 +62,6 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
 
   if (!product) return null;
 
-  const vendedorId = product.vendedorId ?? null;
-  const usuarioActual = getCurrentUser();
-  const esVendedorPropio = Boolean(vendedorId) && usuarioActual?.id === vendedorId;
-
-  // Motivo por el que la calificacion no esta disponible (vacio = disponible).
-  const motivoCalificacionDeshabilitada = !vendedorId
-    ? "No se pudo identificar al vendedor de este producto."
-    : !usuarioActual
-      ? "Inicia sesion para calificar a este vendedor."
-      : esVendedorPropio
-        ? "No puedes calificarte a ti mismo."
-        : "";
-
   async function handleCart() {
     if (agotado) return;
 
@@ -104,50 +69,9 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
     try {
       await onAgregarCarrito?.(product, added);
       setQuantity(1);
-      setToastMsg(`${added} ${added === 1 ? "unidad agregada" : "unidades agregadas"} al carrito`);
+      showToast(`${added} ${added === 1 ? "unidad agregada" : "unidades agregadas"} al carrito`);
     } catch (err) {
-      setToastMsg(err.message || "No se pudo agregar el producto al carrito");
-    }
-  }
-
-  /**
-   * Envia la calificacion del vendedor (RF107). El backend exige un pedido del
-   * comprador con una linea no cancelada hacia ese vendedor, por lo que primero
-   * se resuelve el pedido_id en el historial de compras.
-   */
-  async function handleCalificar() {
-    if (enviandoCalificacion || motivoCalificacionDeshabilitada) return;
-
-    if (estrellas < 1 || estrellas > 5) {
-      setErrorCalificacion("Selecciona una puntuacion de 1 a 5 estrellas.");
-      return;
-    }
-
-    setEnviandoCalificacion(true);
-    setErrorCalificacion("");
-    setExitoCalificacion("");
-
-    try {
-      const pedidoId = await buscarPedidoDelVendedor(product.vendedorNombre);
-      if (!pedidoId) {
-        setErrorCalificacion("Solo puedes calificar a un vendedor despues de comprarle.");
-        return;
-      }
-
-      await calificarVendedor({
-        pedido_id: pedidoId,
-        vendedor_id: vendedorId,
-        estrellas,
-        comentario: comentario.trim() || undefined,
-      });
-
-      setExitoCalificacion("Calificacion registrada. Gracias por tu opinion.");
-      setEstrellas(0);
-      setComentario("");
-    } catch (err) {
-      setErrorCalificacion(err.message || "No se pudo registrar la calificacion.");
-    } finally {
-      setEnviandoCalificacion(false);
+      showToast(err.message || "No se pudo agregar el producto al carrito");
     }
   }
 
@@ -274,7 +198,7 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
               </div>
               <button
                 type="button"
-                onClick={() => setCalificacionAbierta((abierta) => !abierta)}
+                onClick={alternarCalificacion}
                 disabled={Boolean(motivoCalificacionDeshabilitada)}
                 className="h-9 rounded-card border border-brand-orange bg-transparent px-4 text-body-sm font-bold text-brand-orange transition hover:bg-brand-orange/10 disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -321,7 +245,7 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <button
                     type="button"
-                    onClick={handleCalificar}
+                    onClick={enviarCalificacion}
                     disabled={enviandoCalificacion || estrellas === 0}
                     className="h-9 rounded-button bg-brand-orange px-5 text-body-sm font-bold text-brand-dark-text transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                   >
@@ -361,30 +285,12 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
             </div>
 
             <div className="flex items-center justify-between gap-4 sm:justify-end">
-              <div className="text-center">
-                <p className="mb-1 text-xs font-extrabold uppercase text-brand-muted-text">Cantidad</p>
-                <div className="flex items-center">
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((current) => Math.max(1, current - 1))}
-                    disabled={quantity <= 1}
-                    className="flex h-8 w-8 items-center justify-center border-2 border-figma-divider bg-input-bg text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                  <div className="flex h-8 w-9 items-center justify-center border-y-2 border-figma-divider bg-auth-card-bg text-body-sm font-bold text-on-surface">
-                    {quantity}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((current) => Math.min(stock, current + 1))}
-                    disabled={agotado || quantity >= stock}
-                    className="flex h-8 w-8 items-center justify-center border-2 border-figma-divider bg-input-bg text-on-surface transition hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+              <SelectorCantidad
+                cantidad={quantity}
+                stock={stock}
+                agotado={agotado}
+                onChange={setQuantity}
+              />
 
               <button
                 type="button"
@@ -434,9 +340,9 @@ export default function FichaProducto({ product, onClose, onReportar, onIrPerfil
         </div>
       )}
 
-      {toastMsg && (
+      {toast.visible && (
         <div className="fixed bottom-5 left-1/2 z-[70] -translate-x-1/2 whitespace-nowrap rounded-card-lg bg-brand-orange px-5 py-2 text-body-sm font-bold text-brand-dark-text shadow-2xl">
-          {toastMsg}
+          {toast.msg}
         </div>
       )}
     </>,

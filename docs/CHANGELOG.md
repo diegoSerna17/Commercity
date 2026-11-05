@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 > **Nota de correccion (2026-10-31)**: las entradas historicas que citan presentaciones en `docs/` corresponden a `docs/presentaciones/` desde el movimiento del 2026-10-30. Las entradas originales no se reescriben; esta nota solo corrige la ruta para quien consulte el historial.
 
+## 2026-11-05 - RELEASE 1.3.8 - REFACTOR: cierre del Lote B de frontend (TASK-8.5 a 8.7)
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `frontend/src/pages/Inicio/*`, `frontend/src/components/inicio/*`, `frontend/src/pages/Perfil/*`, `frontend/src/components/perfil/*`, `frontend/src/pages/Administrador/useAdminPanel.js` (revision), `frontend/src/utils/*`, `frontend/src/services/productos.service.js`, `frontend/package.json`/lockfile, `frontend/src/constants/*.css`, `tools/verificar-version.mjs`, `VERSION`, package.json/lockfiles de backend/apps, Android/iOS, `docs/api/openapi.json`, `docs/api/swagger.html`, `docs/CHANGELOG.md`.
+- **Descripcion**: Lote 3 de la auditoria 2026-11-04. (1) Se comitea TASK-8.5: `Inicio` queda en 9.4 KB con `useCatalogo`, `HeroCarrusel`, `TarjetaProducto` y `PaginacionCatalogo`; se elimina el boton "Cargar mas" duplicado y el unico boton se muestra en todos los tamanos. (2) Test directo de `useCatalogo` (renderHook): descarta respuestas viejas al cambiar filtros, acumula paginas y distingue errores con/sin `status`. (3) `Ajustes` (499 lineas) se divide en `AjustesPersonales`, `AjustesTema`, `AjustesDireccion`, `AjustesRol` y `AjustesCuenta`, con estilos y aviso compartidos. (4) `FichaProducto` extrae `useCalificacion` y `SelectorCantidad` y pasa a `useToast`. (5) `AgregarProducto` extrae `utils/precioProducto.js` y `useFormularioProducto`. (6) `PerfilPublico` consume `obtenerPerfilPublico` y se divide en `usePerfilPublico`, `PerfilPublicoHeader` y `PerfilPublicoProductos`. (7) `Chats` (371) y `Pedidos` (356) quedan en 238 y 164 lineas con `chatMensajes`/`PedidosTabla`. (8) Precios unificados en `formatPriceRounded` (Carrito, PasarelaPago, Pedidos, DetallePedidos, StatsSection, Tienda, TarjetaProducto, PerfilPublico) y fechas en `utils/formatDate.js`. (9) Lean: se retira `obtenerProducto` sin consumidores, `calcSubtotal`/`calcIVA`/`calcTotal`/`IVA_RATE`, el script duplicado `test:coverage:real` y se renombra `historialUtils.jsx` a `historialComponentes.jsx`. (10) `catch` silenciosos documentados y se quitan los `console.error` de `usePerfilVendedor`. `useAdminPanel` se reviso y se mantiene como orquestador unico porque el modal de reportes cruza usuarios, productos y reportes; los avisos inline de formularios no se migran a `useToast` porque no son toasts transitorios.
+- **Motivo**: cerrar TASK-8.5/8.6/8.7 con componentes por debajo de 350 lineas, formatos y helpers unicos, sin cambios de contrato con la API.
+- **Requerimientos**: TASK-8.5, TASK-8.6, TASK-8.7 del plan de frontend; RF49, RF54, RF87-RF94, RF105-RF110.
+- **Evidencia**: `npm run lint` sin errores. `npm test`: 61 archivos, 468/468. `npm run test:coverage`: Statements 95.67 %, Branches 85.88 %, Functions 95.35 %, Lines 97.24 % (umbrales 92/82/89/93 en verde). `npm run build`: OK; chunk principal 247.58 kB (dentro del +5 %). `node tools/verificar-version.mjs 1.3.7`: OK; `frontend/package.json` entra en el verificador.
+- **Estado**: Cerrado. El refactor de `useAdminPanel` queda como decision documentada (no se divide).
+
+---
+
 ## 2026-11-05 - RELEASE 1.3.7 - HARDENING: validacion Zod central, paginacion y auditoria (auditoria 2026-11-04)
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12

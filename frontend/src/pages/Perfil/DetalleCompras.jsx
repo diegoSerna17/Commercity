@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { formatCOP } from "../../utils/historialUtils.js";
-import { EstadoBadge, Avatar } from "../../utils/historialUtils.jsx";
+import { EstadoBadge, Avatar } from "../../utils/historialComponentes.jsx";
 
 export default function DetalleCompras({
   order,

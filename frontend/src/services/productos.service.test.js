@@ -7,7 +7,6 @@ import {
   listarMisProductos,
   listarProductos,
   listarVendedores,
-  obtenerProducto,
 } from "./productos.service.js";
 
 vi.mock("../api/client.js", () => ({
@@ -58,11 +57,6 @@ describe("productos.service", () => {
         "/api/productos?page=1&limit=12&vendedor=Ana+Perez"
       );
     });
-  });
-
-  it("obtenerProducto consulta el detalle publico (RF78/RF79)", async () => {
-    await obtenerProducto(7);
-    expect(request).toHaveBeenCalledWith("/api/productos/7");
   });
 
   it("listarCategorias y listarVendedores alimentan los filtros del catalogo", async () => {

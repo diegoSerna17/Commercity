@@ -8,6 +8,7 @@ import {
   modificarCantidad,
 } from "../../services/carrito.service.js";
 import { obtenerResumenPedido } from "../../services/pedidos.service.js";
+import { formatPriceRounded } from "../../utils/formatPrice.js";
 
 /** Icono de la accion eliminar producto del carrito. */
 function IconoEliminar() {
@@ -35,9 +36,7 @@ function IconoProducto() {
   );
 }
 
-function formatPeso(valor) {
-  return "$" + Math.round(valor).toLocaleString("es-CO");
-}
+const formatPeso = formatPriceRounded;
 
 export default function Carrito() {
   // El carrito se resuelve con la sesion del usuario autenticado.

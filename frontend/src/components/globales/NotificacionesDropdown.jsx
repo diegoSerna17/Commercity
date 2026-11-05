@@ -79,7 +79,7 @@ export default function NotificacionesDropdown({ onChange }) {
       );
       notificarCambio();
     } catch {
-      // silencio
+      // Marcar como leida es best-effort: si falla, la navegacion continua.
     }
   };
 
@@ -90,7 +90,7 @@ export default function NotificacionesDropdown({ onChange }) {
       setShowAll(false);
       notificarCambio();
     } catch {
-      // silencio
+      // Borrar todas es best-effort: la lista se conserva si el backend falla.
     }
   };
 
@@ -101,7 +101,7 @@ export default function NotificacionesDropdown({ onChange }) {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       notificarCambio();
     } catch {
-      // silencio
+      // Descartar una notificacion es best-effort; no se bloquea la UI.
     }
   };
 
@@ -114,7 +114,7 @@ export default function NotificacionesDropdown({ onChange }) {
         );
         notificarCambio();
       } catch {
-        /* ignore */
+        // Marcar leida es best-effort; la navegacion continua igual.
       }
     }
     if (notif.tipo === "mensajes") {

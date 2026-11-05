@@ -29,7 +29,7 @@ export const listarProductos = ({
 };
 
 // Detalle publico de un producto (RF78/RF79).
-export const obtenerProducto = (id) => request(`/api/productos/${id}`);
+// La ficha usa el objeto ya cargado por el catalogo; no hay wrapper propio.
 
 // Categorias activas para el filtro del catalogo.
 export const listarCategorias = () => request("/api/categorias");

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { formatPriceRounded } from "../../utils/formatPrice.js";
 
 const estadoChip = {
   Entregado: {
@@ -18,7 +19,7 @@ const estadoChip = {
   },
 };
 
-const fmt = (n) => "$" + n.toLocaleString("es-CO");
+const fmt = formatPriceRounded;
 
 export default function DetallePedidos({ pedido, onClose }) {
   useEffect(() => {

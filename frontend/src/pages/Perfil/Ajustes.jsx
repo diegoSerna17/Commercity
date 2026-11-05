@@ -1,69 +1,33 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Monitor, SunDim, MoonIcon,} from "lucide-react";
 import Header from "../../components/globales/Header";
-import {
-  getCurrentUser,
-  setCurrentUser,
-  clearCurrentUser,
-} from "../../api/client.js";
-import {
-  actualizarPerfil,
-  cambiarRol,
-  eliminarCuenta,
-} from "../../services/usuarios.service.js";
+import { getCurrentUser, setCurrentUser, clearCurrentUser } from "../../api/client.js";
+import { cambiarRol, eliminarCuenta } from "../../services/usuarios.service.js";
 import { obtenerTemaGuardado, guardarTema } from "../../utils/tema.js";
 import { useToast } from "../../hooks/useToast.js";
+import AjustesPersonales from "./AjustesPersonales.jsx";
+import AjustesTema from "./AjustesTema.jsx";
+import AjustesDireccion from "./AjustesDireccion.jsx";
+import AjustesRol from "./AjustesRol.jsx";
+import AjustesCuenta from "./AjustesCuenta.jsx";
+import { sectionDivider } from "./ajustesEstilos.js";
 
-function Toast({ toast }) {
-  if (!toast.visible) return null;
-
-  return (
-    <div
-      className={`mb-4 rounded-card border px-4 py-3 text-body-sm ${
-        toast.isError
-          ? "border-error-container bg-error-container/20 text-error"
-          : "border-success bg-success/15 text-green-200"
-      }`}
-    >
-      {toast.msg}
-    </div>
-  );
-}
-
-const sectionDivider = "border-t-2 border-auth-card-bg mb-padding-lg";
-const cardClass =
-  "bg-auth-card-bg rounded-card-lg p-padding-lg sm:p-padding-xl mb-padding-xl shadow-lg";
-const labelClass =
-  "block mb-2 text-body-sm font-bold text-brand-muted-text";
-const inputClass =
-  "input-field bg-input-bg border-input-bg text-on-surface placeholder:text-brand-muted-text focus:ring-border-focus";
-
-const OPCIONES_TEMA = [
-  { id: "light", icono: SunDim, nombre: "Claro", detalle: "Light" },
-  { id: "dark", icono: MoonIcon, nombre: "Oscuro", detalle: "Dark" },
-  { id: "system", icono: Monitor, nombre: "Sistema", detalle: "System" },
-];
-
+/**
+ * Pagina de Ajustes: contenedor de las cinco secciones (personal, tema,
+ * direccion, rol y cuenta) y de los dos modales de confirmacion.
+ */
 export default function Ajustes() {
   const navigate = useNavigate();
   const currentUser = getCurrentUser();
-  const [usuario, setUsuario] = useState(currentUser?.nombre_completo || "");
-  const [email] = useState(currentUser?.email || "");
-  // RE Roles del usuario autenticado (RF20/RF21: comprador <-> vendedor)
   const [roles, setRoles] = useState(currentUser?.roles || []);
-  const [guardandoNombre, setGuardandoNombre] = useState(false);
-  const [direccion, setDireccion] = useState("");
-  const [ciudad, setCiudad] = useState("");
-  const [depto, setDepto] = useState("");
   const [modalEliminar, setModalEliminar] = useState(false);
   const [modalRol, setModalRol] = useState(false);
   const [enviandoRol, setEnviandoRol] = useState(false);
   const [eliminandoCuenta, setEliminandoCuenta] = useState(false);
   const [tema, setTema] = useState(() => obtenerTemaGuardado());
 
+  // RE Avisos de las acciones que se confirman en los modales.
   const { toast: toastPersonal, showToast: showToastPersonal } = useToast(3500);
-  const { toast: toastDir, showToast: showToastDir } = useToast(3500);
 
   // JS Rol actual y rol destino del cambio (el backend solo acepta comprador/vendedor)
   const esVendedor = roles.includes("vendedor");
@@ -77,49 +41,14 @@ export default function Ajustes() {
     };
   }, [modalEliminar, modalRol]);
 
-  async function handlePersonal(event) {
-    event.preventDefault();
-
-    if (!usuario.trim()) {
-      showToastPersonal("El nombre de perfil no puede estar vacio.", true);
-      return;
-    }
-
-    setGuardandoNombre(true);
-    try {
-      const res = await actualizarPerfil(usuario.trim());
-      if (currentUser && res.data) {
-        setCurrentUser({ ...currentUser, nombre_completo: res.data.nombre_completo });
-      }
-      showToastPersonal("Nombre actualizado correctamente.");
-    } catch (err) {
-      showToastPersonal(err.message || "No se pudo actualizar el nombre.", true);
-    } finally {
-      setGuardandoNombre(false);
-    }
-  }
-
-  function handleDireccion(event) {
-    event.preventDefault();
-
-    if (!direccion.trim() || !ciudad.trim() || !depto.trim()) {
-      showToastDir("Por favor completa todos los campos de direccion.", true);
-      return;
-    }
-
-    // El backend aun no expone el guardado de direccion: no se simula exito.
-    showToastDir(
-      "La direccion aun no se guarda en tu cuenta: la indicas al confirmar el pago en el carrito."
-    );
-  }
-
-  function handleVendedor() {
-    setModalRol(true);
-  }
-
   // JS Guarda y aplica la preferencia de tema elegida en Ajustes.
   function seleccionarTema(nuevoTema) {
     setTema(guardarTema(nuevoTema));
+  }
+
+  function handleNombreActualizado(nombre) {
+    const actual = getCurrentUser();
+    if (actual) setCurrentUser({ ...actual, nombre_completo: nombre });
   }
 
   // JS Cambia el rol del usuario (RF20/RF21) y actualiza la sesion local
@@ -138,7 +67,7 @@ export default function Ajustes() {
       setModalRol(false);
       showToastPersonal("Rol actualizado correctamente.");
     } catch (err) {
-      // JS El backend responde 403 si es administrador (no puede autodegradarse)
+      // JS El backend responde 403/409 si es administrador o tiene compromisos
       setModalRol(false);
       showToastPersonal(err.message || "No se pudo cambiar el rol.", true);
     } finally {
@@ -178,246 +107,28 @@ export default function Ajustes() {
 
             <div className={sectionDivider} />
 
-            <div className="mb-padding-lg">
-              <h2 className="text-headline-sm font-bold text-on-surface">
-                Informacion personal
-              </h2>
-              <p className="text-brand-muted-text text-body-sm font-medium mt-1">
-                Actualiza tu usuario y correo electronico.
-              </p>
-            </div>
+            <AjustesPersonales
+              nombreInicial={currentUser?.nombre_completo || ""}
+              email={currentUser?.email || ""}
+              toast={toastPersonal}
+              showToast={showToastPersonal}
+              onNombreActualizado={handleNombreActualizado}
+            />
 
-            <Toast toast={toastPersonal} />
+            <AjustesTema tema={tema} onSeleccionar={seleccionarTema} />
 
-            <div className={cardClass}>
-              <form onSubmit={handlePersonal} noValidate>
-                <div className="mb-5">
-                  <label className={labelClass} htmlFor="input-usuario">
-                    Nombre de perfil
-                  </label>
-                  <input
-                    id="input-usuario"
-                    type="text"
-                    value={usuario}
-                    onChange={(event) => setUsuario(event.target.value)}
-                    className={inputClass}
-                  />
-                </div>
+            <AjustesDireccion />
 
-                <div className="mb-6">
-                  <label className={labelClass} htmlFor="input-email">
-                    Correo electronico
-                  </label>
-                  <input
-                    id="input-email"
-                    type="email"
-                    value={email}
-                    disabled
-                    className={`${inputClass} opacity-60 cursor-not-allowed`}
-                  />
-                </div>
+            <AjustesRol
+              esVendedor={esVendedor}
+              enviandoRol={enviandoRol}
+              onAbrirModal={() => setModalRol(true)}
+            />
 
-                <button
-                  type="submit"
-                  disabled={guardandoNombre}
-                  className="rounded-button bg-gradient-to-r from-brand-orange to-tertiary-container px-6 py-3 text-body-sm font-bold text-brand-dark-text transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {guardandoNombre ? "Guardando..." : "Guardar Cambios"}
-                </button>
-              </form>
-            </div>
-
-            <div className={sectionDivider} />
-
-            <div className="mb-padding-lg">
-              <h2 className="text-headline-sm font-bold text-on-surface">
-                Tema
-              </h2>
-              <p className="text-brand-muted-text text-body-sm font-medium mt-1">
-                Elige como quieres ver tu Commercity.
-              </p>
-            </div>
-
-            <div className={cardClass}>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {OPCIONES_TEMA.map((opcion) => {
-                  const seleccionada = tema === opcion.id;
-                  return (
-                    <button
-                      key={opcion.id}
-                      type="button"
-                      onClick={() => seleccionarTema(opcion.id)}
-                      aria-pressed={seleccionada}
-                      className="flex flex-col items-center justify-center gap-3 rounded-card-lg p-padding-lg text-center transition-all duration-200 hover:-translate-y-0.5"
-                      style={{
-                        backgroundColor: seleccionada
-                          ? "var(--color-sidebar-active-bg)"
-                          : "var(--color-surface-container-low)",
-                        border: seleccionada
-                          ? "2px solid var(--color-brand-orange)"
-                          : "1px solid var(--color-figma-divider)",
-                        boxShadow: seleccionada
-                          ? "0 4px 16px rgba(0,0,0,0.08)"
-                          : "none",
-                      }}
-                    >
-                      <span className="leading-none"
-                        style={{
-                          color: "var(--color-on-surface)",
-                        }}
-                        aria-hidden="true"
-                      >
-                        <opcion.icono className="w-8 h-8" />
-                      </span> 
-                      <span
-                        className="font-bold"
-                        style={{
-                          fontFamily: "var(--font-sans)",
-                          fontSize: "16px",
-                          lineHeight: "20px",
-                          color: "var(--color-on-surface)",
-                        }}
-                      >
-                        {opcion.nombre}
-                      </span>
-                      <span
-                        className="text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: "var(--color-brand-muted-text)" }}
-                      >
-                        {opcion.detalle}
-                      </span>
-                      {seleccionada && (
-                        <span
-                          className="flex h-6 w-6 items-center justify-center rounded-full"
-                          style={{ backgroundColor: "var(--color-brand-orange)" }}
-                          aria-hidden="true"
-                        >
-                          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
-                            <path
-                              d="M20 6L9 17l-5-5"
-                              stroke="var(--color-auth-card-bg)"
-                              strokeWidth="3"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className={sectionDivider} />
-
-            <div className="mb-padding-lg">
-              <h2 className="text-headline-sm font-bold text-on-surface">
-                Direccion de entrega
-              </h2>
-              <p className="text-brand-muted-text text-body-sm font-medium mt-1">
-                Agrega tu direccion para recibir tus pedidos.
-              </p>
-            </div>
-
-            <Toast toast={toastDir} />
-
-            <div className={cardClass}>
-              <form onSubmit={handleDireccion} noValidate>
-                <div className="mb-5">
-                  <label className={labelClass} htmlFor="input-direccion">
-                    Direccion
-                  </label>
-                  <input
-                    id="input-direccion"
-                    type="text"
-                    placeholder="Ej: Calle 123 # 45 - 07"
-                    value={direccion}
-                    onChange={(event) => setDireccion(event.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <label className={labelClass} htmlFor="input-ciudad">
-                      Ciudad
-                    </label>
-                    <input
-                      id="input-ciudad"
-                      type="text"
-                      placeholder="Ej: Cali"
-                      value={ciudad}
-                      onChange={(event) => setCiudad(event.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass} htmlFor="input-depto">
-                      Departamento
-                    </label>
-                    <input
-                      id="input-depto"
-                      type="text"
-                      placeholder="Ej: Valle del cauca"
-                      value={depto}
-                      onChange={(event) => setDepto(event.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="rounded-button bg-gradient-to-r from-brand-orange to-tertiary-container px-6 py-3 text-body-sm font-bold text-brand-dark-text transition hover:opacity-90 active:scale-[0.99]"
-                >
-                  Cambiar Direccion
-                </button>
-              </form>
-            </div>
-
-            <div className={sectionDivider} />
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-5 rounded-card border border-brand-orange bg-brand-orange/5 p-padding-lg mb-padding-xl shadow-lg">
-              <div className="flex-1">
-                <h3 className="text-headline-sm font-bold text-on-surface mb-2">
-                  {esVendedor
-                    ? "Administra tu rol en CommerCity"
-                    : "¿Quieres vender en CommerCity?"}
-                </h3>
-                <p className="text-brand-muted-text text-body-sm font-medium leading-6">
-                  {esVendedor
-                    ? "Si cambias a comprador perderas los permisos para publicar y gestionar tus productos."
-                    : "Crea tu tienda y construye tu futuro en CommerCity, llega a mas compradores en esta comunidad."}
-                </p>
-              </div>
-              <button
-                id="btn-vendedor"
-                onClick={handleVendedor}
-                disabled={enviandoRol}
-                className="shrink-0 rounded-button bg-gradient-to-r from-brand-orange to-tertiary-container px-6 py-3 text-body-sm font-bold text-brand-dark-text transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {esVendedor ? "Cambiar a comprador" : "Cambiar a vendedor"}
-              </button>
-            </div>
-
-            <div className="border-t-2 border-report-red-bg mb-padding-lg" />
-
-            <div className={`${cardClass} mb-padding-2xl`}>
-              <h3 className="text-headline-sm font-bold text-report-red-text mb-3">
-                Elimina tu cuenta
-              </h3>
-              <p className="text-brand-muted-text text-body-sm font-medium leading-6 mb-6">
-                Una vez que elimines tu cuenta, todos tus datos seran borrados permanentemente. Esta accion no se puede deshacer.
-              </p>
-              <button
-                onClick={() => setModalEliminar(true)}
-                disabled={eliminandoCuenta}
-                className="rounded-card border border-report-red-text bg-report-red-bg px-6 py-3 text-body-sm font-bold text-report-red-text transition hover:bg-report-red-text hover:text-white disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {eliminandoCuenta ? "Eliminando..." : "Eliminar Cuenta"}
-              </button>
-            </div>
+            <AjustesCuenta
+              eliminandoCuenta={eliminandoCuenta}
+              onAbrirModal={() => setModalEliminar(true)}
+            />
           </div>
         </section>
       </main>
@@ -436,12 +147,14 @@ export default function Ajustes() {
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-5">
             <button
+              type="button"
               onClick={() => setModalRol(false)}
               className="flex-1 rounded-card border border-figma-divider bg-transparent px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-brand-muted-text transition hover:bg-input-bg"
             >
               Cancelar
             </button>
             <button
+              type="button"
               onClick={confirmarCambioRol}
               disabled={enviandoRol}
               className="flex-1 rounded-card bg-gradient-to-r from-brand-orange to-tertiary-container px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-brand-dark-text transition hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -452,9 +165,8 @@ export default function Ajustes() {
         </div>
       </div>
 
-      {/* --- BACKDROP Y CONTENEDOR DEL MODAL MODIFICADO --- */}
+      {/* --- BACKDROP Y CONTENEDOR DEL MODAL DE ELIMINAR CUENTA --- */}
       <div className={`fixed inset-0 items-center justify-center bg-black/70 px-6 sm:px-10 z-[999999] ${modalEliminar ? "flex" : "hidden"}`} role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setModalEliminar(false); }}>
-        {/* Se cambió de max-w-2xl a max-w-4xl, y los paddings de p-8 sm:p-10 a p-10 sm:p-14 */}
         <div className="w-full max-w-lg sm:max-w-2xl md:max-w-4xl rounded-hero border border-report-red-bg bg-auth-card-bg p-6 sm:p-10 md:p-14 shadow-2xl overflow-y-auto max-h-[90vh]">
           <div className="mb-6 sm:mb-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
             <div className="flex h-12 w-12 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-full bg-report-red-bg text-report-red-text">
@@ -470,7 +182,6 @@ export default function Ajustes() {
             </div>
           </div>
 
-          {/* Submodal o Alerta interna expandida con más padding (px-8 py-6) */}
           <div className="rounded-card border border-report-red-bg bg-report-red-bg/30 px-4 py-4 sm:px-8 sm:py-6 mb-6 sm:mb-10">
             <p className="text-body-sm sm:text-body-md font-medium text-report-red-text">
               ⚠️ Antes de continuar, confirma que entiendes que no podremos recuperar tu cuenta despues de eliminarla. Esta accion es definitiva.
@@ -479,12 +190,14 @@ export default function Ajustes() {
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-5">
             <button
+              type="button"
               onClick={() => setModalEliminar(false)}
               className="flex-1 rounded-card border border-figma-divider bg-transparent px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-brand-muted-text transition hover:bg-input-bg"
             >
               Cancelar
             </button>
             <button
+              type="button"
               onClick={confirmarEliminar}
               disabled={eliminandoCuenta}
               className="flex-1 rounded-card bg-report-red-text px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-white transition hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Avatar, EstadoBadge } from "./historialUtils.jsx";
+import { Avatar, EstadoBadge } from "./historialComponentes.jsx";
 
 describe("EstadoBadge", () => {
   it.each([

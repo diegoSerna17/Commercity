@@ -86,16 +86,16 @@ export function usePerfilVendedor() {
      */
     const cargarDatosPerfil = async () => {
       const [resProductos, resSiguiendo, resSeguidores] = await Promise.all([
-        listarMisProductos().catch((error) => {
-          console.error("No se pudieron cargar los productos del vendedor:", error);
+        listarMisProductos().catch(() => {
+          // La lista queda vacia; el perfil sigue visible con el resto de datos.
           return null;
         }),
-        listarSiguiendo().catch((error) => {
-          console.error("No se pudo cargar la lista de seguidos:", error);
+        listarSiguiendo().catch(() => {
+          // La lista queda vacia; no se bloquea el perfil por una relacion social.
           return null;
         }),
-        listarSeguidores().catch((error) => {
-          console.error("No se pudo cargar la lista de seguidores:", error);
+        listarSeguidores().catch(() => {
+          // La lista queda vacia; no se bloquea el perfil por una relacion social.
           return null;
         }),
       ]);
