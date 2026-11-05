@@ -4,6 +4,66 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 > **Nota de correccion (2026-10-31)**: las entradas historicas que citan presentaciones en `docs/` corresponden a `docs/presentaciones/` desde el movimiento del 2026-10-30. Las entradas originales no se reescriben; esta nota solo corrige la ruta para quien consulte el historial.
 
+## 2026-11-03 - QA: verificacion de BE-11 (Brandon) y cierre con observaciones
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: docs/AVANCES/SPRINT 3/BRANDON/VERIFICACION_BE-11_2026-11-03.md (nuevo, fuera del repositorio); docs/AVANCES/SPRINT 3/CIERRE_EVIDENCIAS/backend_coverage_2026-11-03.log (nuevo, fuera del repositorio); plan/sprint-3-backend-api-rest-2026-10-26.md (seccion 7.4); docs/CHANGELOG.md (este registro)
+- **Descripcion**: se verifico la entrega BE-11 del 2026-11-02 (fuera del plazo del 30-oct). Corrida propia de `npm run test:coverage` con `ALLOW_DESKTOP_ORIGINS=false`: 36 archivos, 539/539 pruebas, cobertura Statements 96.51 %, Branches 88.17 %, Functions 99.57 % y Lines 97.02 %. Se reconcilio el conteo: 536 era la cifra previa al fix `jti` del 2026-10-30; el CHANGELOG de ese dia ya registra 539/539. Cifra unica del sprint: 539 pruebas unitarias en 36 archivos; las 15 de integracion (dinero 5, notificaciones 10) estan fuera de `npm test`. `git branch -a --contains ea9828a` confirma que el commit esta en la rama local de trabajo y en `commercycity/PREVIEW`; `git rev-parse commercycity/PREVIEW` devuelve `ea9828a`. El E2E 13/13 se corrio, segun la evidencia entregada, contra `commercity_dev` local (XAMPP, esquema, semilla y 12 migraciones), no contra la BD del equipo (B-2); los usuarios, productos y reportes temporales se limpiaron.
+- **Motivo**: aceptar BE-11 con evidencia propia y dejar una sola cifra de pruebas unitarias en la documentacion.
+- **Requerimientos**: BE-11 del Sprint 3 (calificaciones, administracion y reportes).
+- **Evidencia**: salida de la corrida en el log citado: "Test Files 36 passed (36)", "Tests 539 passed (539)", "All files | 96.51 | 88.17 | 99.57 | 97.02"; `git branch -a --contains ea9828a` -> `fix/pendientes-auditoria-2026-10-12`, `remotes/commercycity/PREVIEW`, `remotes/commercycity/fix/pendientes-auditoria-2026-10-12`; `git rev-parse commercycity/PREVIEW` -> `ea9828ac9664edd99f5b960cefd9ebf176c516ee`; evidencia E2E en `BE11_E2E_resultados.md` y `BE11_live_e2e.json`. Node v24.22.1. Sin credenciales en la evidencia.
+- **Estado**: Cerrado con observaciones. La entrega es del 2026-11-02 y se registra como tardia; el E2E es local y no valida la BD compartida.
+
+---
+
+## 2026-11-03 - QA: cierre de BE-12 (Carlos Vidal) sin la captura citada
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: docs/AVANCES/SPRINT 3/CARLOS VIDAL/CIERRE_BE-12_SIN_CAPTURA_2026-11-03.md (nuevo, fuera del repositorio); plan/sprint-3-backend-api-rest-2026-10-26.md (seccion 7.4); docs/CHANGELOG.md (este registro)
+- **Descripcion**: BE-12 ya estaba cerrado en pruebas desde el 2026-10-30 (10/10 contra MySQL 8.4 desechable). La unica evidencia pendiente era la captura citada en los anexos: `docs/evidencias/E2E_NOTIFICACIONES_2026-10-27.png`. Se verifico que ese archivo no existe en el arbol (`Test-Path` -> False; busqueda global sin resultados). Se cierra sin captura: la evidencia es la entrada del 2026-10-30 con la corrida real, mas la suite `notificaciones.integration.test.js`. El informe debe quitar la referencia a la captura o adjuntarla si el autor la conserva. No se tomaron capturas nuevas.
+- **Motivo**: no dejar abierto un pendiente que depende de un archivo inexistente y que ya tiene una corrida real registrada.
+- **Requerimientos**: BE-12 / RF99-RF105.
+- **Evidencia**: entrada CHANGELOG 2026-10-30 "corrida real de la suite de notificaciones contra MySQL desechable": 10/10, 18.64 s y 2.34 s, 0 usuarios residuales, puerto 3307 cerrado; `Test-Path 'docs/evidencias/E2E_NOTIFICACIONES_2026-10-27.png'` -> False; busqueda recursiva sin coincidencias. Sin secretos.
+- **Estado**: Cerrado. Captura no entregada; se acepta el log de la corrida como evidencia.
+
+---
+
+## 2026-11-03 - QA: cierre de BE-05 (Jary) con hoja de correcciones del lider
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: docs/AVANCES/SPRINT 3/JARY/HOJA_CORRECCIONES_BE-05_2026-11-03.md (nuevo, fuera del repositorio); docs/AVANCES/SPRINT 3/CIERRE_EVIDENCIAS/backend_coverage_2026-11-03.log y frontend_coverage_2026-11-03.log (nuevos, fuera del repositorio); plan/sprint-3-backend-api-rest-2026-10-26.md (seccion 7.4); docs/CHANGELOG.md (este registro)
+- **Descripcion**: se rehizo la corrida de referencia y se redacto la hoja de correcciones que reemplaza las cifras del PDF de BE-05 (no se modifico el PDF). Backend: 539/539 en 36 archivos (Statements 96.51 %, Branches 88.17 %, Functions 99.57 %, Lines 97.02 %). Frontend: 464/464 en 60 archivos (Statements 95.62 %, Branches 86.15 %, Functions 95.08 %, Lines 97.32 % en la corrida de hoy; 97.41 % en el commit 1.3.5 `357a30d`). El PDF cita 536/536, ramas 88.33 %, 124/124 en 29 archivos (cobertura sobre 39 de 72 archivos fuente) y lenguaje absoluto; la hoja indica cada reemplazo y anade trazabilidad (rama, commit, Node, fecha/hora y comando con `ALLOW_DESKTOP_ORIGINS=false`).
+- **Motivo**: cerrar BE-05 con cifras verificables y sin esperar una nueva version del PDF.
+- **Requerimientos**: BE-05 del Sprint 3.
+- **Evidencia**: log del backend con "Test Files 36 passed (36)", "Tests 539 passed (539)" y "All files | 96.51 | 88.17 | 99.57 | 97.02"; log del frontend con "Test Files 60 passed (60)", "Tests 464 passed (464)" y "All files | 95.62 | 86.15 | 95.08 | 97.32"; ambos con Node v24.22.1; la hoja de correcciones. Sin credenciales en la evidencia.
+- **Estado**: Cerrado con correccion del lider. El PDF original queda como entrega historica; la hoja es el anexo vigente.
+
+---
+
+## 2026-11-03 - QA: cierre de BE-06 (Cristian Rosero) con aclaracion de BD y iOS pendiente
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: docs/AVANCES/SPRINT 3/CRISTIAN ROSERO/ACLARACION_BE-06_BD_Y_IOS_2026-11-03.md (nuevo, fuera del repositorio); plan/sprint-3-backend-api-rest-2026-10-26.md (seccion 7.4); docs/CHANGELOG.md (este registro)
+- **Descripcion**: se cierra BE-06 y se desliga de BE-01. El informe afirma que se valido el acceso a la BD remota `commercy_v2`; el `docker-compose.yml` del repo (lineas 18-31 y 59) define `mysql:8.4`, `MYSQL_DATABASE=commercity_dev`, carga `schema_commercity.sql` y `seed_commercity.sql` en la primera inicializacion y fija `DB_NAME=commercity_dev`. Por tanto, el contenedor crea `commercity_dev` desde el esquema y la semilla del repo, no la BD compartida del equipo. Se anade la linea de aclaracion al informe. iOS: la pagina publica de Actions muestra 10/10 corridas de "Build iOS IPA" fallidas desde el 12-oct; la #10 (commit `ea9828a`) fallo en 31 s con la anotacion "Process completed with exit code 1" en el paso "Sync Capacitor for iOS" (`npx cap sync ios`). El log completo exige iniciar sesion en GitHub y no se recupero. El workflow usa `-project App.xcodeproj`; el repo movil `BLACK-CODE-JSB/COMMERCITY-2.0-MOBILE-` usa `-workspace App.xcworkspace` en `main`; el arreglo (xcodeproj + SPM) queda pendiente de la rama del companero movil. No se toco el workflow.
+- **Motivo**: cerrar la observacion de la BD del contenedor y dejar documentada la causa del build de iOS al nivel disponible, sin cambiar el workflow a ciegas.
+- **Requerimientos**: BE-06; BE-01 (deslinde); RF99-RF105.
+- **Evidencia**: `docker-compose.yml` lineas 18-31 y 59; pagina publica de Actions de `diegoSerna17/Commercity` con 10 corridas fallidas y la anotacion del paso "Sync Capacitor for iOS"; `.github/workflows/ios-build.yml`; `git remote -v` -> `commercycity` = `github.com/diegoSerna17/Commercity.git`. Sin credenciales en la evidencia.
+- **Estado**: BE-06 cerrado. iOS queda como pendiente del frente movil, con la causa documentada al nivel disponible (paso y codigo de salida; log completo no accesible sin sesion).
+
+---
+
+## 2026-11-03 - DOCS: asignacion de Diego Serna (BE-08 E2E web y H-6 proteccion de PREVIEW)
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: docs/AVANCES/SPRINT 3/DIEGO SERNA/ASIGNACION_BE-08_Y_H-6_2026-11-03.md (nuevo, fuera del repositorio); plan/sprint-3-backend-api-rest-2026-10-26.md (seccion 7.4); docs/CHANGELOG.md (este registro)
+- **Descripcion**: la carpeta de Diego Serna no tenia entrega del Sprint 3 y el repositorio no registraba una tarea asignada. Por decision del lider, se le asignan BE-08 (E2E web de login, registro, recuperacion de contrasena y roles contra `commercity_dev` local, con salida real y limpieza de usuarios temporales) y H-6 (activar la proteccion de `PREVIEW`, que requiere permisos de administrador; Diego es dueno del repositorio). Entregable: salida real del E2E, informe corto en su carpeta y evidencia de la regla de proteccion sin tokens. Fecha limite: la del cierre del Sprint 3 (seccion 5); no se fija una fecha distinta sin decision del lider.
+- **Motivo**: cerrar el frente sin responsable y dejar constancia de la asignacion, sin inventar una tarea previa.
+- **Requerimientos**: BE-08; H-6.
+- **Evidencia**: `docs/AVANCES/SPRINT 3/DIEGO SERNA/` vacia al 2026-11-03; `git remote -v` -> `commercycity` = `github.com/diegoSerna17/Commercity.git`; `git rev-parse commercycity/PREVIEW` -> `ea9828a`; decision del lider registrada en la hoja de asignacion.
+- **Estado**: Pendiente de entrega.
+
+---
+
 ## 2026-11-01 - RELEASE 1.3.5: refactor del frontend sin cambio de contrato (Lote B)
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12

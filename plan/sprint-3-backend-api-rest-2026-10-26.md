@@ -1,8 +1,8 @@
 ---
 goal: Registrar el Sprint 3 (Backend y API REST, 26 al 30 de octubre) asignado por el lider de movil, con responsables, entregables, evidencia esperada y el estado real conocido de cada frente
-version: 1.2
+version: 1.3
 date_created: 2026-10-25
-last_updated: 2026-10-31
+last_updated: 2026-11-03
 owner: Daniel Palacios (lider)
 status: 'Assigned'
 tags: [sprint, backend, api, preview, bd, tests, ci, movil]
@@ -143,3 +143,20 @@ El estado de estas tareas se toma de la presentacion de avance v1.3.2 y no esta 
 4. Revisar visualmente el informe de avance en PowerPoint; su diapositiva 4 ya cita la publicacion del 30-oct.
 5. Verificar la proteccion de `PREVIEW` (H-6).
 6. Probar el chat entre dos usuarios en movil y escritorio, y registrar la salida real.
+
+### 7.4 Estado al 2026-11-03: cierre de pendientes
+
+Verificacion propia del lider con la regla de la seccion 5. El detalle, los comandos y los logs estan en `docs/AVANCES/SPRINT 3/CIERRE_PENDIENTES_2026-11-03.md` (carpeta fuera del repositorio). Esta seccion actualiza el estado de 7.1 y 7.2 sin reescribir el registro del 2026-10-31.
+
+| Tarea | Responsable | Estado al 2026-11-03 | Evidencia |
+|---|---|---|---|
+| BE-05 Suites backend y frontend | Jary | Cerrado con correccion del lider. Backend 539/539 en 36 archivos (Statements 96.51 %, Branches 88.17 %, Functions 99.57 %, Lines 97.02 %); frontend 464/464 en 60 archivos (Statements 95.62 %, Branches 86.15 %, Functions 95.08 %, Lines 97.32 % en la corrida de hoy; 97.41 % en el commit 1.3.5 `357a30d`). | `HOJA_CORRECCIONES_BE-05_2026-11-03.md`; CHANGELOG 2026-11-03; logs en `CIERRE_EVIDENCIAS/` |
+| BE-06 CI, contenedores y `/health` | Cristian Rosero | Cerrado. La BD del contenedor es `commercity_dev` (no `commercy_v2`), con lo que se desliga de BE-01. El build de iOS sigue en rojo: 10/10 corridas fallidas; pendiente del frente movil. | `ACLARACION_BE-06_BD_Y_IOS_2026-11-03.md`; CHANGELOG 2026-11-03 |
+| BE-11 Calificaciones, administracion y reportes | Brandon | Cerrado con observaciones. Entrega del 2026-11-02 (tardia). 539/539 en 36 archivos; `ea9828a` es la punta de `PREVIEW`; E2E 13/13 contra `commercity_dev` local (B-2). | `VERIFICACION_BE-11_2026-11-03.md`; log del backend; CHANGELOG 2026-11-03 |
+| BE-12 Notificaciones | Carlos Vidal | Cerrado. 10/10 contra MySQL 8.4 desechable el 2026-10-30. La captura citada no existe; la evidencia es el log de esa corrida. | `CIERRE_BE-12_SIN_CAPTURA_2026-11-03.md`; CHANGELOG 2026-10-30 y 2026-11-03 |
+| BE-08 E2E web | Diego Serna | Asignado; pendiente de entrega. | `ASIGNACION_BE-08_Y_H-6_2026-11-03.md` |
+| H-6 Proteccion de `PREVIEW` | Diego Serna | Asignado; pendiente de activacion por el dueno del repositorio. | `ASIGNACION_BE-08_Y_H-6_2026-11-03.md` |
+
+**Cifras de referencia del 2026-11-03:** backend 539/539 (36 archivos) y frontend 464/464 (60 archivos). Las cifras 536/536 y 450/450 citadas en el plan y en el informe de BE-05 quedan superadas; ver la hoja de correcciones.
+
+**Sin cambios de aplicacion:** esta seccion es solo documentacion. No hay bump de version, commit ni push.
