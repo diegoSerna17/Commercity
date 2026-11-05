@@ -1,6 +1,6 @@
 # CommerCity — Frontend (React + Vite)
 
-SPA en **React 19** + **Vite 8** + **Tailwind CSS 4**. Consume la API REST del backend (Express, puerto 3000) con JWT Bearer.
+SPA en **React 19** + **Vite 8** + **Tailwind CSS 4**. Consume la API REST del backend (Express, puerto 3000) con sesion en cookie `httpOnly`.
 
 ## Obtener el código (rama PREVIEW)
 
@@ -49,12 +49,12 @@ El listado completo (20 usuarios) está en `seed_commercity.sql` y en el `README
 ## Pruebas
 
 ```bash
-npm test              # suite completa: 450 pruebas en 59 archivos (Vitest + jsdom + Testing Library)
+npm test              # suite completa: 493 pruebas en 63 archivos (Vitest + jsdom + Testing Library)
 npm run test:watch    # modo observador
 npm run test:coverage # cobertura de src/**/*.{js,jsx} con umbrales en vite.config.js
 ```
 
-Cobertura real medida el 2026-10-31: Lines 95.69 %, Statements 94.20 %, Functions 92.02 %, Branches 84.85 %.
+Cobertura real medida el 2026-11-05: Lines 96.85 %, Statements 95.41 %, Functions 94.98 %, Branches 85.51 %.
 
 > \[!IMPORTANT]
 > Las pruebas se ejecutan **siempre desde `frontend/`**. Lanzadas desde la raíz del repositorio fallan.

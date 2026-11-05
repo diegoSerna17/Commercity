@@ -7,15 +7,15 @@
 ```text
 server.js          arranca Express (puerto 3000)
 app.js             pipeline: helmet -> CORS allow-list -> /uploads -> rate limits -> routers -> 404 -> errorHandler
-routes/            13 routers, 74 endpoints (ver docs/api/inventario-endpoints.md)
+routes/            13 routers, 76 endpoints (ver docs/api/inventario-endpoints.md)
 controllers/       logica de negocio + autorizacion por ownership
 controllers/admin/ panel de administracion (rol administrador)
 middleware/        auth (JWT + lista negra) | role (RBAC) | validate (Zod) | error (central) | origin (CSRF A-3)
-schemas/           15 archivos, 40 contratos Zod = fuente de la documentacion OpenAPI
+schemas/           15 archivos, 43 esquemas en OpenAPI = fuente de la documentacion
 docs/              registry + builder OpenAPI + rutas /api/openapi.json y /api/docs
 config/            db (pool MySQL2), multer (imagenes; el multer de chat se elimino, B-13)
 utils/             response (envoltorio uniforme), finanzas (IVA 90/10), reembolsos, crypto, ids, mailer
-__tests__/         36 archivos unitarios + 2 de integracion, 536 pruebas unitarias (vitest + supertest)
+__tests__/         42 archivos unitarios + 4 de integracion, 596 pruebas unitarias (vitest + supertest)
 ```
 
 ## Ciclo de una peticion autenticada
@@ -27,7 +27,7 @@ Peticion
  -> rate limit: 10/min en login/recover; 200/15min en /api (off en test)
  -> authRequired: JWT Bearer + SHA-256 en tokens_invalidados + usuarios.activo fail-closed
  -> requireRoles: RBAC (comprador | vendedor | administrador)
- -> validate(schema Zod): solo en 5 endpoints de auth (el resto valida en controller; ver inventario)
+ -> validate(schema Zod): en las rutas de escritura (el inventario marca el resto)
  -> controller: negocio + ownership (el ID siempre sale del token, nunca del body)
  -> { success, data } o errorHandler central { success:false, error:{ code, message } }
 ```
@@ -58,7 +58,7 @@ Regla: el esquema Zod es la unica fuente de verdad. Si cambia un contrato, se re
 ## Referencias
 
 - `README.md` — vision, stack, pipeline resumido, multicanal (web/movil/escritorio).
-- `docs/api/inventario-endpoints.md` — verdad terreno de los 74 endpoints.
+- `docs/api/inventario-endpoints.md` — verdad terreno de los 76 endpoints.
 - `docs/api/openapi.json` + `docs/api/entidades.md` — contratos generados.
 - `docs/bd/modelo-datos.md` — las 19 tablas y regla de dinero.
 - `docs/guias/` — contribucion, pruebas, despliegue.

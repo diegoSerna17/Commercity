@@ -1,6 +1,6 @@
 {
   "name": "commercity",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "CommerCity - Marketplace Desktop App",
   "main": "main.js",
   "scripts": {
@@ -12,8 +12,9 @@
     "electron-builder": "^26.8.1"
   },
   "build": {
-    "appId": "com.commercity.app",
+    "appId": "com.commercity.desktop",
     "productName": "CommerCity",
+    "icon": "assets/icon.png",
     "directories": {
       "output": "dist"
     },

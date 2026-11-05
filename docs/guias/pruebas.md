@@ -31,7 +31,7 @@
 ## Frontend (`frontend/`, vitest + jsdom)
 | Comando | Uso |
 |---|---|
-| `npm test` | Suite completa: 450 pruebas en 59 archivos |
+| `npm test` | Suite completa: 493 pruebas en 63 archivos |
 | `npm run test:coverage` | Cobertura de `src/**/*.{js,jsx}` con umbrales en `vite.config.js` (Lines 93 %, Statements 92 %, Functions 89 %, Branches 82 %) |
 | `npm run test:coverage:real` | Alias del comando anterior |
 

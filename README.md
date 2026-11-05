@@ -1,6 +1,6 @@
 # CommerCity
 
-**Estado:** Proyecto académico en etapa productiva | Backend: 539/539 pruebas unitarias OK (36 archivos) | Frontend: 450/450 pruebas OK (59 archivos) | Integración MySQL local: 5/5 (dinero) y 10/10 (notificaciones, 2026-10-30) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.02 % líneas; frontend: 95.69 % líneas reales (2066/2159, medición 2026-10-31) | Última corrida registrada: backend 2026-10-30, frontend 2026-10-31 (CHANGELOG)
+**Estado:** Proyecto académico en etapa productiva | Backend: 596/596 pruebas unitarias OK (42 archivos) | Frontend: 493/493 pruebas OK (63 archivos) | Integración MySQL local: 4 archivos / 23 pruebas con TEST_DB_* (2026-11-05) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.27 % líneas; frontend: 96.85 % líneas reales (493 pruebas, medición 2026-10-31) | Última corrida registrada: backend y frontend 2026-11-05 (CHANGELOG)
 
 CommerCity es una plataforma de comercio electrónico para mercados locales con roles de comprador, vendedor y administrador. Incluye catálogo de productos con imágenes, carrito de compras, pedidos, pasarela de pago simulada, tiendas de vendedores, chat, notificaciones, seguidores, calificaciones, reportes de contenido y panel de administración.
 
@@ -765,19 +765,19 @@ Resultados actuales:
 
 | Suite                           | Comando                   | Resultado                                 |
 | ------------------------------- | ------------------------- | ----------------------------------------- |
-| Backend (Vitest + supertest)    | `cd backend && npm test`  | 539 pruebas, todas pasando (última corrida registrada 2026-10-30) |
-| Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 450 pruebas en 59 archivos, todas pasando (última corrida registrada 2026-10-31) |
+| Backend (Vitest + supertest)    | `cd backend && npm test`  | 596 pruebas, todas pasando (última corrida registrada 2026-11-05) |
+| Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 493 pruebas en 63 archivos, todas pasando (última corrida registrada 2026-11-05) |
 
 Cobertura del backend (`npm run test:coverage`, proveedor v8; medición 2026-10-30):
 
 | Métrica    | Valor medido | Umbral configurado |
 | ---------- | ------------ | ------------------ |
-| Statements | 96.51%       | 96%                |
-| Branches   | 88.17%       | 88%                |
-| Functions  | 99.57%       | 99%                |
-| Lines      | 97.02%       | 97%                |
+| Statements | 96.84%       | 96%                |
+| Branches   | 88.34%       | 88%                |
+| Functions  | 100%         | 99%                |
+| Lines      | 97.27%       | 97%                |
 
-Cobertura del frontend: la cifra **75.31 %** del CHANGELOG 1.3.1 era una métrica histórica que solo medía los archivos con pruebas. La línea base real de todo `src/` era **41.30 % Lines (888/2150, medición 2026-10-15)**; tras el lote de pruebas del 2026-10-31 es **95.69 % Lines (2066/2159)**, con umbrales en `frontend/vite.config.js` (Lines 93, Statements 92, Functions 89, Branches 82) y M-27 cerrado. Ver `plan/fix-frontend-pendientes-2026-10-15.md`.
+Cobertura del frontend: la cifra **75.31 %** del CHANGELOG 1.3.1 era una métrica histórica que solo medía los archivos con pruebas. La línea base real de todo `src/` era **41.30 % Lines (888/2150, medición 2026-10-15)**; tras el lote de pruebas del 2026-11-05 es **96.85 % Lines (493 pruebas)**, con umbrales en `frontend/vite.config.js` (Lines 93, Statements 92, Functions 89, Branches 82) y M-27 cerrado. Ver `plan/fix-frontend-pendientes-2026-10-15.md`.
 
 E2E con backend vivo (2026-09-28): runner de los endpoints de entonces (69) = **129/129** y capa de red de los `api.js` reales de móvil/escritorio = **102/102** (incluye RF4 recover/reset 12/12). Evidencia conservada por el equipo en `docs/AVANCES/PRUEBAS/` (local, fuera del repositorio) y en `docs/CHANGELOG.md`.
 
@@ -785,7 +785,7 @@ E2E con backend vivo (2026-09-28): runner de los endpoints de entonces (69) = **
 
 La API es REST, escucha en `http://localhost:3000` y responde siempre con el contrato uniforme `{ success, data }` en caso de éxito o `{ success, error }` ante un fallo. Las rutas protegidas exigen la cabecera `Authorization: Bearer <token>`.
 
-Los 74 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`):
+Los 76 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`):
 
 | Prefijo                 | Módulo                                                            |
 | ----------------------- | ----------------------------------------------------------------- |
