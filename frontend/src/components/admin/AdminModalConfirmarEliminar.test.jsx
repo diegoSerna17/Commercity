@@ -71,7 +71,7 @@ describe("AdminModalConfirmarEliminar", () => {
     const { onCancelar } = renderModal();
 
     // Act
-    fireEvent.click(screen.getByRole("presentation"));
+    fireEvent.mouseDown(screen.getByRole("presentation"));
 
     // Assert
     expect(onCancelar).toHaveBeenCalledTimes(1);

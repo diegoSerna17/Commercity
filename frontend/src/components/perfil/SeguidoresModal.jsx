@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Search, X } from "lucide-react";
 
 import { formatSocialCount } from "../../data/perfilVendedorSocial";
 import { dejarDeSeguir, seguirUsuario } from "../../services/seguidores.service.js";
+import Modal from "../globales/Modal.jsx";
 
 function Avatar({ usuario }) {
   if (usuario.avatar) {
@@ -134,21 +134,13 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
       ? "Aun no tienes seguidores"
       : "Aun no sigues a ningun usuario";
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-      role="presentation"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose?.();
-      }}
+  return (
+    <Modal
+      abierto
+      onClose={onClose}
+      tituloId="seguidores-title"
+      panelClassName="relative flex max-h-[90vh] w-full max-w-[520px] flex-col overflow-hidden rounded-card-lg border border-figma-divider bg-auth-card-bg shadow-2xl"
     >
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div
-          className="relative flex max-h-[90vh] w-full max-w-[520px] flex-col overflow-hidden rounded-card-lg border border-figma-divider bg-auth-card-bg shadow-2xl"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="seguidores-title"
-        >
           <div className="flex items-center justify-between border-b border-figma-divider px-padding-lg py-4 shrink-0">
             <span className="w-8" />
             <h2 id="seguidores-title" className="text-headline-sm font-bold text-brand-orange">
@@ -253,9 +245,6 @@ export default function SeguidoresModal({ datos, initialTab = "seguidores", onCl
               })}
             </ul>
           )}
-        </div>
-      </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }

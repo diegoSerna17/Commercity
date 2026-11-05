@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 > **Nota de correccion (2026-10-31)**: las entradas historicas que citan presentaciones en `docs/` corresponden a `docs/presentaciones/` desde el movimiento del 2026-10-30. Las entradas originales no se reescriben; esta nota solo corrige la ruta para quien consulte el historial.
 
+## 2026-11-05 - RELEASE 1.3.9 - A11Y: Modal compartido y accesibilidad (auditoria 2026-11-04)
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `frontend/src/components/globales/Modal.jsx` (+ test), `frontend/src/components/admin/*`, `frontend/src/components/inicio/Reportar.jsx`, `frontend/src/components/perfil/AgregarProducto.jsx`, `ReportarUsuario.jsx`, `SeguidoresModal.jsx`, `frontend/src/pages/Administrador/AjustesAdministrador.jsx`, `frontend/src/pages/Carrito/PasarelaPago.jsx`, `frontend/src/pages/Perfil/Ajustes.jsx`, `DetalleCompras.jsx`, `DetallePedidos.jsx`, `frontend/src/components/inicio/TarjetaProducto.jsx`, `frontend/index.html`, tests afectados, `VERSION`, package.json/lockfiles, Android/iOS, `docs/api/*`, `docs/CHANGELOG.md`.
+- **Descripcion**: Lote 4 de la auditoria 2026-11-04. (1) Nuevo `Modal` compartido con `role="dialog"`, `aria-modal`, `aria-labelledby`, cierre con Escape y clic en el fondo, foco atrapado con Tab/Shift+Tab y foco devuelto al elemento que lo abrio. (2) Migrados a `Modal`: `AdminModalConfirmarEliminar`, `AdminModalReporte`, `AgregarProducto`, `AjustesAdministrador`, `PasarelaPago`, `DetalleCompras`, `DetallePedidos`, los dos modales de `Ajustes`, `Reportar`, `ReportarUsuario` y `SeguidoresModal`; se eliminan los contenedores `role="presentation"` y el patron `hidden` para modales cerrados. (3) Botones con solo icono reciben `aria-label` (cerrar reporte, cerrar ajustes, selector de cantidad) y se agregan `type="button"` donde faltaba. (4) `index.html` pasa a `lang="es"` y las imagenes de `TarjetaProducto` y del perfil publico usan `loading="lazy"`. (5) Tests actualizados al portal de `Modal` (`document`/`body` en vez del `container` local) y al cierre por `mousedown`.
+- **Motivo**: cerrar las brechas de accesibilidad del Lote 4 con un unico patron de modal, navegacion por teclado consistente y carga diferida de imagenes.
+- **Requerimientos**: WCAG 2.1 AA (roles, foco, teclado), RNF de accesibilidad; RF60-RF66, RF105-RF110.
+- **Evidencia**: `npm run lint` sin errores. `npm test`: 62 archivos, 472/472. `npm run test:coverage`: Statements 95.55 %, Branches 85.75 %, Functions 95.19 %, Lines 97.00 % (umbrales 92/82/89/93 en verde). `npm run build`: OK; chunk principal 247.63 kB. `node tools/verificar-version.mjs 1.3.8`: OK.
+- **Estado**: Cerrado.
+
+---
+
 ## 2026-11-05 - RELEASE 1.3.8 - REFACTOR: cierre del Lote B de frontend (TASK-8.5 a 8.7)
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12

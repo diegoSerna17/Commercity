@@ -212,14 +212,13 @@ describe("Ajustes", () => {
   it("confirma el cambio de rol y actualiza la sesion", async () => {
     // Arrange
     const user = userEvent.setup();
-    const { container } = renderAjustes();
-    const modales = container.querySelectorAll('[role="presentation"]');
+    renderAjustes();
 
     // Act
     await user.click(screen.getByRole("button", { name: "Cambiar a comprador" }));
 
     // Assert
-    expect(modales[0].className).toContain("flex");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     // Act
     await user.click(screen.getByRole("button", { name: "Si, cambiar rol" }));
@@ -235,15 +234,14 @@ describe("Ajustes", () => {
     expect(
       screen.getByRole("button", { name: "Cambiar a vendedor" })
     ).toBeInTheDocument();
-    expect(modales[0].className).toContain("hidden");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("muestra el error al cambiar de rol y cierra el modal", async () => {
     // Arrange
     const user = userEvent.setup();
     cambiarRol.mockRejectedValueOnce(new Error("No permitido"));
-    const { container } = renderAjustes();
-    const modales = container.querySelectorAll('[role="presentation"]');
+    renderAjustes();
 
     // Act
     await user.click(screen.getByRole("button", { name: "Cambiar a comprador" }));
@@ -252,55 +250,41 @@ describe("Ajustes", () => {
     // Assert
     expect(await screen.findByText("No permitido")).toBeInTheDocument();
     expect(setCurrentUser).not.toHaveBeenCalled();
-    expect(modales[0].className).toContain("hidden");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("cancela los modales con el boton y con el fondo", () => {
     // Arrange
-    const { container } = renderAjustes();
-    const modales = container.querySelectorAll('[role="presentation"]');
+    renderAjustes();
     const cancelares = () =>
       screen.getAllByRole("button", { name: "Cancelar" });
 
     // Act
     fireEvent.click(screen.getByRole("button", { name: "Cambiar a comprador" }));
-    fireEvent.click(screen.getByRole("button", { name: "Eliminar Cuenta" }));
-
-    // Assert
-    expect(modales[0].className).toContain("flex");
-    expect(modales[1].className).toContain("flex");
-
-    // Act
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.click(cancelares()[0]);
-    fireEvent.click(cancelares()[1]);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
-    // Assert
-    expect(modales[0].className).toContain("hidden");
-    expect(modales[1].className).toContain("hidden");
-
-    // Act
-    fireEvent.click(screen.getByRole("button", { name: "Cambiar a comprador" }));
-    fireEvent.click(modales[0]);
-
-    // Assert
-    expect(modales[0].className).toContain("hidden");
-
-    // Act
     fireEvent.click(screen.getByRole("button", { name: "Eliminar Cuenta" }));
-    fireEvent.click(modales[1]);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(cancelares()[0]);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
-    // Assert
-    expect(modales[1].className).toContain("hidden");
+    // Act: clic en el fondo (mousedown sobre el contenedor presentation)
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar a comprador" }));
+    const backdrop = document.querySelector('[role="presentation"]');
+    fireEvent.mouseDown(backdrop);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("muestra el error al eliminar la cuenta", async () => {
     // Arrange
     eliminarCuenta.mockRejectedValueOnce(new Error("No se puede eliminar"));
-    const { container } = renderAjustes();
-    const modales = container.querySelectorAll('[role="presentation"]');
+    renderAjustes();
 
     // Act
     fireEvent.click(screen.getByRole("button", { name: "Eliminar Cuenta" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole("button", { name: "Si, eliminar cuenta" })
     );
@@ -308,7 +292,7 @@ describe("Ajustes", () => {
     // Assert
     expect(await screen.findByText("No se puede eliminar")).toBeInTheDocument();
     expect(clearCurrentUser).not.toHaveBeenCalled();
-    expect(modales[1].className).toContain("hidden");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Eliminar Cuenta" })
     ).toBeEnabled();

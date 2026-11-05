@@ -11,6 +11,7 @@ import AjustesDireccion from "./AjustesDireccion.jsx";
 import AjustesRol from "./AjustesRol.jsx";
 import AjustesCuenta from "./AjustesCuenta.jsx";
 import { sectionDivider } from "./ajustesEstilos.js";
+import Modal from "../../components/globales/Modal.jsx";
 
 /**
  * Pagina de Ajustes: contenedor de las cinco secciones (personal, tema,
@@ -133,80 +134,84 @@ export default function Ajustes() {
         </section>
       </main>
 
-      {/* --- BACKDROP Y CONTENEDOR DEL MODAL DE CAMBIO DE ROL --- */}
-      <div className={`fixed inset-0 items-center justify-center bg-black/70 px-6 sm:px-10 z-[999999] ${modalRol ? "flex" : "hidden"}`} role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setModalRol(false); }}>
-        <div className="w-full max-w-lg rounded-hero border border-brand-orange bg-auth-card-bg p-6 sm:p-10 shadow-2xl overflow-y-auto max-h-[90vh]">
-          <h4 className="text-headline-sm sm:text-headline-md font-bold text-on-surface mb-4">
-            {rolDestino === "vendedor" ? "¿Cambiar a vendedor?" : "¿Cambiar a comprador?"}
-          </h4>
-          <p className="text-brand-muted-text text-body-sm sm:text-body-md leading-6 mb-8">
-            {rolDestino === "vendedor"
-              ? "Podras publicar productos y gestionar tu tienda en CommerCity."
-              : "Dejaras de tener los permisos de vendedor para publicar y gestionar productos."}
-          </p>
+      <Modal
+        abierto={modalRol}
+        onClose={() => setModalRol(false)}
+        tituloId="ajuste-rol-titulo"
+        panelClassName="max-w-lg rounded-hero border border-brand-orange bg-auth-card-bg p-6 sm:p-10 shadow-2xl overflow-y-auto max-h-[90vh]"
+      >
+        <h4 id="ajuste-rol-titulo" className="text-headline-sm sm:text-headline-md font-bold text-on-surface mb-4">
+          {rolDestino === "vendedor" ? "¿Cambiar a vendedor?" : "¿Cambiar a comprador?"}
+        </h4>
+        <p className="text-brand-muted-text text-body-sm sm:text-body-md leading-6 mb-8">
+          {rolDestino === "vendedor"
+            ? "Podras publicar productos y gestionar tu tienda en CommerCity."
+            : "Dejaras de tener los permisos de vendedor para publicar y gestionar productos."}
+        </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-5">
-            <button
-              type="button"
-              onClick={() => setModalRol(false)}
-              className="flex-1 rounded-card border border-figma-divider bg-transparent px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-brand-muted-text transition hover:bg-input-bg"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={confirmarCambioRol}
-              disabled={enviandoRol}
-              className="flex-1 rounded-card bg-gradient-to-r from-brand-orange to-tertiary-container px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-brand-dark-text transition hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {enviandoRol ? "Cambiando..." : "Si, cambiar rol"}
-            </button>
-          </div>
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-5">
+          <button
+            type="button"
+            onClick={() => setModalRol(false)}
+            className="flex-1 rounded-card border border-figma-divider bg-transparent px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-brand-muted-text transition hover:bg-input-bg"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={confirmarCambioRol}
+            disabled={enviandoRol}
+            className="flex-1 rounded-card bg-gradient-to-r from-brand-orange to-tertiary-container px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-brand-dark-text transition hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {enviandoRol ? "Cambiando..." : "Si, cambiar rol"}
+          </button>
         </div>
-      </div>
+      </Modal>
 
-      {/* --- BACKDROP Y CONTENEDOR DEL MODAL DE ELIMINAR CUENTA --- */}
-      <div className={`fixed inset-0 items-center justify-center bg-black/70 px-6 sm:px-10 z-[999999] ${modalEliminar ? "flex" : "hidden"}`} role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setModalEliminar(false); }}>
-        <div className="w-full max-w-lg sm:max-w-2xl md:max-w-4xl rounded-hero border border-report-red-bg bg-auth-card-bg p-6 sm:p-10 md:p-14 shadow-2xl overflow-y-auto max-h-[90vh]">
-          <div className="mb-6 sm:mb-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-            <div className="flex h-12 w-12 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-full bg-report-red-bg text-report-red-text">
-              <span className="text-3xl sm:text-4xl font-bold">!</span>
-            </div>
-            <div className="flex-1">
-              <h4 className="text-headline-sm sm:text-headline-md md:text-headline-lg font-bold text-report-red-text mb-2 sm:mb-4">
-                ¿Eliminar cuenta?
-              </h4>
-              <p className="text-brand-muted-text text-body-sm sm:text-body-md md:text-body-lg leading-6">
-                Esta accion es permanente e irreversible. Todos tus datos, compras, mensajes y configuraciones seran borrados de forma definitiva. No podras recuperar tu cuenta.
-              </p>
-            </div>
+      <Modal
+        abierto={modalEliminar}
+        onClose={() => setModalEliminar(false)}
+        tituloId="ajuste-eliminar-titulo"
+        panelClassName="max-w-lg sm:max-w-2xl md:max-w-4xl rounded-hero border border-report-red-bg bg-auth-card-bg p-6 sm:p-10 md:p-14 shadow-2xl overflow-y-auto max-h-[90vh]"
+      >
+        <div className="mb-6 sm:mb-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+          <div className="flex h-12 w-12 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-full bg-report-red-bg text-report-red-text">
+            <span className="text-3xl sm:text-4xl font-bold">!</span>
           </div>
-
-          <div className="rounded-card border border-report-red-bg bg-report-red-bg/30 px-4 py-4 sm:px-8 sm:py-6 mb-6 sm:mb-10">
-            <p className="text-body-sm sm:text-body-md font-medium text-report-red-text">
-              ⚠️ Antes de continuar, confirma que entiendes que no podremos recuperar tu cuenta despues de eliminarla. Esta accion es definitiva.
+          <div className="flex-1">
+            <h4 id="ajuste-eliminar-titulo" className="text-headline-sm sm:text-headline-md md:text-headline-lg font-bold text-report-red-text mb-2 sm:mb-4">
+              ¿Eliminar cuenta?
+            </h4>
+            <p className="text-brand-muted-text text-body-sm sm:text-body-md md:text-body-lg leading-6">
+              Esta accion es permanente e irreversible. Todos tus datos, compras, mensajes y configuraciones seran borrados de forma definitiva. No podras recuperar tu cuenta.
             </p>
           </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-5">
-            <button
-              type="button"
-              onClick={() => setModalEliminar(false)}
-              className="flex-1 rounded-card border border-figma-divider bg-transparent px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-brand-muted-text transition hover:bg-input-bg"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={confirmarEliminar}
-              disabled={eliminandoCuenta}
-              className="flex-1 rounded-card bg-report-red-text px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-white transition hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {eliminandoCuenta ? "Eliminando..." : "Si, eliminar cuenta"}
-            </button>
-          </div>
         </div>
-      </div>
+
+        <div className="rounded-card border border-report-red-bg bg-report-red-bg/30 px-4 py-4 sm:px-8 sm:py-6 mb-6 sm:mb-10">
+          <p className="text-body-sm sm:text-body-md font-medium text-report-red-text">
+            ⚠️ Antes de continuar, confirma que entiendes que no podremos recuperar tu cuenta despues de eliminarla. Esta accion es definitiva.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-5">
+          <button
+            type="button"
+            onClick={() => setModalEliminar(false)}
+            className="flex-1 rounded-card border border-figma-divider bg-transparent px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-brand-muted-text transition hover:bg-input-bg"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={confirmarEliminar}
+            disabled={eliminandoCuenta}
+            className="flex-1 rounded-card bg-report-red-text px-4 py-3 sm:px-6 sm:py-4 text-body-sm sm:text-body-md font-bold text-white transition hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {eliminandoCuenta ? "Eliminando..." : "Si, eliminar cuenta"}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

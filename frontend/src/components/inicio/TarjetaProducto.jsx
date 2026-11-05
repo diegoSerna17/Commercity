@@ -39,6 +39,7 @@ export default function TarjetaProducto({ product, onAbrir, onIrPerfilVendedor }
             alt={product.imageAlt}
             data-categoria={product.category}
             data-product-id={product.id}
+            loading="lazy"
             className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
             onError={aplicarFallbackImagenProducto}
             onLoad={replaceInvalidProductImage}
@@ -93,6 +94,7 @@ export default function TarjetaProducto({ product, onAbrir, onIrPerfilVendedor }
           <img
             src={product.vendedorAvatar}
             alt={product.vendedorNombre}
+            loading="lazy"
             className="w-5 h-5 rounded-full"
           />
           <span

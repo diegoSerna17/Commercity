@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { formatPriceRounded } from "../../utils/formatPrice.js";
+import Modal from "../../components/globales/Modal.jsx";
 
 const estadoChip = {
   Entregado: {
@@ -49,20 +50,16 @@ export default function DetallePedidos({ pedido, onClose }) {
     : "bg-input-bg rounded-card overflow-hidden divide-y divide-surface-container/30";
 
   return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      role="presentation"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <Modal
+      abierto
+      onClose={onClose}
+      tituloId="detalle-pedido-titulo"
+      panelClassName="bg-auth-card-bg rounded-hero shadow-2xl w-[400px] sm:w-[500px] max-h-[92vh] overflow-y-auto"
     >
-      <div
-        className="bg-auth-card-bg rounded-hero shadow-2xl w-[400px] sm:w-[500px] max-h-[92vh] overflow-y-auto"
-      >
         <div className="px-6 pt-6 pb-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-on-surface text-2xl font-extrabold tracking-tight leading-tight">
+              <h2 id="detalle-pedido-titulo" className="text-on-surface text-2xl font-extrabold tracking-tight leading-tight">
                 Detalle del pedido
               </h2>
               <p className="text-brand-muted-text font-bold text-sm mt-1">
@@ -175,7 +172,6 @@ export default function DetallePedidos({ pedido, onClose }) {
             Cerrar
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

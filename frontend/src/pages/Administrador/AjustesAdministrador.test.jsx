@@ -430,7 +430,7 @@ describe("AjustesAdministrador", () => {
     await esperarCarga();
 
     // Act
-    fireEvent.click(screen.getByRole("presentation"));
+    fireEvent.mouseDown(screen.getByRole("presentation"));
     fireEvent.click(screen.getAllByRole("button")[0]);
 
     // Assert

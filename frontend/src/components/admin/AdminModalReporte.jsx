@@ -9,6 +9,7 @@ import {
 } from "./AdminIcons";
 import { BadgeTipo, BadgeEstadoReporte } from "./AdminBadges";
 import { formatPrice } from "../../utils/formatPrice.js";
+import Modal from "../globales/Modal.jsx";
 
 export default function AdminModalReporte({
   reporte,
@@ -21,6 +22,7 @@ export default function AdminModalReporte({
   onToggleBanear,
   onPedirEliminarUsuario,
   onPedirEliminarProducto,
+  abierto = true,
 }) {
   const [textareaRespuesta, setTextareaRespuesta] = useState("");
   const [errorRespuesta, setErrorRespuesta] = useState("");
@@ -41,25 +43,25 @@ export default function AdminModalReporte({
   const infoReportado = (reporte.reportadoInfo || "").split("·")[0]?.trim() || "";
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80"
-      role="presentation"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCerrar();
-      }}
+    <Modal
+      abierto={abierto}
+      onClose={onCerrar}
+      tituloId="admin-reporte-titulo"
+      panelClassName="rounded-2xl w-full max-w-4xl flex flex-col overflow-hidden bg-[#12121A] border border-[#1C1C22] shadow-[0_16px_48px_rgba(0,0,0,0.5)] min-h-[500px] max-h-[85vh]"
     >
-      <div className="rounded-2xl w-full max-w-4xl flex flex-col overflow-hidden bg-[#12121A] border border-[#1C1C22] shadow-[0_16px_48px_rgba(0,0,0,0.5)] min-h-[500px] max-h-[85vh]">
         <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-[#1C1C22]">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[rgba(239,68,68,0.15)]">
               <IconUser color="#ef4444" size={18} />
             </div>
-            <h3 className="font-jakarta font-bold text-lg text-white">
+            <h3 id="admin-reporte-titulo" className="font-jakarta font-bold text-lg text-white">
               Detalle del Reporte
             </h3>
           </div>
           <button
+            type="button"
             onClick={onCerrar}
+            aria-label="Cerrar detalle del reporte"
             className="p-1 transition-colors rounded-lg text-[#797998] hover:text-white"
           >
             <IconClose />
@@ -272,7 +274,6 @@ export default function AdminModalReporte({
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -239,7 +239,7 @@ describe("ReportarUsuario", () => {
     expect(onClose).toHaveBeenCalledTimes(2);
 
     // Act
-    fireEvent.click(screen.getByRole("presentation"));
+    fireEvent.mouseDown(screen.getByRole("presentation"));
 
     // Assert
     expect(onClose).toHaveBeenCalledTimes(3);

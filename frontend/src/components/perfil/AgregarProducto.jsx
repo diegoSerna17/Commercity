@@ -1,4 +1,5 @@
 import { useFormularioProducto } from "./useFormularioProducto.js";
+import Modal from "../globales/Modal.jsx";
 
 /**
  * Formulario de producto del vendedor (crear o editar). La logica de estado y
@@ -39,10 +40,14 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
   } = useFormularioProducto({ onSubmit, producto });
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-surface-container-lowest rounded-hero shadow-2xl w-full max-w-[620px] max-h-[90vh] overflow-y-auto">
+    <Modal
+      abierto
+      onClose={onCancel}
+      tituloId="producto-form-titulo"
+      panelClassName="bg-surface-container-lowest rounded-hero shadow-2xl w-full max-w-[620px] max-h-[90vh] overflow-y-auto"
+    >
         <div className="p-padding-xl">
-          <h1 className="text-headline-sm font-bold text-on-surface mb-padding-md">
+          <h1 id="producto-form-titulo" className="text-headline-sm font-bold text-on-surface mb-padding-md">
             {esEdicion ? "Editar Producto" : "Agregar Producto"}
           </h1>
 
@@ -272,7 +277,6 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
             </div>
           </form>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

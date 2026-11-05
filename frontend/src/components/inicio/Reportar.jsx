@@ -1,8 +1,8 @@
 import { useState, useRef } from "react";
-import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { getCurrentUser } from "../../api/client.js";
 import { crearReporte } from "../../services/reportes.service.js";
+import Modal from "../globales/Modal.jsx";
 
 // Longitud maxima del motivo aceptada por el backend (POST /api/reportes).
 const MOTIVO_MAX = 2000;
@@ -143,15 +143,8 @@ export default function Reportar({ producto, onClose }) {
     onClose?.();
   }
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-      role="presentation"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose?.();
-      }}
-    >
+  return (
+    <Modal abierto onClose={onClose} tituloId="reportar-title">
       <div
         className="relative w-full max-w-[560px] rounded-3xl p-6 flex flex-col gap-5 border"
         style={{
@@ -159,9 +152,6 @@ export default function Reportar({ producto, onClose }) {
           borderColor: "rgba(239,153,24,0.4)",
           boxShadow: "0px 4px 4px 0px rgba(0,0,0,0.25)",
         }}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="reportar-title"
       >
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -326,7 +316,6 @@ export default function Reportar({ producto, onClose }) {
           </p>
         )}
       </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }
