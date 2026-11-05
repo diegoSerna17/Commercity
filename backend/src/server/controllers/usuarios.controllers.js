@@ -7,6 +7,7 @@ import { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } from "../utils/config.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { enviarCorreoRecuperacion, enviarAvisoRegistroDuplicado } from "../utils/mailer.js";
 import { escapeLike } from "../utils/sql.js";
+import { borrarUploadPorUrl } from "../config/multer.js";
 import { destinoPedidosVendedor } from "./admin/pedidos.controllers.js";
 import { registrarAuditoria, ACCIONES } from "../utils/auditoria.js";
 
@@ -96,7 +97,7 @@ export const register = async (req, res) => {
             await connection.beginTransaction();
 
             const [resultado] = await connection.query(
-                "INSERT INTO usuarios (email, password, nombre_completo) VALUES (?, ?, ?)",
+                "INSERT INTO usuarios (email, password, nombre_completo, terminos_aceptados_en) VALUES (?, ?, ?, NOW())",
                 [email, passwordHash, nombre_completo || null]
             );
             const usuarioId = resultado.insertId;
@@ -728,15 +729,45 @@ export const listarUsuarios = async (req, res, next) => {
 export const actualizarPerfil = async (req, res, next) => {
     try {
         // Body validado por actualizarPerfilSchema (validate()).
-        const nombre = req.body.nombre_completo;
+        const { nombre_completo, descripcion_personal, direccion_envio } = req.body;
 
-        await pool.query(
-            "UPDATE usuarios SET nombre_completo = ? WHERE id = ?",
-            [nombre, req.userId]
+        const [actual] = await pool.query(
+            "SELECT foto_perfil FROM usuarios WHERE id = ?",
+            [req.userId]
         );
 
+        const campos = [];
+        const valores = [];
+
+        if (nombre_completo !== undefined) {
+            campos.push("nombre_completo = ?");
+            valores.push(nombre_completo);
+        }
+        if (descripcion_personal !== undefined) {
+            campos.push("descripcion_personal = ?");
+            valores.push(descripcion_personal);
+        }
+        if (direccion_envio !== undefined) {
+            campos.push("direccion_envio = ?");
+            valores.push(direccion_envio);
+        }
+        if (req.file) {
+            campos.push("foto_perfil = ?");
+            valores.push(`/uploads/${req.file.filename}`);
+        }
+
+        await pool.query(
+            `UPDATE usuarios SET ${campos.join(", ")} WHERE id = ?`,
+            [...valores, req.userId]
+        );
+
+        // Si se reemplazo el avatar, el archivo anterior deja de estar referenciado.
+        const fotoAnterior = actual[0]?.foto_perfil;
+        if (req.file && fotoAnterior) borrarUploadPorUrl(fotoAnterior);
+
         const [rows] = await pool.query(
-            "SELECT id, email, nombre_completo, foto_perfil FROM usuarios WHERE id = ?",
+            `SELECT id, email, nombre_completo, foto_perfil, descripcion_personal, direccion_envio
+               FROM usuarios WHERE id = ?`,
             [req.userId]
         );
 

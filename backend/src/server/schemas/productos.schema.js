@@ -174,3 +174,16 @@ export const misProductosQuerySchema = z
     description: "Paginacion de GET /api/productos/mis-productos y GET /api/vendedores",
     examples: [{ page: 1, limit: 50 }],
   });
+
+/** Body de PATCH /api/productos/:id/estado (RF55). */
+export const estadoProductoVendedorSchema = z
+  .object({
+    estado: z.enum(["pausado", "activo"], "El estado debe ser pausado o activo"),
+  })
+  .strict()
+  .meta({
+    id: "EstadoProductoVendedor",
+    title: "EstadoProductoVendedor",
+    description: "Pausa o reactiva una publicacion propia del vendedor (RF55)",
+    examples: [{ estado: "pausado" }],
+  });

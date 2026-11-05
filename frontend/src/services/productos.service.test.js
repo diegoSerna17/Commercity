@@ -2,11 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { request } from "../api/client.js";
 import {
   actualizarProducto,
+  cambiarEstadoProducto,
   crearProducto,
+  eliminarProductoPropio,
   listarCategorias,
   listarMisProductos,
   listarProductos,
   listarVendedores,
+  validarStock,
 } from "./productos.service.js";
 
 vi.mock("../api/client.js", () => ({
@@ -128,5 +131,34 @@ describe("productos.service", () => {
     expect(opciones.body.get("nombre")).toBe("Teclado nuevo");
     expect(opciones.body.get("stock")).toBe("3");
     expect(opciones.body.has("imagen")).toBe(false);
+  });
+
+  it("validarStock consulta el stock real por producto y cantidad (RF86)", async () => {
+    // Act
+    await validarStock(7, 3);
+
+    // Assert
+    expect(request).toHaveBeenCalledWith("/api/productos/7/validar-stock?cantidad=3");
+  });
+
+  it("cambiarEstadoProducto hace PATCH con el estado (RF55)", async () => {
+    // Act
+    await cambiarEstadoProducto(7, "pausado");
+
+    // Assert
+    expect(request).toHaveBeenCalledWith("/api/productos/7/estado", {
+      method: "PATCH",
+      body: { estado: "pausado" },
+    });
+  });
+
+  it("eliminarProductoPropio hace DELETE del producto (RF55)", async () => {
+    // Act
+    await eliminarProductoPropio(7);
+
+    // Assert
+    expect(request).toHaveBeenCalledWith("/api/productos/7", {
+      method: "DELETE",
+    });
   });
 });

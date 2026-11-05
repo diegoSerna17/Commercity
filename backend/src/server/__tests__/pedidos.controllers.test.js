@@ -326,6 +326,32 @@ describe("POST /api/pedidos/confirmar-pago (RF134 ACID)", () => {
     expect(conn.rollback).toHaveBeenCalled();
   });
 
+  it("RF55: rechaza un producto pausado en el checkout (409) y filtra el batch FOR UPDATE", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
+      if (sql.includes("FROM carrito_items")) {
+        return [[{ producto_id: 9, cantidad: 1 }], undefined];
+      }
+      // El producto pausado no entra al SELECT ... FOR UPDATE.
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .post("/api/pedidos/confirmar-pago")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ direccion_envio: "Calle 1 # 2-3", metodo_pago: "pse" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.message).toContain("RF74");
+    expect(conn.rollback).toHaveBeenCalled();
+
+    const batch = conn.query.mock.calls.find(
+      ([sql]) => String(sql).includes("FROM productos") && String(sql).includes("FOR UPDATE")
+    );
+    expect(batch[0]).toContain("pausado = 0");
+    expect(batch[0]).toContain("eliminado_por_vendedor = 0");
+  });
+
   it("rechaza stock insuficiente (409)", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];

@@ -26,6 +26,11 @@ export const registerSchema = z
       .min(2, "Nombre obligatorio")
       .optional()
       .describe("Nombre completo (opcional, min 2)"),
+    // RF6: la aceptacion de terminos es obligatoria para crear la cuenta.
+    acepta_terminos: z
+      .boolean({ error: "Debes aceptar los terminos y condiciones" })
+      .refine((valor) => valor === true, "Debes aceptar los terminos y condiciones")
+      .describe("Aceptacion de terminos y condiciones (debe ser true)"),
   })
   .strict()
   .meta({

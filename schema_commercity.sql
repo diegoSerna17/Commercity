@@ -87,6 +87,8 @@ CREATE TABLE usuarios (
     token_version INT NOT NULL DEFAULT 0,
     -- mig 015: auditoria del ultimo cambio de contrasena.
     password_changed_at DATETIME NULL,
+    -- RF6 (mig 019): fecha de aceptacion de terminos en el registro.
+    terminos_aceptados_en DATETIME NULL,
     token_recuperacion VARCHAR(100) NULL,
     -- RF4 (mig 010): expira a los 5 minutos. Se guarda el SHA-256 (H3 P2).
     token_recuperacion_expiracion DATETIME NULL,
@@ -162,13 +164,18 @@ CREATE TABLE productos (
     estado ENUM('Disponible', 'Agotado') AS (IF(stock > 0, 'Disponible', 'Agotado')) STORED, 
     fecha_publicacion DATETIME DEFAULT CURRENT_TIMESTAMP, 
     eliminado_por_admin TINYINT(1) DEFAULT 0, 
+    -- RF55 (mig 019): pausa y baja logica propias del vendedor.
+    pausado TINYINT(1) NOT NULL DEFAULT 0,
+    eliminado_por_vendedor TINYINT(1) NOT NULL DEFAULT 0,
     FOREIGN KEY (vendedor_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE RESTRICT,
     -- RF69-RF71 (M7): busqueda global admin (MATCH nombre, descripcion).
     FULLTEXT KEY ft_productos_busqueda (nombre, descripcion),
     -- R3 (auditoria 2026-10-11, TASK-7.4): listado publico del catalogo filtra
     -- por visibles (no eliminados) + estado + orden por fecha.
-    INDEX idx_productos_visibles (eliminado_por_admin, estado, fecha_publicacion)
+    INDEX idx_productos_visibles (eliminado_por_admin, estado, fecha_publicacion),
+    -- RF55 (mig 019): filtro de pausados/bajas del vendedor.
+    INDEX idx_productos_pausado_vendedor (pausado, eliminado_por_vendedor)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
@@ -373,7 +380,8 @@ INSERT INTO schema_migrations (id, checksum) VALUES
 ('015_token_version.sql', 'a4864286df6db2e804ba30e132f78b18171b802e465f4d31bb1d97ecaa13d8c1'),
 ('016_auditoria_acciones.sql', '4919cfa3804ea64d531ade94c2fd9b062d7c2fa19ae7066e16f34a56fb8f8a02'),
 ('017_datos_bancarios_longitudes.sql', 'e44a9290fa9eef1ec7238e9f800c850eff7124ca574367b7fbd029816ff48ae0'),
-('018_calificaciones_unique_vendedor.sql', '738b3a57f6fd6f9a46335f2fcc36aa0ad71bef8ae8c02e9316feda0dfe1d79b3');
+('018_calificaciones_unique_vendedor.sql', '738b3a57f6fd6f9a46335f2fcc36aa0ad71bef8ae8c02e9316feda0dfe1d79b3'),
+('019_perfil_terminos_y_pausa_productos.sql', 'd1b2bf4fabd10767ed8fbeac35094a04f29cbac0289f7cf93a5443c38ad05e65');
 
 -- ==========================================
 -- EVENTOS PROGRAMADOS (requieren event_scheduler = ON)

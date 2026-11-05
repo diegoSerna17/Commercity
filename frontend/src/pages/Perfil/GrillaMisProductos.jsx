@@ -12,6 +12,8 @@ export default function GrillaMisProductos({
   onImagenRota,
   isMisProductos,
   onEditar,
+  onCambiarEstado,
+  onEliminar,
 }) {
   return (
     <div
@@ -128,6 +130,27 @@ export default function GrillaMisProductos({
             >
               {formatPriceRounded(calcularPrecioFinal(p))}
             </p>
+
+            {isMisProductos && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onCambiarEstado(p.id, p.raw?.pausado ? "activo" : "pausado")
+                  }
+                  className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-input-bg"
+                >
+                  {p.raw?.pausado ? "Reactivar" : "Pausar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onEliminar(p.id)}
+                  className="rounded-full border border-report-red-text/40 px-3 py-1.5 text-xs font-semibold text-report-red-text hover:bg-report-red-bg/30"
+                >
+                  Eliminar
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ))}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../../components/globales/Header";
 import { getCurrentUser, setCurrentUser, clearCurrentUser } from "../../api/client.js";
-import { cambiarRol, eliminarCuenta } from "../../services/usuarios.service.js";
+import { cambiarRol, eliminarCuenta, cerrarTodasLasSesiones } from "../../services/usuarios.service.js";
 import { obtenerTemaGuardado, guardarTema } from "../../utils/tema.js";
 import { useToast } from "../../hooks/useToast.js";
 import AjustesPersonales from "./AjustesPersonales.jsx";
@@ -25,6 +25,8 @@ export default function Ajustes() {
   const [modalRol, setModalRol] = useState(false);
   const [enviandoRol, setEnviandoRol] = useState(false);
   const [eliminandoCuenta, setEliminandoCuenta] = useState(false);
+  const [modalSesiones, setModalSesiones] = useState(false);
+  const [cerrandoSesiones, setCerrandoSesiones] = useState(false);
   const [tema, setTema] = useState(() => obtenerTemaGuardado());
 
   // RE Avisos de las acciones que se confirman en los modales.
@@ -35,21 +37,35 @@ export default function Ajustes() {
   const rolDestino = esVendedor ? "comprador" : "vendedor";
 
   useEffect(() => {
-    const modalAbierto = modalEliminar || modalRol;
+    const modalAbierto = modalEliminar || modalRol || modalSesiones;
     document.body.style.overflow = modalAbierto ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [modalEliminar, modalRol]);
+  }, [modalEliminar, modalRol, modalSesiones]);
 
   // JS Guarda y aplica la preferencia de tema elegida en Ajustes.
   function seleccionarTema(nuevoTema) {
     setTema(guardarTema(nuevoTema));
   }
 
-  function handleNombreActualizado(nombre) {
+  function handlePerfilActualizado(datos) {
     const actual = getCurrentUser();
-    if (actual) setCurrentUser({ ...actual, nombre_completo: nombre });
+    if (actual) setCurrentUser({ ...actual, ...datos });
+  }
+
+  // Cierra todas las sesiones (M-8): el backend incrementa token_version.
+  async function confirmarCerrarSesiones() {
+    setCerrandoSesiones(true);
+    try {
+      await cerrarTodasLasSesiones();
+      clearCurrentUser();
+      navigate("/login");
+    } catch (err) {
+      setCerrandoSesiones(false);
+      setModalSesiones(false);
+      showToastPersonal(err.message || "No se pudieron cerrar las sesiones.", true);
+    }
   }
 
   // JS Cambia el rol del usuario (RF20/RF21) y actualiza la sesion local
@@ -109,16 +125,19 @@ export default function Ajustes() {
             <div className={sectionDivider} />
 
             <AjustesPersonales
-              nombreInicial={currentUser?.nombre_completo || ""}
+              perfilInicial={currentUser}
               email={currentUser?.email || ""}
               toast={toastPersonal}
               showToast={showToastPersonal}
-              onNombreActualizado={handleNombreActualizado}
+              onPerfilActualizado={handlePerfilActualizado}
             />
 
             <AjustesTema tema={tema} onSeleccionar={seleccionarTema} />
 
-            <AjustesDireccion />
+            <AjustesDireccion
+              direccionInicial={currentUser?.direccion_envio || ""}
+              onPerfilActualizado={handlePerfilActualizado}
+            />
 
             <AjustesRol
               esVendedor={esVendedor}
@@ -129,10 +148,43 @@ export default function Ajustes() {
             <AjustesCuenta
               eliminandoCuenta={eliminandoCuenta}
               onAbrirModal={() => setModalEliminar(true)}
+              onAbrirCerrarSesiones={() => setModalSesiones(true)}
             />
           </div>
         </section>
       </main>
+
+      <Modal
+        abierto={modalSesiones}
+        onClose={() => setModalSesiones(false)}
+        tituloId="ajuste-sesiones-titulo"
+        panelClassName="max-w-lg rounded-hero border border-figma-divider bg-auth-card-bg p-6 sm:p-10 shadow-2xl"
+      >
+        <h4 id="ajuste-sesiones-titulo" className="text-headline-sm font-bold text-on-surface mb-4">
+          ¿Cerrar todas las sesiones?
+        </h4>
+        <p className="text-brand-muted-text text-body-sm leading-6 mb-8">
+          Se cerrara la sesion en todos los dispositivos, incluido este. Tendras que
+          iniciar sesion de nuevo.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={() => setModalSesiones(false)}
+            className="flex-1 rounded-card border border-figma-divider bg-transparent px-4 py-3 text-body-sm font-bold text-brand-muted-text transition hover:bg-input-bg"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={confirmarCerrarSesiones}
+            disabled={cerrandoSesiones}
+            className="flex-1 rounded-card bg-brand-orange px-4 py-3 text-body-sm font-bold text-brand-dark-text transition hover:opacity-90 disabled:opacity-60"
+          >
+            {cerrandoSesiones ? "Cerrando..." : "Si, cerrar sesiones"}
+          </button>
+        </div>
+      </Modal>
 
       <Modal
         abierto={modalRol}

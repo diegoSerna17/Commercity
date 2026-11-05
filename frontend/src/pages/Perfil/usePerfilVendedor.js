@@ -8,7 +8,9 @@ import {
 } from "../../utils/mapearProducto.js";
 import {
   actualizarProducto,
+  cambiarEstadoProducto,
   crearProducto,
+  eliminarProductoPropio,
   listarMisProductos,
 } from "../../services/productos.service.js";
 import { listarSeguidores, listarSiguiendo } from "../../services/seguidores.service.js";
@@ -216,6 +218,18 @@ export function usePerfilVendedor() {
     return respuesta;
   };
 
+  /** RF55: pausa o reactiva una publicacion propia. */
+  const handleCambiarEstadoProducto = async (id, estado) => {
+    await cambiarEstadoProducto(id, estado);
+    await recargarProductos();
+  };
+
+  /** RF55: da de baja una publicacion propia (borrado logico). */
+  const handleEliminarProducto = async (id) => {
+    await eliminarProductoPropio(id);
+    await recargarProductos();
+  };
+
   return {
     nombrePerfil,
     productos,
@@ -252,5 +266,7 @@ export function usePerfilVendedor() {
     recargarSeguidores,
     handleAgregarProducto,
     handleActualizarProducto,
+    handleCambiarEstadoProducto,
+    handleEliminarProducto,
   };
 }

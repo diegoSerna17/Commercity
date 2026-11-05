@@ -19,13 +19,18 @@ function esEnteroPositivo(valor) {
 }
 
 /**
- * Obtiene stock y vendedor de un producto activo (no eliminado por admin).
+ * Obtiene stock y vendedor de un producto disponible: ni eliminado por el
+ * administrador, ni dado de baja por el vendedor, ni pausado (RF55).
  * @param {number} productoId - ID del producto
  * @returns {Promise<{stock: number, vendedor_id: number}|null>} Datos o null si no existe
  */
 async function obtenerProducto(productoId) {
   const [filas] = await pool.query(
-    "SELECT stock, vendedor_id FROM productos WHERE id = ? AND eliminado_por_admin = 0 LIMIT 1",
+    `SELECT stock, vendedor_id
+       FROM productos
+      WHERE id = ? AND eliminado_por_admin = 0
+        AND eliminado_por_vendedor = 0 AND pausado = 0
+      LIMIT 1`,
     [productoId]
   );
   return filas.length > 0 ? filas[0] : null;
@@ -70,7 +75,7 @@ export async function agregarProducto(req, res) {
     if (producto === null) {
       return res.status(404).json({
         success: false,
-        error: { code: "PRODUCT_NOT_FOUND", message: "El producto no existe o fue eliminado por el administrador" },
+        error: { code: "PRODUCT_NOT_FOUND", message: "El producto no existe o no esta disponible" },
       });
     }
 
@@ -200,7 +205,7 @@ export async function modificarCantidad(req, res) {
     if (producto === null) {
       return res.status(404).json({
         success: false,
-        error: { code: "PRODUCT_NOT_FOUND", message: "El producto no existe o fue eliminado por el administrador" },
+        error: { code: "PRODUCT_NOT_FOUND", message: "El producto no existe o no esta disponible" },
       });
     }
 

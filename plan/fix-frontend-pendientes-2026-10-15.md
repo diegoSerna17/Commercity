@@ -15,10 +15,9 @@ tags: [fix, frontend, web, tests, cobertura, refactor, versionado]
 Plan de ejecución para cerrar lo que falta en `frontend/` (React 19 + Vite + Vitest). **Este documento es solo el plan: no modifica código, versión ni CHANGELOG.** Se ejecuta por lotes, y cada lote termina con su propio bump de versión y entrada de CHANGELOG (VER-001).
 
 ## Estado al 2026-11-01
-
 - **Lote A: cerrado** en la versión **1.3.4** (commit `ea9828a`). Cobertura real medida: Lines 95,69 % (2066/2159), Statements 94,20 %, Functions 92,02 %, Branches 84,85 %, con 450/450 pruebas en 59 archivos. La numeración original de este documento (Lote A = 1.3.2) quedó obsoleta porque entre el 1.3.2 y el cierre se publicaron 1.3.3 y 1.3.4.
 - **Lote B: cerrado en la versión 1.3.5** para TASK-8.1 a TASK-8.4 (formateadores unificados, `useToast` compartido, `PanelControl` 736 -> 185 líneas y `PerfilVendedor` 859 -> 122 líneas). TASK-8.5 (`Inicio`), TASK-8.6 (`Ajustes`, `FichaProducto`, `AgregarProducto` y `PerfilPublico`, sumado el 2026-11-01) y el resto de TASK-8.7 siguen abiertos: esos cinco archivos continúan por encima de 350 líneas.
-- **Lote C: se mantiene en 1.4.0**, con versión anterior 1.3.5.
+- **Lote C: pendiente.** La versión **1.4.0** la tomó el Lote 5 de la auditoría 2026-11-04 (perfil, términos, pausa de productos y calificaciones públicas). Al retomarse, este lote necesita un bump propio (1.5.0) para no reutilizar 1.4.0.
 - Las cifras de la sección 0 y las fases del Lote A se conservan como registro histórico fechado (2026-10-15); no describen el estado actual.
 
 **Base**: `PREVIEW` = `commercycity/PREVIEW` = `5b11ce4` (verificado con `git ls-remote`, solo lectura). La rama de trabajo es la actual `fix/pendientes-auditoria-2026-10-12`, que está en ese mismo commit y con el árbol limpio. Al 2026-11-01 la rama acumula los lotes A publicados en local hasta `ea9828a` (sin push).

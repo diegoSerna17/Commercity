@@ -60,6 +60,8 @@ export const getProductos = async (req, res, next) => {
       INNER JOIN usuarios v ON p.vendedor_id = v.id
       WHERE 1 = 1
         AND p.eliminado_por_admin = 0
+        AND p.eliminado_por_vendedor = 0
+        AND p.pausado = 0
         AND p.estado = 'Disponible'
         ${where}
     `;
@@ -89,6 +91,8 @@ export const getProductos = async (req, res, next) => {
       INNER JOIN usuarios v ON p.vendedor_id = v.id
       WHERE 1 = 1
         AND p.eliminado_por_admin = 0
+        AND p.eliminado_por_vendedor = 0
+        AND p.pausado = 0
         AND p.estado = 'Disponible'
         ${where}
       ORDER BY p.id DESC
@@ -150,6 +154,14 @@ export const getVendedores = async (req, res, next) => {
       INNER JOIN roles r ON r.id = ur.rol_id
       WHERE r.nombre = 'vendedor'
         AND u.activo = 1
+        AND EXISTS (
+          SELECT 1 FROM productos p
+           WHERE p.vendedor_id = u.id
+             AND p.eliminado_por_admin = 0
+             AND p.eliminado_por_vendedor = 0
+             AND p.pausado = 0
+             AND p.estado = 'Disponible'
+        )
     `);
     const total = Number(totalRow?.total || 0);
     const [vendedores] = await pool.query(
@@ -159,6 +171,14 @@ export const getVendedores = async (req, res, next) => {
        INNER JOIN roles r ON r.id = ur.rol_id
        WHERE r.nombre = 'vendedor'
          AND u.activo = 1
+         AND EXISTS (
+           SELECT 1 FROM productos p
+            WHERE p.vendedor_id = u.id
+              AND p.eliminado_por_admin = 0
+              AND p.eliminado_por_vendedor = 0
+              AND p.pausado = 0
+              AND p.estado = 'Disponible'
+         )
        ORDER BY u.nombre_completo ASC
        LIMIT ? OFFSET ?`,
       [limite, offset]
@@ -214,6 +234,8 @@ export const getProductoDetalle = async (req, res, next) => {
          JOIN usuarios  u ON u.id = p.vendedor_id
         WHERE p.id = ?
           AND p.eliminado_por_admin = 0
+          AND p.eliminado_por_vendedor = 0
+          AND p.pausado = 0
           AND u.activo = 1
         LIMIT 1`,
       [productoId]
@@ -277,6 +299,7 @@ export const validarStockProducto = async (req, res, next) => {
       `SELECT stock, estado
          FROM productos
         WHERE id = ? AND eliminado_por_admin = 0
+          AND eliminado_por_vendedor = 0 AND pausado = 0
         LIMIT 1`,
       [productoId]
     );
@@ -478,6 +501,7 @@ export const getMisProductos = async (req, res, next) => {
     const [productos] = await pool.query(
       `SELECT p.id, p.nombre, p.descripcion, p.imagen_url, p.precio, p.stock,
               p.estado, p.descuento_porcentaje, p.fecha_publicacion,
+              p.pausado, p.eliminado_por_vendedor,
               c.id AS categoria_id, c.nombre AS categoria_nombre
          FROM productos p
          JOIN categorias c ON p.categoria_id = c.id
@@ -502,6 +526,74 @@ export const getMisProductos = async (req, res, next) => {
         total_paginas: Math.max(1, Math.ceil(total / limite)),
       },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/productos/:id/estado (RF55) - el vendedor pausa o reactiva su
+ * publicacion sin borrarla. Un producto dado de baja por el vendedor no se
+ * reactiva desde aqui.
+ */
+export const cambiarEstadoProductoVendedor = async (req, res, next) => {
+  try {
+    const productoId = Number(req.params.id);
+    const { estado } = req.body;
+
+    const [productos] = await pool.query(
+      "SELECT id, pausado, eliminado_por_vendedor FROM productos WHERE id = ? AND vendedor_id = ?",
+      [productoId, req.userId]
+    );
+    if (productos.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Producto no encontrado" },
+      });
+    }
+    if (productos[0].eliminado_por_vendedor === 1) {
+      return res.status(409).json({
+        success: false,
+        error: { code: "CONFLICT", message: "El producto fue eliminado y no se puede reactivar" },
+      });
+    }
+
+    const pausado = estado === "pausado" ? 1 : 0;
+    await pool.query("UPDATE productos SET pausado = ? WHERE id = ? AND vendedor_id = ?", [
+      pausado,
+      productoId,
+      req.userId,
+    ]);
+
+    return res.json({
+      success: true,
+      data: { id: productoId, estado: pausado ? "pausado" : "activo" },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/productos/:id (RF55) - baja logica propia del vendedor. No borra
+ * la fila: conserva el historial de pedidos y calificaciones.
+ */
+export const eliminarProductoVendedor = async (req, res, next) => {
+  try {
+    const productoId = Number(req.params.id);
+    const [resultado] = await pool.query(
+      `UPDATE productos
+          SET eliminado_por_vendedor = 1, pausado = 1
+        WHERE id = ? AND vendedor_id = ? AND eliminado_por_vendedor = 0`,
+      [productoId, req.userId]
+    );
+    if (resultado.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Producto no encontrado o ya eliminado" },
+      });
+    }
+    return res.json({ success: true, data: { id: productoId, estado: "eliminado" } });
   } catch (error) {
     next(error);
   }

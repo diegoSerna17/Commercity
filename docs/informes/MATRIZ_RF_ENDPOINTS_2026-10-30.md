@@ -55,17 +55,17 @@ toda la sustentacion.
 
 | Indicador | Valor |
 |---|---|
-| Operaciones HTTP | 73 (el `GET /` duplicado se retiro el 2026-11-04, version 1.3.7) |
+| Operaciones HTTP | 76 (3 nuevas en 1.4.0: RF51 y RF55) |
 | Routers montados | 13 |
 | RF del documento oficial | 141 |
-| RF con al menos un endpoint identificado | 112 (4 de ellos parciales: RF6, RF40, RF84, RF118) |
-| RF sin endpoint (interfaz, BD, regla o brecha) | 29 |
+| RF con al menos un endpoint identificado | 117 (3 de ellos parciales: RF40, RF84, RF118) |
+| RF sin endpoint (interfaz, BD, regla o brecha) | 24 |
 | RF con evidencia de integracion real | 4 (RF100, RF101, RF102, RF104, via BE-12) |
 | RF con corrida E2E HTTP registrada | 0 al corte |
 
-Las 73 operaciones vigentes se reparten asi: Admin 16, Usuarios 14, Productos 8, Tienda 8,
+Las 76 operaciones vigentes se reparten asi: Admin 16, Usuarios 14, Productos 10, Tienda 8,
 Notificaciones 6, Seguidores 5, Carrito 4, Chat 4, Pedidos 3, Historial 2,
-Reportes 1, Calificaciones 1, Base 1.
+Reportes 1, Calificaciones 2, Base 1.
 
 ## 4. Matriz por modulo
 
@@ -95,28 +95,26 @@ Evidencia del modulo: `usuarios.controllers.test.js`, `auth.middleware.test.js`,
 | 3 | `GET /api/usuarios/perfil-publico/:id` | RF110, RF11, RF12 | Publico | SU |
 | 4 | `GET /api/usuarios/directorio` | RF105 (parcial: destinatarios del chat) | JWT | SU |
 | 5 | `DELETE /api/usuarios/cuenta` | RF42, RF56 | JWT | SU |
-| 6 | `POST /api/usuarios/register` | RF1, RF7, RF8; RF6 **parcial** | Publico | SU |
+| 6 | `POST /api/usuarios/register` | RF1, RF6, RF7, RF8 | Publico | SU |
 | 7 | `POST /api/usuarios/login` | RF2, RNF1, RNF10 | Publico | SU |
 | 8 | `POST /api/usuarios/recover` | RF3 | Publico | SU |
 | 9 | `POST /api/usuarios/reset-password` | RF4 | Publico (token) | SU |
 | 10 | `POST /api/usuarios/logout` | RF2, RF41 | JWT | SU |
 | 11 | `POST /api/usuarios/logout-todas` | RF2 (derivado; **RF por confirmar**) | JWT | SU |
 | 12 | `GET /api/usuarios/me` | RF11, RF37 | JWT | SU |
-| 13 | `PATCH /api/usuarios/me` | RF38 | JWT | SU |
+| 13 | `PATCH /api/usuarios/me` | RF14, RF15, RF16, RF17, RF38, RF39 | JWT + multipart opcional | SU |
 | 14 | `PATCH /api/usuarios/me/rol` | RF43 | JWT | SU |
 | 15 | `GET /api/usuarios/admin` | RF13 | JWT + administrador | SU |
 
-Brechas del modulo:
+Brechas del modulo: cerradas en 1.4.0.
 
-- **RF6** (casilla de aceptacion de terminos): el esquema de registro es `.strict()` con
-  `email`, `password` y `nombre_completo`. No existe campo de aceptacion. La validacion de
-  terminos queda en la interfaz; el backend no la exige.
-- **RF14 a RF17** (foto y descripcion de perfil): `PATCH /me` solo actualiza
-  `nombre_completo`. No hay endpoint ni campo para foto o descripcion.
-- **RF39** (direccion en ajustes): la direccion se recibe en el checkout
-  (`direccion_envio`), no se guarda en el perfil.
+- **RF6** (casilla de aceptacion de terminos): cubierto. `POST /register` exige
+  `acepta_terminos: true` y guarda `usuarios.terminos_aceptados_en` (migracion 019).
+- **RF14 a RF17 y RF39** (foto, descripcion y direccion de perfil): cubiertos.
+  `PATCH /me` acepta `descripcion_personal`, `direccion_envio` y el avatar multipart;
+  la baja del avatar anterior limpia el archivo huerfano.
 
-### 4.3 Productos y catalogo (8 operaciones) - `/api`
+### 4.3 Productos y catalogo (10 operaciones) - `/api`
 
 Evidencia del modulo: `productos.controllers.test.js`, `productos.vendedor.test.js` (SU).
 
@@ -130,6 +128,8 @@ Evidencia del modulo: `productos.controllers.test.js`, `productos.vendedor.test.
 | 21 | `GET /api/productos/:id` | RF81, RF82, RF98 | Publico | SU |
 | 22 | `POST /api/productos` | RF46, RF47, RF48, RF49 | JWT + vendedor (multipart) | SU |
 | 23 | `PUT /api/productos/:id` | RF50 | JWT + vendedor (multipart) | SU |
+| 75 | `PATCH /api/productos/:id/estado` | RF55 | JWT + vendedor | SU |
+| 76 | `DELETE /api/productos/:id` | RF55 | JWT + vendedor | SU |
 
 Observacion: `productos.estado` es columna generada a partir del stock. El backend la lee y
 nunca la escribe, lo que sostiene RF88 sin una actualizacion manual.
@@ -206,13 +206,14 @@ Evidencia del modulo: `reportes.controllers.test.js` (SU).
 Observacion: `tipo` distingue reporte de producto y de usuario; la evidencia es una imagen
 opcional validada por firma real y MIME.
 
-### 4.8 Calificaciones (1 operacion) - `/api/calificaciones`
+### 4.8 Calificaciones (2 operaciones) - `/api/calificaciones`
 
 Evidencia del modulo: `calificaciones.controllers.test.js` (SU).
 
 | # | Metodo y ruta | RF | Auth | Evidencia |
 |---|---|---|---|---|
 | 52 | `POST /api/calificaciones/vendedor` | RF87, RF107, RF51 | JWT (comprador con compra) | SU |
+| 77 | `GET /api/calificaciones/vendedor/:id` | RF51 | Publico | SU |
 
 Observacion: una calificacion por vendedor y pedido, validada por indice unico (migracion 018).
 
@@ -286,7 +287,7 @@ reembolso sobre lo pagado. El historial financiero no se borra: cambia de estado
 
 ## 5. RF sin endpoint
 
-De los 141 RF, 29 no tienen una operacion HTTP propia. Se clasifican asi para que la
+De los 141 RF, 24 no tienen una operacion HTTP propia. Se clasifican asi para que la
 sustentacion no los presente como pendientes por igual.
 
 | Clase | RF | Explicacion |
@@ -295,13 +296,11 @@ sustentacion no los presente como pendientes por igual.
 | Regla de rol o de negocio | 9, 10, 44, 45 | Se aplican con RBAC y con la herencia de funcionalidades del vendedor; no requieren ruta. |
 | Efecto dentro de otra operacion | 59 | La devolucion se descuenta en las estadisticas del administrador al cancelar un pedido. |
 | Base de datos o evento | 113, 141 | Limpieza programada de carritos inactivos y moneda COP; no requieren ruta. |
-| **Brecha declarada** | 14, 15, 16, 17, 39 | Foto y descripcion de perfil y direccion en ajustes: no hay campo ni endpoint. |
 | **Desviacion deliberada** | 122 | El contrato no acepta el numero completo de tarjeta (solo ultimos 4, marca y titular). Decision de seguridad M-28. |
 
-Ademas, cuatro RF estan cubiertos solo de forma parcial y asi se marcan en la matriz:
-RF6 (aceptacion de terminos, no exigida por el backend), RF40 (la direccion se pide en el
-checkout, no en ajustes), RF84 (agregar al carrito comparte el endpoint de RF111) y
-RF118 (el resumen se calcula en `GET /pedidos/resumen`).
+Ademas, tres RF estan cubiertos solo de forma parcial y asi se marcan en la matriz:
+RF40 (la direccion se pide en el checkout, no en ajustes), RF84 (agregar al carrito comparte
+el endpoint de RF111) y RF118 (el resumen se calcula en `GET /pedidos/resumen`).
 
 ## 6. Discrepancias detectadas en los comentarios del codigo
 

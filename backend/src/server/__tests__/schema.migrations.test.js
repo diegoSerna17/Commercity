@@ -5,18 +5,19 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // B1 (auditoria 2026-11-04): el esquema canonico debe reflejar las migraciones
-// 015-018 y registrarlas en schema_migrations con el checksum real de cada
+// 015-019 y registrarlas en schema_migrations con el checksum real de cada
 // archivo, para que `npm run db:migrate` no las reaplique sobre una base creada
 // desde el esquema. Este test es estatico: no necesita MySQL.
 const raizRepo = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const dirMigraciones = join(dirname(fileURLToPath(import.meta.url)), "..", "db");
 const schema = readFileSync(join(raizRepo, "schema_commercity.sql"), "utf8");
 
-const MIGRACIONES_015_018 = [
+const MIGRACIONES_015_019 = [
   "015_token_version.sql",
   "016_auditoria_acciones.sql",
   "017_datos_bancarios_longitudes.sql",
   "018_calificaciones_unique_vendedor.sql",
+  "019_perfil_terminos_y_pausa_productos.sql",
 ];
 
 function bloqueCreateTable(nombre) {
@@ -26,7 +27,7 @@ function bloqueCreateTable(nombre) {
   return match ? match[1] : "";
 }
 
-describe("schema_commercity.sql vs migraciones 015-018 (B1)", () => {
+describe("schema_commercity.sql vs migraciones 015-019 (B1)", () => {
   it("usuarios incluye token_version, password_changed_at y el indice de recuperacion", () => {
     const usuarios = bloqueCreateTable("usuarios");
     expect(usuarios).toMatch(/\btoken_version\s+INT\s+NOT NULL DEFAULT 0/);
@@ -55,8 +56,20 @@ describe("schema_commercity.sql vs migraciones 015-018 (B1)", () => {
     expect(calificaciones).not.toMatch(/UNIQUE KEY[^\n]*\(pedido_id\)/);
   });
 
-  it("schema_migrations registra 015-018 con el checksum real de cada archivo", () => {
-    for (const archivo of MIGRACIONES_015_018) {
+  it("productos incluye pausado y eliminado_por_vendedor de la migracion 019", () => {
+    const productos = bloqueCreateTable("productos");
+    expect(productos).toMatch(/\bpausado\s+TINYINT\(1\)\s+NOT NULL DEFAULT 0/);
+    expect(productos).toMatch(/\beliminado_por_vendedor\s+TINYINT\(1\)\s+NOT NULL DEFAULT 0/);
+    expect(productos).toMatch(/INDEX idx_productos_pausado_vendedor \(pausado, eliminado_por_vendedor\)/);
+  });
+
+  it("usuarios incluye terminos_aceptados_en de la migracion 019", () => {
+    const usuarios = bloqueCreateTable("usuarios");
+    expect(usuarios).toMatch(/\bterminos_aceptados_en\s+DATETIME NULL/);
+  });
+
+  it("schema_migrations registra 015-019 con el checksum real de cada archivo", () => {
+    for (const archivo of MIGRACIONES_015_019) {
       const sql = readFileSync(join(dirMigraciones, archivo), "utf8");
       const checksum = createHash("sha256").update(sql, "utf8").digest("hex");
       expect(schema).toContain(`('${archivo}', '${checksum}')`);

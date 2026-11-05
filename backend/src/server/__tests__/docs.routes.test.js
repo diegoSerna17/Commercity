@@ -11,7 +11,7 @@ describe("Documentacion OpenAPI (/api/openapi.json y /api/docs)", () => {
     expect(res.body.openapi).toBe("3.1.0");
     expect(res.body.info.title).toBe("CommerCity API");
     const numOps = Object.values(res.body.paths).reduce((n, item) => n + Object.keys(item).length, 0);
-    expect(numOps).toBe(73);
+    expect(numOps).toBe(76);
   });
 
   it("login es publico y /me exige bearer (seguridad por operacion)", async () => {

@@ -18,6 +18,12 @@
 > duplicado (repetia `GET /api/usuarios/`) y se documenta `GET /health`, que ya
 > existia. Total vigente: **73 endpoints**. La numeracion historica 1-72 se
 > conserva; `openapi.json` es la fuente de verdad del conteo.
+>
+> Addendum Lote 5 (auditoria 2026-11-04, version 1.4.0): se agregan
+> `GET /api/calificaciones/vendedor/:id` (RF51),
+> `PATCH /api/productos/:id/estado` y `DELETE /api/productos/:id` (RF55), y
+> `PATCH /api/usuarios/me` pasa a aceptar descripcion, direccion y avatar
+> multipart (RF14-RF17, RF39). Total vigente: **76 endpoints**.
 
 Leyenda de estado Zod:
 
@@ -48,11 +54,11 @@ Montajes (`app.js`): `/` → router base · `/api/carrito` · `/api/usuarios` ·
 | 9 | `POST /api/usuarios/reset-password` | publico (token) | body: token, password | ✅ `resetSchema` |
 | 10 | `POST /api/usuarios/logout` | Bearer (revoca token, RF2) | — | ❌ |
 | 11 | `GET /api/usuarios/me` | Bearer | — | ❌ |
-| 12 | `PATCH /api/usuarios/me` | Bearer | body: nombre_completo (trim manual) | ❌ |
+| 12 | `PATCH /api/usuarios/me` | Bearer + multipart opcional `avatar` | body: nombre_completo?, descripcion_personal?, direccion_envio? (al menos uno) | ✅ `actualizarPerfilSchema` |
 | 13 | `PATCH /api/usuarios/me/rol` | Bearer | body: rol enum comprador\|vendedor | ✅ `cambiarRolSchema` |
 | 14 | `GET /api/usuarios/admin` | Bearer + `administrador` | — | ❌ |
 
-## 2. Productos / catalogo — `/api` (8)
+## 2. Productos / catalogo — `/api` (10)
 
 Montado directo en `/api` (no en `/api/productos`).
 
@@ -66,6 +72,8 @@ Montado directo en `/api` (no en `/api/productos`).
 | 20 | `GET /api/productos/:id` | publico | params `id` (`Number()` manual) | ❌ |
 | 21 | `POST /api/productos` | Bearer + `vendedor` + multipart `imagen` | body: nombre, descripcion, precio, stock, descuento, categoria (validacion manual H3: `''`/`null` no validos) | ❌ |
 | 22 | `PUT /api/productos/:id` | Bearer + `vendedor` + multipart `imagen` | params `id` + body parcial | ❌ |
+| 75 | `PATCH /api/productos/:id/estado` | Bearer + `vendedor` | params `id` + body: estado `pausado`\|`activo` (RF55) | ✅ `estadoProductoVendedorSchema` |
+| 76 | `DELETE /api/productos/:id` | Bearer + `vendedor` | params `id` (baja logica propia, RF55) | ❌ |
 
 ## 3. Pedidos / pago — `/api/pedidos` (3)
 
@@ -117,11 +125,12 @@ Montado directo en `/api` (no en `/api/productos`).
 |---|---|---|---|---|
 | 50 | `POST /api/reportes/` | Bearer + multipart `evidencia` (opcional) | body: producto o usuario reportado + motivo | ❌ |
 
-## 7. Calificaciones — `/api/calificaciones` (1)
+## 7. Calificaciones — `/api/calificaciones` (2)
 
 | # | Metodo + ruta completa | Auth / roles | Entrada | Estado Zod |
 |---|---|---|---|---|
 | 51 | `POST /api/calificaciones/vendedor` | Bearer (RF107, 1-5 estrellas tras compra) | body: pedido_id, vendedor_id, estrellas 1-5, comentario? max 500 | ⚠️ `calificacionSchema` inline (`safeParse`) |
+| 77 | `GET /api/calificaciones/vendedor/:id` | publico | params `id` + query page, limit (RF51) | ✅ `calificacionesVendedorParamsSchema` + `calificacionesVendedorQuerySchema` |
 
 ## 8. Chat — `/api/chat` (4)
 

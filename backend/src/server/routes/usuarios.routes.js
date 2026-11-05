@@ -18,6 +18,7 @@ import {
 import { authRequired } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
+import { subirImagen } from "../config/multer.js";
 import {
     registerSchema,
     loginSchema,
@@ -66,7 +67,25 @@ router.post("/logout", authRequired, logout);
 // M-8: cierra TODAS las sesiones (incrementa token_version).
 router.post("/logout-todas", authRequired, cerrarTodasLasSesiones);
 router.get("/me", authRequired, getPerfil);
-router.patch("/me", authRequired, validate(actualizarPerfilSchema), actualizarPerfil);
+router.patch(
+    "/me",
+    authRequired,
+    subirImagen("avatar"),
+    (req, _res, next) => {
+        // El avatar llega como archivo, no como campo de texto: se marca para
+        // que el schema acepte un PATCH que solo cambia la foto. Si el cliente
+        // envia "avatar" en el JSON se descarta: el schema es .strict() y solo
+        // debe contar el archivo real (A5).
+        if (req.file) {
+            req.body = { ...(req.body || {}), avatar: "1" };
+        } else if (req.body) {
+            delete req.body.avatar;
+        }
+        next();
+    },
+    validate(actualizarPerfilSchema),
+    actualizarPerfil
+);
 router.patch("/me/rol", authRequired, validate(cambiarRolSchema), cambiarRol);
 
 // ===== Ruta admin (requiere rol administrador) =====

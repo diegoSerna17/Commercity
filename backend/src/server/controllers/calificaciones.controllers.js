@@ -114,3 +114,74 @@ export const calificarVendedor = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * GET /api/calificaciones/vendedor/:id (RF51)
+ * Calificaciones recibidas por un vendedor, con promedio y paginacion.
+ * Publico con datos minimos del comprador (solo primer nombre).
+ */
+export const listarCalificacionesVendedor = async (req, res, next) => {
+  try {
+    const vendedorId = Number(req.params.id);
+    const { page: pagina, limit: limite } = req.query;
+    const offset = (pagina - 1) * limite;
+
+    // RF51: el perfil solo existe si el id pertenece a un vendedor.
+    const [vendedor] = await pool.query(
+      `SELECT u.id
+         FROM usuarios u
+         INNER JOIN usuario_roles ur ON ur.usuario_id = u.id
+         INNER JOIN roles r ON r.id = ur.rol_id
+        WHERE u.id = ? AND r.nombre = 'vendedor'
+        LIMIT 1`,
+      [vendedorId]
+    );
+    if (vendedor.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Vendedor no encontrado" },
+      });
+    }
+
+    // Resumen y total en una sola consulta.
+    const [[resumen]] = await pool.query(
+      `SELECT COUNT(*) AS total, AVG(estrellas) AS promedio
+         FROM calificaciones_vendedores
+        WHERE vendedor_id = ?`,
+      [vendedorId]
+    );
+    const total = Number(resumen?.total || 0);
+    const promedio = resumen?.promedio;
+
+    const [filas] = await pool.query(
+      `SELECT c.id, c.estrellas, c.comentario, c.fecha_calificacion,
+              SUBSTRING_INDEX(COALESCE(u.nombre_completo, 'Comprador'), ' ', 1) AS comprador
+         FROM calificaciones_vendedores c
+         LEFT JOIN usuarios u ON u.id = c.comprador_id
+        WHERE c.vendedor_id = ?
+        ORDER BY c.id DESC
+        LIMIT ? OFFSET ?`,
+      [vendedorId, limite, offset]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Calificaciones del vendedor",
+      data: {
+        resumen: {
+          promedio: promedio != null ? Number(Number(promedio).toFixed(1)) : null,
+          total,
+        },
+        calificaciones: filas,
+      },
+      paginacion: {
+        pagina,
+        por_pagina: limite,
+        total,
+        total_paginas: Math.max(1, Math.ceil(total / limite)),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};

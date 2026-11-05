@@ -8,6 +8,8 @@ import {
   crearProductoVendedor,
   editarProductoVendedor,
   getMisProductos,
+  cambiarEstadoProductoVendedor,
+  eliminarProductoVendedor,
 } from "../controllers/productos.controllers.js";
 import { authRequired } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
@@ -20,6 +22,7 @@ import {
   crearProductoSchema,
   editarProductoSchema,
   misProductosQuerySchema,
+  estadoProductoVendedorSchema,
 } from "../schemas/productos.schema.js";
 
 const router = Router();
@@ -72,6 +75,23 @@ router.put(
   subirImagen("imagen"),
   validate(editarProductoSchema),
   editarProductoVendedor
+);
+
+// RF55: pausar/reactivar y baja logica propia del vendedor.
+router.patch(
+  "/productos/:id/estado",
+  authRequired,
+  requireRoles(["vendedor"]),
+  validate(productoIdParamsSchema, "params"),
+  validate(estadoProductoVendedorSchema),
+  cambiarEstadoProductoVendedor
+);
+router.delete(
+  "/productos/:id",
+  authRequired,
+  requireRoles(["vendedor"]),
+  validate(productoIdParamsSchema, "params"),
+  eliminarProductoVendedor
 );
 
 export default router;

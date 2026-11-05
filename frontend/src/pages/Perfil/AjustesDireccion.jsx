@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useToast } from "../../hooks/useToast.js";
+import { actualizarPerfil } from "../../services/usuarios.service.js";
 import {
   cardClass,
   inputClass,
@@ -9,16 +10,17 @@ import {
 import AjustesToast from "./AjustesToast.jsx";
 
 /**
- * Seccion "Direccion de entrega". El backend todavia no persiste la direccion
- * (RF39, brecha documentada): la UI lo dice en vez de simular exito.
+ * Seccion "Direccion de entrega" (RF39). Guarda la direccion en el perfil para
+ * que el checkout pueda reutilizarla.
  */
-export default function AjustesDireccion() {
-  const [direccion, setDireccion] = useState("");
+export default function AjustesDireccion({ direccionInicial = "", onPerfilActualizado }) {
+  const [direccion, setDireccion] = useState(direccionInicial);
   const [ciudad, setCiudad] = useState("");
   const [depto, setDepto] = useState("");
+  const [guardando, setGuardando] = useState(false);
   const { toast, showToast } = useToast(3500);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (!direccion.trim() || !ciudad.trim() || !depto.trim()) {
@@ -26,9 +28,20 @@ export default function AjustesDireccion() {
       return;
     }
 
-    showToast(
-      "La direccion aun no se guarda en tu cuenta: la indicas al confirmar el pago en el carrito."
-    );
+    const direccionCompleta = `${direccion.trim()}, ${ciudad.trim()}, ${depto.trim()}`;
+    setGuardando(true);
+    try {
+      const res = await actualizarPerfil({ direccion_envio: direccionCompleta });
+      if (res.data) onPerfilActualizado?.(res.data);
+      setDireccion(direccionCompleta);
+      setCiudad("");
+      setDepto("");
+      showToast("Direccion guardada correctamente.");
+    } catch (err) {
+      showToast(err.message || "No se pudo guardar la direccion.", true);
+    } finally {
+      setGuardando(false);
+    }
   }
 
   return (
@@ -93,9 +106,10 @@ export default function AjustesDireccion() {
 
           <button
             type="submit"
-            className="rounded-button bg-gradient-to-r from-brand-orange to-tertiary-container px-6 py-3 text-body-sm font-bold text-brand-dark-text transition hover:opacity-90 active:scale-[0.99]"
+            disabled={guardando}
+            className="rounded-button bg-gradient-to-r from-brand-orange to-tertiary-container px-6 py-3 text-body-sm font-bold text-brand-dark-text transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Cambiar Direccion
+            {guardando ? "Guardando..." : "Cambiar Direccion"}
           </button>
         </form>
       </div>

@@ -8,6 +8,7 @@ import {
   modificarCantidad,
 } from "../../services/carrito.service.js";
 import { obtenerResumenPedido } from "../../services/pedidos.service.js";
+import { validarStock } from "../../services/productos.service.js";
 import { formatPriceRounded } from "../../utils/formatPrice.js";
 
 /** Icono de la accion eliminar producto del carrito. */
@@ -108,6 +109,18 @@ export default function Carrito() {
   /** Abre la pasarela con los totales reales de GET /api/pedidos/resumen. */
   async function abrirPasarela() {
     try {
+      // RF86: el stock pudo cambiar desde que se agrego al carrito.
+      const validaciones = await Promise.all(
+        productos.map((producto) => validarStock(producto.id, producto.cantidad))
+      );
+      const sinStock = productos.find(
+        (_producto, indice) => validaciones[indice]?.data?.valido === false
+      );
+      if (sinStock) {
+        setError(`Stock insuficiente para "${sinStock.nombre}". Ajusta la cantidad.`);
+        return;
+      }
+
       const res = await obtenerResumenPedido();
       setTotales(res.data?.totales ?? null);
       setError("");

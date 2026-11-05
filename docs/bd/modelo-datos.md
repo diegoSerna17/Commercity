@@ -47,7 +47,7 @@ erDiagram
 | id | INT AUTO_INCREMENT | no | PK | — |
 | email | VARCHAR(150) UNIQUE | no | UNIQUE | Login; validado por Zod (`Login`) |
 | password | VARCHAR(255) | no | — | Hash bcrypt (nunca plano) |
-| nombre_completo | VARCHAR(100) | si | — | Unico campo editable por PATCH /me |
+| nombre_completo | VARCHAR(100) | si | — | Editable por PATCH /me junto con descripcion, direccion y avatar (RF14-RF17, RF38, RF39) |
 | foto_perfil | VARCHAR(255) | si | — | Ruta estatica |
 | descripcion_personal | TEXT | si | — | Perfil publico |
 | direccion_envio | TEXT | si | — | — |
@@ -56,6 +56,7 @@ erDiagram
 | password_changed_at | DATETIME | si | — | Mig 015: fecha del ultimo cambio de contrasena |
 | token_recuperacion | VARCHAR(100) | si | — | Flujo recover/reset (RF4); indice `idx_usuarios_token_recuperacion` (mig 015) |
 | token_recuperacion_expiracion | DATETIME | si | — | Expira a los 5 min; se guarda SHA-256 |
+| terminos_aceptados_en | DATETIME | si | — | RF6 (mig 019): fecha de aceptacion de terminos en el registro |
 | created_at / updated_at | TIMESTAMP | no | — | updated_at ON UPDATE |
 
 ### `usuario_roles` (N:M usuarios <-> roles)
@@ -101,6 +102,12 @@ Tabla en desuso: el codigo no la consulta y el seed dejo de cargarla. Sigue en l
 | estado | ENUM('Disponible','Agotado') GENERATED STORED | `IF(stock > 0, ...)` — lo calcula la BD |
 | fecha_publicacion | DATETIME DEFAULT now | — |
 | eliminado_por_admin | TINYINT(1) DEFAULT 0 | Suspension logica (bandeo admin) |
+| pausado | TINYINT(1) DEFAULT 0 | RF55 (mig 019): el vendedor pausa su publicacion; el catalogo la oculta |
+| eliminado_por_vendedor | TINYINT(1) DEFAULT 0 | RF55 (mig 019): baja logica propia; conserva pedidos y calificaciones |
+
+El catalogo publico exige `eliminado_por_admin = 0 AND eliminado_por_vendedor = 0 AND pausado = 0`;
+`mis-productos` si muestra las publicaciones pausadas del propio vendedor (RF55). Indice
+`idx_productos_pausado_vendedor (pausado, eliminado_por_vendedor)` (mig 019).
 
 ### ~~`producto_etiquetas` (N:M)~~ (RETIRADA del esquema 2026-10-11)
 Tabla en desuso (misma decision que `etiquetas`).

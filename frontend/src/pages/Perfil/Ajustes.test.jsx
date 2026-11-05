@@ -10,6 +10,7 @@ import {
 import {
   actualizarPerfil,
   cambiarRol,
+  cerrarTodasLasSesiones,
   eliminarCuenta,
 } from "../../services/usuarios.service.js";
 import Ajustes from "./Ajustes.jsx";
@@ -27,6 +28,7 @@ vi.mock("../../api/client.js", () => ({
 vi.mock("../../services/usuarios.service.js", () => ({
   actualizarPerfil: vi.fn(),
   cambiarRol: vi.fn(),
+  cerrarTodasLasSesiones: vi.fn(),
   eliminarCuenta: vi.fn(),
 }));
 
@@ -55,6 +57,7 @@ describe("Ajustes", () => {
       data: { nombre_completo: "Ana Gomez" },
     });
     cambiarRol.mockResolvedValue({ data: { roles: ["comprador"] } });
+    cerrarTodasLasSesiones.mockResolvedValue({ data: {} });
     eliminarCuenta.mockResolvedValue({ data: { id: 7, estado: "inactivo" } });
   });
 
@@ -74,14 +77,19 @@ describe("Ajustes", () => {
     await user.click(screen.getByRole("button", { name: "Guardar Cambios" }));
 
     // Assert
-    expect(actualizarPerfil).toHaveBeenCalledWith("Ana Gomez");
-    expect(await screen.findByText("Nombre actualizado correctamente.")).toBeInTheDocument();
+    expect(actualizarPerfil).toHaveBeenCalledWith(
+      { nombre_completo: "Ana Gomez", descripcion_personal: "" },
+      null
+    );
+    expect(
+      await screen.findByText("Perfil actualizado correctamente.")
+    ).toBeInTheDocument();
     expect(setCurrentUser).toHaveBeenCalledWith(
       expect.objectContaining({ nombre_completo: "Ana Gomez" })
     );
   });
 
-  it("no simula exito al guardar la direccion (el backend aun no la persiste)", async () => {
+  it("guarda la direccion en el perfil (RF39)", async () => {
     // Arrange
     const user = userEvent.setup();
     renderAjustes();
@@ -93,11 +101,11 @@ describe("Ajustes", () => {
     await user.click(screen.getByRole("button", { name: "Cambiar Direccion" }));
 
     // Assert
+    expect(actualizarPerfil).toHaveBeenCalledWith({
+      direccion_envio: "Calle 123 #45-67, Cali, Valle",
+    });
     expect(
-      screen.queryByText("Direccion actualizada correctamente.")
-    ).not.toBeInTheDocument();
-    expect(
-      await screen.findByText(/aun no se guarda en tu cuenta/)
+      await screen.findByText("Direccion guardada correctamente.")
     ).toBeInTheDocument();
   });
 
@@ -178,7 +186,7 @@ describe("Ajustes", () => {
 
     // Assert
     expect(
-      await screen.findByText("No se pudo actualizar el nombre.")
+      await screen.findByText("No se pudo actualizar el perfil.")
     ).toBeInTheDocument();
   });
 
@@ -318,10 +326,13 @@ describe("Ajustes", () => {
 
     // Assert
     await waitFor(() =>
-      expect(actualizarPerfil).toHaveBeenCalledWith("Nuevo Nombre")
+      expect(actualizarPerfil).toHaveBeenCalledWith(
+        { nombre_completo: "Nuevo Nombre", descripcion_personal: "" },
+        null
+      )
     );
     expect(
-      await screen.findByText("Nombre actualizado correctamente.")
+      await screen.findByText("Perfil actualizado correctamente.")
     ).toBeInTheDocument();
     expect(setCurrentUser).not.toHaveBeenCalled();
 
@@ -335,5 +346,75 @@ describe("Ajustes", () => {
       await screen.findByText("Rol actualizado correctamente.")
     ).toBeInTheDocument();
     expect(setCurrentUser).not.toHaveBeenCalled();
+  });
+
+  it("sube foto y descripcion del perfil (RF14-RF17)", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    actualizarPerfil.mockResolvedValueOnce({
+      data: {
+        nombre_completo: "Ana Perez",
+        descripcion_personal: "Vendo cafe",
+        foto_perfil: "/uploads/avatar.png",
+      },
+    });
+    renderAjustes();
+
+    // Act
+    await user.type(screen.getByLabelText("Descripcion"), "Vendo cafe");
+    const archivo = new File([new Uint8Array([1, 2, 3])], "foto.png", {
+      type: "image/png",
+    });
+    await user.upload(screen.getByLabelText("Foto de perfil"), archivo);
+    await user.click(screen.getByRole("button", { name: "Guardar Cambios" }));
+
+    // Assert
+    await waitFor(() => expect(actualizarPerfil).toHaveBeenCalled());
+    const [datos, foto] = actualizarPerfil.mock.calls[0];
+    expect(datos).toEqual({
+      nombre_completo: "Ana Perez",
+      descripcion_personal: "Vendo cafe",
+    });
+    expect(foto).toBe(archivo);
+    expect(setCurrentUser).toHaveBeenCalledWith(
+      expect.objectContaining({ descripcion_personal: "Vendo cafe" })
+    );
+  });
+
+  it("cierra todas las sesiones tras confirmar (M-8)", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    renderAjustes();
+
+    // Act
+    await user.click(
+      screen.getByRole("button", { name: "Cerrar sesion en todos los dispositivos" })
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Si, cerrar sesiones" }));
+
+    // Assert
+    await waitFor(() => expect(cerrarTodasLasSesiones).toHaveBeenCalledTimes(1));
+    expect(clearCurrentUser).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByRole("heading", { name: "Inicio de sesion" })
+    ).toBeInTheDocument();
+  });
+
+  it("muestra el error al cerrar todas las sesiones", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    cerrarTodasLasSesiones.mockRejectedValueOnce(new Error("No se pudo"));
+    renderAjustes();
+
+    // Act
+    await user.click(
+      screen.getByRole("button", { name: "Cerrar sesion en todos los dispositivos" })
+    );
+    await user.click(screen.getByRole("button", { name: "Si, cerrar sesiones" }));
+
+    // Assert
+    expect(await screen.findByText("No se pudo")).toBeInTheDocument();
+    expect(clearCurrentUser).not.toHaveBeenCalled();
   });
 });

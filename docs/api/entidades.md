@@ -1,7 +1,7 @@
 # Contratos de datos — CommerCity
 
 > Generado con `npm run docs:api` + `npm run docs:entidades` desde `backend/src/server/schemas/`. No editar a mano.
-> 45 contratos documentados. Fuente de verdad: los esquemas Zod.
+> 48 contratos documentados. Fuente de verdad: los esquemas Zod.
 
 ## Indice
 
@@ -23,6 +23,7 @@
 - [CatalogoQuery](#catalogoquery)
 - [CrearProducto](#crearproducto)
 - [EditarProducto](#editarproducto)
+- [EstadoProductoVendedor](#estadoproductovendedor)
 - [MisProductosQuery](#misproductosquery)
 - [ProductoIdParams](#productoidparams)
 - [ValidarStock](#validarstock)
@@ -41,6 +42,8 @@
 - [MensajeIdParams](#mensajeidparams)
 - [ListarNotificacionesQuery](#listarnotificacionesquery)
 - [CalificacionVendedor](#calificacionvendedor)
+- [CalificacionesVendedorParams](#calificacionesvendedorparams)
+- [CalificacionesVendedorQuery](#calificacionesvendedorquery)
 - [SeguidoresQuery](#seguidoresquery)
 - [SeguirUsuario](#seguirusuario)
 - [CrearReporte](#crearreporte)
@@ -215,6 +218,7 @@
 | `email` | string (email) | si | Correo del usuario |
 | `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes) |
 | `nombre_completo` | string [longitud >= 2] | no | Nombre completo (opcional, min 2) |
+| `acepta_terminos` | boolean | si | Aceptacion de terminos y condiciones (debe ser true) |
 
 **Ejemplo:**
 
@@ -301,20 +305,24 @@
 
 ## ActualizarPerfil (`ActualizarPerfil`)
 
-> Body de PATCH /api/usuarios/me (actualiza unicamente el nombre)
+> Body de PATCH /api/usuarios/me (nombre, descripcion o direccion; avatar por multipart)
 
 - **Fuente:** `backend/src/server/schemas/usuarios.schema.js`
 - **Usado en:** `PATCH /api/usuarios/me`
 
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
-| `nombre_completo` | string [longitud >= 1, longitud <= 100] | si | Nombre de perfil (obligatorio, max 100) |
+| `nombre_completo` | string [longitud >= 1, longitud <= 100] | no | Nombre de perfil (max 100) |
+| `descripcion_personal` | string [longitud <= 2000] | no | Descripcion personal del perfil (max 2000) |
+| `direccion_envio` | string [longitud <= 500] | no | Direccion de envio por defecto (max 500) |
+| `avatar` | const: "1" | no | Marcador interno del avatar multipart |
 
 **Ejemplo:**
 
 ```json
 {
-  "nombre_completo": "Ana Compradora"
+  "nombre_completo": "Ana Compradora",
+  "descripcion_personal": "Compro en CommerCity"
 }
 ```
 
@@ -417,6 +425,25 @@
 }
 ```
 
+## EstadoProductoVendedor (`EstadoProductoVendedor`)
+
+> Pausa o reactiva una publicacion propia del vendedor (RF55)
+
+- **Fuente:** `backend/src/server/schemas/productos.schema.js`
+- **Usado en:** `PATCH /api/productos/{id}/estado`
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `estado` | enum: "pausado" \| "activo" | si |  |
+
+**Ejemplo:**
+
+```json
+{
+  "estado": "pausado"
+}
+```
+
 ## MisProductosQuery (`MisProductosQuery`)
 
 > Paginacion de GET /api/productos/mis-productos y GET /api/vendedores
@@ -443,7 +470,7 @@
 > Params de GET /api/productos/:id y /:id/validar-stock
 
 - **Fuente:** `backend/src/server/schemas/productos.schema.js`
-- **Usado en:** `GET /api/productos/{id}/validar-stock`, `GET /api/productos/{id}`, `PUT /api/productos/{id}`
+- **Usado en:** `GET /api/productos/{id}/validar-stock`, `GET /api/productos/{id}`, `PUT /api/productos/{id}`, `PATCH /api/productos/{id}/estado`, `DELETE /api/productos/{id}`
 
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
@@ -802,6 +829,46 @@
   "vendedor_id": 4,
   "estrellas": 5,
   "comentario": "Excelente vendedor"
+}
+```
+
+## CalificacionesVendedorParams (`CalificacionesVendedorParams`)
+
+> Id del vendedor cuyas calificaciones se consultan
+
+- **Fuente:** `backend/src/server/schemas/calificaciones.schema.js`
+- **Usado en:** `GET /api/calificaciones/vendedor/{id}`
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `id` | integer [max 9007199254740991, > 0] | si | Identificador entero positivo de ruta o cuerpo |
+
+**Ejemplo:**
+
+```json
+{
+  "id": 4
+}
+```
+
+## CalificacionesVendedorQuery (`CalificacionesVendedorQuery`)
+
+> Paginacion de las calificaciones recibidas por un vendedor
+
+- **Fuente:** `backend/src/server/schemas/calificaciones.schema.js`
+- **Usado en:** `GET /api/calificaciones/vendedor/{id}`
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `page` | integer [min 1, max 9007199254740991] | no | Pagina, base 1 |
+| `limit` | integer [min 1, max 100] | no | Registros por pagina (max 100) |
+
+**Ejemplo:**
+
+```json
+{
+  "page": 1,
+  "limit": 10
 }
 ```
 

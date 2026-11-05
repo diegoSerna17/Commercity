@@ -49,7 +49,8 @@ export default function AjustesAdministrador({ onClose }) {
 
     async function cargarCuenta() {
       try {
-        const res = await obtenerMiCuentaBancaria();
+        // El formulario de edicion es la accion explicita que revela la cuenta.
+        const res = await obtenerMiCuentaBancaria({ revelar: true });
         const datos = res?.data?.datos;
         if (!activo || !res?.data?.registrado || !datos) return;
         setRegistrado(true);

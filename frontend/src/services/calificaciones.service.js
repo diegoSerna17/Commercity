@@ -19,3 +19,13 @@ import { request } from "../api/client.js";
  */
 export const calificarVendedor = (datos) =>
   request("/api/calificaciones/vendedor", { method: "POST", body: datos });
+
+/**
+ * Calificaciones recibidas por un vendedor (RF51), paginadas.
+ * @param {number|string} vendedorId
+ * @param {{page?: number, limit?: number}} opciones
+ */
+export const listarCalificacionesVendedor = (vendedorId, { page = 1, limit = 5 } = {}) =>
+  request(
+    `/api/calificaciones/vendedor/${vendedorId}?page=${page}&limit=${limit}`
+  );

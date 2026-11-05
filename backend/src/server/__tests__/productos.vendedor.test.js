@@ -600,3 +600,178 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
     expect(res.body.error.code).toBe("INTERNAL_ERROR");
   });
 });
+
+describe("Pausa y baja de publicaciones (RF55)", () => {
+  it("PATCH /api/productos/:id/estado pausa un producto propio (200)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT id, pausado, eliminado_por_vendedor FROM productos"))
+        return [[{ id: 5, pausado: 0, eliminado_por_vendedor: 0 }], undefined];
+      if (sql.includes("UPDATE productos SET pausado = ?")) return [{ affectedRows: 1 }, undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/productos/5/estado")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .send({ estado: "pausado" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ id: 5, estado: "pausado" });
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE productos SET pausado = ?"),
+      [1, 5, 2]
+    );
+  });
+
+  it("PATCH /api/productos/:id/estado reactiva un producto pausado (200)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT id, pausado, eliminado_por_vendedor FROM productos"))
+        return [[{ id: 5, pausado: 1, eliminado_por_vendedor: 0 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/productos/5/estado")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .send({ estado: "activo" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.estado).toBe("activo");
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE productos SET pausado = ?"),
+      [0, 5, 2]
+    );
+  });
+
+  it("PATCH /api/productos/:id/estado de otro vendedor o inexistente -> 404", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/productos/99/estado")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .send({ estado: "pausado" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("PATCH /api/productos/:id/estado con estado invalido -> 400", async () => {
+    const res = await request(app)
+      .patch("/api/productos/5/estado")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .send({ estado: "borrado" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("PATCH /api/productos/:id/estado con token de comprador -> 403", async () => {
+    mockAuth("comprador");
+
+    const res = await request(app)
+      .patch("/api/productos/5/estado")
+      .set("Authorization", `Bearer ${tokenComprador}`)
+      .send({ estado: "pausado" });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("PATCH /api/productos/:id/estado no reactiva un producto dado de baja (409)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT id, pausado, eliminado_por_vendedor FROM productos"))
+        return [[{ id: 5, pausado: 1, eliminado_por_vendedor: 1 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/productos/5/estado")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .send({ estado: "activo" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("CONFLICT");
+  });
+
+  it("DELETE /api/productos/:id da de baja un producto propio con baja logica (200)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("UPDATE productos")) return [{ affectedRows: 1 }, undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .delete("/api/productos/5")
+      .set("Authorization", `Bearer ${tokenVendedor}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ id: 5, estado: "eliminado" });
+
+    const update = pool.query.mock.calls.find(([sql]) =>
+      String(sql).includes("SET eliminado_por_vendedor = 1")
+    );
+    expect(update[1]).toEqual([5, 2]);
+    // Baja logica: la fila y sus pedidos se conservan.
+    expect(
+      pool.query.mock.calls.some(([sql]) => String(sql).includes("DELETE FROM productos"))
+    ).toBe(false);
+  });
+
+  it("DELETE /api/productos/:id de otro vendedor o ya eliminado -> 404", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      return [{ affectedRows: 0 }, undefined];
+    });
+
+    const res = await request(app)
+      .delete("/api/productos/99")
+      .set("Authorization", `Bearer ${tokenVendedor}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("DELETE /api/productos/:id con token de comprador -> 403", async () => {
+    mockAuth("comprador");
+
+    const res = await request(app)
+      .delete("/api/productos/5")
+      .set("Authorization", `Bearer ${tokenComprador}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it("PATCH /api/productos/:id/estado con la BD caida -> 500", async () => {
+    pool.query.mockRejectedValue(new Error("BD caida"));
+
+    const res = await request(app)
+      .patch("/api/productos/5/estado")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .send({ estado: "pausado" });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe("INTERNAL_ERROR");
+  });
+
+  it("DELETE /api/productos/:id con la BD caida -> 500", async () => {
+    pool.query.mockRejectedValue(new Error("BD caida"));
+
+    const res = await request(app)
+      .delete("/api/productos/5")
+      .set("Authorization", `Bearer ${tokenVendedor}`);
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe("INTERNAL_ERROR");
+  });
+});

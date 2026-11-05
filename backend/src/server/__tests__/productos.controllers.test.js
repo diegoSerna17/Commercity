@@ -93,6 +93,19 @@ describe("GET /api/productos (Panel Principal RF87-RF94)", () => {
     expect(consulta[0]).toContain("p.estado = 'Disponible'");
   });
 
+  it("RF55: oculta productos pausados o dados de baja por el vendedor", async () => {
+    pool.query.mockResolvedValue([[], undefined]);
+
+    await request(app).get("/api/productos");
+
+    const total = pool.query.mock.calls.find(([sql]) => sql.includes("COUNT(*)"));
+    const listado = pool.query.mock.calls.find(([sql]) => sql.includes("LIMIT ? OFFSET ?"));
+    for (const consulta of [total, listado]) {
+      expect(consulta[0]).toContain("p.pausado = 0");
+      expect(consulta[0]).toContain("p.eliminado_por_vendedor = 0");
+    }
+  });
+
   it("rechaza paginas negativas o limites desmedidos (400, schema Zod)", async () => {
     const res = await request(app).get("/api/productos?page=-5&limit=9999");
 
@@ -177,6 +190,20 @@ describe("GET /api/vendedores", () => {
       success: false,
       error: { code: "INTERNAL_ERROR", message: "Error interno del servidor" },
     });
+  });
+
+  it("RF55: solo lista vendedores con al menos un producto visible", async () => {
+    pool.query.mockResolvedValue([[], undefined]);
+
+    await request(app).get("/api/vendedores");
+
+    const total = pool.query.mock.calls.find(([sql]) => sql.includes("COUNT(*)"));
+    const listado = pool.query.mock.calls.find(([sql]) => sql.includes("LIMIT ? OFFSET ?"));
+    for (const consulta of [total, listado]) {
+      expect(consulta[0]).toContain("EXISTS");
+      expect(consulta[0]).toContain("p.pausado = 0");
+      expect(consulta[0]).toContain("p.eliminado_por_vendedor = 0");
+    }
   });
 });
 

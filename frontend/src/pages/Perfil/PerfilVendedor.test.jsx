@@ -1,17 +1,20 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PerfilVendedor from "./PerfilVendedor.jsx";
 import {
   actualizarProducto,
+  cambiarEstadoProducto,
   crearProducto,
+  eliminarProductoPropio,
   listarMisProductos,
 } from "../../services/productos.service.js";
 import {
   listarSeguidores,
   listarSiguiendo,
 } from "../../services/seguidores.service.js";
+import { listarCalificacionesVendedor } from "../../services/calificaciones.service.js";
 import { getCurrentUser } from "../../api/client.js";
 import {
   crearArchivoImagen,
@@ -58,11 +61,17 @@ vi.mock("../../services/productos.service.js", () => ({
   listarMisProductos: vi.fn(),
   crearProducto: vi.fn(),
   actualizarProducto: vi.fn(),
+  cambiarEstadoProducto: vi.fn(),
+  eliminarProductoPropio: vi.fn(),
 }));
 
 vi.mock("../../services/seguidores.service.js", () => ({
   listarSeguidores: vi.fn(),
   listarSiguiendo: vi.fn(),
+}));
+
+vi.mock("../../services/calificaciones.service.js", () => ({
+  listarCalificacionesVendedor: vi.fn(),
 }));
 
 vi.mock("../../api/client.js", () => ({
@@ -114,8 +123,15 @@ describe("PerfilVendedor", () => {
     listarMisProductos.mockReset();
     crearProducto.mockReset();
     actualizarProducto.mockReset();
+    cambiarEstadoProducto.mockReset();
+    eliminarProductoPropio.mockReset();
     listarSiguiendo.mockReset();
     listarSeguidores.mockReset();
+    listarCalificacionesVendedor.mockReset();
+    listarCalificacionesVendedor.mockResolvedValue({
+      data: { resumen: { promedio: null, total: 0 }, calificaciones: [] },
+      paginacion: { pagina: 1, por_pagina: 5, total: 0, total_paginas: 1 },
+    });
     getCurrentUser.mockReset();
     getCurrentUser.mockReturnValue(
       usuarioFalso("vendedor", { foto_perfil: "/uploads/ana.png" })
@@ -533,5 +549,83 @@ describe("PerfilVendedor", () => {
       "avatar-placeholder.svg"
     );
     expect(screen.getAllByText("Usuario")).toHaveLength(2);
+  });
+
+  it("pausa una publicacion propia y recarga la lista (RF55)", async () => {
+    // Arrange
+    const usuario = userEvent.setup();
+    prepararCarga({ productos: [productoApi({ pausado: 0 })] });
+    cambiarEstadoProducto.mockResolvedValue({ success: true });
+    renderPerfil();
+    await screen.findByText("Teclado mecanico");
+
+    // Act
+    await usuario.click(screen.getByRole("button", { name: "Pausar" }));
+
+    // Assert
+    await waitFor(() =>
+      expect(cambiarEstadoProducto).toHaveBeenCalledWith(1, "pausado")
+    );
+    expect(listarMisProductos).toHaveBeenCalledTimes(2);
+  });
+
+  it("ofrece reactivar una publicacion pausada (RF55)", async () => {
+    // Arrange
+    const usuario = userEvent.setup();
+    prepararCarga({ productos: [productoApi({ pausado: 1 })] });
+    cambiarEstadoProducto.mockResolvedValue({ success: true });
+    renderPerfil();
+    await screen.findByText("Teclado mecanico");
+
+    // Act
+    await usuario.click(screen.getByRole("button", { name: "Reactivar" }));
+
+    // Assert
+    await waitFor(() =>
+      expect(cambiarEstadoProducto).toHaveBeenCalledWith(1, "activo")
+    );
+  });
+
+  it("elimina una publicacion solo tras confirmar el modal (RF55)", async () => {
+    // Arrange
+    const usuario = userEvent.setup();
+    prepararCarga();
+    eliminarProductoPropio.mockResolvedValue({ success: true });
+    renderPerfil();
+    await screen.findByText("Teclado mecanico");
+
+    // Act
+    await usuario.click(screen.getByRole("button", { name: "Eliminar" }));
+
+    // Assert: la confirmacion es un modal accesible, no window.confirm
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "¿Eliminar la publicacion?" })
+    ).toBeInTheDocument();
+    expect(eliminarProductoPropio).not.toHaveBeenCalled();
+
+    // Act
+    await usuario.click(screen.getByRole("button", { name: "Si, dar de baja" }));
+
+    // Assert
+    await waitFor(() => expect(eliminarProductoPropio).toHaveBeenCalledWith(1));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(listarMisProductos).toHaveBeenCalledTimes(2);
+  });
+
+  it("no elimina la publicacion si el modal se cancela (RF55)", async () => {
+    // Arrange
+    const usuario = userEvent.setup();
+    prepararCarga();
+    renderPerfil();
+    await screen.findByText("Teclado mecanico");
+
+    // Act
+    await usuario.click(screen.getByRole("button", { name: "Eliminar" }));
+    await usuario.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    // Assert
+    expect(eliminarProductoPropio).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

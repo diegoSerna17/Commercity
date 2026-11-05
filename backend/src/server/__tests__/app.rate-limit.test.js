@@ -16,6 +16,10 @@ process.env.JWT_SECRET = "jwt-secret-de-pruebas-rate-limit-000000000000";
 process.env.DB_USER = "rate_limit_user";
 process.env.DB_PASSWORD = "clave-local-rate-limit";
 
+// Estas pruebas hacen 250+ peticiones HTTP reales; con la suite completa en
+// paralelo el timeout por defecto (5 s) se queda corto y las marca como fallo.
+vi.setConfig({ testTimeout: 30000 });
+
 const { default: app } = await import("../app.js");
 
 describe("Rate limits por endpoint (M-9/H7)", () => {

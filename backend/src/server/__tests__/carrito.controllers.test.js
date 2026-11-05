@@ -132,6 +132,24 @@ describe("POST /api/carrito (agregarProducto)", () => {
     expect(res.body.error.code).toBe("PRODUCT_NOT_FOUND");
   });
 
+  it("RF55: un producto pausado no se agrega al carrito (404) y el filtro va en el SQL", async () => {
+    productoInexistente();
+
+    const res = await request(app)
+      .post("/api/carrito")
+      .set(auth1)
+      .send({ producto_id: 5, cantidad: 1 });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("PRODUCT_NOT_FOUND");
+
+    const consulta = pool.query.mock.calls.find(([sql]) =>
+      String(sql).includes("SELECT stock, vendedor_id")
+    );
+    expect(consulta[0]).toContain("pausado = 0");
+    expect(consulta[0]).toContain("eliminado_por_vendedor = 0");
+  });
+
   it("M-4/DEC-002: rechaza agregar un producto propio (autocompra) -> 400", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return Promise.resolve([[], undefined]);

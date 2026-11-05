@@ -9,11 +9,27 @@ import { request } from "../api/client.js";
  */
 export const obtenerMiUsuario = () => request("/api/usuarios/me");
 
-export const actualizarPerfil = (nombre_completo) =>
-  request("/api/usuarios/me", {
+export const actualizarPerfil = (datos = {}, archivo = null) => {
+  if (archivo) {
+    const formData = new FormData();
+    Object.entries(datos).forEach(([clave, valor]) => {
+      if (valor !== undefined && valor !== null) formData.append(clave, valor);
+    });
+    formData.append("avatar", archivo);
+    return request("/api/usuarios/me", { method: "PATCH", body: formData, isForm: true });
+  }
+  return request("/api/usuarios/me", {
     method: "PATCH",
-    body: { nombre_completo },
+    body: datos,
   });
+};
+
+/**
+ * Cierra TODAS las sesiones del usuario (M-8): incrementa token_version en el
+ * backend y deja inservibles los JWT ya emitidos.
+ */
+export const cerrarTodasLasSesiones = () =>
+  request("/api/usuarios/logout-todas", { method: "POST" });
 
 /**
  * Solicita el enlace de recuperacion de contrasena (RF4: expira en 5 minutos).

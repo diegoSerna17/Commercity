@@ -4,6 +4,7 @@ import { useParams, useLocation } from "react-router-dom";
 import { usePerfilPublico } from "./usePerfilPublico.js";
 import PerfilPublicoHeader from "./PerfilPublicoHeader.jsx";
 import PerfilPublicoProductos from "./PerfilPublicoProductos.jsx";
+import PerfilCalificaciones from "./PerfilCalificaciones.jsx";
 
 /**
  * Perfil publico de un vendedor (accesible desde el producto).
@@ -52,6 +53,8 @@ export default function PerfilPublico() {
           onEnviarMensaje={enviarMensaje}
           onReportar={() => setReportarAbierto(true)}
         />
+
+        <PerfilCalificaciones vendedorId={vendedor.id} />
 
         <PerfilPublicoProductos
           cargando={cargando}
