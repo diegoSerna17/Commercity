@@ -974,6 +974,57 @@ describe("DELETE /api/usuarios/cuenta (RF40 - comprador elimina su cuenta)", () 
     expect(conn.commit).toHaveBeenCalled();
   });
 
+  it("B3: el ultimo administrador activo no puede eliminar su cuenta (409)", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT id, password, activo FROM usuarios"))
+        return [[{ id: 5, password: "$2b$10$mock_hash", activo: 1 }], undefined];
+      if (sql.includes("MAX(CASE WHEN r.nombre = 'administrador'"))
+        return [[{ es_admin: 1 }], undefined];
+      if (sql.includes("COUNT(DISTINCT u.id) AS total"))
+        return [[{ total: 1 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .delete("/api/usuarios/cuenta")
+      .set("Authorization", `Bearer ${tokenCuenta}`)
+      .send({ password: "secreta123" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("CONFLICT");
+    expect(res.body.error.message).toMatch(/último administrador/i);
+    expect(conn.rollback).toHaveBeenCalled();
+    expect(
+      conn.query.mock.calls.some(([sql]) => String(sql).includes("UPDATE usuarios SET activo = 0"))
+    ).toBe(false);
+  });
+
+  it("B3: un administrador con otro admin activo se da de baja y deja auditoria", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT id, password, activo FROM usuarios"))
+        return [[{ id: 5, password: "$2b$10$mock_hash", activo: 1 }], undefined];
+      if (sql.includes("MAX(CASE WHEN r.nombre = 'administrador'"))
+        return [[{ es_admin: 1 }], undefined];
+      if (sql.includes("COUNT(DISTINCT u.id) AS total"))
+        return [[{ total: 2 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .delete("/api/usuarios/cuenta")
+      .set("Authorization", `Bearer ${tokenCuenta}`)
+      .send({ password: "secreta123" });
+
+    expect(res.status).toBe(200);
+    expect(conn.commit).toHaveBeenCalled();
+    const auditoria = conn.query.mock.calls.find(([sql]) =>
+      String(sql).includes("INSERT INTO auditoria_acciones")
+    );
+    expect(auditoria).toBeDefined();
+    expect(auditoria[1]).toContain("usuario.baja_cuenta");
+    expect(auditoria[1]).toContain(5);
+  });
+
   it("M-7: rechaza la baja sin contrasena (403) y no muta nada", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT id, password, activo FROM usuarios"))

@@ -16,6 +16,7 @@ Plantilla en `backend/.env.example` (nunca commitear `.env` real):
 | `FRONTEND_URL` | Origen web permitido por CORS (default `http://localhost:5173`) |
 | `ALLOW_DESKTOP_ORIGINS` | `true` acepta `null`/`file://` (dev/entorno controlado) |
 | `DOCS_ENABLED` | `true` fuerza `/api/openapi.json` y `/api/docs` aun en produccion |
+| `TRUST_PROXY` | **Obligatorio detras de un proxy inverso**: numero de hops de confianza (p. ej. `1`) para que el rate limit use la IP real de `X-Forwarded-For`. Vacio solo si la API se expone directa, sin proxy |
 | `CRYPTO_SECRET_KEY` | Clave propia de cifrado de datos bancarios (recomendada; sin ella se deriva de `JWT_SECRET`) |
 | DB / JWT / correo | Ver `.env.example` (pool MySQL, secreto JWT, Resend con modo simulacion sin key) |
 
@@ -23,6 +24,12 @@ Plantilla en `backend/.env.example` (nunca commitear `.env` real):
 - Las migraciones incrementales viven en `backend/src/server/db/` (`000` y `008`-`018`), son **idempotentes** y llevan su rollback en comentarios (TASK-7.2 a TASK-7.5).
 - Se aplican en orden con `npm run db:migrate` (desde `backend/`): usa `DB_*` (`DB_NAME` por defecto `commercity_dev`), registra cada archivo en `schema_migrations` con checksum SHA-256 y se niega a tocar una base compartida sin `--permitir-compartida` explicito (SEC-003).
 - Los dos EVENT del esquema (`limpiar_carritos_inactivos`, `purgar_tokens_invalidados`) requieren **`event_scheduler = ON`** en el servidor MySQL de produccion (`SET GLOBAL event_scheduler = ON;` o `event_scheduler=ON` en `my.cnf`).
+
+## Proxy inverso (TRUST_PROXY)
+- Si la API queda detras de nginx, Traefik, Caddy o un balanceador, `TRUST_PROXY` es **obligatorio**: indica cuantos hops de proxy son de confianza (habitualmente `1`).
+- Sin esa variable, Express ignora `X-Forwarded-For`, todas las peticiones parecen venir de la IP del proxy y el rate limit por IP bloquea a todos los clientes a la vez.
+- No declarar mas hops de los reales: un cliente podria falsificar `X-Forwarded-For`. Nunca usar `TRUST_PROXY=true` con la API expuesta directamente.
+- `GET /health` se registra antes de los limitadores y no consume cupo; esta pensado para los healthchecks de Docker y monitoreo.
 
 ## Documentacion en despliegue
 - Generar antes de publicar: `npm run docs:api` y `npm run docs:entidades` (artefactos versionados en `docs/api/`).

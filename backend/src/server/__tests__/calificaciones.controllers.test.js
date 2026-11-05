@@ -200,6 +200,41 @@ describe("Calificacion de vendedor (RF107)", () => {
     expect(insert[1][4]).toBe("Excelente");
   });
 
+  it("B2: un pedido multi-vendedor permite calificar a cada vendedor una vez", async () => {
+    // El vendedor 3 ya fue calificado en el pedido 5; el vendedor 4 todavia no.
+    const calificados = new Map([[3, [{ id: 1 }]]]);
+    pool.query.mockImplementation((sql, params) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
+      if (sql.includes("FROM pedidos WHERE id")) return [[{ id: 5, comprador_id: 9 }], undefined];
+      if (sql.includes("FROM detalle_pedidos")) return [[{ id: 1 }], undefined];
+      if (sql.includes("FROM calificaciones_vendedores")) {
+        // El pre-chequeo debe filtrar por vendedor, no solo por pedido.
+        return [calificados.get(Number(params?.[1])) ?? [], undefined];
+      }
+      if (sql.includes("INSERT INTO calificaciones_vendedores")) return [{ insertId: 78 }, undefined];
+      return [[], undefined];
+    });
+
+    const alSegundoVendedor = await request(app)
+      .post("/api/calificaciones/vendedor")
+      .set("Authorization", `Bearer ${tokenComprador}`)
+      .send({ pedido_id: 5, vendedor_id: 4, estrellas: 4 });
+    expect(alSegundoVendedor.status).toBe(201);
+
+    const consulta = pool.query.mock.calls.find(
+      ([sql]) => sql.includes("FROM calificaciones_vendedores")
+    );
+    expect(consulta[0]).toContain("vendedor_id = ?");
+    expect(consulta[1]).toEqual([5, 4]);
+
+    const repetido = await request(app)
+      .post("/api/calificaciones/vendedor")
+      .set("Authorization", `Bearer ${tokenComprador}`)
+      .send({ pedido_id: 5, vendedor_id: 3, estrellas: 5 });
+    expect(repetido.status).toBe(409);
+  });
+
   it("devuelve 500 si la BD falla", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];

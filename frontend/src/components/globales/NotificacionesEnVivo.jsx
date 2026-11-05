@@ -7,8 +7,10 @@ import {
   marcarLeida,
 } from "../../services/notificaciones.service.js";
 
-// JS Intervalo de consulta de nuevas notificaciones en milisegundos
-const INTERVALO_MS = 7000;
+// JS Intervalo de consulta de nuevas notificaciones en milisegundos.
+// B4 (auditoria 2026-11-04): 30 s y se pausa con la pestana oculta; antes 7 s
+// mantenian el sondeo aunque el usuario no estuviera mirando la app.
+const INTERVALO_MS = 30000;
 const DURACION_TOAST_MS = 6000;
 
 const mapearRuta = (url, tipo) => {
@@ -36,6 +38,8 @@ export default function NotificacionesEnVivo() {
     let cancelado = false;
 
     const consultar = async () => {
+      // B4: con la pestana oculta no se consulta la API; al volver se refresca.
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       try {
         const res = await listarNotificaciones(10);
         if (cancelado) return;
@@ -66,10 +70,16 @@ export default function NotificacionesEnVivo() {
 
     consultar();
     const timer = setInterval(consultar, INTERVALO_MS);
+    // B4: al volver a la pestana se consulta de inmediato (sin esperar 30 s).
+    const alCambiarVisibilidad = () => {
+      if (document.visibilityState === "visible") consultar();
+    };
+    document.addEventListener("visibilitychange", alCambiarVisibilidad);
 
     return () => {
       cancelado = true;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", alCambiarVisibilidad);
     };
   }, []);
 

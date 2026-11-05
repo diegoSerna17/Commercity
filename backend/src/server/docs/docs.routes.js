@@ -7,7 +7,18 @@ import { errorResponse } from "../utils/response.js";
 const router = Router();
 
 // docs/api/ vive en la raiz del repo (versionado por excepcion .gitignore).
-const dirDocsApi = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "docs", "api");
+// B1 (auditoria 2026-11-04): en la imagen Docker el backend se copia a /app
+// (sin el nivel extra `backend/`), asi que la ruta relativa de 4 niveles no
+// apunta al repo. Se prueban candidatos y DOCS_API_DIR permite fijarla:
+// Dockerfile copia docs/api a /app/docs/api y define DOCS_API_DIR.
+const candidatosDocsApi = [
+  process.env.DOCS_API_DIR,
+  join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "docs", "api"),
+  join(process.cwd(), "docs", "api"),
+].filter(Boolean);
+const dirDocsApi =
+  candidatosDocsApi.find((dir) => existsSync(join(dir, "openapi.json"))) ??
+  candidatosDocsApi[0];
 
 // Gate conservador: visible fuera de produccion salvo DOCS_ENABLED=false;
 // en produccion solo con DOCS_ENABLED=true. No toca helmet/CSP/CORS.

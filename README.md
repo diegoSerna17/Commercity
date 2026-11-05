@@ -692,7 +692,7 @@ Get-Content .\schema_commercity.sql -Raw | mysql -u root -p --default-character-
 Get-Content .\seed_commercity.sql -Raw | mysql -u root -p --default-character-set=utf8mb4     # datos de prueba
 ```
 
-**Migraciones incrementales:** viven en `backend/src/server/db/` (`000` y `008`-`018`, idempotentes, con rollback en comentarios) y se aplican en orden con `npm run db:migrate` desde `backend/` (registra cada archivo en `schema_migrations` con checksum; se niega a tocar una base compartida sin `--permitir-compartida`). Una base local creada con `schema_commercity.sql` ya trae el esquema vigente; contra la **base compartida del equipo** el líder aplica las migraciones pendientes **antes** de arrancar el backend.
+**Migraciones incrementales:** viven en `backend/src/server/db/` (`000` y `008`-`018`, idempotentes, con rollback en comentarios) y se aplican en orden con `npm run db:migrate` desde `backend/` (registra cada archivo en `schema_migrations` con checksum; se niega a tocar una base compartida sin `--permitir-compartida`). Una base local creada con `schema_commercity.sql` ya trae el esquema vigente **incluidas las migraciones 015-018** (columnas `token_version`/`password_changed_at`, tabla `auditoria_acciones`, longitudes bancarias y UNIQUE `(pedido_id, vendedor_id)`), y esas cuatro quedan registradas en `schema_migrations` con su checksum: `db:migrate` las omite y solo aplica las anteriores. Contra la **base compartida del equipo** el líder aplica las migraciones pendientes **antes** de arrancar el backend.
 
 **Eventos programados:** el esquema define `limpiar_carritos_inactivos` (RF109) y `purgar_tokens_invalidados`; ambos requieren `event_scheduler = ON` en el servidor MySQL (ver `docs/guias/despliegue.md`).
 

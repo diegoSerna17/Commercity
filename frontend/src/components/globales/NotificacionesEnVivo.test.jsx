@@ -88,7 +88,7 @@ describe("NotificacionesEnVivo", () => {
     expect(screen.queryByText("Nueva notificación")).not.toBeInTheDocument();
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(7100);
+      await vi.advanceTimersByTimeAsync(30100);
     });
 
     // Assert
@@ -115,10 +115,42 @@ describe("NotificacionesEnVivo", () => {
     // Act
     renderNotificaciones();
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(7100);
+      await vi.advanceTimersByTimeAsync(30100);
     });
 
     // Assert: la primera consulta solo memoriza el id, no hay toast
     expect(screen.queryByText("Nueva notificación")).not.toBeInTheDocument();
+  });
+
+  it("B4: no consulta con la pestaña oculta y sí al volver a visible", async () => {
+    // Arrange
+    getCurrentUser.mockReturnValue({ id: 7 });
+    listarNotificaciones.mockResolvedValue({ data: { notificaciones: [] } });
+    let visibilidad = "hidden";
+    const spyVisibilidad = vi
+      .spyOn(Document.prototype, "visibilityState", "get")
+      .mockImplementation(() => visibilidad);
+
+    try {
+      // Act: monta con la pestaña oculta y deja pasar varios intervalos
+      renderNotificaciones();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30100);
+      });
+
+      // Assert: ni la consulta inicial ni el intervalo consultaron
+      expect(listarNotificaciones).not.toHaveBeenCalled();
+
+      // Act: el usuario vuelve a la pestaña
+      visibilidad = "visible";
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+
+      // Assert: se refresca de inmediato
+      expect(listarNotificaciones).toHaveBeenCalledTimes(1);
+    } finally {
+      spyVisibilidad.mockRestore();
+    }
   });
 });

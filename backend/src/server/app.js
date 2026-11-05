@@ -99,14 +99,14 @@ app.use(
 // limitadores con `skip` se desactivan en NODE_ENV=test para no romper
 // Vitest/Supertest; el skip se evalua por peticion.
 const MENSAJE_RATE_LIMIT = { success: false, error: { code: "RATE_LIMIT", message: "Demasiadas peticiones." } };
-const limitePorVentana = ({ windowMs, max, keyGenerator }) => rateLimit({
+const limitePorVentana = ({ windowMs, max, keyGenerator, skip }) => rateLimit({
     windowMs,
     max,
     keyGenerator,
     message: MENSAJE_RATE_LIMIT,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => process.env.NODE_ENV === "test",
+    skip: skip || (() => process.env.NODE_ENV === "test"),
 });
 
 // Anti fuerza bruta en login/recover: por IP (10/min) y ADEMAS por CUENTA
@@ -145,8 +145,26 @@ app.use(["/api/productos", "/api/reportes"], (req, res, next) =>
         : next()
 );
 
-// Rate limit general de escritura (H5): 200 req / 15 min por IP para /api.
-const limiteEscritura = limitePorVentana({ windowMs: 15 * 60 * 1000, max: 200 });
+// Rate limits generales de /api (H5, B4): cupos SEPARADOS por metodo.
+//  - Lectura (GET/HEAD/OPTIONS): 1000 / 15 min. Antes el cupo de escritura
+//    contaba tambien la navegacion y dos pestanas agotaban 200 GET.
+//  - Escritura (POST/PUT/PATCH/DELETE): 200 / 15 min por IP.
+// `/health` se registra antes de estos middlewares, por lo que nunca se limita
+// (Docker/compose y monitoreo deben poder consultarlo siempre).
+const METODOS_LECTURA = new Set(["GET", "HEAD", "OPTIONS"]);
+const limiteLectura = limitePorVentana({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    skip: (req) =>
+        process.env.NODE_ENV === "test" || !METODOS_LECTURA.has(req.method),
+});
+const limiteEscritura = limitePorVentana({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    skip: (req) =>
+        process.env.NODE_ENV === "test" || METODOS_LECTURA.has(req.method),
+});
+app.use("/api/", limiteLectura);
 app.use("/api/", limiteEscritura);
 
 // TASK-8.4 (auditoria 2026-10-11): healthcheck para Docker/compose y

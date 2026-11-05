@@ -8,6 +8,7 @@ import { successResponse, errorResponse } from "../utils/response.js";
 import { enviarCorreoRecuperacion, enviarAvisoRegistroDuplicado } from "../utils/mailer.js";
 import { escapeLike } from "../utils/sql.js";
 import { destinoPedidosVendedor } from "./admin/pedidos.controllers.js";
+import { registrarAuditoria, ACCIONES } from "../utils/auditoria.js";
 
 // ============================================================================
 // MODULO DE AUTENTICACION (integrado desde AVANCES/SPRING 1/DIEGO SERNA/2)
@@ -595,6 +596,36 @@ export const eliminarCuentaComprador = async (req, res) => {
             });
         }
 
+        // B3 (auditoria 2026-11-04): un administrador puede darse de baja, pero
+        // la operacion no puede dejar la plataforma sin ningun admin activo.
+        // Se reutiliza la regla del ultimo administrador de validarObjetivoBaneable.
+        const [rolAdmin] = await conn.query(
+            `SELECT MAX(CASE WHEN r.nombre = 'administrador' THEN 1 ELSE 0 END) AS es_admin
+               FROM usuario_roles ur
+               JOIN roles r ON r.id = ur.rol_id
+              WHERE ur.usuario_id = ?`,
+            [compradorId]
+        );
+        if (Number(rolAdmin[0]?.es_admin) === 1) {
+            const [adminsActivos] = await conn.query(
+                `SELECT COUNT(DISTINCT u.id) AS total
+                   FROM usuarios u
+                   JOIN usuario_roles ur ON ur.usuario_id = u.id
+                   JOIN roles r ON r.id = ur.rol_id
+                  WHERE r.nombre = 'administrador' AND u.activo = 1`
+            );
+            if (Number(adminsActivos[0]?.total || 0) <= 1) {
+                await conn.rollback();
+                return res.status(409).json({
+                    success: false,
+                    error: {
+                        code: "CONFLICT",
+                        message: "No se puede eliminar la cuenta del último administrador activo"
+                    }
+                });
+            }
+        }
+
         // Desactivacion logica de la cuenta. M-8: incrementa token_version
         // (todas las sesiones del usuario quedan invalidas al instante).
         await conn.query(
@@ -614,6 +645,18 @@ export const eliminarCuentaComprador = async (req, res) => {
             "DELETE FROM carrito_items WHERE comprador_id = ?",
             [compradorId]
         );
+
+        // B3: dejar constancia de la baja en la auditoria, dentro de la misma
+        // transaccion. Fail-soft: un fallo de auditoria no revierte la baja.
+        await registrarAuditoria({
+            actorId: compradorId,
+            accion: ACCIONES.USUARIO_BAJA_CUENTA,
+            objetivoTipo: "usuario",
+            objetivoId: compradorId,
+            detalle: { pedidos },
+            ip: req.ip,
+            conn,
+        });
 
         await conn.commit();
         return res.status(200).json({

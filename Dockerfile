@@ -20,6 +20,11 @@ WORKDIR /app
 COPY --from=dependencias /app/node_modules ./node_modules
 COPY backend/package.json ./
 COPY backend/src ./src
+# B1 (auditoria 2026-11-04): /api/docs y /api/openapi.json leen docs/api/.
+# En la imagen no existe la ruta relativa del repo; se copia aqui y docs.routes.js
+# la resuelve por DOCS_API_DIR.
+COPY docs/api ./docs/api
+ENV DOCS_API_DIR=/app/docs/api
 # La app escribe las imagenes subidas en src/server/uploads: el usuario sin
 # privilegios del contenedor necesita el directorio propio.
 RUN mkdir -p src/server/uploads && chown -R node:node /app

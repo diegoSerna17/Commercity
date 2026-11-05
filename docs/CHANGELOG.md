@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 > **Nota de correccion (2026-10-31)**: las entradas historicas que citan presentaciones en `docs/` corresponden a `docs/presentaciones/` desde el movimiento del 2026-10-30. Las entradas originales no se reescriben; esta nota solo corrige la ruta para quien consulte el historial.
 
+## 2026-11-04 - RELEASE 1.3.6 - FIX: errores reales de backend e infraestructura (auditoria 2026-11-04)
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `schema_commercity.sql`, `README.md`, `backend/src/server/db/*`, `backend/src/server/controllers/calificaciones.controllers.js`, `backend/src/server/controllers/usuarios.controllers.js`, `backend/src/server/utils/auditoria.js`, `backend/src/server/app.js`, `backend/src/server/docs/docs.routes.js`, `backend/src/server/__tests__/*`, `backend/.env.example`, `docker-compose.yml`, `Dockerfile`, `.github/workflows/ios-build.yml`, `apps/movil/package.json`, `apps/movil/android/app/build.gradle`, `apps/movil/ios/App/App.xcodeproj/project.pbxproj`, `apps/movil/ios/App/CapApp-SPM/Package.swift`, `frontend/src/components/globales/NotificacionesEnVivo.jsx` (+ test), `docs/guias/despliegue.md`, `VERSION`, `backend/package.json`, `apps/escritorio/package.json`, `docs/api/openapi.json`, `docs/CHANGELOG.md`.
+- **Descripcion**: se corrigen los errores reales del Lote 1 de la auditoria 2026-11-04. (B1) El esquema canonico incorpora `usuarios.token_version`, `usuarios.password_changed_at`, su indice de recuperacion, la tabla `auditoria_acciones`, las longitudes bancarias de la 017 y el UNIQUE `(pedido_id, vendedor_id)` de la 018; las cuatro migraciones quedan registradas en `schema_migrations` con su SHA-256 real para que `db:migrate` no las reaplique. (B2) La calificacion pre-chequea por `(pedido_id, vendedor_id)`: un pedido multi-vendedor ya permite calificar a cada vendedor y repetir el mismo devuelve 409. (B3) La baja de cuenta de un administrador queda bloqueada con 409 si es el ultimo admin activo y se audita como `usuario.baja_cuenta`. (B4) El rate limit general separa lectura (1000/15 min) de escritura (200/15 min); 250 GET seguidos ya no dan 429. El sondeo de notificaciones pasa de 7 s a 30 s y se pausa con la pestana oculta. `TRUST_PROXY` queda documentado como obligatorio detras de un proxy. Las subidas viven en un volumen nombrado de Docker y `/api/docs` resuelve `docs/api` por `DOCS_API_DIR` dentro de la imagen. El workflow de iOS usa Node 22, timeout y concurrencia; `Package.swift` usa rutas POSIX. Bump de version, Android `versionCode` 34 e iOS `CURRENT_PROJECT_VERSION` 2.
+- **Motivo**: cerrar los defectos B1-B4 y los riesgos de infraestructura detectados en la auditoria, con pruebas que los cubren.
+- **Requerimientos**: B1, B2, B3 y B4 de la auditoria 2026-11-04; RF40, RF107.
+- **Evidencia**: `npm test` (con `ALLOW_DESKTOP_ORIGINS=false`): 37 archivos, 549/549 pruebas en verde. Tests nuevos: comparacion estatica esquema/migraciones (5), multi-vendedor (1), guarda y auditoria de baja de admin (2), cupos de lectura/escritura (2) y pausa por visibilidad (1). `npx vitest run src/pages/Inicio src/pages/Home`: 16/16.
+- **Estado**: Cerrado. El bump se valida con `node tools/verificar-version.mjs 1.3.5`.
+
+---
+
 ## 2026-11-03 - QA: verificacion de BE-11 (Brandon) y cierre con observaciones
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
