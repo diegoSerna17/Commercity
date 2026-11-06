@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 > **Nota de correccion (2026-10-31)**: las entradas historicas que citan presentaciones en `docs/` corresponden a `docs/presentaciones/` desde el movimiento del 2026-10-30. Las entradas originales no se reescriben; esta nota solo corrige la ruta para quien consulte el historial.
 
+## 2026-11-06 - RELEASE 1.4.3 - PERF: catalogo con count sin JOINs e indice compuesto (medicion 100k)
+
+- **Autor**: Daniel Palacios (lider) - rama perf/rendimiento-2026-11
+- **Archivos**: `backend/src/server/controllers/productos.controllers.js`, `backend/src/server/db/020_indices_rendimiento.sql`, `schema_commercity.sql`, `backend/src/server/__tests__/schema.migrations.test.js`, `VERSION`, `backend/package.json`, `frontend/package.json`, `apps/escritorio/package.json`, `apps/movil/package.json`, `apps/movil/android/app/build.gradle`, `apps/movil/ios/App/App.xcodeproj/project.pbxproj`, `frontend/src/constants/buttons.css`, `frontend/src/constants/inputs.css`, `docs/api/openapi.json`, `docs/CHANGELOG.md`.
+- **Descripcion**: Medicion con 100.000 productos en `commercity_dev` (siembra en 7.1 s). El catalogo publico tardaba 871 ms de p50 porque el `COUNT(*)` unia `categorias` y `usuarios` sin necesidad y recorria la tabla con lookups por fila. (1) El count ahora omite los JOIN cuando no se filtra por categoria ni vendedor; solo los usa si el filtro toca esas columnas. (2) Migracion idempotente 020 con `idx_productos_catalogo (eliminado_por_admin, pausado, eliminado_por_vendedor, estado, id)`, que resuelve el count como covering index y permite recorrer el indice en orden inverso. (3) El esquema canonico y su ledger incorporan la 020, y el test de migraciones cubre 015-020 y el indice nuevo. (4) Se agregan los scripts `backend/scripts/sembrar-carga.mjs` y `backend/scripts/medir-endpoints.mjs` para reproducir la medicion.
+- **Motivo**: cumplir la prueba de rendimiento solicitada por el instructor con 100.000 registros y corregir el cuello de botella real del endpoint mas usado.
+- **Requerimientos**: RNF de rendimiento y calidad; recomendacion del instructor (100k filas, medicion en navegador).
+- **Evidencia**: Catalogo p50 871.66 -> 53.05 ms y p95 901.15 -> 80.72 ms; pagina 50 p50 825.37 -> 59.15 ms. `EXPLAIN ANALYZE`: count con JOINs 509-597 ms, count sin JOINs con el indice 36.7 ms; lista 2-5 ms. Busqueda `LIKE '%a%'` se mantiene en ~685 ms (el comodin inicial no usa indice; cambiarla a FULLTEXT altera la semantica y queda como decision pendiente). `node tools/verificar-version.mjs 1.4.2`: OK.
+- **Estado**: Cerrado en local. La migracion 020 queda pendiente de aplicar en la base compartida por el lider; la prueba en red del SENA y el informe con capturas quedan pendientes.
+
+---
+
 ## 2026-11-06 - RELEASE 1.4.2 - SYNC: publicacion funcional al repo oficial y guia de estructura
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12

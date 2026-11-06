@@ -175,7 +175,9 @@ CREATE TABLE productos (
     -- por visibles (no eliminados) + estado + orden por fecha.
     INDEX idx_productos_visibles (eliminado_por_admin, estado, fecha_publicacion),
     -- RF55 (mig 019): filtro de pausados/bajas del vendedor.
-    INDEX idx_productos_pausado_vendedor (pausado, eliminado_por_vendedor)
+    INDEX idx_productos_pausado_vendedor (pausado, eliminado_por_vendedor),
+    -- Rendimiento (mig 020): catalogo publico; cubre filtros + orden por id.
+    INDEX idx_productos_catalogo (eliminado_por_admin, pausado, eliminado_por_vendedor, estado, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
@@ -381,7 +383,8 @@ INSERT INTO schema_migrations (id, checksum) VALUES
 ('016_auditoria_acciones.sql', '4919cfa3804ea64d531ade94c2fd9b062d7c2fa19ae7066e16f34a56fb8f8a02'),
 ('017_datos_bancarios_longitudes.sql', 'e44a9290fa9eef1ec7238e9f800c850eff7124ca574367b7fbd029816ff48ae0'),
 ('018_calificaciones_unique_vendedor.sql', '738b3a57f6fd6f9a46335f2fcc36aa0ad71bef8ae8c02e9316feda0dfe1d79b3'),
-('019_perfil_terminos_y_pausa_productos.sql', 'd1b2bf4fabd10767ed8fbeac35094a04f29cbac0289f7cf93a5443c38ad05e65');
+('019_perfil_terminos_y_pausa_productos.sql', 'd1b2bf4fabd10767ed8fbeac35094a04f29cbac0289f7cf93a5443c38ad05e65'),
+('020_indices_rendimiento.sql', '16d9ab1398b552cbe665f50505c4d1b2dd07f525a2827c5383ff17be2bb988a2');
 
 -- ==========================================
 -- EVENTOS PROGRAMADOS (requieren event_scheduler = ON)
