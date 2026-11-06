@@ -70,9 +70,16 @@ describe("schema_commercity.sql vs migraciones 015-019 (B1)", () => {
 
   it("schema_migrations registra 015-019 con el checksum real de cada archivo", () => {
     for (const archivo of MIGRACIONES_015_019) {
-      const sql = readFileSync(join(dirMigraciones, archivo), "utf8");
-      const checksum = createHash("sha256").update(sql, "utf8").digest("hex");
-      expect(schema).toContain(`('${archivo}', '${checksum}')`);
+      // El ledger se genero en checkouts con finales de linea distintos (unos
+      // LF, otros CRLF). Se aceptan las dos variantes del MISMO contenido:
+      // cualquier edicion real cambia ambos hashes y sigue fallando.
+      const contenido = readFileSync(join(dirMigraciones, archivo), "utf8").replace(/\r\n/g, "\n");
+      const hashes = [
+        createHash("sha256").update(contenido, "utf8").digest("hex"),
+        createHash("sha256").update(contenido.replace(/\n/g, "\r\n"), "utf8").digest("hex"),
+      ];
+      const registrado = hashes.some((h) => schema.includes(`('${archivo}', '${h}')`));
+      expect(registrado, `${archivo}: ningun checksum del archivo coincide con schema_migrations`).toBe(true);
     }
   });
 });
