@@ -252,3 +252,9 @@ apps/movil/android/app/src/main/assets/public/
 
 # Indice de la documentacion tecnica (Lote 6, 1.4.1).
 !docs/README.md
+# Rendimiento (2026-11-06): scripts de siembra/medicion y evidencia del informe.
+!backend/scripts/sembrar-carga.mjs
+!backend/scripts/medir-endpoints.mjs
+!docs/informes/rendimiento/
+!docs/informes/rendimiento/**
+!docs/informes/INFORME_RENDIMIENTO_*.md

@@ -9,8 +9,8 @@
  * Nunca hace push. Los tests y el PR se ejecutan despues, a mano.
  *
  * Uso:
- *   node tools/sincronizar-oficial.mjs [rama] [--dry-run]
- *   rama por defecto: PREVIEW
+ *   node tools/sincronizar-oficial.mjs [rama] [--nombre <rama-sync>] [--dry-run]
+ *   rama por defecto: PREVIEW; rama-sync por defecto: sync/oficial-AAAA-MM-DD
  */
 import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
@@ -21,14 +21,19 @@ const REMOTO = "commercycity";
 const RAMA_OFICIAL = `${REMOTO}/PREVIEW`;
 
 // Unica lista de exclusiones del repositorio oficial. Todo lo que cuelga de
-// estas rutas se borra en la punta del merge; `docs/api/` es la unica
-// excepcion porque la sirve el backend y la valida el CI.
+// estas rutas se borra en la punta del merge; `docs/api/` y los informes de
+// rendimiento son la excepcion (los pidio el instructor y el equipo los necesita).
 const EXCLUIR = ["plan", "CONTRIBUTING.md", "SECURITY.md", "docs"];
-const MANTENER = ["docs/api"];
+const MANTENER = ["docs/api", "docs/informes/INFORME_RENDIMIENTO_"];
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
-const rama = args.find((a) => !a.startsWith("--")) ?? "PREVIEW";
+function valor(nombre, defecto) {
+  const i = args.indexOf(nombre);
+  return i >= 0 && args[i + 1] ? args[i + 1] : defecto;
+}
+const nombreSync = valor("--nombre", "");
+const rama = args.find((a) => !a.startsWith("--") && a !== nombreSync) ?? "PREVIEW";
 
 function git(...a) {
   return execFileSync("git", a, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
@@ -52,18 +57,24 @@ function abortar(msg) {
 
 function estaExcluida(ruta) {
   const excluida = EXCLUIR.some((p) => ruta === p || ruta.startsWith(`${p}/`));
-  const permitida = MANTENER.some((p) => ruta === p || ruta.startsWith(`${p}/`));
+  // MANTENER admite prefijos de archivo (p. ej. los informes de rendimiento).
+  const permitida = MANTENER.some((p) => ruta === p || ruta.startsWith(p));
   return excluida && !permitida;
 }
 
 // Colapsa cientos de archivos a entradas cortas para que `git rm` reciba una
 // lista manejable (Windows limita la linea de comandos). docs/ se abre por
-// segundo nivel para no tocar docs/api, que es funcional.
+// segundo nivel para no tocar docs/api; docs/informes se borra archivo por
+// archivo porque alli viven los informes de rendimiento que si se conservan.
 function aEntradasDeBorrado(rutas) {
   const entradas = new Set();
   for (const ruta of rutas) {
     if (ruta.startsWith("plan/")) {
       entradas.add("plan");
+      continue;
+    }
+    if (ruta.startsWith("docs/informes/")) {
+      entradas.add(ruta);
       continue;
     }
     if (ruta.startsWith("docs/")) {
@@ -97,7 +108,7 @@ const base = git("rev-parse", "--short", RAMA_OFICIAL);
 const origen = git("rev-parse", "--short", rama);
 const hoy = new Date();
 const fecha = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
-const ramaSync = `sync/oficial-${fecha}`;
+const ramaSync = nombreSync || `sync/oficial-${fecha}`;
 
 if (gitPermiteFallo("rev-parse", "--verify", `refs/heads/${ramaSync}`).ok) {
   abortar(`la rama ${ramaSync} ya existe: renombrala o borrala antes de volver a sincronizar`);
@@ -109,11 +120,12 @@ const excluidas = [...enArbol].filter(estaExcluida);
 const borrados = aEntradasDeBorrado(excluidas);
 const conservadas = [...enArbol].filter((r) => !estaExcluida(r));
 const tieneOpenapi = conservadas.includes("docs/api/openapi.json");
+const informes = conservadas.filter((r) => r.startsWith("docs/informes/INFORME_RENDIMIENTO_"));
 
 console.log(`SYNC: base oficial ${RAMA_OFICIAL} = ${base}`);
 console.log(`SYNC: rama completa ${rama} = ${origen}`);
 console.log(`SYNC: excluir ${excluidas.length} rutas en ${borrados.length} entradas: ${borrados.join(", ")}`);
-console.log(`SYNC: conservar ${conservadas.length} archivos; docs/api/openapi.json: ${tieneOpenapi ? "si" : "NO"}`);
+console.log(`SYNC: conservar ${conservadas.length} archivos; docs/api/openapi.json: ${tieneOpenapi ? "si" : "NO"}; informes de rendimiento: ${informes.length}`);
 
 if (!tieneOpenapi) abortar("docs/api/openapi.json no aparece en la rama completa; revisa MANTENER");
 

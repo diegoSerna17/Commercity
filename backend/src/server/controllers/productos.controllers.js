@@ -24,36 +24,46 @@ export const getProductos = async (req, res, next) => {
     const vendedor = String(req.query.vendedor || "");
     const vendedorId = req.query.vendedor_id;
 
-    const condiciones = [];
-    const valores = [];
+    const condicionesProducto = [];
+    const condicionesJoin = [];
+    const valoresProducto = [];
+    const valoresJoin = [];
 
     // M-20 (TASK-5.4): filtro exacto por vendedor para el perfil publico.
     if (vendedorId !== undefined) {
-      condiciones.push("p.vendedor_id = ?");
-      valores.push(vendedorId);
+      condicionesProducto.push("p.vendedor_id = ?");
+      valoresProducto.push(vendedorId);
     }
 
     // B-8 (TASK-4.9): comodines del usuario escapados (busqueda literal).
     if (nombre.trim() !== "") {
-      condiciones.push("p.nombre LIKE ?");
-      valores.push(escapeLike(nombre));
+      condicionesProducto.push("p.nombre LIKE ?");
+      valoresProducto.push(escapeLike(nombre));
     }
 
     if (categoria.trim() !== "") {
-      condiciones.push("c.nombre LIKE ?");
-      valores.push(escapeLike(categoria));
+      condicionesJoin.push("c.nombre LIKE ?");
+      valoresJoin.push(escapeLike(categoria));
     }
 
     if (vendedor.trim() !== "") {
-      condiciones.push("v.nombre_completo LIKE ?");
-      valores.push(escapeLike(vendedor));
+      condicionesJoin.push("v.nombre_completo LIKE ?");
+      valoresJoin.push(escapeLike(vendedor));
     }
 
-    const where = condiciones.length
-      ? ` AND ${condiciones.join(" AND ")}`
+    const whereProducto = condicionesProducto.length
+      ? ` AND ${condicionesProducto.join(" AND ")}`
       : "";
+    const whereJoin = condicionesJoin.length
+      ? ` AND ${condicionesJoin.join(" AND ")}`
+      : "";
+    const valores = [...valoresProducto, ...valoresJoin];
 
-    const consultaTotal = `
+    // Rendimiento (2026-11-06): el catalogo base no necesita los JOIN con
+    // categorias ni usuarios para contar. Solo se unen si el filtro usa sus
+    // columnas, y asi el COUNT se resuelve con el indice del catalogo.
+    const consultaTotal = condicionesJoin.length
+      ? `
       SELECT COUNT(*) AS total
       FROM productos p
       INNER JOIN categorias c ON p.categoria_id = c.id
@@ -63,10 +73,22 @@ export const getProductos = async (req, res, next) => {
         AND p.eliminado_por_vendedor = 0
         AND p.pausado = 0
         AND p.estado = 'Disponible'
-        ${where}
+        ${whereProducto}
+        ${whereJoin}
+    `
+      : `
+      SELECT COUNT(*) AS total
+      FROM productos p
+      WHERE 1 = 1
+        AND p.eliminado_por_admin = 0
+        AND p.eliminado_por_vendedor = 0
+        AND p.pausado = 0
+        AND p.estado = 'Disponible'
+        ${whereProducto}
     `;
+    const valoresTotal = condicionesJoin.length ? valores : valoresProducto;
 
-    const [resultadoTotal] = await pool.query(consultaTotal, valores);
+    const [resultadoTotal] = await pool.query(consultaTotal, valoresTotal);
 
     const totalProductos = Number(resultadoTotal[0]?.total || 0);
     const totalPaginas = Math.max(Math.ceil(totalProductos / limite), 1);
@@ -94,7 +116,8 @@ export const getProductos = async (req, res, next) => {
         AND p.eliminado_por_vendedor = 0
         AND p.pausado = 0
         AND p.estado = 'Disponible'
-        ${where}
+        ${whereProducto}
+        ${whereJoin}
       ORDER BY p.id DESC
       LIMIT ? OFFSET ?
     `;

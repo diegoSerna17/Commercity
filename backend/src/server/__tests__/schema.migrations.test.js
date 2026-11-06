@@ -12,12 +12,13 @@ const raizRepo = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..",
 const dirMigraciones = join(dirname(fileURLToPath(import.meta.url)), "..", "db");
 const schema = readFileSync(join(raizRepo, "schema_commercity.sql"), "utf8");
 
-const MIGRACIONES_015_019 = [
+const MIGRACIONES_015_020 = [
   "015_token_version.sql",
   "016_auditoria_acciones.sql",
   "017_datos_bancarios_longitudes.sql",
   "018_calificaciones_unique_vendedor.sql",
   "019_perfil_terminos_y_pausa_productos.sql",
+  "020_indices_rendimiento.sql",
 ];
 
 function bloqueCreateTable(nombre) {
@@ -63,13 +64,20 @@ describe("schema_commercity.sql vs migraciones 015-019 (B1)", () => {
     expect(productos).toMatch(/INDEX idx_productos_pausado_vendedor \(pausado, eliminado_por_vendedor\)/);
   });
 
+  it("productos incluye el indice del catalogo de la migracion 020", () => {
+    const productos = bloqueCreateTable("productos");
+    expect(productos).toMatch(
+      /INDEX idx_productos_catalogo \(eliminado_por_admin, pausado, eliminado_por_vendedor, estado, id\)/
+    );
+  });
+
   it("usuarios incluye terminos_aceptados_en de la migracion 019", () => {
     const usuarios = bloqueCreateTable("usuarios");
     expect(usuarios).toMatch(/\bterminos_aceptados_en\s+DATETIME NULL/);
   });
 
-  it("schema_migrations registra 015-019 con el checksum real de cada archivo", () => {
-    for (const archivo of MIGRACIONES_015_019) {
+  it("schema_migrations registra 015-020 con el checksum real de cada archivo", () => {
+    for (const archivo of MIGRACIONES_015_020) {
       // El ledger se genero en checkouts con finales de linea distintos (unos
       // LF, otros CRLF). Se aceptan las dos variantes del MISMO contenido:
       // cualquier edicion real cambia ambos hashes y sigue fallando.
