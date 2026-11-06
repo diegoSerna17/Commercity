@@ -23,8 +23,13 @@ const src = readFileSync(appJs, "utf8");
 const usadas = new Set([...src.matchAll(/["'`](\/api\/[A-Za-z0-9/_{}-]+)["'`]/g)].map((m) => m[1].replace(/\/\d+/g, "/{id}")));
 console.log(`contrato-escritorio: ${usadas.size} rutas usadas, ${rutas.size} en OpenAPI`);
 for (const r of usadas) {
-  const base = r.split("?")[0];
-  const ok = [...rutas].some((o) => o === base || base.startsWith(o.split("{")[0]));
+  // La barra final no cambia el endpoint: OpenAPI registra `/api/seguidores/`
+  // y el cliente llama `/api/seguidores`. Se normaliza en ambos lados.
+  const base = r.split("?")[0].replace(/\/+$/, "");
+  const ok = [...rutas].some((o) => {
+    const oficial = o.split("{")[0].replace(/\/+$/, "");
+    return oficial === base || base.startsWith(`${oficial}/`);
+  });
   if (!ok) {
     console.error(`contrato-escritorio: ruta sin OpenAPI: ${r}`);
     errores += 1;

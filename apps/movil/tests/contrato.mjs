@@ -31,8 +31,13 @@ for (const p of [apiJs, appJs]) {
 const usadas = extraeRutas(src);
 console.log(`contrato-movil: ${usadas.size} rutas usadas en el cliente, ${rutas.size} en OpenAPI`);
 for (const r of usadas) {
-  const base = r.split("?")[0];
-  const ok = [...rutas].some((o) => o === base || base.startsWith(o.split("{")[0]));
+  // La barra final no cambia el endpoint: OpenAPI registra `/api/carrito/` y
+  // el cliente llama `/api/carrito`. Se normaliza en ambos lados.
+  const base = r.split("?")[0].replace(/\/+$/, "");
+  const ok = [...rutas].some((o) => {
+    const oficial = o.split("{")[0].replace(/\/+$/, "");
+    return oficial === base || base.startsWith(`${oficial}/`);
+  });
   if (!ok) {
     console.error(`contrato-movil: ruta del cliente sin OpenAPI: ${r}`);
     errores += 1;
