@@ -1,0 +1,179 @@
+{
+  "fecha": "2026-11-06T22:39:57.852Z",
+  "base": "http://localhost:3000",
+  "node": "v24.22.1",
+  "token_usado": false,
+  "n": 50,
+  "concurrencia": 5,
+  "calentamiento": 5,
+  "omitidos": [
+    "notificaciones",
+    "historial",
+    "admin-stats"
+  ],
+  "resultados": [
+    {
+      "endpoint": "health",
+      "ruta": "/health",
+      "n": 50,
+      "concurrencia": 5,
+      "errores": 0,
+      "por_estado": {
+        "200": 50
+      },
+      "p50_ms": 2.3,
+      "p95_ms": 15.52,
+      "p99_ms": 16.14,
+      "promedio_ms": 3.77,
+      "ttfb_p50_ms": 2.26,
+      "ttfb_p95_ms": 15.45,
+      "rps": 1240.55,
+      "bytes_promedio": 49
+    },
+    {
+      "endpoint": "catalogo-p1",
+      "ruta": "/api/productos?page=1&limit=20",
+      "n": 50,
+      "concurrencia": 5,
+      "errores": 0,
+      "por_estado": {
+        "200": 50
+      },
+      "p50_ms": 871.66,
+      "p95_ms": 901.15,
+      "p99_ms": 906.72,
+      "promedio_ms": 869.07,
+      "ttfb_p50_ms": 871.56,
+      "ttfb_p95_ms": 900.87,
+      "rps": 5.73,
+      "bytes_promedio": 7094
+    },
+    {
+      "endpoint": "catalogo-p50",
+      "ruta": "/api/productos?page=50&limit=20",
+      "n": 50,
+      "concurrencia": 5,
+      "errores": 0,
+      "por_estado": {
+        "200": 50
+      },
+      "p50_ms": 825.37,
+      "p95_ms": 877.38,
+      "p99_ms": 892.47,
+      "promedio_ms": 830.88,
+      "ttfb_p50_ms": 825.21,
+      "ttfb_p95_ms": 877.31,
+      "rps": 6,
+      "bytes_promedio": 7054
+    },
+    {
+      "endpoint": "busqueda",
+      "ruta": "/api/productos?nombre=a",
+      "n": 50,
+      "concurrencia": 5,
+      "errores": 0,
+      "por_estado": {
+        "200": 50
+      },
+      "p50_ms": 665.6,
+      "p95_ms": 732.98,
+      "p99_ms": 745.61,
+      "promedio_ms": 670.57,
+      "ttfb_p50_ms": 665.53,
+      "ttfb_p95_ms": 732.69,
+      "rps": 7.36,
+      "bytes_promedio": 1741
+    },
+    {
+      "endpoint": "categorias",
+      "ruta": "/api/categorias",
+      "n": 50,
+      "concurrencia": 5,
+      "errores": 0,
+      "por_estado": {
+        "200": 50
+      },
+      "p50_ms": 4.3,
+      "p95_ms": 11.47,
+      "p99_ms": 11.68,
+      "promedio_ms": 5.13,
+      "ttfb_p50_ms": 4.28,
+      "ttfb_p95_ms": 11.23,
+      "rps": 943.08,
+      "bytes_promedio": 528
+    },
+    {
+      "endpoint": "vendedores",
+      "ruta": "/api/vendedores?page=1&limit=20",
+      "n": 50,
+      "concurrencia": 5,
+      "errores": 0,
+      "por_estado": {
+        "200": 50
+      },
+      "p50_ms": 11.64,
+      "p95_ms": 33.73,
+      "p99_ms": 38.78,
+      "promedio_ms": 13.65,
+      "ttfb_p50_ms": 11.42,
+      "ttfb_p95_ms": 33.27,
+      "rps": 358.42,
+      "bytes_promedio": 579
+    },
+    {
+      "endpoint": "producto-detalle",
+      "ruta": "/api/productos/1",
+      "n": 50,
+      "concurrencia": 5,
+      "errores": 0,
+      "por_estado": {
+        "200": 50
+      },
+      "p50_ms": 8.69,
+      "p95_ms": 10.45,
+      "p99_ms": 11.55,
+      "promedio_ms": 8.86,
+      "ttfb_p50_ms": 8.65,
+      "ttfb_p95_ms": 10.42,
+      "rps": 550.77,
+      "bytes_promedio": 620
+    },
+    {
+      "endpoint": "seguidores-contadores",
+      "ruta": "/api/seguidores/1/contadores",
+      "n": 50,
+      "concurrencia": 5,
+      "errores": 0,
+      "por_estado": {
+        "200": 25,
+        "429": 25
+      },
+      "p50_ms": 4.52,
+      "p95_ms": 26.04,
+      "p99_ms": 28.4,
+      "promedio_ms": 10.91,
+      "ttfb_p50_ms": 4.51,
+      "ttfb_p95_ms": 26.01,
+      "rps": 449.68,
+      "bytes_promedio": 91
+    },
+    {
+      "endpoint": "calificaciones-vendedor",
+      "ruta": "/api/calificaciones/vendedor/1",
+      "n": 50,
+      "concurrencia": 5,
+      "errores": 0,
+      "por_estado": {
+        "200": 50
+      },
+      "p50_ms": 9.59,
+      "p95_ms": 10.79,
+      "p99_ms": 10.9,
+      "promedio_ms": 9.02,
+      "ttfb_p50_ms": 9.54,
+      "ttfb_p95_ms": 10.76,
+      "rps": 544.4,
+      "bytes_promedio": 192
+    }
+  ]
+}
