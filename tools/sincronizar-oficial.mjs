@@ -56,14 +56,22 @@ function estaExcluida(ruta) {
   return excluida && !permitida;
 }
 
-// Colapsa cientos de archivos a sus entradas de primer nivel para que `git rm`
-// reciba una lista corta (Windows limita la linea de comandos).
-const DIRECTORIOS = ["plan", "docs"];
+// Colapsa cientos de archivos a entradas cortas para que `git rm` reciba una
+// lista manejable (Windows limita la linea de comandos). docs/ se abre por
+// segundo nivel para no tocar docs/api, que es funcional.
 function aEntradasDeBorrado(rutas) {
   const entradas = new Set();
   for (const ruta of rutas) {
-    const raiz = DIRECTORIOS.find((d) => ruta.startsWith(`${d}/`));
-    entradas.add(raiz ?? ruta);
+    if (ruta.startsWith("plan/")) {
+      entradas.add("plan");
+      continue;
+    }
+    if (ruta.startsWith("docs/")) {
+      const nivel = ruta.split("/")[1];
+      if (nivel !== "api") entradas.add(`docs/${nivel}`);
+      continue;
+    }
+    entradas.add(ruta);
   }
   return [...entradas].sort();
 }
