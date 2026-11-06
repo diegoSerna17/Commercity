@@ -1,6 +1,6 @@
 {
   "name": "commercity",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "CommerCity - Marketplace Desktop App",
   "main": "main.js",
   "scripts": {

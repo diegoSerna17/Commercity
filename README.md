@@ -585,6 +585,30 @@ COMMER CITY/
 └── .gitignore
 ```
 
+## Estructura del backend (guía para quien llega nuevo)
+
+El backend vive en `backend/src/server/` y **no tiene carpeta `models`**: el acceso a datos está en los controllers y la forma de los datos la definen el esquema SQL y los contratos Zod.
+
+| Necesitas | Dónde está |
+|---|---|
+| Conexión a MySQL | `backend/src/server/config/db.js` exporta el `pool` de `mysql2/promise` (10 conexiones, `waitForConnections`). Los controllers lo importan y ejecutan SQL parametrizado. |
+| Configuración y validación del entorno | `backend/src/server/utils/config.js` (aborta el arranque si falta `JWT_SECRET`). |
+| Contratos de entrada | `backend/src/server/schemas/` (esquemas Zod) aplicados por `backend/src/server/middleware/validate.middleware.js`. |
+| Migraciones incrementales | `backend/src/server/db/` (000 y 008-019, idempotentes, con rollback en comentarios y checksum en `schema_migrations`). |
+| Modelo de datos completo | `schema_commercity.sql` (DDL de las 16 tablas de negocio) y `seed_commercity.sql` (datos de prueba) en la raíz. |
+
+### Variables de entorno
+
+```powershell
+Copy-Item backend\.env.example backend\.env     # desde la raíz del repositorio
+```
+
+Variables que trae la plantilla (sin valores): `PORT`, `NODE_ENV`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET` (obligatoria), `CRYPTO_SECRET_KEY`, `FRONTEND_URL`, `CORS_ALLOWLIST`, `ALLOW_DESKTOP_ORIGINS`, `TRUST_PROXY`, `RESEND_API_KEY` y `RESEND_FROM`.
+
+El `.env` **no se versiona** (está en `.gitignore` por diseño): los valores de la base compartida y la contraseña del seed los entrega el líder por canal privado. El detalle de cada variable está en [Configuración](#configuración).
+
+La documentación ampliada (arquitectura, guías, auditorías e historial de cambios) vive en el repositorio **ECOMMERCE** (`danielpalacios665-sys/ECOMMERCE`), rama `main`; este repositorio oficial publica solo el código funcional.
+
 ## Rama PREVIEW del repo oficial (pruebas del equipo)
 
 El código para que todo el equipo pruebe el proyecto se publica en la rama **`PREVIEW`** del repositorio oficial: `https://github.com/diegoSerna17/Commercity`.

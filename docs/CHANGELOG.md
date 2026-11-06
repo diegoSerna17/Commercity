@@ -4,6 +4,18 @@ Registro central de cambios (según regla `documentacion-cambios.md`). Entradas 
 
 > **Nota de correccion (2026-10-31)**: las entradas historicas que citan presentaciones en `docs/` corresponden a `docs/presentaciones/` desde el movimiento del 2026-10-30. Las entradas originales no se reescriben; esta nota solo corrige la ruta para quien consulte el historial.
 
+## 2026-11-06 - RELEASE 1.4.2 - SYNC: publicacion funcional al repo oficial y guia de estructura
+
+- **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
+- **Archivos**: `README.md`, `tools/sincronizar-oficial.mjs`, `VERSION`, `backend/package.json`, `frontend/package.json`, `apps/escritorio/package.json`, `apps/movil/package.json`, `apps/movil/android/app/build.gradle`, `apps/movil/ios/App/App.xcodeproj/project.pbxproj`, `frontend/src/constants/buttons.css`, `frontend/src/constants/inputs.css`, `docs/api/openapi.json`, `docs/CHANGELOG.md`.
+- **Descripcion**: (1) Nueva seccion "Estructura del backend" en `README.md` para quien llega nuevo al repositorio oficial: rutas de `backend/src/server/config/db.js` y `utils/config.js`; creacion del `.env` con `Copy-Item backend\.env.example backend\.env` y la lista de variables sin valores; por que no existe carpeta `models` (controllers con el `pool` compartido, contratos Zod en `schemas/` y migraciones en `db/`); donde esta el modelo de datos (`schema_commercity.sql` y `seed_commercity.sql`) y una linea que apunta a la documentacion completa en ECOMMERCE. (2) `tools/sincronizar-oficial.mjs`: exige arbol limpio, hace `git fetch commercycity`, crea `sync/oficial-AAAA-MM-DD` desde `commercycity/PREVIEW`, mergea la rama completa con `--no-ff --no-commit`, borra en la punta `plan/`, `CONTRIBUTING.md`, `SECURITY.md` y todo `docs/` salvo `docs/api/` (asi se resuelven como borrado los conflictos modify/delete), aborta si quedan conflictos en archivos funcionales, valida el arbol con `git ls-files` y commitea; soporta `--dry-run` y nunca hace push. (3) Bump 1.4.2 sincronizado en `VERSION`, package.json de backend/frontend/apps, Android/iOS y OpenAPI regenerado.
+- **Motivo**: publicar la version funcional en la rama `PREVIEW` del repositorio oficial con la estructura explicada, separar el contenido de ECOMMERCE (codigo y documentacion) del repositorio del equipo y dejar el release al dia antes de limpiar ramas.
+- **Requerimientos**: TASK-10.x de publicacion; H-6 (proteccion de PREVIEW); RNF de calidad del CI y de documentacion para nuevos integrantes.
+- **Evidencia**: `node --check tools/sincronizar-oficial.mjs` OK; `npm run docs:api` v1.4.2: 64 paths, 76 operaciones, 43 esquemas; `npm run docs:entidades`: 48 contratos; `node tools/verificar-version.mjs 1.4.1` OK. La sincronizacion real al oficial se valida con `--dry-run`, las suites y el PR (pasos posteriores con aprobacion).
+- **Estado**: Cerrado en local. La publicacion a `commercycity/PREVIEW` y a ECOMMERCE queda pendiente de aprobacion y del PR.
+
+---
+
 ## 2026-11-05 - RELEASE 1.4.1 - CI: Lote 6 de CI, repositorio y documentacion (auditoria 2026-11-04)
 
 - **Autor**: Daniel Palacios (lider) - rama fix/pendientes-auditoria-2026-10-12
