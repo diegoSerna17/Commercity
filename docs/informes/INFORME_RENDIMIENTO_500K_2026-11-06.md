@@ -80,6 +80,8 @@ El catalogo escala de forma casi lineal con el volumen porque el `COUNT` recorre
 - `docs/informes/rendimiento/medicion-local-500k-2026-11-06.json`
 - `docs/informes/rendimiento/medicion-local-optimizada-2026-11-06.json` (100k)
 - `docs/informes/INFORME_RENDIMIENTO_2026-11-06.md` (100k)
+- `docs/informes/INFORME_RENDIMIENTO_FIREFOX_2026-11-06.md` (Firefox 159.0 con HAR)
+- `docs/informes/rendimiento/firefox-2026-11-06T23-04-36-624Z.json` y `.har`
 
 ## Pendiente
 

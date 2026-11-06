@@ -1,0 +1,778 @@
+{
+  "fecha": "2026-11-06T23:05:07.346Z",
+  "navegador": "firefox 159.0",
+  "app": "http://localhost:5173",
+  "api": "http://localhost:3000",
+  "repeticiones": 5,
+  "resumen": [
+    {
+      "endpoint": "catalogo-p1",
+      "n": 5,
+      "p50_ms": 178,
+      "p95_ms": 222,
+      "ttfb_har_p50_ms": 173.23,
+      "bytes_har_promedio": 7116,
+      "headers_har_promedio": 1040,
+      "estados": [
+        200
+      ]
+    },
+    {
+      "endpoint": "catalogo-p50",
+      "n": 5,
+      "p50_ms": 185,
+      "p95_ms": 210,
+      "ttfb_har_p50_ms": 176.99,
+      "bytes_har_promedio": 7116,
+      "headers_har_promedio": 1040,
+      "estados": [
+        200
+      ]
+    },
+    {
+      "endpoint": "busqueda",
+      "n": 5,
+      "p50_ms": 2878,
+      "p95_ms": 3050,
+      "ttfb_har_p50_ms": 2871.62,
+      "bytes_har_promedio": 1741,
+      "headers_har_promedio": 1039,
+      "estados": [
+        200
+      ]
+    },
+    {
+      "endpoint": "categorias",
+      "n": 5,
+      "p50_ms": 7,
+      "p95_ms": 34,
+      "ttfb_har_p50_ms": 1.54,
+      "bytes_har_promedio": 528,
+      "headers_har_promedio": 1044,
+      "estados": [
+        200
+      ]
+    },
+    {
+      "endpoint": "vendedores",
+      "n": 5,
+      "p50_ms": 9,
+      "p95_ms": 30,
+      "ttfb_har_p50_ms": 4.12,
+      "bytes_har_promedio": 579,
+      "headers_har_promedio": 1039,
+      "estados": [
+        200
+      ]
+    }
+  ],
+  "muestras": [
+    {
+      "endpoint": "catalogo-p1",
+      "status": 200,
+      "total_ms": 177,
+      "bytes_texto": 7110,
+      "resource_timing": {
+        "duration_ms": 176,
+        "transferSize": 0,
+        "encodedBodySize": 7116,
+        "decodedBodySize": 7116,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 6754
+      }
+    },
+    {
+      "endpoint": "catalogo-p1",
+      "status": 200,
+      "total_ms": 222,
+      "bytes_texto": 7110,
+      "resource_timing": {
+        "duration_ms": 219,
+        "transferSize": 0,
+        "encodedBodySize": 7116,
+        "decodedBodySize": 7116,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 7102
+      }
+    },
+    {
+      "endpoint": "catalogo-p1",
+      "status": 200,
+      "total_ms": 199,
+      "bytes_texto": 7110,
+      "resource_timing": {
+        "duration_ms": 196,
+        "transferSize": 0,
+        "encodedBodySize": 7116,
+        "decodedBodySize": 7116,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 7491
+      }
+    },
+    {
+      "endpoint": "catalogo-p1",
+      "status": 200,
+      "total_ms": 178,
+      "bytes_texto": 7110,
+      "resource_timing": {
+        "duration_ms": 175,
+        "transferSize": 0,
+        "encodedBodySize": 7116,
+        "decodedBodySize": 7116,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 7862
+      }
+    },
+    {
+      "endpoint": "catalogo-p1",
+      "status": 200,
+      "total_ms": 177,
+      "bytes_texto": 7110,
+      "resource_timing": {
+        "duration_ms": 175,
+        "transferSize": 0,
+        "encodedBodySize": 7116,
+        "decodedBodySize": 7116,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 8206
+      }
+    },
+    {
+      "endpoint": "catalogo-p50",
+      "status": 200,
+      "total_ms": 167,
+      "bytes_texto": 7110,
+      "resource_timing": {
+        "duration_ms": 165,
+        "transferSize": 0,
+        "encodedBodySize": 7116,
+        "decodedBodySize": 7116,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 8548
+      }
+    },
+    {
+      "endpoint": "catalogo-p50",
+      "status": 200,
+      "total_ms": 208,
+      "bytes_texto": 7110,
+      "resource_timing": {
+        "duration_ms": 205,
+        "transferSize": 0,
+        "encodedBodySize": 7116,
+        "decodedBodySize": 7116,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 8875
+      }
+    },
+    {
+      "endpoint": "catalogo-p50",
+      "status": 200,
+      "total_ms": 172,
+      "bytes_texto": 7110,
+      "resource_timing": {
+        "duration_ms": 169,
+        "transferSize": 0,
+        "encodedBodySize": 7116,
+        "decodedBodySize": 7116,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 9247
+      }
+    },
+    {
+      "endpoint": "catalogo-p50",
+      "status": 200,
+      "total_ms": 210,
+      "bytes_texto": 7110,
+      "resource_timing": {
+        "duration_ms": 207,
+        "transferSize": 0,
+        "encodedBodySize": 7116,
+        "decodedBodySize": 7116,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 9593
+      }
+    },
+    {
+      "endpoint": "catalogo-p50",
+      "status": 200,
+      "total_ms": 185,
+      "bytes_texto": 7110,
+      "resource_timing": {
+        "duration_ms": 181,
+        "transferSize": 0,
+        "encodedBodySize": 7116,
+        "decodedBodySize": 7116,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 9965
+      }
+    },
+    {
+      "endpoint": "busqueda",
+      "status": 200,
+      "total_ms": 2732,
+      "bytes_texto": 1737,
+      "resource_timing": {
+        "duration_ms": 2728,
+        "transferSize": 0,
+        "encodedBodySize": 1741,
+        "decodedBodySize": 1741,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 10328
+      }
+    },
+    {
+      "endpoint": "busqueda",
+      "status": 200,
+      "total_ms": 3050,
+      "bytes_texto": 1737,
+      "resource_timing": {
+        "duration_ms": 3047,
+        "transferSize": 0,
+        "encodedBodySize": 1741,
+        "decodedBodySize": 1741,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 13219
+      }
+    },
+    {
+      "endpoint": "busqueda",
+      "status": 200,
+      "total_ms": 2878,
+      "bytes_texto": 1737,
+      "resource_timing": {
+        "duration_ms": 2874,
+        "transferSize": 0,
+        "encodedBodySize": 1741,
+        "decodedBodySize": 1741,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 16432
+      }
+    },
+    {
+      "endpoint": "busqueda",
+      "status": 200,
+      "total_ms": 2776,
+      "bytes_texto": 1737,
+      "resource_timing": {
+        "duration_ms": 2774,
+        "transferSize": 0,
+        "encodedBodySize": 1741,
+        "decodedBodySize": 1741,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 19478
+      }
+    },
+    {
+      "endpoint": "busqueda",
+      "status": 200,
+      "total_ms": 2904,
+      "bytes_texto": 1737,
+      "resource_timing": {
+        "duration_ms": 2903,
+        "transferSize": 0,
+        "encodedBodySize": 1741,
+        "decodedBodySize": 1741,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 22409
+      }
+    },
+    {
+      "endpoint": "categorias",
+      "status": 200,
+      "total_ms": 5,
+      "bytes_texto": 523,
+      "resource_timing": {
+        "duration_ms": 4,
+        "transferSize": 0,
+        "encodedBodySize": 528,
+        "decodedBodySize": 528,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 25476
+      }
+    },
+    {
+      "endpoint": "categorias",
+      "status": 200,
+      "total_ms": 34,
+      "bytes_texto": 523,
+      "resource_timing": {
+        "duration_ms": 3,
+        "transferSize": 0,
+        "encodedBodySize": 528,
+        "decodedBodySize": 528,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 25649
+      }
+    },
+    {
+      "endpoint": "categorias",
+      "status": 200,
+      "total_ms": 5,
+      "bytes_texto": 523,
+      "resource_timing": {
+        "duration_ms": 3,
+        "transferSize": 0,
+        "encodedBodySize": 528,
+        "decodedBodySize": 528,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 25837
+      }
+    },
+    {
+      "endpoint": "categorias",
+      "status": 200,
+      "total_ms": 7,
+      "bytes_texto": 523,
+      "resource_timing": {
+        "duration_ms": 5,
+        "transferSize": 0,
+        "encodedBodySize": 528,
+        "decodedBodySize": 528,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 26008
+      }
+    },
+    {
+      "endpoint": "categorias",
+      "status": 200,
+      "total_ms": 7,
+      "bytes_texto": 523,
+      "resource_timing": {
+        "duration_ms": 4,
+        "transferSize": 0,
+        "encodedBodySize": 528,
+        "decodedBodySize": 528,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 26177
+      }
+    },
+    {
+      "endpoint": "vendedores",
+      "status": 200,
+      "total_ms": 9,
+      "bytes_texto": 577,
+      "resource_timing": {
+        "duration_ms": 6,
+        "transferSize": 0,
+        "encodedBodySize": 579,
+        "decodedBodySize": 579,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 26350
+      }
+    },
+    {
+      "endpoint": "vendedores",
+      "status": 200,
+      "total_ms": 30,
+      "bytes_texto": 577,
+      "resource_timing": {
+        "duration_ms": 6,
+        "transferSize": 0,
+        "encodedBodySize": 579,
+        "decodedBodySize": 579,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 26523
+      }
+    },
+    {
+      "endpoint": "vendedores",
+      "status": 200,
+      "total_ms": 7,
+      "bytes_texto": 577,
+      "resource_timing": {
+        "duration_ms": 5,
+        "transferSize": 0,
+        "encodedBodySize": 579,
+        "decodedBodySize": 579,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 26710
+      }
+    },
+    {
+      "endpoint": "vendedores",
+      "status": 200,
+      "total_ms": 10,
+      "bytes_texto": 577,
+      "resource_timing": {
+        "duration_ms": 7,
+        "transferSize": 0,
+        "encodedBodySize": 579,
+        "decodedBodySize": 579,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 26880
+      }
+    },
+    {
+      "endpoint": "vendedores",
+      "status": 200,
+      "total_ms": 9,
+      "bytes_texto": 577,
+      "resource_timing": {
+        "duration_ms": 6,
+        "transferSize": 0,
+        "encodedBodySize": 579,
+        "decodedBodySize": 579,
+        "responseStart": 0,
+        "requestStart": 0,
+        "startTime": 27051
+      }
+    }
+  ],
+  "har": [
+    {
+      "url": "http://localhost:5173/src/api/client.js",
+      "metodo": "GET",
+      "status": 200,
+      "tiempo_total_ms": 10.174000000000001,
+      "espera_ttfb_ms": 10.105,
+      "recepcion_ms": 0.069,
+      "headers_bytes": 238,
+      "cuerpo_bytes": 9417,
+      "contenido_bytes": 9417
+    },
+    {
+      "url": "http://localhost:3000/api/categorias",
+      "metodo": "GET",
+      "status": 200,
+      "tiempo_total_ms": 10.084999999999997,
+      "espera_ttfb_ms": 4.531,
+      "recepcion_ms": 0.133,
+      "headers_bytes": 1085,
+      "cuerpo_bytes": 528,
+      "contenido_bytes": 528
+    },
+    {
+      "url": "http://localhost:3000/api/productos?page=1&limit=12",
+      "metodo": "GET",
+      "status": 200,
+      "tiempo_total_ms": 475.36400000000003,
+      "espera_ttfb_ms": 474.737,
+      "recepcion_ms": 0.627,
+      "headers_bytes": 1087,
+      "cuerpo_bytes": 4344,
+      "contenido_bytes": 4344
+    },
+    {
+      "url": "http://localhost:3000/api/categorias",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 9.722000000000001,
+      "espera_ttfb_ms": 4.533,
+      "recepcion_ms": 0.085,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 528,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?page=1&limit=12",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 265.926,
+      "espera_ttfb_ms": 265.776,
+      "recepcion_ms": 0.15,
+      "headers_bytes": 1028,
+      "cuerpo_bytes": 4344,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?page=1&limit=20",
+      "metodo": "GET",
+      "status": 200,
+      "tiempo_total_ms": 176.811,
+      "espera_ttfb_ms": 166.31,
+      "recepcion_ms": 0.193,
+      "headers_bytes": 1087,
+      "cuerpo_bytes": 7116,
+      "contenido_bytes": 7116
+    },
+    {
+      "url": "http://localhost:3000/api/productos?page=1&limit=20",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 215.433,
+      "espera_ttfb_ms": 215.197,
+      "recepcion_ms": 0.236,
+      "headers_bytes": 1028,
+      "cuerpo_bytes": 7116,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?page=1&limit=20",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 193.50300000000001,
+      "espera_ttfb_ms": 193.353,
+      "recepcion_ms": 0.15,
+      "headers_bytes": 1028,
+      "cuerpo_bytes": 7116,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?page=1&limit=20",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 173.322,
+      "espera_ttfb_ms": 173.233,
+      "recepcion_ms": 0.089,
+      "headers_bytes": 1028,
+      "cuerpo_bytes": 7116,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?page=1&limit=20",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 171.672,
+      "espera_ttfb_ms": 171.515,
+      "recepcion_ms": 0.157,
+      "headers_bytes": 1028,
+      "cuerpo_bytes": 7116,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?page=50&limit=20",
+      "metodo": "GET",
+      "status": 200,
+      "tiempo_total_ms": 162.111,
+      "espera_ttfb_ms": 162.011,
+      "recepcion_ms": 0.1,
+      "headers_bytes": 1087,
+      "cuerpo_bytes": 7116,
+      "contenido_bytes": 7116
+    },
+    {
+      "url": "http://localhost:3000/api/productos?page=50&limit=20",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 202.451,
+      "espera_ttfb_ms": 202.262,
+      "recepcion_ms": 0.189,
+      "headers_bytes": 1028,
+      "cuerpo_bytes": 7116,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?page=50&limit=20",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 167.29000000000002,
+      "espera_ttfb_ms": 167.122,
+      "recepcion_ms": 0.168,
+      "headers_bytes": 1028,
+      "cuerpo_bytes": 7116,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?page=50&limit=20",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 197.758,
+      "espera_ttfb_ms": 197.613,
+      "recepcion_ms": 0.145,
+      "headers_bytes": 1028,
+      "cuerpo_bytes": 7116,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?page=50&limit=20",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 177.18,
+      "espera_ttfb_ms": 176.988,
+      "recepcion_ms": 0.192,
+      "headers_bytes": 1028,
+      "cuerpo_bytes": 7116,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?nombre=a",
+      "metodo": "GET",
+      "status": 200,
+      "tiempo_total_ms": 2721.592,
+      "espera_ttfb_ms": 2721.469,
+      "recepcion_ms": 0.123,
+      "headers_bytes": 1086,
+      "cuerpo_bytes": 1741,
+      "contenido_bytes": 1741
+    },
+    {
+      "url": "http://localhost:3000/api/productos?nombre=a",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 3039.3579999999997,
+      "espera_ttfb_ms": 3039.236,
+      "recepcion_ms": 0.122,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 1741,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?nombre=a",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 2871.769,
+      "espera_ttfb_ms": 2871.618,
+      "recepcion_ms": 0.151,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 1741,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?nombre=a",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 2771.582,
+      "espera_ttfb_ms": 2771.464,
+      "recepcion_ms": 0.118,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 1741,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/productos?nombre=a",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 2898.9410000000003,
+      "espera_ttfb_ms": 2898.862,
+      "recepcion_ms": 0.079,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 1741,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/categorias",
+      "metodo": "GET",
+      "status": 200,
+      "tiempo_total_ms": 1.635,
+      "espera_ttfb_ms": 1.542,
+      "recepcion_ms": 0.093,
+      "headers_bytes": 1085,
+      "cuerpo_bytes": 528,
+      "contenido_bytes": 528
+    },
+    {
+      "url": "http://localhost:3000/api/categorias",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 1.5,
+      "espera_ttfb_ms": 1.392,
+      "recepcion_ms": 0.108,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 528,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/categorias",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 1.214,
+      "espera_ttfb_ms": 1.149,
+      "recepcion_ms": 0.065,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 528,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/categorias",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 1.646,
+      "espera_ttfb_ms": 1.585,
+      "recepcion_ms": 0.061,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 528,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/categorias",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 1.7149999999999999,
+      "espera_ttfb_ms": 1.462,
+      "recepcion_ms": 0.253,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 528,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/vendedores?page=1&limit=20",
+      "metodo": "GET",
+      "status": 200,
+      "tiempo_total_ms": 4.22,
+      "espera_ttfb_ms": 4.117,
+      "recepcion_ms": 0.103,
+      "headers_bytes": 1085,
+      "cuerpo_bytes": 579,
+      "contenido_bytes": 579
+    },
+    {
+      "url": "http://localhost:3000/api/vendedores?page=1&limit=20",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 3.875,
+      "espera_ttfb_ms": 3.785,
+      "recepcion_ms": 0.09,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 579,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/vendedores?page=1&limit=20",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 3.3939999999999997,
+      "espera_ttfb_ms": 3.336,
+      "recepcion_ms": 0.058,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 579,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/vendedores?page=1&limit=20",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 4.736,
+      "espera_ttfb_ms": 4.651,
+      "recepcion_ms": 0.085,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 579,
+      "contenido_bytes": -1
+    },
+    {
+      "url": "http://localhost:3000/api/vendedores?page=1&limit=20",
+      "metodo": "GET",
+      "status": 304,
+      "tiempo_total_ms": 4.297,
+      "espera_ttfb_ms": 4.189,
+      "recepcion_ms": 0.108,
+      "headers_bytes": 1027,
+      "cuerpo_bytes": 579,
+      "contenido_bytes": -1
+    }
+  ]
+}
