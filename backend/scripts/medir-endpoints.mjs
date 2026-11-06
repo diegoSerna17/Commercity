@@ -46,11 +46,22 @@ const endpoints = [
   { nombre: "health", ruta: "/health" },
   { nombre: "catalogo-p1", ruta: "/api/productos?page=1&limit=20" },
   { nombre: "catalogo-p50", ruta: "/api/productos?page=50&limit=20" },
-  { nombre: "busqueda", ruta: `/api/productos?nombre=${encodeURIComponent("PERF-Producto 000001")}` },
-  { nombre: "notificaciones", ruta: "/api/notificaciones?pagina=1&limite=10" },
-  { nombre: "historial", ruta: "/api/historial/compras" },
-  { nombre: "admin-stats", ruta: "/api/admin/stats" },
+  { nombre: "busqueda", ruta: `/api/productos?nombre=${encodeURIComponent("a")}` },
+  { nombre: "categorias", ruta: "/api/categorias" },
+  { nombre: "vendedores", ruta: "/api/vendedores?page=1&limit=20" },
+  { nombre: "producto-detalle", ruta: "/api/productos/1" },
+  { nombre: "seguidores-contadores", ruta: "/api/seguidores/1/contadores" },
+  { nombre: "calificaciones-vendedor", ruta: "/api/calificaciones/vendedor/1" },
+  { nombre: "notificaciones", ruta: "/api/notificaciones?pagina=1&limite=10", auth: true },
+  { nombre: "historial", ruta: "/api/historial/compras", auth: true },
+  { nombre: "admin-stats", ruta: "/api/admin/stats", auth: true },
 ];
+
+const activos = endpoints.filter((e) => !e.auth || token);
+const omitidos = endpoints.filter((e) => e.auth && !token);
+if (omitidos.length > 0) {
+  console.log(`MEDICION: sin PERF_TOKEN, se omiten: ${omitidos.map((e) => e.nombre).join(", ")}`);
+}
 
 function peticion(url) {
   const lib = url.protocol === "https:" ? https : http;
@@ -134,7 +145,7 @@ async function medirEndpoint({ nombre, ruta }) {
 }
 
 const resultados = [];
-for (const endpoint of endpoints) {
+for (const endpoint of activos) {
   console.log(`MEDICION: ${endpoint.nombre} (${endpoint.ruta})`);
   const r = await medirEndpoint(endpoint);
   resultados.push(r);
@@ -159,6 +170,7 @@ writeFileSync(
       n,
       concurrencia,
       calentamiento,
+      omitidos: omitidos.map((e) => e.nombre),
       resultados,
     },
     null,
