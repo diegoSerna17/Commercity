@@ -55,6 +55,11 @@ const Register = () => {
       setError("La contraseña debe tener mínimo 8 caracteres");
       return;
     }
+    // RF6: el backend exige la aceptacion explicita de los terminos.
+    if (!acceptedTerms) {
+      setError("Debes aceptar los términos y condiciones");
+      return;
+    }
 
     setError("");
     setLoading(true);
@@ -65,6 +70,7 @@ const Register = () => {
           nombre_completo: nombreLimpio,
           email: emailLimpio,
           password,
+          acepta_terminos: true,
         },
       });
       // JS Mismo patron de sesion que la pantalla de inicio de sesion:
@@ -149,14 +155,18 @@ const Register = () => {
 
           {/* TW Terminos y condiciones */}
           <div className="flex items-center gap-sm pt-xs">
-            <label className="flex items-center gap-sm cursor-pointer group relative">
+            <label
+              htmlFor="acepta-terminos"
+              className="flex items-center gap-sm cursor-pointer group relative"
+            >
               <div className="relative flex items-center justify-center">
                 <input
+                  id="acepta-terminos"
                   type="checkbox"
                   // JS Alterna el estado de aceptacion de terminos
                   checked={acceptedTerms}
                   onChange={() => setAcceptedTerms(!acceptedTerms)}
-                  required
+                  aria-required="true"
                   className="w-5 h-5 rounded-lg border-surface-variant bg-input-bg checked:bg-brand-orange checked:border-brand-orange focus:ring-brand-orange focus:ring-offset-0 focus:ring-offset-transparent transition-colors cursor-pointer appearance-none"
                 />
                 <Check

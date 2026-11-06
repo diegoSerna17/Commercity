@@ -191,7 +191,7 @@ describe("AdminModalReporte", () => {
     const { onCerrar } = renderModal({ modo: "responder" });
 
     // Act
-    fireEvent.click(screen.getByRole("presentation"));
+    fireEvent.mouseDown(screen.getByRole("presentation"));
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
 
     // Assert

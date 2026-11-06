@@ -14,6 +14,7 @@ import {
   listarProductos,
   listarVendedores,
 } from "../../services/productos.service.js";
+import { listarCalificacionesVendedor } from "../../services/calificaciones.service.js";
 import PerfilPublico from "./PerfilPublico.jsx";
 
 vi.mock("../../components/globales/Header", () => ({
@@ -38,6 +39,10 @@ vi.mock("../../services/seguidores.service.js", () => ({
 
 vi.mock("../../services/reportes.service.js", () => ({
   crearReporte: vi.fn(),
+}));
+
+vi.mock("../../services/calificaciones.service.js", () => ({
+  listarCalificacionesVendedor: vi.fn(),
 }));
 
 function LocationProbe() {
@@ -86,6 +91,10 @@ describe("PerfilPublico", () => {
     listarSiguiendo.mockResolvedValue({ data: [] });
     dejarDeSeguir.mockResolvedValue({ success: true });
     seguirUsuario.mockResolvedValue({ success: true });
+    listarCalificacionesVendedor.mockResolvedValue({
+      data: { resumen: { promedio: null, total: 0 }, calificaciones: [] },
+      paginacion: { pagina: 1, por_pagina: 5, total: 0, total_paginas: 1 },
+    });
   });
 
   it("renderiza el vendedor y abre el modal de reporte de usuario", async () => {

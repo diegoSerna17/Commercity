@@ -200,6 +200,41 @@ describe("Calificacion de vendedor (RF107)", () => {
     expect(insert[1][4]).toBe("Excelente");
   });
 
+  it("B2: un pedido multi-vendedor permite calificar a cada vendedor una vez", async () => {
+    // El vendedor 3 ya fue calificado en el pedido 5; el vendedor 4 todavia no.
+    const calificados = new Map([[3, [{ id: 1 }]]]);
+    pool.query.mockImplementation((sql, params) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
+      if (sql.includes("FROM pedidos WHERE id")) return [[{ id: 5, comprador_id: 9 }], undefined];
+      if (sql.includes("FROM detalle_pedidos")) return [[{ id: 1 }], undefined];
+      if (sql.includes("FROM calificaciones_vendedores")) {
+        // El pre-chequeo debe filtrar por vendedor, no solo por pedido.
+        return [calificados.get(Number(params?.[1])) ?? [], undefined];
+      }
+      if (sql.includes("INSERT INTO calificaciones_vendedores")) return [{ insertId: 78 }, undefined];
+      return [[], undefined];
+    });
+
+    const alSegundoVendedor = await request(app)
+      .post("/api/calificaciones/vendedor")
+      .set("Authorization", `Bearer ${tokenComprador}`)
+      .send({ pedido_id: 5, vendedor_id: 4, estrellas: 4 });
+    expect(alSegundoVendedor.status).toBe(201);
+
+    const consulta = pool.query.mock.calls.find(
+      ([sql]) => sql.includes("FROM calificaciones_vendedores")
+    );
+    expect(consulta[0]).toContain("vendedor_id = ?");
+    expect(consulta[1]).toEqual([5, 4]);
+
+    const repetido = await request(app)
+      .post("/api/calificaciones/vendedor")
+      .set("Authorization", `Bearer ${tokenComprador}`)
+      .send({ pedido_id: 5, vendedor_id: 3, estrellas: 5 });
+    expect(repetido.status).toBe(409);
+  });
+
   it("devuelve 500 si la BD falla", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
@@ -211,6 +246,89 @@ describe("Calificacion de vendedor (RF107)", () => {
       .send({ pedido_id: 5, vendedor_id: 3, estrellas: 5 });
     expect(res.status).toBe(500);
     expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe("INTERNAL_ERROR");
+  });
+});
+
+describe("GET /api/calificaciones/vendedor/:id (RF51)", () => {
+  function mockVendedor({ existe = true, total = 0, promedio = null, filas = [] } = {}) {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("usuario_roles")) return [existe ? [{ id: 3 }] : [], undefined];
+      if (sql.includes("AVG(estrellas)")) return [[{ total, promedio }], undefined];
+      if (sql.includes("FROM calificaciones_vendedores c")) return [filas, undefined];
+      return [[], undefined];
+    });
+  }
+
+  it("devuelve resumen y pagina de calificaciones (200)", async () => {
+    mockVendedor({
+      total: 12,
+      promedio: 4.666,
+      filas: [
+        { id: 9, estrellas: 5, comentario: "Excelente", fecha_calificacion: "2026-11-01", comprador: "Camila" },
+        { id: 8, estrellas: 4, comentario: null, fecha_calificacion: "2026-10-20", comprador: "Ana" },
+      ],
+    });
+
+    const res = await request(app).get("/api/calificaciones/vendedor/3?page=2&limit=2");
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.resumen).toEqual({ promedio: 4.7, total: 12 });
+    expect(res.body.data.calificaciones).toHaveLength(2);
+    expect(res.body.paginacion).toEqual({
+      pagina: 2,
+      por_pagina: 2,
+      total: 12,
+      total_paginas: 6,
+    });
+
+    const listado = pool.query.mock.calls.find(([sql]) =>
+      String(sql).includes("FROM calificaciones_vendedores c")
+    );
+    expect(listado[1]).toEqual([3, 2, 2]);
+  });
+
+  it("devuelve promedio null cuando el vendedor no tiene calificaciones", async () => {
+    mockVendedor({ total: 0, promedio: null, filas: [] });
+
+    const res = await request(app).get("/api/calificaciones/vendedor/3");
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.resumen).toEqual({ promedio: null, total: 0 });
+    expect(res.body.data.calificaciones).toEqual([]);
+    expect(res.body.paginacion.total_paginas).toBe(1);
+  });
+
+  it("devuelve 404 si el vendedor no existe", async () => {
+    mockVendedor({ existe: false });
+
+    const res = await request(app).get("/api/calificaciones/vendedor/999");
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("devuelve 400 si el id no es un entero positivo", async () => {
+    const res = await request(app).get("/api/calificaciones/vendedor/abc");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("devuelve 400 si la paginacion es invalida", async () => {
+    const res = await request(app).get("/api/calificaciones/vendedor/3?page=0");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("devuelve 500 si la BD falla", async () => {
+    pool.query.mockRejectedValue(new Error("BD caida"));
+
+    const res = await request(app).get("/api/calificaciones/vendedor/3");
+
+    expect(res.status).toBe(500);
     expect(res.body.error.code).toBe("INTERNAL_ERROR");
   });
 });

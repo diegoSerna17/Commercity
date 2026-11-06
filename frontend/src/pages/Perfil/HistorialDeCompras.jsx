@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import Header from "../../components/globales/Header";
 import DetalleCompras from "./DetalleCompras";
 import { formatCOP, numProductosLabel } from "../../utils/historialUtils.js";
-import { EstadoBadge, Avatar } from "../../utils/historialUtils.jsx";
+import { formatearFecha } from "../../utils/formatDate.js";
+import { EstadoBadge, Avatar } from "../../utils/historialComponentes.jsx";
 import {
   cancelarCompra,
   listarHistorialCompras,
@@ -22,24 +23,6 @@ const ETIQUETA_ESTADO = { "En camino": "En Camino" };
 
 function etiquetaEstado(estado) {
   return ETIQUETA_ESTADO[estado] || estado || "Pendiente";
-}
-
-function formatearFecha(valor) {
-  const fecha = new Date(valor);
-  if (Number.isNaN(fecha.getTime())) return { corta: "", larga: "" };
-
-  return {
-    corta: fecha.toLocaleDateString("es-CO", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }),
-    larga: fecha.toLocaleDateString("es-CO", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }),
-  };
 }
 
 function iniciales(nombre) {

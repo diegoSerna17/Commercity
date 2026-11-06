@@ -73,8 +73,13 @@ describe("servicios de pedidos, historial, admin y perfil", () => {
     });
 
     await obtenerMiCuentaBancaria();
-    // B-7: el formulario pide la vista completa (el backend enmascara por defecto)
-    expect(request).toHaveBeenLastCalledWith("/api/admin/mi-cuenta-bancaria?revelar=completa");
+    // B-7: el default va enmascarado; la vista completa exige revelar explicito.
+    expect(request).toHaveBeenLastCalledWith("/api/admin/mi-cuenta-bancaria");
+
+    await obtenerMiCuentaBancaria({ revelar: true });
+    expect(request).toHaveBeenLastCalledWith(
+      "/api/admin/mi-cuenta-bancaria?revelar=completa"
+    );
   });
 
   it("M-28: confirmarPago envia solo los ultimos 4 digitos, nunca el PAN", async () => {

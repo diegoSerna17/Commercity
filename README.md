@@ -1,6 +1,6 @@
 # CommerCity
 
-**Estado:** Proyecto académico en etapa productiva | Backend: 539/539 pruebas unitarias OK (36 archivos) | Frontend: 450/450 pruebas OK (59 archivos) | Integración MySQL local: 5/5 (dinero) y 10/10 (notificaciones, 2026-10-30) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.02 % líneas; frontend: 95.69 % líneas reales (2066/2159, medición 2026-10-31) | Última corrida registrada: backend 2026-10-30, frontend 2026-10-31 (CHANGELOG)
+**Estado:** Proyecto académico en etapa productiva | Backend: 596/596 pruebas unitarias OK (42 archivos) | Frontend: 493/493 pruebas OK (63 archivos) | Integración MySQL local: 4 archivos / 23 pruebas con TEST_DB_* (2026-11-05) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.27 % líneas; frontend: 96.85 % líneas reales (493 pruebas, medición 2026-10-31) | Última corrida registrada: backend y frontend 2026-11-05 (CHANGELOG)
 
 CommerCity es una plataforma de comercio electrónico para mercados locales con roles de comprador, vendedor y administrador. Incluye catálogo de productos con imágenes, carrito de compras, pedidos, pasarela de pago simulada, tiendas de vendedores, chat, notificaciones, seguidores, calificaciones, reportes de contenido y panel de administración.
 
@@ -585,6 +585,30 @@ COMMER CITY/
 └── .gitignore
 ```
 
+## Estructura del backend (guía para quien llega nuevo)
+
+El backend vive en `backend/src/server/` y **no tiene carpeta `models`**: el acceso a datos está en los controllers y la forma de los datos la definen el esquema SQL y los contratos Zod.
+
+| Necesitas | Dónde está |
+|---|---|
+| Conexión a MySQL | `backend/src/server/config/db.js` exporta el `pool` de `mysql2/promise` (10 conexiones, `waitForConnections`). Los controllers lo importan y ejecutan SQL parametrizado. |
+| Configuración y validación del entorno | `backend/src/server/utils/config.js` (aborta el arranque si falta `JWT_SECRET`). |
+| Contratos de entrada | `backend/src/server/schemas/` (esquemas Zod) aplicados por `backend/src/server/middleware/validate.middleware.js`. |
+| Migraciones incrementales | `backend/src/server/db/` (000 y 008-019, idempotentes, con rollback en comentarios y checksum en `schema_migrations`). |
+| Modelo de datos completo | `schema_commercity.sql` (DDL de las 16 tablas de negocio) y `seed_commercity.sql` (datos de prueba) en la raíz. |
+
+### Variables de entorno
+
+```powershell
+Copy-Item backend\.env.example backend\.env     # desde la raíz del repositorio
+```
+
+Variables que trae la plantilla (sin valores): `PORT`, `NODE_ENV`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET` (obligatoria), `CRYPTO_SECRET_KEY`, `FRONTEND_URL`, `CORS_ALLOWLIST`, `ALLOW_DESKTOP_ORIGINS`, `TRUST_PROXY`, `RESEND_API_KEY` y `RESEND_FROM`.
+
+El `.env` **no se versiona** (está en `.gitignore` por diseño): los valores de la base compartida y la contraseña del seed los entrega el líder por canal privado. El detalle de cada variable está en [Configuración](#configuración).
+
+La documentación ampliada (arquitectura, guías, auditorías e historial de cambios) vive en el repositorio **ECOMMERCE** (`danielpalacios665-sys/ECOMMERCE`), rama `main`; este repositorio oficial publica solo el código funcional.
+
 ## Rama PREVIEW del repo oficial (pruebas del equipo)
 
 El código para que todo el equipo pruebe el proyecto se publica en la rama **`PREVIEW`** del repositorio oficial: `https://github.com/diegoSerna17/Commercity`.
@@ -692,7 +716,7 @@ Get-Content .\schema_commercity.sql -Raw | mysql -u root -p --default-character-
 Get-Content .\seed_commercity.sql -Raw | mysql -u root -p --default-character-set=utf8mb4     # datos de prueba
 ```
 
-**Migraciones incrementales:** viven en `backend/src/server/db/` (`000` y `008`-`018`, idempotentes, con rollback en comentarios) y se aplican en orden con `npm run db:migrate` desde `backend/` (registra cada archivo en `schema_migrations` con checksum; se niega a tocar una base compartida sin `--permitir-compartida`). Una base local creada con `schema_commercity.sql` ya trae el esquema vigente; contra la **base compartida del equipo** el líder aplica las migraciones pendientes **antes** de arrancar el backend.
+**Migraciones incrementales:** viven en `backend/src/server/db/` (`000` y `008`-`018`, idempotentes, con rollback en comentarios) y se aplican en orden con `npm run db:migrate` desde `backend/` (registra cada archivo en `schema_migrations` con checksum; se niega a tocar una base compartida sin `--permitir-compartida`). Una base local creada con `schema_commercity.sql` ya trae el esquema vigente **incluidas las migraciones 015-018** (columnas `token_version`/`password_changed_at`, tabla `auditoria_acciones`, longitudes bancarias y UNIQUE `(pedido_id, vendedor_id)`), y esas cuatro quedan registradas en `schema_migrations` con su checksum: `db:migrate` las omite y solo aplica las anteriores. Contra la **base compartida del equipo** el líder aplica las migraciones pendientes **antes** de arrancar el backend.
 
 **Eventos programados:** el esquema define `limpiar_carritos_inactivos` (RF109) y `purgar_tokens_invalidados`; ambos requieren `event_scheduler = ON` en el servidor MySQL (ver `docs/guias/despliegue.md`).
 
@@ -765,19 +789,19 @@ Resultados actuales:
 
 | Suite                           | Comando                   | Resultado                                 |
 | ------------------------------- | ------------------------- | ----------------------------------------- |
-| Backend (Vitest + supertest)    | `cd backend && npm test`  | 539 pruebas, todas pasando (última corrida registrada 2026-10-30) |
-| Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 450 pruebas en 59 archivos, todas pasando (última corrida registrada 2026-10-31) |
+| Backend (Vitest + supertest)    | `cd backend && npm test`  | 596 pruebas, todas pasando (última corrida registrada 2026-11-05) |
+| Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 493 pruebas en 63 archivos, todas pasando (última corrida registrada 2026-11-05) |
 
 Cobertura del backend (`npm run test:coverage`, proveedor v8; medición 2026-10-30):
 
 | Métrica    | Valor medido | Umbral configurado |
 | ---------- | ------------ | ------------------ |
-| Statements | 96.51%       | 96%                |
-| Branches   | 88.17%       | 88%                |
-| Functions  | 99.57%       | 99%                |
-| Lines      | 97.02%       | 97%                |
+| Statements | 96.84%       | 96%                |
+| Branches   | 88.34%       | 88%                |
+| Functions  | 100%         | 99%                |
+| Lines      | 97.27%       | 97%                |
 
-Cobertura del frontend: la cifra **75.31 %** del CHANGELOG 1.3.1 era una métrica histórica que solo medía los archivos con pruebas. La línea base real de todo `src/` era **41.30 % Lines (888/2150, medición 2026-10-15)**; tras el lote de pruebas del 2026-10-31 es **95.69 % Lines (2066/2159)**, con umbrales en `frontend/vite.config.js` (Lines 93, Statements 92, Functions 89, Branches 82) y M-27 cerrado. Ver `plan/fix-frontend-pendientes-2026-10-15.md`.
+Cobertura del frontend: la cifra **75.31 %** del CHANGELOG 1.3.1 era una métrica histórica que solo medía los archivos con pruebas. La línea base real de todo `src/` era **41.30 % Lines (888/2150, medición 2026-10-15)**; tras el lote de pruebas del 2026-11-05 es **96.85 % Lines (493 pruebas)**, con umbrales en `frontend/vite.config.js` (Lines 93, Statements 92, Functions 89, Branches 82) y M-27 cerrado. Ver `plan/fix-frontend-pendientes-2026-10-15.md`.
 
 E2E con backend vivo (2026-09-28): runner de los endpoints de entonces (69) = **129/129** y capa de red de los `api.js` reales de móvil/escritorio = **102/102** (incluye RF4 recover/reset 12/12). Evidencia conservada por el equipo en `docs/AVANCES/PRUEBAS/` (local, fuera del repositorio) y en `docs/CHANGELOG.md`.
 
@@ -785,7 +809,7 @@ E2E con backend vivo (2026-09-28): runner de los endpoints de entonces (69) = **
 
 La API es REST, escucha en `http://localhost:3000` y responde siempre con el contrato uniforme `{ success, data }` en caso de éxito o `{ success, error }` ante un fallo. Las rutas protegidas exigen la cabecera `Authorization: Bearer <token>`.
 
-Los 74 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`):
+Los 76 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`):
 
 | Prefijo                 | Módulo                                                            |
 | ----------------------- | ----------------------------------------------------------------- |

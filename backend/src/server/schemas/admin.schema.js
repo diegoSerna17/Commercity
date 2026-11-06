@@ -3,12 +3,11 @@ import { bancoSchema, bancoPlataformaSchema } from "./cuentaBancaria.schema.js";
 
 // ============================================================================
 // Contratos del modulo admin (RF55-RF76; toda ruta exige rol administrador).
-// Espejan la validacion manual de controllers/admin/*:
-//  - :id numerico entero positivo (validarId);
-//  - cambio de estado de usuario: solo activo|baneado (motivo lo genera el servidor);
+// Cableados con validate() en routes/admin.routes.js:
+//  - :id numerico entero positivo (paramsIdSchema);
+//  - cambio de estado de usuario: solo activo|baneado;
 //  - reportes: filtro pendiente|resuelto; resolver exige respuesta max 2000;
 //  - buscador: q libre + scope usuario|producto|all (default all).
-// Fuente documental (OpenAPI); sin cablear validate() todavia (Fase 1).
 // ============================================================================
 
 export { bancoSchema };
@@ -54,12 +53,20 @@ export const adminProductosQuerySchema = z
   .object({
     q: z.string().trim().optional().describe("Busca por producto o vendedor"),
     soloActivos: z.string().optional().describe('"true" para excluir suspendidos'),
+    pagina: z.coerce.number().int().positive().default(1).describe("Pagina (default 1)"),
+    por_pagina: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(100)
+      .default(50)
+      .describe("Productos por pagina (default 50, max 100)"),
   })
   .meta({
     id: "AdminProductosQuery",
     title: "AdminProductosQuery",
-    description: "Query de GET /api/admin/productos (RF68/RF72)",
-    examples: [{ q: "cafe", soloActivos: "true" }],
+    description: "Query de GET /api/admin/productos (RF68/RF72, paginado)",
+    examples: [{ q: "cafe", soloActivos: "true", pagina: 1, por_pagina: 50 }],
   });
 
 /** Query de GET /api/admin/reportes. */
@@ -68,19 +75,27 @@ export const adminReportesQuerySchema = z
     q: z.string().trim().optional().describe("Texto a buscar"),
     estado: z.enum(["pendiente", "resuelto"]).optional().describe("Filtra por estado"),
     incluir_archivados: z.string().optional().describe('Valores que incluyen archivados: "1", "true", "si"'),
+    pagina: z.coerce.number().int().positive().default(1).describe("Pagina (default 1)"),
+    por_pagina: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(100)
+      .default(50)
+      .describe("Reportes por pagina (default 50, max 100)"),
   })
   .meta({
     id: "AdminReportesQuery",
     title: "AdminReportesQuery",
-    description: "Query de GET /api/admin/reportes (RF60-RF66)",
-    examples: [{ estado: "pendiente" }],
+    description: "Query de GET /api/admin/reportes (RF60-RF66, paginado)",
+    examples: [{ estado: "pendiente", pagina: 1, por_pagina: 50 }],
   });
 
 /** Body de PATCH /api/admin/reportes/:id/resolver. */
 export const resolverReporteSchema = z
   .object({
     respuesta: z
-      .string()
+      .string({ error: "La respuesta es obligatoria" })
       .trim()
       .min(1, "La respuesta es obligatoria")
       .max(2000, "Respuesta demasiado larga")
@@ -97,7 +112,7 @@ export const resolverReporteSchema = z
 /** Query de GET /api/admin/busqueda (RF69-RF71, FULLTEXT con fallback LIKE). */
 export const busquedaAdminQuerySchema = z
   .object({
-    q: z.string().trim().describe("Texto a buscar (vacio = listas vacias)"),
+    q: z.string().trim().default("").describe("Texto a buscar (vacio = listas vacias)"),
     scope: z.enum(["all", "usuario", "producto"]).default("all").describe("Alcance de la busqueda"),
   })
   .meta({

@@ -42,18 +42,22 @@ describe("contratos Zod y registro OpenAPI (smoke)", () => {
     expect(revisados).toBeGreaterThan(30);
   });
 
-  it("el documento OpenAPI se construye desde el registro con las 74 operaciones", () => {
+  it("el documento OpenAPI se construye desde el registro con las 76 operaciones", () => {
     const doc = buildOpenApi({ version: "0.0.0-test" });
 
     expect(doc.openapi).toBe("3.1.0");
     expect(doc.info.version).toBe("0.0.0-test");
     const numOps = Object.values(doc.paths).reduce((n, item) => n + Object.keys(item).length, 0);
     expect(numOps).toBe(operaciones.length);
-    expect(numOps).toBe(74);
+    expect(numOps).toBe(76);
 
     // Endpoints clave del lote
     expect(doc.paths["/health"].get.operationId).toBe("healthCheck");
     expect(doc.paths["/api/usuarios/logout-todas"].post).toBeTruthy();
+    // Lote 5: RF51 y RF55
+    expect(doc.paths["/api/calificaciones/vendedor/{id}"].get).toBeTruthy();
+    expect(doc.paths["/api/productos/{id}/estado"].patch).toBeTruthy();
+    expect(doc.paths["/api/productos/{id}"].delete).toBeTruthy();
     // Multipart documentado (productos) y query paginada (chat)
     expect(doc.paths["/api/productos"].post.requestBody.content["multipart/form-data"]).toBeTruthy();
     expect(

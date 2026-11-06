@@ -16,6 +16,10 @@ process.env.JWT_SECRET = "jwt-secret-de-pruebas-rate-limit-000000000000";
 process.env.DB_USER = "rate_limit_user";
 process.env.DB_PASSWORD = "clave-local-rate-limit";
 
+// Estas pruebas hacen 250+ peticiones HTTP reales; con la suite completa en
+// paralelo el timeout por defecto (5 s) se queda corto y las marca como fallo.
+vi.setConfig({ testTimeout: 30000 });
+
 const { default: app } = await import("../app.js");
 
 describe("Rate limits por endpoint (M-9/H7)", () => {
@@ -65,5 +69,25 @@ describe("Rate limits por endpoint (M-9/H7)", () => {
       .post("/api/usuarios/login")
       .send({ email: "otra-cuenta@test.local", password: "intento-fallido" });
     expect(otra.status).not.toBe(429);
+  });
+
+  it("B4: 250 GET seguidos no dan 429 (la navegacion no consume el cupo de escritura)", async () => {
+    const estados = [];
+    for (let i = 0; i < 250; i += 1) {
+      const res = await request(app).get("/api/ruta-inexistente-rate-limit");
+      estados.push(res.status);
+    }
+    expect(estados.every((s) => s !== 429)).toBe(true);
+    expect(estados.every((s) => s === 404)).toBe(true);
+  });
+
+  it("B4: el cupo de escritura (200/15min) si limita los POST", async () => {
+    let ultimo;
+    for (let i = 0; i < 201; i += 1) {
+      // logout sin token: 401 hasta que el cupo general de escritura responde 429.
+      ultimo = await request(app).post("/api/usuarios/logout");
+    }
+    expect(ultimo.status).toBe(429);
+    expect(ultimo.body.error.code).toBe("RATE_LIMIT");
   });
 });

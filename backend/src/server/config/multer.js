@@ -46,6 +46,10 @@ const EXTENSION_CANONICA = { jpeg: ".jpg", png: ".png", webp: ".webp", gif: ".gi
 const LIMITE_SUBIDAS_POR_USUARIO = 20;
 const VENTANA_SUBIDAS_MS = 60 * 60 * 1000;
 const subidasPorUsuario = new Map();
+// LIMITACION CONOCIDA (no resuelta): este cupo vive en memoria del proceso.
+// Con varias instancias detras de un balanceador cada una lleva su propia
+// cuenta; el limite estricto multi-instancia exige un almacen compartido
+// (Redis). shortcut: con una sola instancia (despliegue actual) es suficiente.
 
 /**
  * Detecta la firma real (magic bytes) de una imagen. Funcion propia, sin
@@ -96,9 +100,16 @@ export function borrarArchivoSubido(file) {
  */
 export function borrarUploadPorUrl(url) {
   if (typeof url !== "string" || !url.startsWith("/uploads/")) return;
-  const nombre = path.basename(url);
+  const relativa = url.slice("/uploads/".length);
+  const nombre = path.basename(relativa);
   if (!/^[a-f0-9]{32}\.(jpg|png|webp|gif)$/i.test(nombre)) return;
-  fs.unlink(path.join(UPLOADS_DIR, nombre), () => {
+  const subdirectorio = path.dirname(relativa);
+  // Solo los directorios propios (raiz de uploads o la subcarpeta reportes/).
+  if (subdirectorio !== "." && subdirectorio !== "reportes") return;
+  const destino = subdirectorio === "."
+    ? path.join(UPLOADS_DIR, nombre)
+    : path.join(UPLOADS_DIR, subdirectorio, nombre);
+  fs.unlink(destino, () => {
     // best effort
   });
 }
@@ -110,6 +121,11 @@ export function borrarUploadPorUrl(url) {
 function limitarSubidasPorUsuario(req, res, next) {
   if (process.env.NODE_ENV === "test") return next();
   const ahora = Date.now();
+  // B2 (auditoria 2026-11-04): purga perezosa de claves vencidas para que el
+  // Map no crezca sin limite con usuarios que subieron una vez.
+  for (const [usuarioId, registro] of subidasPorUsuario) {
+    if (ahora > registro.reinicia) subidasPorUsuario.delete(usuarioId);
+  }
   const registro = subidasPorUsuario.get(req.userId);
   if (!registro || ahora > registro.reinicia) {
     subidasPorUsuario.set(req.userId, { total: 1, reinicia: ahora + VENTANA_SUBIDAS_MS });
@@ -152,9 +168,10 @@ const upload = multer({
  *  4. solo entonces lo escribe en uploads/ con nombre crypto-aleatorio.
  * Errores: 413 si excede 5 MB, 400 si el contenido no es una imagen valida.
  * @param {string} campo nombre del campo multipart (p. ej. "imagen")
+ * @param {string} [subdirectorio] subcarpeta dentro de uploads/ (p. ej. "reportes")
  * @returns {import("express").RequestHandler[]}
  */
-export const subirImagen = (campo) => [
+export const subirImagen = (campo, subdirectorio = "") => [
   limitarSubidasPorUsuario,
   (req, res, next) => {
     upload.single(campo)(req, res, (err) => {
@@ -188,7 +205,12 @@ export const subirImagen = (campo) => [
       }
 
       const nombreArchivo = crypto.randomBytes(16).toString("hex") + EXTENSION_CANONICA[firma];
-      const destino = path.join(UPLOADS_DIR, nombreArchivo);
+      const dirDestino = subdirectorio
+        ? path.join(UPLOADS_DIR, subdirectorio)
+        : UPLOADS_DIR;
+      // La subcarpeta (p. ej. reportes/) se crea al primer uso.
+      fs.mkdirSync(dirDestino, { recursive: true });
+      const destino = path.join(dirDestino, nombreArchivo);
       fs.writeFile(destino, req.file.buffer, (errorEscritura) => {
         if (errorEscritura) return next(errorEscritura);
         req.file.filename = nombreArchivo;

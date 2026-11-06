@@ -27,6 +27,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280, height: 800, minWidth: 1024, minHeight: 700,
     frame: false, titleBarStyle: 'hidden',
+    icon: path.join(__dirname, 'assets', 'icon.png'),
     // F1-F3 (P0 auditoria 2026-10-05) + M-19 (auditoria 2026-10-11):
     // sin acceso Node en el renderer, contexto aislado y sandbox explicito.
     // El renderer solo usa window.electron via preload + contextBridge.

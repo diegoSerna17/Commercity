@@ -7,7 +7,9 @@ import { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } from "../utils/config.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { enviarCorreoRecuperacion, enviarAvisoRegistroDuplicado } from "../utils/mailer.js";
 import { escapeLike } from "../utils/sql.js";
+import { borrarUploadPorUrl } from "../config/multer.js";
 import { destinoPedidosVendedor } from "./admin/pedidos.controllers.js";
+import { registrarAuditoria, ACCIONES } from "../utils/auditoria.js";
 
 // ============================================================================
 // MODULO DE AUTENTICACION (integrado desde AVANCES/SPRING 1/DIEGO SERNA/2)
@@ -20,8 +22,7 @@ import { destinoPedidosVendedor } from "./admin/pedidos.controllers.js";
 
 /**
  * Endpoint de verificación: responde que el servidor esta activo.
- * Usado por GET / (routes/routes.js) y por GET /api/usuarios/
- * (routes/usuarios.routes.js).
+ * Usado por GET /api/usuarios/ (routes/usuarios.routes.js).
  *
  * Fix DEF-02 / DEF-03 (P1 contrato API uniforme): anteriormente devolvia
  * texto plano, lo cual rompia el contrato { success, data } que usan los
@@ -96,7 +97,7 @@ export const register = async (req, res) => {
             await connection.beginTransaction();
 
             const [resultado] = await connection.query(
-                "INSERT INTO usuarios (email, password, nombre_completo) VALUES (?, ?, ?)",
+                "INSERT INTO usuarios (email, password, nombre_completo, terminos_aceptados_en) VALUES (?, ?, ?, NOW())",
                 [email, passwordHash, nombre_completo || null]
             );
             const usuarioId = resultado.insertId;
@@ -326,15 +327,10 @@ export const getPerfil = async (req, res) => {
 };
 
 // ============ CAMBIAR ROL (comprador <-> vendedor) =============
-export const cambiarRol = async (req, res) => {
-    const { rol } = req.body ?? {};
+export const cambiarRol = async (req, res, next) => {
+    const { rol } = req.body;
 
     try {
-        const rolesValidos = ["comprador", "vendedor"];
-        if (!rolesValidos.includes(rol)) {
-            return errorResponse(res, "Rol inválido. Solo comprador o vendedor", 400);
-        }
-
         const [rolRow] = await pool.query(
             "SELECT id FROM roles WHERE nombre = ?",
             [rol]
@@ -358,6 +354,27 @@ export const cambiarRol = async (req, res) => {
         try {
             await connection.beginTransaction();
 
+            // B2 (auditoria 2026-11-04): bajar a comprador con productos activos
+            // o pedidos abiertos dejaría ventas y compromisos sin responsable.
+            if (rol === "comprador") {
+                const [[compromisos]] = await connection.query(
+                    `SELECT
+                       (SELECT COUNT(*) FROM productos
+                         WHERE vendedor_id = ? AND eliminado_por_admin = 0) AS productos_activos,
+                       (SELECT COUNT(*) FROM detalle_pedidos
+                         WHERE vendedor_id = ? AND estado_envio IN ('Pendiente', 'En camino')) AS pedidos_abiertos`,
+                    [req.userId, req.userId]
+                );
+                if (Number(compromisos.productos_activos) > 0 || Number(compromisos.pedidos_abiertos) > 0) {
+                    await connection.rollback();
+                    return errorResponse(
+                        res,
+                        "No puedes cambiar a comprador con productos activos o pedidos abiertos",
+                        409
+                    );
+                }
+            }
+
             await connection.query(
                 "DELETE FROM usuario_roles WHERE usuario_id = ?",
                 [req.userId]
@@ -366,6 +383,20 @@ export const cambiarRol = async (req, res) => {
                 "INSERT INTO usuario_roles (usuario_id, rol_id) VALUES (?, ?)",
                 [req.userId, rolRow[0].id]
             );
+
+            // M-11/B2: auditoria del cambio de rol (sin datos sensibles).
+            await registrarAuditoria({
+                actorId: req.userId,
+                accion: ACCIONES.USUARIO_ROL_CAMBIADO,
+                objetivoTipo: "usuario",
+                objetivoId: req.userId,
+                detalle: {
+                    roles_anteriores: rolesActuales.map((r) => r.nombre),
+                    rol_nuevo: rol,
+                },
+                ip: req.ip,
+                conn: connection,
+            });
 
             await connection.commit();
         } catch (err) {
@@ -379,8 +410,7 @@ export const cambiarRol = async (req, res) => {
             roles: [rol]
         });
     } catch (error) {
-        console.error("Error en cambiarRol:", error?.message);
-        return errorResponse(res, "Error interno del servidor", 500);
+        return next(error);
     }
 };
 
@@ -493,16 +523,8 @@ export const adminGetDatos = async (req, res) => {
  */
 export const getPerfilPublico = async (req, res) => {
     try {
-        const { id } = req.params;
-
-        // Validacion de entrada: id debe ser entero positivo
-        const idNumerico = Number(id);
-        if (!Number.isInteger(idNumerico) || idNumerico <= 0) {
-            return res.status(400).json({
-                success: false,
-                error: { code: "VALIDATION_ERROR", message: "El id debe ser un entero positivo" }
-            });
-        }
+        // Params ya validados por perfilPublicoParamsSchema (validate()).
+        const idNumerico = Number(req.params.id);
 
         // Busqueda del usuario activo en la BD (excluye datos sensibles)
         const [rows] = await pool.query(
@@ -559,7 +581,7 @@ export const getPerfilPublico = async (req, res) => {
  * - Se conservan pedidos, calificaciones y reportes (historial intacto)
  * - Todo en UNA sola transaccion.
  */
-export const eliminarCuentaComprador = async (req, res) => {
+export const eliminarCuentaComprador = async (req, res, next) => {
     const compradorId = req.userId;
     const { password } = req.body ?? {};
 
@@ -595,6 +617,36 @@ export const eliminarCuentaComprador = async (req, res) => {
             });
         }
 
+        // B3 (auditoria 2026-11-04): un administrador puede darse de baja, pero
+        // la operacion no puede dejar la plataforma sin ningun admin activo.
+        // Se reutiliza la regla del ultimo administrador de validarObjetivoBaneable.
+        const [rolAdmin] = await conn.query(
+            `SELECT MAX(CASE WHEN r.nombre = 'administrador' THEN 1 ELSE 0 END) AS es_admin
+               FROM usuario_roles ur
+               JOIN roles r ON r.id = ur.rol_id
+              WHERE ur.usuario_id = ?`,
+            [compradorId]
+        );
+        if (Number(rolAdmin[0]?.es_admin) === 1) {
+            const [adminsActivos] = await conn.query(
+                `SELECT COUNT(DISTINCT u.id) AS total
+                   FROM usuarios u
+                   JOIN usuario_roles ur ON ur.usuario_id = u.id
+                   JOIN roles r ON r.id = ur.rol_id
+                  WHERE r.nombre = 'administrador' AND u.activo = 1`
+            );
+            if (Number(adminsActivos[0]?.total || 0) <= 1) {
+                await conn.rollback();
+                return res.status(409).json({
+                    success: false,
+                    error: {
+                        code: "CONFLICT",
+                        message: "No se puede eliminar la cuenta del último administrador activo"
+                    }
+                });
+            }
+        }
+
         // Desactivacion logica de la cuenta. M-8: incrementa token_version
         // (todas las sesiones del usuario quedan invalidas al instante).
         await conn.query(
@@ -615,6 +667,18 @@ export const eliminarCuentaComprador = async (req, res) => {
             [compradorId]
         );
 
+        // B3: dejar constancia de la baja en la auditoria, dentro de la misma
+        // transaccion. Fail-soft: un fallo de auditoria no revierte la baja.
+        await registrarAuditoria({
+            actorId: compradorId,
+            accion: ACCIONES.USUARIO_BAJA_CUENTA,
+            objetivoTipo: "usuario",
+            objetivoId: compradorId,
+            detalle: { pedidos },
+            ip: req.ip,
+            conn,
+        });
+
         await conn.commit();
         return res.status(200).json({
             success: true,
@@ -622,11 +686,7 @@ export const eliminarCuentaComprador = async (req, res) => {
         });
     } catch (error) {
         await conn.rollback();
-        console.error("Error al eliminar la cuenta:", error.message);
-        return res.status(500).json({
-            success: false,
-            error: { code: "INTERNAL_ERROR", message: "Error al eliminar la cuenta" }
-        });
+        next(error);
     } finally {
         conn.release();
     }
@@ -668,24 +728,46 @@ export const listarUsuarios = async (req, res, next) => {
  */
 export const actualizarPerfil = async (req, res, next) => {
     try {
-        const nombre = typeof req.body?.nombre_completo === "string"
-            ? req.body.nombre_completo.trim()
-            : "";
+        // Body validado por actualizarPerfilSchema (validate()).
+        const { nombre_completo, descripcion_personal, direccion_envio } = req.body;
 
-        if (!nombre) {
-            return errorResponse(res, "El nombre de perfil es obligatorio", 400);
+        const [actual] = await pool.query(
+            "SELECT foto_perfil FROM usuarios WHERE id = ?",
+            [req.userId]
+        );
+
+        const campos = [];
+        const valores = [];
+
+        if (nombre_completo !== undefined) {
+            campos.push("nombre_completo = ?");
+            valores.push(nombre_completo);
         }
-        if (nombre.length > 100) {
-            return errorResponse(res, "El nombre de perfil no puede superar 100 caracteres", 400);
+        if (descripcion_personal !== undefined) {
+            campos.push("descripcion_personal = ?");
+            valores.push(descripcion_personal);
+        }
+        if (direccion_envio !== undefined) {
+            campos.push("direccion_envio = ?");
+            valores.push(direccion_envio);
+        }
+        if (req.file) {
+            campos.push("foto_perfil = ?");
+            valores.push(`/uploads/${req.file.filename}`);
         }
 
         await pool.query(
-            "UPDATE usuarios SET nombre_completo = ? WHERE id = ?",
-            [nombre, req.userId]
+            `UPDATE usuarios SET ${campos.join(", ")} WHERE id = ?`,
+            [...valores, req.userId]
         );
 
+        // Si se reemplazo el avatar, el archivo anterior deja de estar referenciado.
+        const fotoAnterior = actual[0]?.foto_perfil;
+        if (req.file && fotoAnterior) borrarUploadPorUrl(fotoAnterior);
+
         const [rows] = await pool.query(
-            "SELECT id, email, nombre_completo, foto_perfil FROM usuarios WHERE id = ?",
+            `SELECT id, email, nombre_completo, foto_perfil, descripcion_personal, direccion_envio
+               FROM usuarios WHERE id = ?`,
             [req.userId]
         );
 

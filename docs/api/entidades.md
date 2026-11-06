@@ -1,7 +1,7 @@
 # Contratos de datos — CommerCity
 
 > Generado con `npm run docs:api` + `npm run docs:entidades` desde `backend/src/server/schemas/`. No editar a mano.
-> 43 contratos documentados. Fuente de verdad: los esquemas Zod.
+> 48 contratos documentados. Fuente de verdad: los esquemas Zod.
 
 ## Indice
 
@@ -23,6 +23,8 @@
 - [CatalogoQuery](#catalogoquery)
 - [CrearProducto](#crearproducto)
 - [EditarProducto](#editarproducto)
+- [EstadoProductoVendedor](#estadoproductovendedor)
+- [MisProductosQuery](#misproductosquery)
 - [ProductoIdParams](#productoidparams)
 - [ValidarStock](#validarstock)
 - [ConfirmarPago](#confirmarpago)
@@ -40,6 +42,9 @@
 - [MensajeIdParams](#mensajeidparams)
 - [ListarNotificacionesQuery](#listarnotificacionesquery)
 - [CalificacionVendedor](#calificacionvendedor)
+- [CalificacionesVendedorParams](#calificacionesvendedorparams)
+- [CalificacionesVendedorQuery](#calificacionesvendedorquery)
+- [SeguidoresQuery](#seguidoresquery)
 - [SeguirUsuario](#seguirusuario)
 - [CrearReporte](#crearreporte)
 - [AdminProductosQuery](#adminproductosquery)
@@ -171,7 +176,7 @@
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
 | `email` | string (email) | si | Correo del usuario |
-| `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes) |
+| `password` | string [longitud >= 1, longitud <= 200] | si | Contraseña del usuario (no vacia) |
 
 **Ejemplo:**
 
@@ -213,6 +218,7 @@
 | `email` | string (email) | si | Correo del usuario |
 | `password` | string [longitud >= 8] | si | Contraseña: minimo 8 caracteres, con letra y numero (max 72 bytes) |
 | `nombre_completo` | string [longitud >= 2] | no | Nombre completo (opcional, min 2) |
+| `acepta_terminos` | boolean | si | Aceptacion de terminos y condiciones (debe ser true) |
 
 **Ejemplo:**
 
@@ -299,20 +305,24 @@
 
 ## ActualizarPerfil (`ActualizarPerfil`)
 
-> Body de PATCH /api/usuarios/me (actualiza unicamente el nombre)
+> Body de PATCH /api/usuarios/me (nombre, descripcion o direccion; avatar por multipart)
 
 - **Fuente:** `backend/src/server/schemas/usuarios.schema.js`
 - **Usado en:** `PATCH /api/usuarios/me`
 
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
-| `nombre_completo` | string [longitud >= 1, longitud <= 100] | si | Nombre de perfil (obligatorio, max 100) |
+| `nombre_completo` | string [longitud >= 1, longitud <= 100] | no | Nombre de perfil (max 100) |
+| `descripcion_personal` | string [longitud <= 2000] | no | Descripcion personal del perfil (max 2000) |
+| `direccion_envio` | string [longitud <= 500] | no | Direccion de envio por defecto (max 500) |
+| `avatar` | const: "1" | no | Marcador interno del avatar multipart |
 
 **Ejemplo:**
 
 ```json
 {
-  "nombre_completo": "Ana Compradora"
+  "nombre_completo": "Ana Compradora",
+  "descripcion_personal": "Compro en CommerCity"
 }
 ```
 
@@ -371,12 +381,12 @@
 
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
-| `nombre` | string [longitud >= 1] | si | Nombre del producto |
-| `descripcion` | string [longitud >= 1] | si | Descripcion |
-| `precio` | number [> 0] | si | Precio publicado (ya incluye IVA 19%, RF48) |
-| `stock` | integer [min 0, max 9007199254740991] | si | Stock disponible (entero >= 0) |
-| `descuento` | number [min 0, max 100] | no | Descuento porcentual (opcional) |
-| `categoria` | string [longitud >= 1] | si | Categoria (se crea si no existe) |
+| `nombre` | string [longitud >= 1, longitud <= 150] | si | Nombre del producto (max 150) |
+| `descripcion` | string [longitud >= 1, longitud <= 5000] | si | Descripcion (TEXT) |
+| `precio` | cualquiera de (2 variantes) | si | Precio publicado (ya incluye IVA 19%, RF48; max DECIMAL(12,2)) |
+| `stock` | cualquiera de (2 variantes) | si | Stock disponible (entero >= 0, max INT) |
+| `descuento` | cualquiera de (2 variantes) | no | Descuento porcentual (opcional) |
+| `categoria` | string [longitud >= 1, longitud <= 100] | si | Categoria (se crea si no existe; max 100) |
 
 **Ejemplo:**
 
@@ -399,12 +409,12 @@
 
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
-| `nombre` | string [longitud >= 1] | no | Nombre del producto |
-| `descripcion` | string [longitud >= 1] | no | Descripcion |
-| `precio` | number [> 0] | no | Precio publicado (ya incluye IVA 19%, RF48) |
-| `stock` | integer [min 0, max 9007199254740991] | no | Stock disponible (entero >= 0) |
-| `descuento` | number [min 0, max 100] | no | Descuento porcentual 0-100 |
-| `categoria` | string [longitud >= 1] | no | Categoria |
+| `nombre` | string [longitud >= 1, longitud <= 150] | no | Nombre del producto (max 150) |
+| `descripcion` | string [longitud >= 1, longitud <= 5000] | no | Descripcion (TEXT) |
+| `precio` | cualquiera de (2 variantes) | no | Precio publicado (ya incluye IVA 19%, RF48; max DECIMAL(12,2)) |
+| `stock` | cualquiera de (2 variantes) | no | Stock disponible (entero >= 0, max INT) |
+| `descuento` | cualquiera de (2 variantes) | no | Descuento porcentual 0-100 |
+| `categoria` | string [longitud >= 1, longitud <= 100] | no | Categoria (max 100) |
 
 **Ejemplo:**
 
@@ -415,12 +425,52 @@
 }
 ```
 
+## EstadoProductoVendedor (`EstadoProductoVendedor`)
+
+> Pausa o reactiva una publicacion propia del vendedor (RF55)
+
+- **Fuente:** `backend/src/server/schemas/productos.schema.js`
+- **Usado en:** `PATCH /api/productos/{id}/estado`
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `estado` | enum: "pausado" \| "activo" | si |  |
+
+**Ejemplo:**
+
+```json
+{
+  "estado": "pausado"
+}
+```
+
+## MisProductosQuery (`MisProductosQuery`)
+
+> Paginacion de GET /api/productos/mis-productos y GET /api/vendedores
+
+- **Fuente:** `backend/src/server/schemas/productos.schema.js`
+- **Usado en:** envoltorio comun / base
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `page` | integer [min 1, max 9007199254740991] | no | Pagina, base 1 |
+| `limit` | integer [min 1, max 100] | no | Registros por pagina (max 100) |
+
+**Ejemplo:**
+
+```json
+{
+  "page": 1,
+  "limit": 50
+}
+```
+
 ## ProductoIdParams (`ProductoIdParams`)
 
 > Params de GET /api/productos/:id y /:id/validar-stock
 
 - **Fuente:** `backend/src/server/schemas/productos.schema.js`
-- **Usado en:** `GET /api/productos/{id}/validar-stock`, `GET /api/productos/{id}`, `PUT /api/productos/{id}`
+- **Usado en:** `GET /api/productos/{id}/validar-stock`, `GET /api/productos/{id}`, `PUT /api/productos/{id}`, `PATCH /api/productos/{id}/estado`, `DELETE /api/productos/{id}`
 
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
@@ -782,6 +832,67 @@
 }
 ```
 
+## CalificacionesVendedorParams (`CalificacionesVendedorParams`)
+
+> Id del vendedor cuyas calificaciones se consultan
+
+- **Fuente:** `backend/src/server/schemas/calificaciones.schema.js`
+- **Usado en:** `GET /api/calificaciones/vendedor/{id}`
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `id` | integer [max 9007199254740991, > 0] | si | Identificador entero positivo de ruta o cuerpo |
+
+**Ejemplo:**
+
+```json
+{
+  "id": 4
+}
+```
+
+## CalificacionesVendedorQuery (`CalificacionesVendedorQuery`)
+
+> Paginacion de las calificaciones recibidas por un vendedor
+
+- **Fuente:** `backend/src/server/schemas/calificaciones.schema.js`
+- **Usado en:** `GET /api/calificaciones/vendedor/{id}`
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `page` | integer [min 1, max 9007199254740991] | no | Pagina, base 1 |
+| `limit` | integer [min 1, max 100] | no | Registros por pagina (max 100) |
+
+**Ejemplo:**
+
+```json
+{
+  "page": 1,
+  "limit": 10
+}
+```
+
+## SeguidoresQuery (`SeguidoresQuery`)
+
+> Paginacion de GET /api/seguidores/siguiendo y /seguidores
+
+- **Fuente:** `backend/src/server/schemas/seguidores.schema.js`
+- **Usado en:** envoltorio comun / base
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `page` | integer [min 1, max 9007199254740991] | no | Pagina, base 1 |
+| `limit` | integer [min 1, max 100] | no | Registros por pagina (max 100) |
+
+**Ejemplo:**
+
+```json
+{
+  "page": 1,
+  "limit": 50
+}
+```
+
 ## SeguirUsuario (`SeguirUsuario`)
 
 > Body de POST /api/seguidores/ (seguir a un usuario)
@@ -808,21 +919,16 @@
 - **Fuente:** `backend/src/server/schemas/reportes.schema.js`
 - **Usado en:** `POST /api/reportes/`
 
-Union discriminada con 2 variantes (ver `openapi.json#/components/schemas/CrearReporte`).
-
-**Ejemplo:**
-
-```json
-{
-  "tipo": "Producto",
-  "motivo": "Producto falsificado",
-  "producto_id": 9
-}
-```
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `tipo` | string [longitud >= 1] | si | Tipo de contenido reportado (se normaliza capitalizacion) |
+| `motivo` | string [longitud >= 1, longitud <= 2000] | si | Motivo del reporte (max 2000) |
+| `producto_id` | integer [max 9007199254740991, > 0] | no | Producto reportado (requerido si tipo=Producto) |
+| `usuario_reportado_id` | integer [max 9007199254740991, > 0] | no | Usuario reportado (requerido si tipo=Usuario) |
 
 ## AdminProductosQuery (`AdminProductosQuery`)
 
-> Query de GET /api/admin/productos (RF68/RF72)
+> Query de GET /api/admin/productos (RF68/RF72, paginado)
 
 - **Fuente:** `backend/src/server/schemas/admin.schema.js`
 - **Usado en:** `GET /api/admin/productos`
@@ -831,19 +937,23 @@ Union discriminada con 2 variantes (ver `openapi.json#/components/schemas/CrearR
 |---|---|---|---|
 | `q` | string | no | Busca por producto o vendedor |
 | `soloActivos` | string | no | "true" para excluir suspendidos |
+| `pagina` | integer [max 9007199254740991, > 0] | no | Pagina (default 1) |
+| `por_pagina` | integer [max 100, > 0] | no | Productos por pagina (default 50, max 100) |
 
 **Ejemplo:**
 
 ```json
 {
   "q": "cafe",
-  "soloActivos": "true"
+  "soloActivos": "true",
+  "pagina": 1,
+  "por_pagina": 50
 }
 ```
 
 ## AdminReportesQuery (`AdminReportesQuery`)
 
-> Query de GET /api/admin/reportes (RF60-RF66)
+> Query de GET /api/admin/reportes (RF60-RF66, paginado)
 
 - **Fuente:** `backend/src/server/schemas/admin.schema.js`
 - **Usado en:** `GET /api/admin/reportes`
@@ -853,12 +963,16 @@ Union discriminada con 2 variantes (ver `openapi.json#/components/schemas/CrearR
 | `q` | string | no | Texto a buscar |
 | `estado` | enum: "pendiente" \| "resuelto" | no | Filtra por estado |
 | `incluir_archivados` | string | no | Valores que incluyen archivados: "1", "true", "si" |
+| `pagina` | integer [max 9007199254740991, > 0] | no | Pagina (default 1) |
+| `por_pagina` | integer [max 100, > 0] | no | Reportes por pagina (default 50, max 100) |
 
 **Ejemplo:**
 
 ```json
 {
-  "estado": "pendiente"
+  "estado": "pendiente",
+  "pagina": 1,
+  "por_pagina": 50
 }
 ```
 
@@ -894,7 +1008,7 @@ Union discriminada con 2 variantes (ver `openapi.json#/components/schemas/CrearR
 
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
-| `q` | string | si | Texto a buscar (vacio = listas vacias) |
+| `q` | string | no | Texto a buscar (vacio = listas vacias) |
 | `scope` | enum: "all" \| "usuario" \| "producto" | no | Alcance de la busqueda |
 
 **Ejemplo:**

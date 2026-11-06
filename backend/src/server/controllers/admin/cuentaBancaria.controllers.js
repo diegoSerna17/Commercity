@@ -1,8 +1,6 @@
-import { z } from "zod";
 import bcrypt from "bcrypt";
 import pool from "../../config/db.js";
 import { successResponse, errorResponse } from "../../utils/response.js";
-import { bancoPlataformaSchema } from "../../schemas/cuentaBancaria.schema.js";
 import {
   buscarCuentaCommercity,
   recifrarCuentaBancariaSiEsLegado,
@@ -81,7 +79,8 @@ export const getMiCuentaBancariaMasked = async (req, res, next) => {
 export const upsertMiCuentaBancaria = async (req, res, next) => {
   const conn = await pool.getConnection();
   try {
-    const data = bancoPlataformaSchema.parse(req.body);
+    // Body validado por upsertCuentaBancariaAdminSchema (validate()).
+    const data = req.body;
     const usuarioId = req.userId;
 
     // M-12 (TASK-4.5): step-up obligatorio con la contrasena del administrador
@@ -148,10 +147,6 @@ export const upsertMiCuentaBancaria = async (req, res, next) => {
     );
   } catch (err) {
     await conn.rollback();
-    if (err instanceof z.ZodError) {
-      return errorResponse(res, "Datos de cuenta bancaria inválidos.", 400,
-        err.issues.map((i) => ({ campo: i.path.join("."), mensaje: i.message })));
-    }
     next(err);
   } finally {
     conn.release();

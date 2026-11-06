@@ -54,6 +54,28 @@ describe("Seguidores", () => {
         expect(response.body.error.code).toBe("VALIDATION_ERROR");
     });
 
+    it("B2: pagina siguiendo/seguidores con LIMIT/OFFSET", async () => {
+        pool.query.mockImplementation((sql) => {
+            if (sql.includes("COUNT(*)")) return [[{ total: 5 }], undefined];
+            if (sql.includes("LIMIT ? OFFSET ?")) return [[{ id: 1 }], undefined];
+            return [[], undefined];
+        });
+
+        const res = await request(app)
+            .get("/api/seguidores/siguiendo?page=2&limit=2")
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.paginacion).toMatchObject({
+            pagina: 2,
+            por_pagina: 2,
+            total: 5,
+            total_paginas: 3,
+        });
+        const listado = pool.query.mock.calls.find(([sql]) => String(sql).includes("LIMIT ? OFFSET ?"));
+        expect(listado[1]).toEqual([9, 2, 2]);
+    });
+
     it("impide el auto-seguimiento", async () => {
         const response = await request(app)
             .post("/api/seguidores")

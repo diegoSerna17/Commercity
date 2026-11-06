@@ -1,24 +1,13 @@
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-import { validarId } from "../utils/ids.js";
 import { registrarAuditoria, ACCIONES } from "../utils/auditoria.js";
 import { borrarArchivoSubido } from "../config/multer.js";
-
-const TIPOS_VALIDOS = ["Producto", "Usuario"];
-
-/**
- * Normaliza el tipo de reporte a la nomenclatura del ENUM de BD
- * ('Producto' | 'Usuario'), aceptando variantes de mayusculas/minusculas.
- * @param {string} tipo - valor recibido del cliente
- * @returns {string} valor normalizado
- */
-const normalizarTipo = (tipo) =>
-  tipo.charAt(0).toUpperCase() + tipo.slice(1).toLowerCase();
 
 /**
  * Crea un reporte de producto o usuario (RF62/RF63, RF79, RF101).
  * El informante se toma del JWT (req.userId), nunca del body.
  * La evidencia es opcional (archivo multipart "evidencia").
+ * El formato lo valida crearReporteSchema (validate()).
  *
  * @param {import("express").Request} req
  * @param {import("express").Response} res
@@ -26,71 +15,35 @@ const normalizarTipo = (tipo) =>
  */
 export const crearReporte = async (req, res, next) => {
   try {
-    // B-8: un POST sin cuerpo llegaba como req.body undefined y daba 500 en
-    // vez de 400; se coalesce a {} y las validaciones responden 400.
-    const body = req.body ?? {};
-    const tipo = normalizarTipo(
-      typeof body.tipo === "string" ? body.tipo.trim() : ""
-    );
-    const motivo =
-      typeof body.motivo === "string" ? body.motivo.trim() : "";
-    const evidenciaUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    const tipo = req.body.tipo;
+    const motivo = req.body.motivo;
+    const evidenciaUrl = req.file ? `/uploads/reportes/${req.file.filename}` : null;
 
-    if (!TIPOS_VALIDOS.includes(tipo)) {
-      // TASK-4.6: sin reporte, la evidencia subida no debe quedar huerfana.
-      borrarArchivoSubido(req.file);
-      return errorResponse(
-        res,
-        "El tipo de reporte debe ser 'Producto' o 'Usuario'",
-        400
-      );
-    }
-    if (!motivo) {
-      borrarArchivoSubido(req.file);
-      return errorResponse(res, "El motivo es obligatorio", 400);
-    }
-    if (motivo.length > 2000) {
-      borrarArchivoSubido(req.file);
-      return errorResponse(res, "El motivo es demasiado largo", 400);
-    }
-
-    let productoId = null;
-    let usuarioReportadoId = null;
+    let productoId = req.body.producto_id ?? null;
+    let usuarioReportadoId = req.body.usuario_reportado_id ?? null;
 
     if (tipo === "Producto") {
-      const id = Number(body.producto_id);
-      if (!validarId(id)) {
-        borrarArchivoSubido(req.file);
-        return errorResponse(res, "Debe indicar un producto valido", 400);
-      }
       const [producto] = await pool.query(
         "SELECT id FROM productos WHERE id = ?",
-        [id]
+        [productoId]
       );
       if (producto.length === 0) {
         borrarArchivoSubido(req.file);
         return errorResponse(res, "Producto no encontrado", 404);
       }
-      productoId = id;
     } else {
-      const id = Number(body.usuario_reportado_id);
-      if (!validarId(id)) {
-        borrarArchivoSubido(req.file);
-        return errorResponse(res, "Debe indicar un usuario valido", 400);
-      }
-      if (id === req.userId) {
+      if (usuarioReportadoId === req.userId) {
         borrarArchivoSubido(req.file);
         return errorResponse(res, "No puedes reportarte a ti mismo", 400);
       }
       const [usuario] = await pool.query(
         "SELECT id FROM usuarios WHERE id = ?",
-        [id]
+        [usuarioReportadoId]
       );
       if (usuario.length === 0) {
         borrarArchivoSubido(req.file);
         return errorResponse(res, "Usuario no encontrado", 404);
       }
-      usuarioReportadoId = id;
     }
 
     // M-14: deduplicar por (informante, objetivo, estado abierto): un usuario

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { createPortal } from "react-dom";
 import { formatCOP } from "../../utils/historialUtils.js";
-import { EstadoBadge, Avatar } from "../../utils/historialUtils.jsx";
+import { EstadoBadge, Avatar } from "../../utils/historialComponentes.jsx";
+import Modal from "../../components/globales/Modal.jsx";
 
 export default function DetalleCompras({
   order,
@@ -25,18 +25,15 @@ export default function DetalleCompras({
     ? "bg-input-bg rounded-card overflow-x-hidden overflow-y-auto max-h-64 divide-y divide-surface-container/30"
     : "bg-input-bg rounded-card overflow-hidden divide-y divide-surface-container/30";
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm">
-      <div
-        className="min-h-full flex items-center justify-center p-4"
-        role="presentation"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-      >
-        <div className="bg-auth-card-bg rounded-hero shadow-2xl w-[400px] sm:w-[500px]">
+  return (
+    <Modal
+      abierto
+      onClose={onClose}
+      tituloId="detalle-compra-titulo"
+      panelClassName="bg-auth-card-bg rounded-hero shadow-2xl w-[400px] sm:w-[500px]"
+    >
         <div className="px-4 sm:px-6 pt-5 sm:pt-6 pb-3 sm:pb-4">
-          <h2 className="text-on-surface text-xl sm:text-2xl font-extrabold tracking-tight leading-tight">
+          <h2 id="detalle-compra-titulo" className="text-on-surface text-xl sm:text-2xl font-extrabold tracking-tight leading-tight">
             Detalle de la compra
           </h2>
           <p className="text-brand-muted-text font-bold text-xs sm:text-sm mt-1 mb-2 sm:mb-3">
@@ -117,9 +114,6 @@ export default function DetalleCompras({
               Cerrar
             </button>
           </div>
-        </div>
-      </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }

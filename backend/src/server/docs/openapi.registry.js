@@ -17,6 +17,7 @@ import {
   validarStockQuerySchema,
   crearProductoSchema,
   editarProductoSchema,
+  estadoProductoVendedorSchema,
 } from "../schemas/productos.schema.js";
 import {
   confirmarPagoSchema,
@@ -45,7 +46,7 @@ import {
   mensajeIdParamsSchema,
 } from "../schemas/chat.schema.js";
 import { listarNotificacionesQuerySchema } from "../schemas/notificaciones.schema.js";
-import { calificacionSchema } from "../schemas/calificaciones.schema.js";
+import { calificacionSchema, calificacionesVendedorParamsSchema, calificacionesVendedorQuerySchema } from "../schemas/calificaciones.schema.js";
 import { seguirSchema, seguidorIdParamSchema } from "../schemas/seguidores.schema.js";
 import { crearReporteSchema } from "../schemas/reportes.schema.js";
 import {
@@ -59,7 +60,7 @@ import {
 } from "../schemas/admin.schema.js";
 
 // ============================================================================
-// Registro de las 72 operaciones de la API (fuente del OpenAPI 3.1).
+// Registro de las 76 operaciones de la API (fuente del OpenAPI 3.1).
 // Cada operacion referencia esquemas Zod de schemas/ (contratos de entrada).
 // Convencion: auth=false publico; auth=true exige JWT Bearer;
 // roles=[...] exige ademas esos roles (RBAC).
@@ -92,13 +93,7 @@ const creado = (description, extra = {}) => ({ 201: { description }, ...extra })
 
 /** @type {Operacion[]} */
 export const operaciones = [
-  // ── Base (2) ──────────────────────────────────────────────
-  {
-    method: "get", path: "/", operationId: "verificarServidor", tag: "Base",
-    summary: "Verificacion del servidor",
-    description: "Endpoint raiz de verificacion (responde el modulo usuarios).",
-    responses: ok("Servidor en linea."),
-  },
+  // ── Base (1) ──────────────────────────────────────────────
   {
     method: "get", path: "/health", operationId: "healthCheck", tag: "Base",
     summary: "Healthcheck",
@@ -187,9 +182,9 @@ export const operaciones = [
   },
   {
     method: "patch", path: "/api/usuarios/me", operationId: "actualizarMiPerfil", tag: "Usuarios",
-    summary: "Actualizar mi nombre de perfil",
-    description: "Actualiza unicamente el nombre de perfil (obligatorio, max 100).",
-    auth: true, body: actualizarPerfilSchema,
+    summary: "Actualizar mi perfil",
+    description: "Actualiza nombre, descripcion o direccion (al menos uno) y la foto por multipart en el campo avatar (RF14-RF17, RF38, RF39).",
+    auth: true, body: actualizarPerfilSchema, multipart: "avatar",
     responses: ok("Perfil actualizado.", { ...R400, ...R401 }),
   },
   {
@@ -261,6 +256,20 @@ export const operaciones = [
     description: "Edicion parcial; conserva los valores de BD no enviados. Imagen opcional (multipart).",
     auth: true, roles: ["vendedor"], params: productoIdParamsSchema, body: editarProductoSchema, multipart: "imagen",
     responses: ok("Producto actualizado.", { ...R400, ...R401, ...R403, ...R404 }),
+  },
+  {
+    method: "patch", path: "/api/productos/{id}/estado", operationId: "cambiarEstadoProducto", tag: "Productos",
+    summary: "Pausar o reactivar un producto (vendedor)",
+    description: "Pausa o reactiva una publicacion propia sin borrarla; un producto dado de baja no se reactiva (RF55).",
+    auth: true, roles: ["vendedor"], params: productoIdParamsSchema, body: estadoProductoVendedorSchema,
+    responses: ok("Estado de la publicacion actualizado.", { ...R400, ...R401, ...R403, ...R404, 409: { description: "El producto fue eliminado y no se puede reactivar." } }),
+  },
+  {
+    method: "delete", path: "/api/productos/{id}", operationId: "eliminarProductoPropio", tag: "Productos",
+    summary: "Dar de baja un producto (vendedor)",
+    description: "Baja logica propia: conserva la fila, los pedidos y las calificaciones (RF55).",
+    auth: true, roles: ["vendedor"], params: productoIdParamsSchema,
+    responses: ok("Producto dado de baja.", { ...R400, ...R401, ...R403, ...R404 }),
   },
 
   // ── Pedidos / pago (3) ────────────────────────────────────
@@ -513,13 +522,20 @@ export const operaciones = [
     responses: creado("Reporte creado.", { ...R400, ...R401, ...R404 }),
   },
 
-  // ── Calificaciones (1) ────────────────────────────────────
+  // ── Calificaciones (2) ────────────────────────────────────
   {
     method: "post", path: "/api/calificaciones/vendedor", operationId: "calificarVendedor", tag: "Calificaciones",
     summary: "Calificar a un vendedor",
     description: "Calificacion de 1 a 5 estrellas tras una compra; una por pedido (RF107).",
     auth: true, body: calificacionSchema,
     responses: creado("Calificacion registrada.", { ...R400, ...R401, ...R403 }),
+  },
+  {
+    method: "get", path: "/api/calificaciones/vendedor/{id}", operationId: "listarCalificacionesVendedor", tag: "Calificaciones",
+    summary: "Ver calificaciones de un vendedor",
+    description: "Calificaciones recibidas por un vendedor con promedio y paginacion (RF51). Publico.",
+    params: calificacionesVendedorParamsSchema, query: calificacionesVendedorQuerySchema,
+    responses: ok("Calificaciones del vendedor.", { ...R400, ...R404 }),
   },
 
   // ── Chat (4) ──────────────────────────────────────────────

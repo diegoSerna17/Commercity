@@ -5,9 +5,7 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import router from "./routes/routes.js";
-import carritoRouter from "./routes/carrito.routes.js";
-import usuariosRouter from "./routes/usuarios.routes.js";
+import carritoRouter from "./routes/carrito.routes.js";import usuariosRouter from "./routes/usuarios.routes.js";
 import historialRouter from "./routes/historial.routes.js";
 import productosRouter from "./routes/productos.routes.js";
 import pedidosRouter from "./routes/pedidos.routes.js";
@@ -83,13 +81,22 @@ app.use(cors({
 app.use(validarOriginCookies);
 
 // H2 (P0): /uploads ya no es totalmente publico. Las imagenes de producto
-// (jpg/jpeg/png/webp/gif) siguen publicas para el catalogo (RF45/RF49);
-// cualquier otro archivo (pdf/doc/xls/zip del chat, evidencias) exige JWT.
+// (jpg/jpeg/png/webp/gif) de la raiz siguen publicas para el catalogo
+// (RF45/RF49); las evidencias de reportes viven en /uploads/reportes/ y son
+// privadas (B2, auditoria 2026-11-04). Cualquier otro archivo (pdf/doc/xls/zip
+// del chat, evidencias) exige JWT.
 const IMAGEN_PUBLICA = /\.(jpg|jpeg|png|webp|gif)$/i;
+const ES_EVIDENCIA_PRIVADA = (ruta) => ruta.startsWith("/reportes/");
 app.use(
   "/uploads",
   (req, res, next) => {
-    if (req.method === "GET" && IMAGEN_PUBLICA.test(req.path)) return next();
+    if (
+      req.method === "GET" &&
+      IMAGEN_PUBLICA.test(req.path) &&
+      !ES_EVIDENCIA_PRIVADA(req.path)
+    ) {
+      return next();
+    }
     return authRequired(req, res, next);
   },
   express.static(path.join(__dirname, "uploads"), { dotfiles: "deny", index: false })
@@ -99,14 +106,14 @@ app.use(
 // limitadores con `skip` se desactivan en NODE_ENV=test para no romper
 // Vitest/Supertest; el skip se evalua por peticion.
 const MENSAJE_RATE_LIMIT = { success: false, error: { code: "RATE_LIMIT", message: "Demasiadas peticiones." } };
-const limitePorVentana = ({ windowMs, max, keyGenerator }) => rateLimit({
+const limitePorVentana = ({ windowMs, max, keyGenerator, skip }) => rateLimit({
     windowMs,
     max,
     keyGenerator,
     message: MENSAJE_RATE_LIMIT,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => process.env.NODE_ENV === "test",
+    skip: skip || (() => process.env.NODE_ENV === "test"),
 });
 
 // Anti fuerza bruta en login/recover: por IP (10/min) y ADEMAS por CUENTA
@@ -136,6 +143,21 @@ app.use("/api/chat", limitePorVentana({ windowMs: 60 * 1000, max: 60 }));
 app.use("/api/reportes", limitePorVentana({ windowMs: 60 * 60 * 1000, max: 20 }));
 app.use("/api/seguidores", limitePorVentana({ windowMs: 60 * 1000, max: 30 }));
 
+// B2 (auditoria 2026-11-04): cupos propios para operaciones de dinero/cuenta.
+// Se montan por ruta+metodo para no afectar los GET del mismo prefijo.
+const limiteConfirmarPago = limitePorVentana({ windowMs: 15 * 60 * 1000, max: 30 });
+const limiteCalificaciones = limitePorVentana({ windowMs: 60 * 60 * 1000, max: 20 });
+const limiteCambioRol = limitePorVentana({ windowMs: 60 * 60 * 1000, max: 5 });
+app.use("/api/pedidos/confirmar-pago", (req, res, next) =>
+    req.method === "POST" ? limiteConfirmarPago(req, res, next) : next()
+);
+app.use("/api/calificaciones", (req, res, next) =>
+    req.method === "POST" ? limiteCalificaciones(req, res, next) : next()
+);
+app.use("/api/usuarios/me/rol", (req, res, next) =>
+    req.method === "PATCH" ? limiteCambioRol(req, res, next) : next()
+);
+
 // Subidas multipart (productos/reportes): cupo propio; el limite por usuario
 // se aplica ademas en config/multer.js (TASK-4.6).
 const limiteSubidas = limitePorVentana({ windowMs: 60 * 60 * 1000, max: 30 });
@@ -145,8 +167,26 @@ app.use(["/api/productos", "/api/reportes"], (req, res, next) =>
         : next()
 );
 
-// Rate limit general de escritura (H5): 200 req / 15 min por IP para /api.
-const limiteEscritura = limitePorVentana({ windowMs: 15 * 60 * 1000, max: 200 });
+// Rate limits generales de /api (H5, B4): cupos SEPARADOS por metodo.
+//  - Lectura (GET/HEAD/OPTIONS): 1000 / 15 min. Antes el cupo de escritura
+//    contaba tambien la navegacion y dos pestanas agotaban 200 GET.
+//  - Escritura (POST/PUT/PATCH/DELETE): 200 / 15 min por IP.
+// `/health` se registra antes de estos middlewares, por lo que nunca se limita
+// (Docker/compose y monitoreo deben poder consultarlo siempre).
+const METODOS_LECTURA = new Set(["GET", "HEAD", "OPTIONS"]);
+const limiteLectura = limitePorVentana({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    skip: (req) =>
+        process.env.NODE_ENV === "test" || !METODOS_LECTURA.has(req.method),
+});
+const limiteEscritura = limitePorVentana({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    skip: (req) =>
+        process.env.NODE_ENV === "test" || METODOS_LECTURA.has(req.method),
+});
+app.use("/api/", limiteLectura);
 app.use("/api/", limiteEscritura);
 
 // TASK-8.4 (auditoria 2026-10-11): healthcheck para Docker/compose y
@@ -165,7 +205,6 @@ app.get("/health", async (_req, res) => {
 });
 
 // Routers por modulo
-app.use("/", router);
 app.use("/api/carrito", carritoRouter);
 app.use("/api/usuarios", usuariosRouter);
 app.use("/api/historial", historialRouter);

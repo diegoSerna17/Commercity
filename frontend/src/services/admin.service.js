@@ -80,12 +80,14 @@ export const eliminarReporteAdmin = (id) =>
 
 /**
  * Cuenta bancaria de Commercity, la que recibe la comision del 10% (RF75/RF76).
- * B-7: el backend enmascara por defecto; el formulario de ajustes pide la
- * vista completa con ?revelar=completa para poder editarla.
- * @returns {Promise<{success: boolean, data: {registrado: boolean, datos: {titular_nombre: string, banco: string, tipo_cuenta: string, numero_cuenta: string}|null}}>}
+ * B-7: enmascarada por defecto; `revelar` solo debe pedirse desde un formulario
+ * de edicion abierto por una accion explicita del administrador.
+ * @param {{revelar?: boolean}} [opciones]
  */
-export const obtenerMiCuentaBancaria = () =>
-  request("/api/admin/mi-cuenta-bancaria?revelar=completa");
+export const obtenerMiCuentaBancaria = ({ revelar = false } = {}) =>
+  request(
+    `/api/admin/mi-cuenta-bancaria${revelar ? "?revelar=completa" : ""}`
+  );
 
 /**
  * Registra (POST) o actualiza (PUT) la cuenta bancaria de Commercity. El backend

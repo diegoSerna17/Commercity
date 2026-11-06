@@ -98,18 +98,6 @@ function conexionSinItem() {
   );
 }
 
-describe("GET /", () => {
-  it("responde 200 con el mensaje del servidor en contrato JSON (DEF-02/DEF-03)", async () => {
-    const res = await request(app).get("/");
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.message).toContain("servidor creado");
-    expect(res.body.data.status).toBe("ok");
-    expect(res.body.data.version).toBeDefined();
-    expect(res.body.data.timestamp).toBeDefined();
-  });
-});
-
 describe("POST /api/carrito (agregarProducto)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -142,6 +130,24 @@ describe("POST /api/carrito (agregarProducto)", () => {
       .send({ producto_id: 999, cantidad: 2 });
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("PRODUCT_NOT_FOUND");
+  });
+
+  it("RF55: un producto pausado no se agrega al carrito (404) y el filtro va en el SQL", async () => {
+    productoInexistente();
+
+    const res = await request(app)
+      .post("/api/carrito")
+      .set(auth1)
+      .send({ producto_id: 5, cantidad: 1 });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("PRODUCT_NOT_FOUND");
+
+    const consulta = pool.query.mock.calls.find(([sql]) =>
+      String(sql).includes("SELECT stock, vendedor_id")
+    );
+    expect(consulta[0]).toContain("pausado = 0");
+    expect(consulta[0]).toContain("eliminado_por_vendedor = 0");
   });
 
   it("M-4/DEC-002: rechaza agregar un producto propio (autocompra) -> 400", async () => {

@@ -38,11 +38,6 @@ export const enviarMensaje = async (req, res, next) => {
         if (receptorId === req.userId) {
             return errorResponse(res, "No puedes enviarte un mensaje a ti mismo", 400);
         }
-        // B2 (rama A): sin archivo_url en la BD real no se puede persistir un
-        // adjunto; rechazar con 400 evita perder el archivo silenciosamente.
-        if (req.file) {
-            return errorResponse(res, "El chat no admite archivos en esta versión", 400);
-        }
 
         // Verificar que el receptor exista y este activo.
         const [receptor] = await pool.query(

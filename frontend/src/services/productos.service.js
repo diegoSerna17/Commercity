@@ -29,7 +29,7 @@ export const listarProductos = ({
 };
 
 // Detalle publico de un producto (RF78/RF79).
-export const obtenerProducto = (id) => request(`/api/productos/${id}`);
+// La ficha usa el objeto ya cargado por el catalogo; no hay wrapper propio.
 
 // Categorias activas para el filtro del catalogo.
 export const listarCategorias = () => request("/api/categorias");
@@ -39,6 +39,20 @@ export const listarVendedores = () => request("/api/vendedores");
 
 // Productos del vendedor autenticado (RF54, requiere JWT de vendedor).
 export const listarMisProductos = () => request("/api/productos/mis-productos");
+
+// RF86: valida el stock real antes de pagar.
+export const validarStock = (id, cantidad) =>
+  request(`/api/productos/${id}/validar-stock?cantidad=${cantidad}`);
+
+// RF55: pausar/reactivar y baja logica propia del vendedor.
+export const cambiarEstadoProducto = (id, estado) =>
+  request(`/api/productos/${id}/estado`, {
+    method: "PATCH",
+    body: { estado },
+  });
+
+export const eliminarProductoPropio = (id) =>
+  request(`/api/productos/${id}`, { method: "DELETE" });
 
 /**
  * Indica si un valor debe incluirse en el FormData (no vacio ni nulo).

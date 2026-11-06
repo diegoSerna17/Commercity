@@ -11,7 +11,7 @@ import { errorResponse } from "../utils/response.js";
 const router = Router();
 
 // ============================================================================
-// RUTAS DEL CHAT INTERNO (RF101) - solo texto.
+// RUTAS DEL CHAT INTERNO (RF105) - solo texto.
 //
 // B-13: config/multer.chat.js se elimino (los adjuntos no tienen columna de
 // persistencia, rama A); el multipart se rechaza en la puerta con 400

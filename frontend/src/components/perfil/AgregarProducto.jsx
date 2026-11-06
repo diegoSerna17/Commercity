@@ -1,216 +1,53 @@
-import { useEffect, useRef, useState } from "react";
-import { listarCategorias } from "../../services/productos.service.js";
-
-function formatearPrecio(numero) {
-  return numero.toLocaleString("es-CO");
-}
-
-function limpiarPrecio(valor) {
-  const soloNumeros = (valor || "").replace(/\./g, "").replace(/[^0-9]/g, "");
-  return soloNumeros === "" ? NaN : parseInt(soloNumeros, 10);
-}
+import { useFormularioProducto } from "./useFormularioProducto.js";
+import Modal from "../globales/Modal.jsx";
 
 /**
- * Valores iniciales del formulario.
- * @param {object|null} producto Producto a editar (null al crear)
- * @returns {{nombre: string, descripcion: string, precioTexto: string, stock: string, descuento: string, categoria: string}}
- */
-function valoresIniciales(producto) {
-  return {
-    nombre: producto?.nombre ?? "",
-    descripcion: producto?.descripcion ?? "",
-    precioTexto:
-      producto?.precio != null
-        ? formatearPrecio(Math.round(Number(producto.precio)))
-        : "",
-    stock: producto?.stock != null ? String(producto.stock) : "",
-    descuento: producto?.descuento_porcentaje
-      ? String(producto.descuento_porcentaje)
-      : "",
-    categoria: producto?.categoria_nombre ?? "",
-  };
-}
-
-/**
- * Formulario de producto del vendedor (crear o editar).
- * Carga las categorias reales, valida los campos que exige el backend y
- * muestra el estado de envio, el error del backend y el mensaje de exito.
+ * Formulario de producto del vendedor (crear o editar). La logica de estado y
+ * validacion vive en useFormularioProducto; este componente solo pinta.
  * @param {object} props
  * @param {Function} props.onCancel Cierra el formulario
  * @param {Function} props.onSubmit Recibe (datos, imagen) y llama a la API
  * @param {object|null} props.producto Producto a editar; null para crear
  */
 export default function AgregarProducto({ onCancel, onSubmit, producto = null } = {}) {
-  const esEdicion = Boolean(producto);
-  const inicial = valoresIniciales(producto);
-
-  const [nombre, setNombre] = useState(inicial.nombre);
-  const [descripcion, setDescripcion] = useState(inicial.descripcion);
-  const [precioTexto, setPrecioTexto] = useState(inicial.precioTexto);
-  const [stock, setStock] = useState(inicial.stock);
-  const [estado, setEstado] = useState("disponible");
-  const [descuento, setDescuento] = useState(inicial.descuento);
-  const [categoria, setCategoria] = useState(inicial.categoria);
-  const [categorias, setCategorias] = useState([]);
-  const [cargandoCategorias, setCargandoCategorias] = useState(true);
-  const [errorCategorias, setErrorCategorias] = useState(false);
-  const [imagenArchivo, setImagenArchivo] = useState(null);
-  const inputImagenRef = useRef(null);
-  const [errores, setErrores] = useState({});
-  const [enviando, setEnviando] = useState(false);
-  const [mensajeError, setMensajeError] = useState("");
-  const [mensajeExito, setMensajeExito] = useState("");
-
-  // Categorias reales del backend para el selector (GET /api/categorias).
-  useEffect(() => {
-    let activo = true;
-
-    listarCategorias()
-      .then((respuesta) => {
-        if (!activo) return;
-        setCategorias(Array.isArray(respuesta?.data) ? respuesta.data : []);
-      })
-      .catch(() => {
-        if (activo) setErrorCategorias(true);
-      })
-      .finally(() => {
-        if (activo) setCargandoCategorias(false);
-      });
-
-    return () => {
-      activo = false;
-    };
-  }, []);
-
-  // Si el producto se edita y su categoria no esta en la lista activa, se agrega.
-  const opcionesCategoria =
-    categoria && !categorias.some((c) => c.nombre === categoria)
-      ? [{ id: "actual", nombre: categoria }, ...categorias]
-      : categorias;
-
-  function mostrarError(campo, mostrar) {
-    setErrores((prev) => ({ ...prev, [campo]: mostrar }));
-  }
-
-  function handlePrecioChange(e) {
-    const cursorAlFinal = e.target.selectionEnd === e.target.value.length;
-    const numero = limpiarPrecio(e.target.value);
-
-    if (isNaN(numero)) {
-      setPrecioTexto("");
-      return;
-    }
-
-    setPrecioTexto(formatearPrecio(numero));
-
-    if (cursorAlFinal) {
-      requestAnimationFrame(() => {
-        const input = e.target;
-        input.setSelectionRange(input.value.length, input.value.length);
-      });
-    }
-  }
-
-  function handleImagenChange(e) {
-    const archivo = e.target.files[0];
-
-    if (!archivo) {
-      setImagenArchivo(null);
-      mostrarError("imagen", false);
-      return;
-    }
-
-    if (!archivo.type.startsWith("image/")) {
-      e.target.value = "";
-      setImagenArchivo(null);
-      mostrarError("imagen", true);
-      return;
-    }
-
-    setImagenArchivo(archivo);
-    mostrarError("imagen", false);
-  }
-
-  function validarFormulario() {
-    const nuevosErrores = {};
-
-    if (!nombre.trim()) nuevosErrores.nombre = true;
-
-    // Al crear la imagen es obligatoria; al editar se conserva la actual.
-    const imagenInvalida = imagenArchivo
-      ? !imagenArchivo.type.startsWith("image/")
-      : !esEdicion;
-    if (imagenInvalida) nuevosErrores.imagen = true;
-
-    if (!descripcion.trim()) nuevosErrores.descripcion = true;
-
-    const precio = limpiarPrecio(precioTexto);
-    if (isNaN(precio) || precio <= 0) nuevosErrores.precio = true;
-
-    const stockNum = parseInt(stock, 10);
-    if (isNaN(stockNum) || stockNum < 0) nuevosErrores.stock = true;
-
-    if (!categoria.trim()) nuevosErrores.categoria = true;
-
-    setErrores(nuevosErrores);
-    return Object.keys(nuevosErrores).length === 0;
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setMensajeError("");
-    setMensajeExito("");
-    if (!validarFormulario()) return;
-
-    const datos = {
-      nombre: nombre.trim(),
-      descripcion: descripcion.trim(),
-      precio: limpiarPrecio(precioTexto),
-      stock: parseInt(stock, 10),
-      categoria: categoria.trim(),
-      descuento: descuento !== "" ? parseFloat(descuento) : 0,
-    };
-
-    try {
-      setEnviando(true);
-      const respuesta = await onSubmit?.(datos, imagenArchivo);
-      setMensajeExito(
-        respuesta?.data?.mensaje ||
-          (esEdicion
-            ? "Producto actualizado exitosamente"
-            : "Producto creado exitosamente")
-      );
-      resetForm();
-    } catch (error) {
-      setMensajeError(error?.message || "No se pudo guardar el producto");
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  function resetForm() {
-    const base = valoresIniciales(producto);
-    setNombre(base.nombre);
-    setDescripcion(base.descripcion);
-    setPrecioTexto(base.precioTexto);
-    setStock(base.stock);
-    setEstado("disponible");
-    setDescuento(base.descuento);
-    setCategoria(base.categoria);
-    setImagenArchivo(null);
-    if (inputImagenRef.current) inputImagenRef.current.value = "";
-    setErrores({});
-  }
-
-  function handleCancelar() {
-    if (onCancel) onCancel();
-  }
+  const {
+    esEdicion,
+    nombre,
+    setNombre,
+    descripcion,
+    setDescripcion,
+    precioTexto,
+    handlePrecioChange,
+    stock,
+    setStock,
+    estado,
+    setEstado,
+    descuento,
+    setDescuento,
+    categoria,
+    setCategoria,
+    opcionesCategoria,
+    cargandoCategorias,
+    errorCategorias,
+    inputImagenRef,
+    handleImagenChange,
+    imagenArchivo,
+    errores,
+    enviando,
+    mensajeError,
+    mensajeExito,
+    handleSubmit,
+  } = useFormularioProducto({ onSubmit, producto });
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-surface-container-lowest rounded-hero shadow-2xl w-full max-w-[620px] max-h-[90vh] overflow-y-auto">
+    <Modal
+      abierto
+      onClose={onCancel}
+      tituloId="producto-form-titulo"
+      panelClassName="bg-surface-container-lowest rounded-hero shadow-2xl w-full max-w-[620px] max-h-[90vh] overflow-y-auto"
+    >
         <div className="p-padding-xl">
-          <h1 className="text-headline-sm font-bold text-on-surface mb-padding-md">
+          <h1 id="producto-form-titulo" className="text-headline-sm font-bold text-on-surface mb-padding-md">
             {esEdicion ? "Editar Producto" : "Agregar Producto"}
           </h1>
 
@@ -231,7 +68,7 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
                   <p className="text-error text-body-xs mt-1">Campo requerido</p>
                 )}
               </div>
-              
+
               <div className="flex-1 min-w-0">
                 <label className="block text-body-xs font-bold text-brand-muted-text mb-1" htmlFor="imagen">
                   Imagen
@@ -301,7 +138,7 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
                   <p className="text-error text-body-xs mt-1">Ingresa un precio válido</p>
                 )}
               </div>
-              
+
               <div className="flex-1 min-w-0">
                 <label className="block text-body-xs font-bold text-brand-muted-text mb-1" htmlFor="producto-stock">
                   Stock
@@ -319,7 +156,7 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
                   <p className="text-error text-body-xs mt-1">Ingresa un stock válido</p>
                 )}
               </div>
-              
+
               <div className="flex-1 min-w-0">
                 <label className="block text-body-xs font-bold text-brand-muted-text mb-1" htmlFor="producto-estado">
                   Estado
@@ -358,7 +195,7 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
                   className="w-full bg-input-bg border border-input-bg rounded-xl px-4 py-3 text-body-sm text-on-surface outline-none focus:ring-2 focus:ring-border-focus transition-colors"
                 />
               </div>
-              
+
               <div className="flex-1 min-w-0">
                 <label className="block text-body-xs font-bold text-brand-muted-text mb-1" htmlFor="producto-categoria">
                   Categoria
@@ -421,7 +258,7 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
             <div className="flex flex-col sm:flex-row gap-3 pt-padding-md">
               <button
                 type="button"
-                onClick={handleCancelar}
+                onClick={onCancel}
                 className="flex-1 h-[44px] bg-surface-container-high border border-border-subtle rounded-button text-body-sm font-bold text-brand-muted-text hover:bg-surface-container-highest transition-colors"
               >
                 {mensajeExito ? "Cerrar" : "Cancelar"}
@@ -440,7 +277,6 @@ export default function AgregarProducto({ onCancel, onSubmit, producto = null } 
             </div>
           </form>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

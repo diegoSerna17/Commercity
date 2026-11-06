@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { request } from "../api/client.js";
 import {
   actualizarProducto,
+  cambiarEstadoProducto,
   crearProducto,
+  eliminarProductoPropio,
   listarCategorias,
   listarMisProductos,
   listarProductos,
   listarVendedores,
-  obtenerProducto,
+  validarStock,
 } from "./productos.service.js";
 
 vi.mock("../api/client.js", () => ({
@@ -58,11 +60,6 @@ describe("productos.service", () => {
         "/api/productos?page=1&limit=12&vendedor=Ana+Perez"
       );
     });
-  });
-
-  it("obtenerProducto consulta el detalle publico (RF78/RF79)", async () => {
-    await obtenerProducto(7);
-    expect(request).toHaveBeenCalledWith("/api/productos/7");
   });
 
   it("listarCategorias y listarVendedores alimentan los filtros del catalogo", async () => {
@@ -134,5 +131,34 @@ describe("productos.service", () => {
     expect(opciones.body.get("nombre")).toBe("Teclado nuevo");
     expect(opciones.body.get("stock")).toBe("3");
     expect(opciones.body.has("imagen")).toBe(false);
+  });
+
+  it("validarStock consulta el stock real por producto y cantidad (RF86)", async () => {
+    // Act
+    await validarStock(7, 3);
+
+    // Assert
+    expect(request).toHaveBeenCalledWith("/api/productos/7/validar-stock?cantidad=3");
+  });
+
+  it("cambiarEstadoProducto hace PATCH con el estado (RF55)", async () => {
+    // Act
+    await cambiarEstadoProducto(7, "pausado");
+
+    // Assert
+    expect(request).toHaveBeenCalledWith("/api/productos/7/estado", {
+      method: "PATCH",
+      body: { estado: "pausado" },
+    });
+  });
+
+  it("eliminarProductoPropio hace DELETE del producto (RF55)", async () => {
+    // Act
+    await eliminarProductoPropio(7);
+
+    // Assert
+    expect(request).toHaveBeenCalledWith("/api/productos/7", {
+      method: "DELETE",
+    });
   });
 });

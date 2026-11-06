@@ -4,6 +4,7 @@ import {
   actualizarPerfil,
   cambiarRol,
   cerrarSesion,
+  cerrarTodasLasSesiones,
   eliminarCuenta,
   obtenerMiUsuario,
   restablecerPassword,
@@ -25,11 +26,34 @@ describe("usuarios.service", () => {
     expect(request).toHaveBeenCalledWith("/api/usuarios/me");
   });
 
-  it("actualizarPerfil envia PATCH con el nombre", async () => {
-    await actualizarPerfil("Ana Gomez");
+  it("actualizarPerfil envia PATCH con los campos de texto", async () => {
+    await actualizarPerfil({ nombre_completo: "Ana Gomez" });
     expect(request).toHaveBeenCalledWith("/api/usuarios/me", {
       method: "PATCH",
       body: { nombre_completo: "Ana Gomez" },
+    });
+  });
+
+  it("actualizarPerfil con archivo envia FormData multipart (RF39)", async () => {
+    const archivo = new File([new Uint8Array([1, 2, 3])], "avatar.png", {
+      type: "image/png",
+    });
+
+    await actualizarPerfil({ descripcion_personal: "Hola" }, archivo);
+
+    const [url, opciones] = request.mock.calls[0];
+    expect(url).toBe("/api/usuarios/me");
+    expect(opciones.method).toBe("PATCH");
+    expect(opciones.isForm).toBe(true);
+    expect(opciones.body).toBeInstanceOf(FormData);
+    expect(opciones.body.get("descripcion_personal")).toBe("Hola");
+    expect(opciones.body.get("avatar")).toBeInstanceOf(File);
+  });
+
+  it("cerrarTodasLasSesiones invoca POST /api/usuarios/logout-todas (M-8)", async () => {
+    await cerrarTodasLasSesiones();
+    expect(request).toHaveBeenCalledWith("/api/usuarios/logout-todas", {
+      method: "POST",
     });
   });
 

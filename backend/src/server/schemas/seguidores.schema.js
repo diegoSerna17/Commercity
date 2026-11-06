@@ -1,11 +1,22 @@
 import { z } from "zod";
-import { idParam } from "./common.schema.js";
+import { idParam, paginacionSchema } from "./common.schema.js";
 
 // ============================================================================
 // Contratos del modulo seguidores (RF106, RF110).
-// Movidos verbatim desde seguidores.controllers.js (Fase 1):
-// misma forma, mismo comportamiento (safeParse en el controller).
 // ============================================================================
+
+/** Query paginada de GET /siguiendo y /seguidores. */
+export const seguidoresQuerySchema = z
+  .object({
+    page: paginacionSchema.shape.page,
+    limit: paginacionSchema.shape.limit,
+  })
+  .meta({
+    id: "SeguidoresQuery",
+    title: "SeguidoresQuery",
+    description: "Paginacion de GET /api/seguidores/siguiendo y /seguidores",
+    examples: [{ page: 1, limit: 50 }],
+  });
 
 /** Body de POST /api/seguidores/ (seguir a un usuario). */
 export const seguirSchema = z

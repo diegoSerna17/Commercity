@@ -18,7 +18,7 @@ function fail(msg) {
   console.error(`VERSION-CHECK: ${msg}`);
 }
 
-for (const rel of ["backend/package.json", "apps/escritorio/package.json", "apps/movil/package.json"]) {
+for (const rel of ["backend/package.json", "apps/escritorio/package.json", "apps/movil/package.json", "frontend/package.json"]) {
   const p = join(ROOT, rel);
   if (!existsSync(p)) continue;
   const j = JSON.parse(readFileSync(p, "utf8"));
@@ -46,6 +46,7 @@ if (anterior) {
     "backend/package.json",
     "apps/escritorio/package.json",
     "apps/movil/package.json",
+    "frontend/package.json",
     "frontend/src/constants/buttons.css",
     "frontend/src/constants/inputs.css",
     "docs/api/openapi.json",

@@ -62,6 +62,12 @@ services:
       FRONTEND_URL: http://localhost:5173
     ports:
       - "3000:3000"
+    volumes:
+      # B1 (auditoria 2026-11-04): las imagenes/evidencias subidas viven en un
+      # volumen nombrado; recrear el contenedor ya no borra los archivos de
+      # src/server/uploads. El volumen se inicializa con el contenido y owner
+      # de la imagen (node) la primera vez.
+      - uploads_api:/app/src/server/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -79,3 +85,4 @@ services:
 
 volumes:
   datos_mysql:
+  uploads_api:

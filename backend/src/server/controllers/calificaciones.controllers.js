@@ -6,8 +6,9 @@ import { calificacionSchema } from "../schemas/calificaciones.schema.js";
 // MODULO DE CALIFICACIONES DE VENDEDORES (RF107 del documento 20/08)
 // "El sistema permitira a los compradores calificar a los vendedores de 1 a 5
 // estrellas despues de realizar una compra."
-// Tabla real: calificaciones_vendedores (pedido_id UNIQUE -> una calificacion
-// por pedido; estrellas CHECK 1-5; comprador_id, vendedor_id, comentario).
+// Tabla real: calificaciones_vendedores (UNIQUE (pedido_id, vendedor_id) ->
+// una calificacion por vendedor y pedido; estrellas CHECK 1-5; comprador_id,
+// vendedor_id, comentario).
 // Contrato de entrada: calificacionSchema (schemas/calificaciones.schema.js).
 
 /**
@@ -19,7 +20,9 @@ import { calificacionSchema } from "../schemas/calificaciones.schema.js";
  *  - El pedido debe existir y pertenecer al comprador autenticado.
  *  - Debe existir al menos una linea de compra hacia ese vendedor que no este
  *    cancelada (el RF exige "despues de realizar una compra").
- *  - Una sola calificacion por pedido (restriccion UNIQUE del esquema).
+ *  - Una sola calificacion por vendedor dentro del pedido (UNIQUE
+ *    (pedido_id, vendedor_id) del esquema); un pedido multi-vendedor permite
+ *    calificar a cada vendedor una vez.
  *
  * @param {import("express").Request} req
  * @param {import("express").Response} res
@@ -66,10 +69,12 @@ export const calificarVendedor = async (req, res, next) => {
       return errorResponse(res, "Solo puedes calificar a un vendedor con una compra 'Entregado' en este pedido", 400);
     }
 
-    // Una sola calificacion por pedido (UNIQUE uq_pedido_calificacion_vend).
+    // Una sola calificacion por VENDEDOR dentro del pedido
+    // (UNIQUE (pedido_id, vendedor_id), mig 018). Un pedido multi-vendedor
+    // permite calificar a cada vendedor por separado.
     const [existentes] = await pool.query(
-      "SELECT id FROM calificaciones_vendedores WHERE pedido_id = ?",
-      [pedido_id]
+      "SELECT id FROM calificaciones_vendedores WHERE pedido_id = ? AND vendedor_id = ?",
+      [pedido_id, vendedor_id]
     );
     if (existentes.length > 0) {
       return errorResponse(res, "Este pedido ya fue calificado", 409);
@@ -105,6 +110,77 @@ export const calificarVendedor = async (req, res, next) => {
       },
       201
     );
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/calificaciones/vendedor/:id (RF51)
+ * Calificaciones recibidas por un vendedor, con promedio y paginacion.
+ * Publico con datos minimos del comprador (solo primer nombre).
+ */
+export const listarCalificacionesVendedor = async (req, res, next) => {
+  try {
+    const vendedorId = Number(req.params.id);
+    const { page: pagina, limit: limite } = req.query;
+    const offset = (pagina - 1) * limite;
+
+    // RF51: el perfil solo existe si el id pertenece a un vendedor.
+    const [vendedor] = await pool.query(
+      `SELECT u.id
+         FROM usuarios u
+         INNER JOIN usuario_roles ur ON ur.usuario_id = u.id
+         INNER JOIN roles r ON r.id = ur.rol_id
+        WHERE u.id = ? AND r.nombre = 'vendedor'
+        LIMIT 1`,
+      [vendedorId]
+    );
+    if (vendedor.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Vendedor no encontrado" },
+      });
+    }
+
+    // Resumen y total en una sola consulta.
+    const [[resumen]] = await pool.query(
+      `SELECT COUNT(*) AS total, AVG(estrellas) AS promedio
+         FROM calificaciones_vendedores
+        WHERE vendedor_id = ?`,
+      [vendedorId]
+    );
+    const total = Number(resumen?.total || 0);
+    const promedio = resumen?.promedio;
+
+    const [filas] = await pool.query(
+      `SELECT c.id, c.estrellas, c.comentario, c.fecha_calificacion,
+              SUBSTRING_INDEX(COALESCE(u.nombre_completo, 'Comprador'), ' ', 1) AS comprador
+         FROM calificaciones_vendedores c
+         LEFT JOIN usuarios u ON u.id = c.comprador_id
+        WHERE c.vendedor_id = ?
+        ORDER BY c.id DESC
+        LIMIT ? OFFSET ?`,
+      [vendedorId, limite, offset]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Calificaciones del vendedor",
+      data: {
+        resumen: {
+          promedio: promedio != null ? Number(Number(promedio).toFixed(1)) : null,
+          total,
+        },
+        calificaciones: filas,
+      },
+      paginacion: {
+        pagina,
+        por_pagina: limite,
+        total,
+        total_paginas: Math.max(1, Math.ceil(total / limite)),
+      },
+    });
   } catch (err) {
     next(err);
   }

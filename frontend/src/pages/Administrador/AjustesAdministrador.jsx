@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import {
   guardarMiCuentaBancaria,
   obtenerMiCuentaBancaria,
 } from "../../services/admin.service.js";
+import { useToast } from "../../hooks/useToast.js";
+import Modal from "../../components/globales/Modal.jsx";
 
 // Bancos ofrecidos en el selector; el valor es el que se guarda en la BD.
 const BANCOS = [
@@ -31,21 +33,6 @@ function mensajeDeError(error) {
   return error?.message || "No se pudo guardar la cuenta bancaria.";
 }
 
-function useToast() {
-  const [toast, setToast] = useState({ visible: false, msg: "", isError: false });
-  const timerRef = useRef(null);
-
-  const showToast = useCallback((msg, isError = false) => {
-    clearTimeout(timerRef.current);
-    setToast({ visible: true, msg, isError });
-    timerRef.current = setTimeout(() => {
-      setToast((t) => ({ ...t, visible: false }));
-    }, 3000);
-  }, []);
-
-  return { toast, showToast };
-}
-
 export default function AjustesAdministrador({ onClose }) {
   // RF75/RF76: la cuenta bancaria de Commercity se guarda en el backend cifrada.
   const [cargando, setCargando] = useState(true);
@@ -62,7 +49,8 @@ export default function AjustesAdministrador({ onClose }) {
 
     async function cargarCuenta() {
       try {
-        const res = await obtenerMiCuentaBancaria();
+        // El formulario de edicion es la accion explicita que revela la cuenta.
+        const res = await obtenerMiCuentaBancaria({ revelar: true });
         const datos = res?.data?.datos;
         if (!activo || !res?.data?.registrado || !datos) return;
         setRegistrado(true);
@@ -137,14 +125,7 @@ export default function AjustesAdministrador({ onClose }) {
   }
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center p-4 z-50"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-      role="presentation"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose?.();
-      }}
-    >
+    <Modal abierto onClose={onClose} tituloId="ajustes-admin-titulo">
       <div
         className="relative w-full max-w-[560px] max-h-[90vh] overflow-y-auto rounded-2xl p-6 border"
         style={{
@@ -156,13 +137,16 @@ export default function AjustesAdministrador({ onClose }) {
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <h2
+            id="ajustes-admin-titulo"
             className="font-sans font-extrabold text-xl"
             style={{ color: "var(--color-figma-text-primary)" }}
           >
             Ajustes
           </h2>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Cerrar ajustes de la plataforma"
             className="flex items-center justify-center rounded-full transition-colors p-1"
             style={{ color: "var(--color-brand-muted-text)" }}
           >
@@ -312,6 +296,6 @@ export default function AjustesAdministrador({ onClose }) {
           {toast.msg}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

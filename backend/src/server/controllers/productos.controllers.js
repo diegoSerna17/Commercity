@@ -13,28 +13,22 @@ import { escapeLike } from "../utils/sql.js";
  * @param {import("express").Request} req
  * @param {import("express").Response} res
  */
-export const getProductos = async (req, res) => {
+export const getProductos = async (req, res, next) => {
   try {
-    const pagina = Math.max(parseInt(req.query.page, 10) || 1, 1);
-    const limite = Math.min(Math.max(parseInt(req.query.limit, 10) || 4, 1), 100);
+    const pagina = req.query.page;
+    const limite = req.query.limit;
     const offset = (pagina - 1) * limite;
 
     const nombre = String(req.query.nombre || "");
     const categoria = String(req.query.categoria || "");
     const vendedor = String(req.query.vendedor || "");
+    const vendedorId = req.query.vendedor_id;
 
     const condiciones = [];
     const valores = [];
 
     // M-20 (TASK-5.4): filtro exacto por vendedor para el perfil publico.
-    if (req.query.vendedor_id !== undefined) {
-      const vendedorId = Number(req.query.vendedor_id);
-      if (!Number.isInteger(vendedorId) || vendedorId <= 0) {
-        return res.status(400).json({
-          success: false,
-          error: { code: "VALIDATION_ERROR", message: "vendedor_id debe ser un entero positivo" },
-        });
-      }
+    if (vendedorId !== undefined) {
       condiciones.push("p.vendedor_id = ?");
       valores.push(vendedorId);
     }
@@ -66,6 +60,8 @@ export const getProductos = async (req, res) => {
       INNER JOIN usuarios v ON p.vendedor_id = v.id
       WHERE 1 = 1
         AND p.eliminado_por_admin = 0
+        AND p.eliminado_por_vendedor = 0
+        AND p.pausado = 0
         AND p.estado = 'Disponible'
         ${where}
     `;
@@ -95,6 +91,8 @@ export const getProductos = async (req, res) => {
       INNER JOIN usuarios v ON p.vendedor_id = v.id
       WHERE 1 = 1
         AND p.eliminado_por_admin = 0
+        AND p.eliminado_por_vendedor = 0
+        AND p.pausado = 0
         AND p.estado = 'Disponible'
         ${where}
       ORDER BY p.id DESC
@@ -120,18 +118,14 @@ export const getProductos = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error al obtener productos:", error.message);
-    return res.status(500).json({
-      success: false,
-      error: { code: "INTERNAL_ERROR", message: "Error al obtener productos" },
-    });
+    next(error);
   }
 };
 
 /**
  * Lista las categorias activas para el filtro del panel.
  */
-export const getCategorias = async (_req, res) => {
+export const getCategorias = async (_req, res, next) => {
   try {
     const [categorias] = await pool.query(`
       SELECT id, nombre
@@ -142,36 +136,66 @@ export const getCategorias = async (_req, res) => {
 
     return res.json({ success: true, data: categorias });
   } catch (error) {
-    console.error("Error al obtener categorías:", error.message);
-    return res.status(500).json({
-      success: false,
-      error: { code: "INTERNAL_ERROR", message: "Error al obtener las categorías" },
-    });
+    next(error);
   }
 };
 
 /**
- * Lista los vendedores activos para el filtro del panel.
+ * Lista los vendedores activos para el filtro del panel (paginado).
  */
-export const getVendedores = async (_req, res) => {
+export const getVendedores = async (req, res, next) => {
   try {
-    const [vendedores] = await pool.query(`
-      SELECT u.id, u.nombre_completo AS nombre
+    const { page: pagina, limit: limite } = req.query;
+    const offset = (pagina - 1) * limite;
+    const [[totalRow]] = await pool.query(`
+      SELECT COUNT(*) AS total
       FROM usuarios u
       INNER JOIN usuario_roles ur ON u.id = ur.usuario_id
       INNER JOIN roles r ON r.id = ur.rol_id
       WHERE r.nombre = 'vendedor'
         AND u.activo = 1
-      ORDER BY u.nombre_completo ASC
+        AND EXISTS (
+          SELECT 1 FROM productos p
+           WHERE p.vendedor_id = u.id
+             AND p.eliminado_por_admin = 0
+             AND p.eliminado_por_vendedor = 0
+             AND p.pausado = 0
+             AND p.estado = 'Disponible'
+        )
     `);
+    const total = Number(totalRow?.total || 0);
+    const [vendedores] = await pool.query(
+      `SELECT u.id, u.nombre_completo AS nombre
+       FROM usuarios u
+       INNER JOIN usuario_roles ur ON u.id = ur.usuario_id
+       INNER JOIN roles r ON r.id = ur.rol_id
+       WHERE r.nombre = 'vendedor'
+         AND u.activo = 1
+         AND EXISTS (
+           SELECT 1 FROM productos p
+            WHERE p.vendedor_id = u.id
+              AND p.eliminado_por_admin = 0
+              AND p.eliminado_por_vendedor = 0
+              AND p.pausado = 0
+              AND p.estado = 'Disponible'
+         )
+       ORDER BY u.nombre_completo ASC
+       LIMIT ? OFFSET ?`,
+      [limite, offset]
+    );
 
-    return res.json({ success: true, data: vendedores });
-  } catch (error) {
-    console.error("Error al obtener vendedores:", error.message);
-    return res.status(500).json({
-      success: false,
-      error: { code: "INTERNAL_ERROR", message: "Error al obtener los vendedores" },
+    return res.json({
+      success: true,
+      data: vendedores,
+      paginacion: {
+        pagina,
+        por_pagina: limite,
+        total,
+        total_paginas: Math.max(1, Math.ceil(total / limite)),
+      },
     });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -195,16 +219,9 @@ const avatarPorDefecto = (nombre) =>
  * Detalle publico de un producto con datos del vendedor y su calificacion (RF49).
  * Filtra productos suspendidos por el admin (RF72) y vendedores inactivos (RF74).
  */
-export const getProductoDetalle = async (req, res) => {
+export const getProductoDetalle = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const productoId = Number(id);
-    if (!Number.isInteger(productoId) || productoId <= 0) {
-      return res.status(400).json({
-        success: false,
-        error: { code: "VALIDATION_ERROR", message: "ID inválido" },
-      });
-    }
+    const productoId = Number(req.params.id);
 
     const [filas] = await pool.query(
       `SELECT p.id, p.nombre, p.descripcion, p.imagen_url, p.precio,
@@ -217,6 +234,8 @@ export const getProductoDetalle = async (req, res) => {
          JOIN usuarios  u ON u.id = p.vendedor_id
         WHERE p.id = ?
           AND p.eliminado_por_admin = 0
+          AND p.eliminado_por_vendedor = 0
+          AND p.pausado = 0
           AND u.activo = 1
         LIMIT 1`,
       [productoId]
@@ -261,11 +280,7 @@ export const getProductoDetalle = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error al obtener el producto:", error.message);
-    return res.status(500).json({
-      success: false,
-      error: { code: "INTERNAL_ERROR", message: "Error al obtener el producto" },
-    });
+    next(error);
   }
 };
 
@@ -275,29 +290,16 @@ export const getProductoDetalle = async (req, res) => {
  * Disponible/Agotado SIEMPRE se lee de la columna generada (nunca se calcula
  * en el backend). Se usa como respaldo del control del frontend.
  */
-export const validarStockProducto = async (req, res) => {
+export const validarStockProducto = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const productoId = Number(id);
-    const cantidad = Number(req.query.cantidad ?? req.body?.cantidad);
-
-    if (!Number.isInteger(productoId) || productoId <= 0) {
-      return res.status(400).json({
-        success: false,
-        error: { code: "VALIDATION_ERROR", message: "ID inválido" },
-      });
-    }
-    if (!Number.isInteger(cantidad) || cantidad < 1) {
-      return res.status(400).json({
-        success: false,
-        error: { code: "VALIDATION_ERROR", message: "La cantidad debe ser un número entero mayor a 0" },
-      });
-    }
+    const productoId = Number(req.params.id);
+    const cantidad = Number(req.query.cantidad);
 
     const [filas] = await pool.query(
       `SELECT stock, estado
          FROM productos
         WHERE id = ? AND eliminado_por_admin = 0
+          AND eliminado_por_vendedor = 0 AND pausado = 0
         LIMIT 1`,
       [productoId]
     );
@@ -345,11 +347,7 @@ export const validarStockProducto = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error al validar el stock:", error.message);
-    return res.status(500).json({
-      success: false,
-      error: { code: "INTERNAL_ERROR", message: "Error al validar el stock" },
-    });
+    next(error);
   }
 };
 
@@ -363,96 +361,28 @@ export const validarStockProducto = async (req, res) => {
 
 /**
  * Busca una categoria por nombre; si no existe, la crea automaticamente.
+ * B2 (auditoria 2026-11-04): un solo INSERT ... ON DUPLICATE KEY UPDATE cierra
+ * la carrera entre dos altas simultaneas de la misma categoria (nombre UNIQUE).
  * @param {string} nombreCategoria
  * @returns {Promise<number>} id de la categoria (existente o recien creada)
  */
 async function obtenerOCrearCategoria(nombreCategoria) {
-  const [filas] = await pool.query(
-    "SELECT id FROM categorias WHERE nombre = ?",
-    [nombreCategoria]
-  );
-  if (filas.length > 0) return filas[0].id;
-
   const [resultado] = await pool.query(
-    "INSERT INTO categorias (nombre) VALUES (?)",
+    `INSERT INTO categorias (nombre) VALUES (?)
+     ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`,
     [nombreCategoria]
   );
   return resultado.insertId;
 }
 
 /**
- * S3 (RF81-RF90): valida los rangos de precio/stock/descuento de un producto.
- * precio: numero finito > 0; stock: entero >= 0; descuento: numero entre 0 y
- * 100 (models descuento_porcentaje DECIMAL(5,2)). Los campos son OPCIONALES
- * (edicion parcial conserva el valor de BD); al crear, la presencia de
- * precio/stock se exige aparte.
- * @param {{ precio?: unknown, stock?: unknown, descuento?: unknown }} campos
- * @returns {string|null} mensaje del primer error, o null si todo valida
- */
-function validarRangosProducto({ precio, stock, descuento }) {
-  if (precio !== undefined) {
-    const precioNum = Number(precio);
-    if (!Number.isFinite(precioNum) || precioNum <= 0) {
-      return "Precio y stock deben ser numeros validos";
-    }
-  }
-  if (stock !== undefined) {
-    // H3: '' y null no son un stock valido (Number('')=0 zereaba el stock en silencio)
-    if (stock === "" || stock === null) {
-      return "Precio y stock deben ser numeros validos";
-    }
-    const stockNum = Number(stock);
-    if (!Number.isInteger(stockNum) || stockNum < 0) {
-      return "Precio y stock deben ser numeros validos";
-    }
-  }
-  if (descuento !== undefined) {
-    // H3: '' y null no son un descuento valido (Number('')=0 lo reseteaba)
-    if (descuento === "" || descuento === null) {
-      return "El descuento debe ser un numero entre 0 y 100";
-    }
-    const descuentoNum = Number(descuento);
-    if (!Number.isFinite(descuentoNum) || descuentoNum < 0 || descuentoNum > 100) {
-      return "El descuento debe ser un numero entre 0 y 100";
-    }
-  }
-  return null;
-}
-
-/**
  * POST /api/productos (RF45/RF46/RF48) - crear producto del vendedor autenticado.
  * Multipart: campo "imagen" obligatorio. El estado lo calcula la BD (GENERADA).
+ * El formato y los rangos los valida crearProductoSchema (validate()).
  */
-export const crearProductoVendedor = async (req, res) => {
+export const crearProductoVendedor = async (req, res, next) => {
   try {
-    // TASK-4.9: el multipart puede no traer campos; no romper con 500.
-    const { nombre, descripcion, precio, stock, descuento, categoria } = req.body ?? {};
-
-    if (!nombre || !descripcion || !categoria) {
-      // TASK-4.6: la imagen ya quedo en disco; sin producto no debe quedar huerfana.
-      borrarArchivoSubido(req.file);
-      return res.status(400).json({
-        success: false,
-        error: { code: "VALIDATION_ERROR", message: "Faltan campos requeridos (nombre, descripcion, categoria)" },
-      });
-    }
-
-    // S3 (RF81-RF90): presencia y rangos de precio/stock/descuento.
-    if (precio === undefined || stock === undefined) {
-      borrarArchivoSubido(req.file);
-      return res.status(400).json({
-        success: false,
-        error: { code: "VALIDATION_ERROR", message: "Faltan campos requeridos (precio, stock)" },
-      });
-    }
-    const errorRangos = validarRangosProducto({ precio, stock, descuento });
-    if (errorRangos) {
-      borrarArchivoSubido(req.file);
-      return res.status(400).json({
-        success: false,
-        error: { code: "VALIDATION_ERROR", message: errorRangos },
-      });
-    }
+    const { nombre, descripcion, precio, stock, descuento, categoria } = req.body;
 
     if (!req.file) {
       return res.status(400).json({
@@ -461,7 +391,7 @@ export const crearProductoVendedor = async (req, res) => {
       });
     }
 
-    const categoriaId = await obtenerOCrearCategoria(String(categoria).trim());
+    const categoriaId = await obtenerOCrearCategoria(categoria);
     const imagenUrl = `/uploads/${req.file.filename}`;
 
     const [resultado] = await pool.query(
@@ -471,12 +401,12 @@ export const crearProductoVendedor = async (req, res) => {
       [
         req.userId,
         categoriaId,
-        String(nombre).trim(),
-        String(descripcion).trim(),
+        nombre,
+        descripcion,
         imagenUrl,
-        Number(precio),
-        Number(stock),
-        descuento === undefined || descuento === "" || descuento === null ? 0 : Number(descuento),
+        precio,
+        stock,
+        descuento ?? 0,
       ]
     );
 
@@ -486,11 +416,7 @@ export const crearProductoVendedor = async (req, res) => {
     });
   } catch (error) {
     borrarArchivoSubido(req.file);
-    console.error("Error al crear producto del vendedor:", error.message);
-    return res.status(500).json({
-      success: false,
-      error: { code: "INTERNAL_ERROR", message: "Error al crear el producto" },
-    });
+    next(error);
   }
 };
 
@@ -498,17 +424,9 @@ export const crearProductoVendedor = async (req, res) => {
  * PUT /api/productos/:id (RF49) - editar producto del vendedor autenticado.
  * Solo puede editar productos cuyo vendedor_id sea el del JWT.
  */
-export const editarProductoVendedor = async (req, res) => {
+export const editarProductoVendedor = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const productoId = Number(id);
-    if (!Number.isInteger(productoId) || productoId <= 0) {
-      borrarArchivoSubido(req.file);
-      return res.status(400).json({
-        success: false,
-        error: { code: "VALIDATION_ERROR", message: "ID inválido" },
-      });
-    }
+    const productoId = Number(req.params.id);
 
     const [productoExistente] = await pool.query(
       `SELECT id, categoria_id, imagen_url, vendedor_id,
@@ -527,22 +445,11 @@ export const editarProductoVendedor = async (req, res) => {
     }
 
     const producto = productoExistente[0];
-    const { nombre, descripcion, precio, stock, descuento, categoria } = req.body ?? {};
-
-    // S3 (RF81-RF90): mismos rangos que la creacion, antes de tocar la BD.
-    // Los campos son opcionales: si no viene uno se conserva el valor actual.
-    const errorRangos = validarRangosProducto({ precio, stock, descuento });
-    if (errorRangos) {
-      borrarArchivoSubido(req.file);
-      return res.status(400).json({
-        success: false,
-        error: { code: "VALIDATION_ERROR", message: errorRangos },
-      });
-    }
+    const { nombre, descripcion, precio, stock, descuento, categoria } = req.body;
 
     let categoriaId = producto.categoria_id;
-    if (categoria && String(categoria).trim() !== "") {
-      categoriaId = await obtenerOCrearCategoria(String(categoria).trim());
+    if (categoria !== undefined) {
+      categoriaId = await obtenerOCrearCategoria(categoria);
     }
 
     const imagenUrl = req.file ? `/uploads/${req.file.filename}` : producto.imagen_url;
@@ -557,12 +464,12 @@ export const editarProductoVendedor = async (req, res) => {
               stock = ?, descuento_porcentaje = ?, categoria_id = ?
         WHERE id = ? AND vendedor_id = ?`,
       [
-        nombre ? String(nombre).trim() : producto.nombre,
-        descripcion ? String(descripcion).trim() : producto.descripcion,
+        nombre ?? producto.nombre,
+        descripcion ?? producto.descripcion,
         imagenUrl,
-        precio !== undefined ? Number(precio) : producto.precio,
-        stock !== undefined ? Number(stock) : producto.stock,
-        descuento !== undefined ? Number(descuento) : producto.descuento_porcentaje,
+        precio ?? producto.precio,
+        stock ?? producto.stock,
+        descuento ?? producto.descuento_porcentaje,
         categoriaId,
         productoId,
         req.userId,
@@ -575,28 +482,33 @@ export const editarProductoVendedor = async (req, res) => {
     });
   } catch (error) {
     borrarArchivoSubido(req.file);
-    console.error("Error al editar producto del vendedor:", error.message);
-    return res.status(500).json({
-      success: false,
-      error: { code: "INTERNAL_ERROR", message: "Error al editar el producto" },
-    });
+    next(error);
   }
 };
 
 /**
  * GET /api/productos/mis-productos (RF54) - lista los productos del vendedor autenticado.
  */
-export const getMisProductos = async (req, res) => {
+export const getMisProductos = async (req, res, next) => {
   try {
+    const { page: pagina, limit: limite } = req.query;
+    const offset = (pagina - 1) * limite;
+    const [[totalRow]] = await pool.query(
+      "SELECT COUNT(*) AS total FROM productos WHERE vendedor_id = ?",
+      [req.userId]
+    );
+    const total = Number(totalRow?.total || 0);
     const [productos] = await pool.query(
       `SELECT p.id, p.nombre, p.descripcion, p.imagen_url, p.precio, p.stock,
               p.estado, p.descuento_porcentaje, p.fecha_publicacion,
+              p.pausado, p.eliminado_por_vendedor,
               c.id AS categoria_id, c.nombre AS categoria_nombre
          FROM productos p
          JOIN categorias c ON p.categoria_id = c.id
         WHERE p.vendedor_id = ?
-        ORDER BY p.id DESC`,
-      [req.userId]
+        ORDER BY p.id DESC
+        LIMIT ? OFFSET ?`,
+      [req.userId, limite, offset]
     );
 
     return res.json({
@@ -607,12 +519,82 @@ export const getMisProductos = async (req, res) => {
         stock: Number(p.stock),
         descuento_porcentaje: Number(p.descuento_porcentaje || 0),
       })),
+      paginacion: {
+        pagina,
+        por_pagina: limite,
+        total,
+        total_paginas: Math.max(1, Math.ceil(total / limite)),
+      },
     });
   } catch (error) {
-    console.error("Error al obtener mis productos:", error.message);
-    return res.status(500).json({
-      success: false,
-      error: { code: "INTERNAL_ERROR", message: "Error al obtener los productos" },
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/productos/:id/estado (RF55) - el vendedor pausa o reactiva su
+ * publicacion sin borrarla. Un producto dado de baja por el vendedor no se
+ * reactiva desde aqui.
+ */
+export const cambiarEstadoProductoVendedor = async (req, res, next) => {
+  try {
+    const productoId = Number(req.params.id);
+    const { estado } = req.body;
+
+    const [productos] = await pool.query(
+      "SELECT id, pausado, eliminado_por_vendedor FROM productos WHERE id = ? AND vendedor_id = ?",
+      [productoId, req.userId]
+    );
+    if (productos.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Producto no encontrado" },
+      });
+    }
+    if (productos[0].eliminado_por_vendedor === 1) {
+      return res.status(409).json({
+        success: false,
+        error: { code: "CONFLICT", message: "El producto fue eliminado y no se puede reactivar" },
+      });
+    }
+
+    const pausado = estado === "pausado" ? 1 : 0;
+    await pool.query("UPDATE productos SET pausado = ? WHERE id = ? AND vendedor_id = ?", [
+      pausado,
+      productoId,
+      req.userId,
+    ]);
+
+    return res.json({
+      success: true,
+      data: { id: productoId, estado: pausado ? "pausado" : "activo" },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/productos/:id (RF55) - baja logica propia del vendedor. No borra
+ * la fila: conserva el historial de pedidos y calificaciones.
+ */
+export const eliminarProductoVendedor = async (req, res, next) => {
+  try {
+    const productoId = Number(req.params.id);
+    const [resultado] = await pool.query(
+      `UPDATE productos
+          SET eliminado_por_vendedor = 1, pausado = 1
+        WHERE id = ? AND vendedor_id = ? AND eliminado_por_vendedor = 0`,
+      [productoId, req.userId]
+    );
+    if (resultado.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Producto no encontrado o ya eliminado" },
+      });
+    }
+    return res.json({ success: true, data: { id: productoId, estado: "eliminado" } });
+  } catch (error) {
+    next(error);
   }
 };

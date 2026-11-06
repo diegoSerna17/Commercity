@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { confirmarPago } from "../../services/pedidos.service.js";
+import { formatPriceRounded } from "../../utils/formatPrice.js";
+import Modal from "../../components/globales/Modal.jsx";
 
 function IconoTarjeta() {
   return (
@@ -19,9 +21,7 @@ function IconoUsuario() {
   );
 }
 
-function formatPeso(valor) {
-  return "$" + Math.round(valor).toLocaleString("es-CO");
-}
+const formatPeso = formatPriceRounded;
 
 // M-28: la pasarela es simulada; al backend solo viajan los ultimos 4 digitos
 // y la marca. El numero completo nunca se envia ni se registra.
@@ -86,10 +86,12 @@ export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-
-      <div className="bg-auth-card-bg rounded-card-lg w-[400px] sm:w-[500px] lg:w-[600px] shadow-2xl overflow-hidden border border-figma-divider">
-
+    <Modal
+      abierto
+      onClose={onCancelar}
+      tituloId="pasarela-pago-titulo"
+      panelClassName="bg-auth-card-bg rounded-card-lg w-[400px] sm:w-[500px] lg:w-[600px] shadow-2xl overflow-hidden border border-figma-divider"
+    >
         {pagado ? (
           <div className="p-8 text-center flex flex-col items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-success/10 flex items-center justify-center">
@@ -110,7 +112,7 @@ export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
           <form onSubmit={manejarPago}>
 
             <div className="px-6 pt-6 pb-4">
-              <h2 className="text-2xl font-extrabold text-brand-orange tracking-tight">
+              <h2 id="pasarela-pago-titulo" className="text-2xl font-extrabold text-brand-orange tracking-tight">
                 Pasarela de Pago
               </h2>
             </div>
@@ -227,7 +229,6 @@ export default function PasarelaPago({ totales, onCancelar, onPagoExitoso }) {
             </div>
           </form>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }

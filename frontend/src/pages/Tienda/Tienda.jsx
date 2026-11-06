@@ -9,6 +9,7 @@ import {
   obtenerEstadisticasTienda,
   validarMiTienda,
 } from "../../services/tienda.service.js";
+import { formatPriceRounded } from "../../utils/formatPrice.js";
 
 function DatoValidacion({ titulo, ok, detalle }) {
   return (
@@ -121,7 +122,7 @@ export default function Tienda() {
                     ok={Boolean(flujo?.validado)}
                     detalle={
                       flujo
-                        ? `${flujo.lineas_analizadas} líneas analizadas · ${flujo.lineas_incoherentes} incoherentes · neto esperado ${"$" + Math.round(flujo.totales?.vendedor_90_esperado ?? 0).toLocaleString("es-CO")}`
+                        ? `${flujo.lineas_analizadas} líneas analizadas · ${flujo.lineas_incoherentes} incoherentes · neto esperado ${formatPriceRounded(flujo.totales?.vendedor_90_esperado ?? 0)}`
                         : "Sin líneas de venta para validar"
                     }
                   />

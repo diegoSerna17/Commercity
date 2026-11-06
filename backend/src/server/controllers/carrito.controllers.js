@@ -19,13 +19,18 @@ function esEnteroPositivo(valor) {
 }
 
 /**
- * Obtiene stock y vendedor de un producto activo (no eliminado por admin).
+ * Obtiene stock y vendedor de un producto disponible: ni eliminado por el
+ * administrador, ni dado de baja por el vendedor, ni pausado (RF55).
  * @param {number} productoId - ID del producto
  * @returns {Promise<{stock: number, vendedor_id: number}|null>} Datos o null si no existe
  */
 async function obtenerProducto(productoId) {
   const [filas] = await pool.query(
-    "SELECT stock, vendedor_id FROM productos WHERE id = ? AND eliminado_por_admin = 0 LIMIT 1",
+    `SELECT stock, vendedor_id
+       FROM productos
+      WHERE id = ? AND eliminado_por_admin = 0
+        AND eliminado_por_vendedor = 0 AND pausado = 0
+      LIMIT 1`,
     [productoId]
   );
   return filas.length > 0 ? filas[0] : null;
@@ -57,13 +62,9 @@ export async function agregarProducto(req, res) {
     // H1 (P0): el comprador se deriva del JWT (req.userId). Se ignora
     // cualquier comprador_id enviado por el cliente para cerrar el IDOR.
     const compradorId = Number(req.userId);
-    const { producto_id: productoId, cantidad = 1 } = req.body ?? {};
+    const { producto_id: productoId, cantidad = 1 } = req.body;
 
-    if (
-      !esEnteroPositivo(compradorId) ||
-      !esEnteroPositivo(productoId) ||
-      !esEnteroPositivo(cantidad)
-    ) {
+    if (!esEnteroPositivo(compradorId)) {
       return res.status(400).json({
         success: false,
         error: { code: "VALIDATION_ERROR", message: "producto_id y cantidad deben ser enteros positivos" },
@@ -74,7 +75,7 @@ export async function agregarProducto(req, res) {
     if (producto === null) {
       return res.status(404).json({
         success: false,
-        error: { code: "PRODUCT_NOT_FOUND", message: "El producto no existe o fue eliminado por el administrador" },
+        error: { code: "PRODUCT_NOT_FOUND", message: "El producto no existe o no esta disponible" },
       });
     }
 
@@ -151,7 +152,7 @@ export async function eliminarProducto(req, res) {
     const compradorId = Number(req.userId);
     const productoId = Number(req.params.productoId);
 
-    if (!esEnteroPositivo(compradorId) || !esEnteroPositivo(productoId)) {
+    if (!esEnteroPositivo(compradorId)) {
       return res.status(400).json({
         success: false,
         error: { code: "VALIDATION_ERROR", message: "producto_id debe ser entero positivo" },
@@ -191,13 +192,9 @@ export async function modificarCantidad(req, res) {
     // H1 (P0): comprador desde JWT, nunca de query.
     const compradorId = Number(req.userId);
     const productoId = Number(req.params.productoId);
-    const { cantidad } = req.body ?? {};
+    const { cantidad } = req.body;
 
-    if (
-      !esEnteroPositivo(compradorId) ||
-      !esEnteroPositivo(productoId) ||
-      !esEnteroPositivo(cantidad)
-    ) {
+    if (!esEnteroPositivo(compradorId)) {
       return res.status(400).json({
         success: false,
         error: { code: "VALIDATION_ERROR", message: "producto_id y cantidad deben ser enteros positivos" },
@@ -208,7 +205,7 @@ export async function modificarCantidad(req, res) {
     if (producto === null) {
       return res.status(404).json({
         success: false,
-        error: { code: "PRODUCT_NOT_FOUND", message: "El producto no existe o fue eliminado por el administrador" },
+        error: { code: "PRODUCT_NOT_FOUND", message: "El producto no existe o no esta disponible" },
       });
     }
 

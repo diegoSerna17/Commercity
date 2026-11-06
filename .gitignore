@@ -249,3 +249,6 @@ graphify-out/.graphify_root
 apps/movil/android/local.properties
 apps/movil/android/.gradle/
 apps/movil/android/app/src/main/assets/public/
+
+# Indice de la documentacion tecnica (Lote 6, 1.4.1).
+!docs/README.md

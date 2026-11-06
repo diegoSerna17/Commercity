@@ -9,6 +9,7 @@ import {
   modificarCantidad,
 } from "../../services/carrito.service.js";
 import { obtenerResumenPedido } from "../../services/pedidos.service.js";
+import { validarStock } from "../../services/productos.service.js";
 import Carrito from "./Carrito.jsx";
 
 const mockPasarelaPago = vi.hoisted(() => vi.fn());
@@ -31,6 +32,10 @@ vi.mock("../../services/carrito.service.js", () => ({
 
 vi.mock("../../services/pedidos.service.js", () => ({
   obtenerResumenPedido: vi.fn(),
+}));
+
+vi.mock("../../services/productos.service.js", () => ({
+  validarStock: vi.fn(),
 }));
 
 function respuestaCarrito(cantidad = 2) {
@@ -66,6 +71,7 @@ describe("Carrito", () => {
     modificarCantidad.mockResolvedValue({});
     eliminarProducto.mockResolvedValue({});
     obtenerResumenPedido.mockResolvedValue({ data: { totales: null } });
+    validarStock.mockResolvedValue({ data: { valido: true } });
     mockPasarelaPago.mockImplementation(({ totales, onCancelar, onPagoExitoso }) =>
       createElement(
         "div",
@@ -194,6 +200,22 @@ describe("Carrito", () => {
     expect(await screen.findByTestId("pasarela-pago")).toHaveTextContent(
       JSON.stringify(totales)
     );
+  });
+
+  it("no abre la pasarela si el stock ya no alcanza (RF86)", async () => {
+    const user = userEvent.setup();
+    validarStock.mockResolvedValueOnce({
+      data: { valido: false, stock_disponible: 0, mensaje: "Agotado" },
+    });
+
+    render(<Carrito />);
+
+    await screen.findByText("Audífonos");
+    await user.click(screen.getByRole("button", { name: "Comprar" }));
+
+    expect(await screen.findByText(/Stock insuficiente para "Audífonos"/)).toBeInTheDocument();
+    expect(screen.queryByTestId("pasarela-pago")).not.toBeInTheDocument();
+    expect(obtenerResumenPedido).not.toHaveBeenCalled();
   });
 
   it("pide iniciar sesion y no consulta el carrito sin usuario", async () => {

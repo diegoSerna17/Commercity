@@ -1,0 +1,73 @@
+version: 2
+
+updates:
+  # Cada dependencia entra por PR con CI obligatorio; los parches y menores de
+  # un mismo stack se agrupan para no inundar la bandeja.
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Bogota"
+    open-pull-requests-limit: 5
+    labels: ["dependencias", "backend"]
+    groups:
+      backend-produccion:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+      backend-desarrollo:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Bogota"
+    open-pull-requests-limit: 5
+    labels: ["dependencias", "frontend"]
+    groups:
+      frontend-produccion:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+      frontend-desarrollo:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/apps/escritorio"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Bogota"
+    open-pull-requests-limit: 3
+    labels: ["dependencias", "escritorio"]
+
+  - package-ecosystem: "npm"
+    directory: "/apps/movil"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Bogota"
+    open-pull-requests-limit: 3
+    labels: ["dependencias", "movil"]
+
+  # Acciones del CI: un solo PR agrupado por semana. Mantiene el SHA fijado y
+  # el comentario de version en el mismo cambio.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Bogota"
+    open-pull-requests-limit: 3
+    labels: ["dependencias", "ci"]
+    groups:
+      acciones-ci:
+        patterns: ["*"]

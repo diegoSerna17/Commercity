@@ -9,9 +9,9 @@ import { z } from "zod";
 
 /** Id entero positivo de ruta. Acepta string numerico (Express entrega strings). */
 export const idParam = z.coerce
-  .number()
-  .int()
-  .positive()
+  .number({ error: "El id debe ser un entero positivo" })
+  .int("El id debe ser un entero positivo")
+  .positive("El id debe ser un entero positivo")
   .describe("Identificador entero positivo")
   .meta({ title: "IdParam", description: "Identificador entero positivo de ruta o cuerpo" });
 

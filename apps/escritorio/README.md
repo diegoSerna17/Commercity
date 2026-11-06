@@ -39,7 +39,7 @@ Creados por `seed_commercity.sql`; la contraseña de prueba de todos es la misma
 ## 📦 Generar el instalador (.exe)
 
 ```bash
-npm run build    # electron-builder (NSIS) -> dist/CommerCity Setup 2.0.0.exe
+npm run build    # electron-builder (NSIS) -> dist/CommerCity Setup 1.4.1.exe
 ```
 
 Para release público hay que habilitar firma real (`build.win.signAndEditExecutable` está en `false` para evitar el privilegio de symlinks en Windows).

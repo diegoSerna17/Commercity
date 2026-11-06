@@ -18,6 +18,7 @@ import {
 import { authRequired } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
+import { subirImagen } from "../config/multer.js";
 import {
     registerSchema,
     loginSchema,
@@ -25,6 +26,11 @@ import {
     resetSchema,
     cambiarRolSchema,
 } from "../schemas/auth.schemas.js";
+import {
+    actualizarPerfilSchema,
+    directorioQuerySchema,
+    perfilPublicoParamsSchema,
+} from "../schemas/usuarios.schema.js";
 
 const router = Router();
 
@@ -32,10 +38,19 @@ const router = Router();
 router.get("/", getUsuarios);
 
 // Endpoint publico para ver el perfil de otro usuario por su ID
-router.get("/perfil-publico/:id", getPerfilPublico);
+router.get(
+    "/perfil-publico/:id",
+    validate(perfilPublicoParamsSchema, "params"),
+    getPerfilPublico
+);
 
 // Directorio de usuarios para iniciar un chat con cualquier persona.
-router.get("/directorio", authRequired, listarUsuarios);
+router.get(
+    "/directorio",
+    authRequired,
+    validate(directorioQuerySchema, "query"),
+    listarUsuarios
+);
 
 // RF40: el comprador elimina su cuenta (desactivacion logica, usa req.userId del token)
 router.delete("/cuenta", authRequired, eliminarCuentaComprador);
@@ -52,7 +67,25 @@ router.post("/logout", authRequired, logout);
 // M-8: cierra TODAS las sesiones (incrementa token_version).
 router.post("/logout-todas", authRequired, cerrarTodasLasSesiones);
 router.get("/me", authRequired, getPerfil);
-router.patch("/me", authRequired, actualizarPerfil);
+router.patch(
+    "/me",
+    authRequired,
+    subirImagen("avatar"),
+    (req, _res, next) => {
+        // El avatar llega como archivo, no como campo de texto: se marca para
+        // que el schema acepte un PATCH que solo cambia la foto. Si el cliente
+        // envia "avatar" en el JSON se descarta: el schema es .strict() y solo
+        // debe contar el archivo real (A5).
+        if (req.file) {
+            req.body = { ...(req.body || {}), avatar: "1" };
+        } else if (req.body) {
+            delete req.body.avatar;
+        }
+        next();
+    },
+    validate(actualizarPerfilSchema),
+    actualizarPerfil
+);
 router.patch("/me/rol", authRequired, validate(cambiarRolSchema), cambiarRol);
 
 // ===== Ruta admin (requiere rol administrador) =====

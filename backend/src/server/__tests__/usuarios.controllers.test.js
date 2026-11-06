@@ -72,7 +72,7 @@ describe("GET /api/usuarios/perfil-publico/:id", () => {
     const res = await request(app).get("/api/usuarios/perfil-publico/abc");
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       success: false,
       error: { code: "VALIDATION_ERROR", message: "El id debe ser un entero positivo" },
     });
@@ -189,7 +189,12 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
 
     const res = await request(app)
       .post("/api/usuarios/register")
-      .send({ email: "nuevo@test.com", password: "SuperPass123", nombre_completo: "Nuevo Usuario" });
+      .send({
+        email: "nuevo@test.com",
+        password: "SuperPass123",
+        nombre_completo: "Nuevo Usuario",
+        acepta_terminos: true,
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -209,6 +214,12 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
       expect.stringContaining("INSERT INTO usuarios"),
       ["nuevo@test.com", "$2b$10$mock_hash", "Nuevo Usuario"]
     );
+    // RF6: la aceptacion de terminos queda registrada con la fecha del alta.
+    const [sqlAlta] = conn.query.mock.calls.find(([sql]) =>
+      String(sql).includes("INSERT INTO usuarios")
+    );
+    expect(sqlAlta).toContain("terminos_aceptados_en");
+    expect(sqlAlta).toContain("NOW()");
     expect(conn.query).toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO usuario_roles"),
       [99, 1]
@@ -222,7 +233,7 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
 
     const res = await request(app)
       .post("/api/usuarios/register")
-      .send({ email: "duplicado@test.com", password: "SuperPass123" });
+      .send({ email: "duplicado@test.com", password: "SuperPass123", acepta_terminos: true });
 
     // Misma respuesta que un alta (no se revela que el email existe)
     expect(res.status).toBe(201);
@@ -240,16 +251,36 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
   it("rechaza body con campo extra 'rol' (.strict())", async () => {
     const res = await request(app)
       .post("/api/usuarios/register")
-      .send({ email: "x@test.com", password: "SuperPass123", rol: "vendedor" });
+      .send({ email: "x@test.com", password: "SuperPass123", rol: "vendedor", acepta_terminos: true });
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
   });
 
+  it("RF6: rechaza el registro sin acepta_terminos (400)", async () => {
+    const res = await request(app)
+      .post("/api/usuarios/register")
+      .send({ email: "sinterminos@test.com", password: "SuperPass123" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(pool.getConnection).not.toHaveBeenCalled();
+  });
+
+  it("RF6: rechaza acepta_terminos en false (400)", async () => {
+    const res = await request(app)
+      .post("/api/usuarios/register")
+      .send({ email: "terminos-false@test.com", password: "SuperPass123", acepta_terminos: false });
+
+    expect(res.status).toBe(400);
+    expect(pool.getConnection).not.toHaveBeenCalled();
+  });
+
   it("rechaza contraseña menor a 6 caracteres (400)", async () => {
     const res = await request(app)
       .post("/api/usuarios/register")
-      .send({ email: "short@test.com", password: "12345" });
+      .send({ email: "short@test.com", password: "12345", acepta_terminos: true });
 
     expect(res.status).toBe(400);
   });
@@ -260,7 +291,7 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
 
     const res = await request(app)
       .post("/api/usuarios/register")
-      .send({ email: "falla@test.com", password: "SuperPass123" });
+      .send({ email: "falla@test.com", password: "SuperPass123", acepta_terminos: true });
 
     expect(res.status).toBe(500);
     expect(conn.rollback).toHaveBeenCalled();
@@ -272,7 +303,7 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
 
     const res = await request(app)
       .post("/api/usuarios/register")
-      .send({ email: "race@test.com", password: "SuperPass123" });
+      .send({ email: "race@test.com", password: "SuperPass123", acepta_terminos: true });
 
     expect(res.status).toBe(201);
     expect(res.body.data.token).toBeNull();
@@ -289,7 +320,7 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
 
     const res = await request(app)
       .post("/api/usuarios/register")
-      .send({ email: "norol@test.com", password: "SuperPass123" });
+      .send({ email: "norol@test.com", password: "SuperPass123", acepta_terminos: true });
 
     expect(res.status).toBe(500);
     expect(conn.rollback).toHaveBeenCalled();
@@ -315,6 +346,17 @@ describe("POST /api/usuarios/login (RF2 - fix 3.1)", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.token).toBeTruthy();
     expect(res.body.data.user.roles).toEqual(["comprador"]);
+  });
+
+  it("B2: una contrasena corta no se rechaza por complejidad; el login responde 401 uniforme", async () => {
+    pool.query.mockResolvedValue([[], undefined]);
+
+    const res = await request(app)
+      .post("/api/usuarios/login")
+      .send({ email: "no-existe@test.com", password: "abc" });
+
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
   });
 
   it("M-8/B-4: el token de login lleva token_version y iss/aud (revocable)", async () => {
@@ -610,6 +652,61 @@ describe("PATCH /api/usuarios/me/rol (RF41 - comprador <-> vendedor)", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.roles).toEqual(["vendedor"]);
     expect(conn.commit).toHaveBeenCalled();
+  });
+
+  it("B2: no permite bajar a comprador con productos activos o pedidos abiertos (409)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 1 }], undefined];
+      if (sql.includes("FROM roles r")) return [[{ nombre: "vendedor" }], undefined];
+      return [[], undefined];
+    });
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT") && sql.includes("productos_activos")) {
+        return [[{ productos_activos: 2, pedidos_abiertos: 0 }], undefined];
+      }
+      return [{ affectedRows: 1 }, undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/usuarios/me/rol")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ rol: "comprador" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("CONFLICT");
+    expect(conn.rollback).toHaveBeenCalled();
+    expect(
+      conn.query.mock.calls.some(([sql]) => String(sql).includes("DELETE FROM usuario_roles"))
+    ).toBe(false);
+  });
+
+  it("B2: baja a comprador sin compromisos y audita el cambio de rol", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("SELECT id FROM roles WHERE nombre")) return [[{ id: 1 }], undefined];
+      if (sql.includes("FROM roles r")) return [[{ nombre: "vendedor" }], undefined];
+      return [[], undefined];
+    });
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT") && sql.includes("productos_activos")) {
+        return [[{ productos_activos: 0, pedidos_abiertos: 0 }], undefined];
+      }
+      return [{ affectedRows: 1 }, undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/usuarios/me/rol")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ rol: "comprador" });
+
+    expect(res.status).toBe(200);
+    expect(conn.commit).toHaveBeenCalled();
+    const auditoria = conn.query.mock.calls.find(([sql]) =>
+      String(sql).includes("INSERT INTO auditoria_acciones")
+    );
+    expect(auditoria).toBeDefined();
+    expect(auditoria[1]).toContain("usuario.rol_cambiado");
   });
 
   it("devuelve 404 si el rol solicitado no existe en la BD", async () => {
@@ -974,6 +1071,57 @@ describe("DELETE /api/usuarios/cuenta (RF40 - comprador elimina su cuenta)", () 
     expect(conn.commit).toHaveBeenCalled();
   });
 
+  it("B3: el ultimo administrador activo no puede eliminar su cuenta (409)", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT id, password, activo FROM usuarios"))
+        return [[{ id: 5, password: "$2b$10$mock_hash", activo: 1 }], undefined];
+      if (sql.includes("MAX(CASE WHEN r.nombre = 'administrador'"))
+        return [[{ es_admin: 1 }], undefined];
+      if (sql.includes("COUNT(DISTINCT u.id) AS total"))
+        return [[{ total: 1 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .delete("/api/usuarios/cuenta")
+      .set("Authorization", `Bearer ${tokenCuenta}`)
+      .send({ password: "secreta123" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("CONFLICT");
+    expect(res.body.error.message).toMatch(/último administrador/i);
+    expect(conn.rollback).toHaveBeenCalled();
+    expect(
+      conn.query.mock.calls.some(([sql]) => String(sql).includes("UPDATE usuarios SET activo = 0"))
+    ).toBe(false);
+  });
+
+  it("B3: un administrador con otro admin activo se da de baja y deja auditoria", async () => {
+    conn.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT id, password, activo FROM usuarios"))
+        return [[{ id: 5, password: "$2b$10$mock_hash", activo: 1 }], undefined];
+      if (sql.includes("MAX(CASE WHEN r.nombre = 'administrador'"))
+        return [[{ es_admin: 1 }], undefined];
+      if (sql.includes("COUNT(DISTINCT u.id) AS total"))
+        return [[{ total: 2 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .delete("/api/usuarios/cuenta")
+      .set("Authorization", `Bearer ${tokenCuenta}`)
+      .send({ password: "secreta123" });
+
+    expect(res.status).toBe(200);
+    expect(conn.commit).toHaveBeenCalled();
+    const auditoria = conn.query.mock.calls.find(([sql]) =>
+      String(sql).includes("INSERT INTO auditoria_acciones")
+    );
+    expect(auditoria).toBeDefined();
+    expect(auditoria[1]).toContain("usuario.baja_cuenta");
+    expect(auditoria[1]).toContain(5);
+  });
+
   it("M-7: rechaza la baja sin contrasena (403) y no muta nada", async () => {
     conn.query.mockImplementation((sql) => {
       if (sql.includes("SELECT id, password, activo FROM usuarios"))
@@ -1147,9 +1295,12 @@ describe("PATCH /api/usuarios/me (actualiza nombre de perfil)", () => {
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       success: false,
-      error: { code: "VALIDATION_ERROR", message: "El nombre de perfil es obligatorio" },
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Debes enviar al menos un campo para actualizar el perfil",
+      },
     });
   });
 
@@ -1187,10 +1338,19 @@ describe("PATCH /api/usuarios/me (actualiza nombre de perfil)", () => {
   it("actualiza el nombre y devuelve el perfil actualizado (200)", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("SELECT foto_perfil FROM usuarios WHERE id = ?"))
+        return [[{ foto_perfil: null }], undefined];
       if (sql.includes("UPDATE usuarios SET nombre_completo"))
         return [{ affectedRows: 1 }, undefined];
-      if (sql.includes("SELECT id, email, nombre_completo, foto_perfil FROM usuarios"))
-        return [[{ id: 7, email: "test@test.com", nombre_completo: "Nuevo Nombre", foto_perfil: null }], undefined];
+      if (sql.includes("SELECT id, email, nombre_completo, foto_perfil") && sql.includes("descripcion_personal"))
+        return [[{
+          id: 7,
+          email: "test@test.com",
+          nombre_completo: "Nuevo Nombre",
+          foto_perfil: null,
+          descripcion_personal: null,
+          direccion_envio: null,
+        }], undefined];
       return [[], undefined];
     });
 
@@ -1207,6 +1367,8 @@ describe("PATCH /api/usuarios/me (actualiza nombre de perfil)", () => {
       email: "test@test.com",
       nombre_completo: "Nuevo Nombre",
       foto_perfil: null,
+      descripcion_personal: null,
+      direccion_envio: null,
     });
 
     // El UPDATE es parametrizado y usa el nombre ya recortado (trim).
@@ -1214,6 +1376,97 @@ describe("PATCH /api/usuarios/me (actualiza nombre de perfil)", () => {
       "UPDATE usuarios SET nombre_completo = ? WHERE id = ?",
       ["Nuevo Nombre", 7],
     ]);
+  });
+
+  it("actualiza descripcion y direccion en un solo PATCH (RF14-RF17)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("SELECT foto_perfil FROM usuarios WHERE id = ?"))
+        return [[{ foto_perfil: null }], undefined];
+      if (sql.includes("UPDATE usuarios SET"))
+        return [{ affectedRows: 1 }, undefined];
+      if (sql.includes("FROM usuarios WHERE id = ?"))
+        return [[{
+          id: 7,
+          email: "test@test.com",
+          nombre_completo: "Ana",
+          foto_perfil: null,
+          descripcion_personal: "Vendo artesanias",
+          direccion_envio: "Cra 1 #2-3",
+        }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .patch("/api/usuarios/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ descripcion_personal: " Vendo artesanias ", direccion_envio: " Cra 1 #2-3 " });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.descripcion_personal).toBe("Vendo artesanias");
+    expect(res.body.data.direccion_envio).toBe("Cra 1 #2-3");
+
+    const update = pool.query.mock.calls.find(([sql]) =>
+      String(sql).startsWith("UPDATE usuarios SET")
+    );
+    expect(update[0]).toContain("descripcion_personal = ?");
+    expect(update[0]).toContain("direccion_envio = ?");
+    expect(update[1]).toEqual(["Vendo artesanias", "Cra 1 #2-3", 7]);
+  });
+
+  it("A5: un avatar enviado como texto en JSON se rechaza (400)", async () => {
+    const res = await request(app)
+      .patch("/api/usuarios/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ avatar: "1" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    // El marcador interno no debe llegar al controller como cambio valido.
+    expect(pool.query).not.toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE usuarios SET foto_perfil"),
+      expect.anything()
+    );
+  });
+
+  it("sube el avatar por multipart y borra la foto anterior (200)", async () => {
+    const fotoAnterior = `/uploads/${"a".repeat(32)}.png`;
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("SELECT foto_perfil FROM usuarios"))
+        return [[{ foto_perfil: fotoAnterior }], undefined];
+      if (sql.includes("UPDATE usuarios SET")) return [{ affectedRows: 1 }, undefined];
+      if (sql.includes("FROM usuarios WHERE id = ?"))
+        return [[{
+          id: 7,
+          email: "test@test.com",
+          nombre_completo: "Ana",
+          foto_perfil: `/uploads/${"b".repeat(32)}.png`,
+          descripcion_personal: null,
+          direccion_envio: null,
+        }], undefined];
+      return [[], undefined];
+    });
+
+    const png = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.alloc(24),
+    ]);
+
+    const res = await request(app)
+      .patch("/api/usuarios/me")
+      .set("Authorization", `Bearer ${token}`)
+      .attach("avatar", png, { filename: "avatar.png", contentType: "image/png" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    const update = pool.query.mock.calls.find(([sql]) =>
+      String(sql).includes("SET foto_perfil")
+    );
+    expect(update).toBeDefined();
+    // El archivo se guarda con nombre crypto-aleatorio, no con el original.
+    expect(update[1][0]).toMatch(/^\/uploads\/[a-f0-9]{32}\.png$/);
   });
 
   it("devuelve 500 si la BD falla", async () => {
@@ -1229,5 +1482,21 @@ describe("PATCH /api/usuarios/me (actualiza nombre de perfil)", () => {
 
     expect(res.status).toBe(500);
     expect(res.body.error.code).toBe("INTERNAL_ERROR");
+  });
+});
+
+describe("GET /api/usuarios/ (banner dinamico)", () => {
+  it("responde el estado del modulo con la version major del backend", async () => {
+    const res = await request(app).get("/api/usuarios/");
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toMatchObject({
+      message: "servidor creado",
+      status: "ok",
+    });
+    // El banner toma el major de backend/package.json, no un texto fijo.
+    expect(res.body.data.version).toMatch(/^Commercity API v\d+$/);
+    expect(typeof res.body.data.timestamp).toBe("string");
   });
 });

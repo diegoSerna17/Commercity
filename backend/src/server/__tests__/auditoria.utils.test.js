@@ -47,7 +47,7 @@ describe("utils/auditoria.js (M-11/TASK-4.5)", () => {
   it("usa la conexion en transaccion cuando se pasa conn", async () => {
     const conn = { query: vi.fn().mockResolvedValue([{}, undefined]) };
 
-    await registrarAuditoria({ conn, actorId: 5, accion: ACCIONES.DESEMBOLSO, ip: "10.0.0.1" });
+    await registrarAuditoria({ conn, actorId: 5, accion: ACCIONES.PRODUCTO_SUSPENDIDO, ip: "10.0.0.1" });
 
     expect(conn.query).toHaveBeenCalledTimes(1);
     expect(pool.query).not.toHaveBeenCalled();

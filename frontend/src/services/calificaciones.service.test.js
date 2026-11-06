@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { request } from "../api/client.js";
-import { calificarVendedor } from "./calificaciones.service.js";
+import { calificarVendedor, listarCalificacionesVendedor } from "./calificaciones.service.js";
 
 vi.mock("../api/client.js", () => ({
   request: vi.fn(),
@@ -43,5 +43,25 @@ describe("calificaciones.service", () => {
     await expect(
       calificarVendedor({ pedido_id: 5, vendedor_id: 3, estrellas: 5 })
     ).rejects.toMatchObject({ status: 409, message: "El pedido ya fue calificado" });
+  });
+
+  it("listarCalificacionesVendedor arma la URL paginada (RF51)", async () => {
+    // Act
+    await listarCalificacionesVendedor(3, { page: 2, limit: 10 });
+
+    // Assert
+    expect(request).toHaveBeenCalledWith(
+      "/api/calificaciones/vendedor/3?page=2&limit=10"
+    );
+  });
+
+  it("listarCalificacionesVendedor usa page=1 y limit=5 por defecto", async () => {
+    // Act
+    await listarCalificacionesVendedor(3);
+
+    // Assert
+    expect(request).toHaveBeenCalledWith(
+      "/api/calificaciones/vendedor/3?page=1&limit=5"
+    );
   });
 });

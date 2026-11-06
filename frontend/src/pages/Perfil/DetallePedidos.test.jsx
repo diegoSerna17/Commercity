@@ -53,9 +53,9 @@ describe("DetallePedidos", () => {
     ["Pendiente", "text-error"],
     ["Desconocido", "text-on-surface-variant"],
   ])("aplica el chip del estado %s", (estado, clase) => {
-    const { container } = renderDetalle({ estado });
+    renderDetalle({ estado });
 
-    const chip = container.querySelector(`span.${clase}`);
+    const chip = document.querySelector(`span.${clase}`);
     expect(chip).toBeInTheDocument();
     expect(chip).toHaveTextContent(estado);
   });
@@ -70,7 +70,7 @@ describe("DetallePedidos", () => {
       estado: "Pendiente",
     }));
 
-    const { container } = renderDetalle({
+    renderDetalle({
       productos,
       neto: undefined,
       comision: undefined,
@@ -78,7 +78,7 @@ describe("DetallePedidos", () => {
 
     expect(screen.getByText("Producto 6")).toBeInTheDocument();
     expect(screen.getByText("$60.000")).toBeInTheDocument();
-    expect(container.querySelector(".max-h-64")).toBeInTheDocument();
+    expect(document.querySelector(".max-h-64")).toBeInTheDocument();
     expect(screen.getAllByText("$0").length).toBeGreaterThanOrEqual(2);
   });
 

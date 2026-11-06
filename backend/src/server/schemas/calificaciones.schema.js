@@ -1,10 +1,32 @@
 import { z } from "zod";
+import { idParam, paginacionSchema } from "./common.schema.js";
 
 // ============================================================================
 // Contrato del modulo calificaciones (RF107).
-// Movido verbatim desde calificaciones.controllers.js (Fase 1):
-// misma forma, mismos mensajes implicitos, mismo comportamiento.
 // ============================================================================
+
+/** Query de GET /api/calificaciones/vendedor/:id (RF51). */
+export const calificacionesVendedorQuerySchema = z
+  .object({
+    page: paginacionSchema.shape.page,
+    limit: paginacionSchema.shape.limit,
+  })
+  .meta({
+    id: "CalificacionesVendedorQuery",
+    title: "CalificacionesVendedorQuery",
+    description: "Paginacion de las calificaciones recibidas por un vendedor",
+    examples: [{ page: 1, limit: 10 }],
+  });
+
+/** Params :id del vendedor. */
+export const calificacionesVendedorParamsSchema = z
+  .object({ id: idParam })
+  .meta({
+    id: "CalificacionesVendedorParams",
+    title: "CalificacionesVendedorParams",
+    description: "Id del vendedor cuyas calificaciones se consultan",
+    examples: [{ id: 4 }],
+  });
 
 export const calificacionSchema = z
   .object({

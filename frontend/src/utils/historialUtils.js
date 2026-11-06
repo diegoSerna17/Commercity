@@ -1,19 +1,7 @@
-export const IVA_RATE = 0.19;
+import { formatPriceRounded } from "./formatPrice.js";
 
 export function formatCOP(amount) {
-  return "$" + Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
-
-export function calcSubtotal(productos) {
-  return productos.reduce((sum, p) => sum + p.cantidad * p.precioUnit, 0);
-}
-
-export function calcIVA(subtotal) {
-  return subtotal * IVA_RATE;
-}
-
-export function calcTotal(subtotal) {
-  return subtotal + calcIVA(subtotal);
+  return formatPriceRounded(amount);
 }
 
 export function numProductosLabel(productos) {

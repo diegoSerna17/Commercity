@@ -140,6 +140,11 @@ describe("GET /api/admin/usuarios y productos (RF67/RF68)", () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(2);
     expect(res.body.data[1].suspendido).toBe(true);
+    // B2: listado paginado con LIMIT/OFFSET (default 50).
+    const listado = pool.query.mock.calls.find(([sql]) =>
+      String(sql).includes("LIMIT ? OFFSET ?")
+    );
+    expect(listado[1]).toEqual([50, 0]);
   });
 
   it("fix 4.4: restaura un producto suspendido", async () => {
@@ -157,6 +162,12 @@ describe("GET /api/admin/usuarios y productos (RF67/RF68)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.estado).toBe("activo");
+    // M-11/B2: la restauracion queda auditada.
+    expect(
+      pool.query.mock.calls.some(([sql]) =>
+        String(sql).includes("INSERT INTO auditoria_acciones")
+      )
+    ).toBe(true);
   });
 
   it("suspende un producto con borrado logico (RF72)", async () => {
@@ -175,6 +186,12 @@ describe("GET /api/admin/usuarios y productos (RF67/RF68)", () => {
     expect(res.status).toBe(200);
     const consulta = pool.query.mock.calls.find(([sql]) => sql.includes("SET eliminado_por_admin = 1"));
     expect(consulta[0]).not.toContain("DELETE FROM productos");
+    // M-11/B2: la suspension queda auditada.
+    expect(
+      pool.query.mock.calls.some(([sql]) =>
+        String(sql).includes("INSERT INTO auditoria_acciones")
+      )
+    ).toBe(true);
   });
 });
 
@@ -487,6 +504,11 @@ describe("Reportes admin (RF60-RF66 + fix 4.2)", () => {
     expect(res.status).toBe(200);
     expect(res.body.data[0].tipo).toBe("producto");
     expect(res.body.data[0].estado).toBe("pendiente");
+    // B2: listado paginado con LIMIT/OFFSET (default 50).
+    const listado = pool.query.mock.calls.find(([sql]) =>
+      String(sql).includes("LIMIT ? OFFSET ?")
+    );
+    expect(listado[1]).toEqual([50, 0]);
   });
 
   it("A2: excluye archivados por defecto e incluye con ?incluir_archivados=1", async () => {

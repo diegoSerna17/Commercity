@@ -158,6 +158,8 @@ export const confirmarPago = async (req, res, next) => {
          FROM productos
         WHERE id IN (${items.map(() => "?").join(",")})
           AND eliminado_por_admin = 0
+          AND eliminado_por_vendedor = 0
+          AND pausado = 0
           AND vendedor_id IN (SELECT id FROM usuarios WHERE activo = 1)
           FOR UPDATE`,
       items.map((item) => item.producto_id)

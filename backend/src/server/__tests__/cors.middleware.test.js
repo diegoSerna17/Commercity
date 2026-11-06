@@ -11,6 +11,11 @@ vi.mock("mysql2/promise", () => ({
 // El secreto debe existir antes de importar app.js (utils/config.js lo exige).
 process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto_test";
 
+// El .env local del proyecto puede habilitar los origenes de escritorio; este
+// archivo prueba el DEFAULT cerrado, asi que se fija explicitamente en false
+// (dotenv no sobreescribe variables ya definidas). El ultimo test lo activa.
+process.env.ALLOW_DESKTOP_ORIGINS = "false";
+
 const { default: app } = await import("../app.js");
 
 // Mismo origen web que resuelve app.js (el .env del proyecto define FRONTEND_URL).
@@ -88,6 +93,10 @@ describe("CORS (origenes permitidos: frontend web + WebView Capacitor)", () => {
 
     const resFile = await preflight("file://", appDesktop);
     expect(resFile.headers["access-control-allow-origin"]).toBe("file://");
+
+    // Electron empaquetado suele enviar una ruta file:///...
+    const resRuta = await preflight("file:///C:/app/index.html", appDesktop);
+    expect(resRuta.headers["access-control-allow-origin"]).toBe("file:///C:/app/index.html");
   });
 
   it("M-16/H6: en produccion solo entran FRONTEND_URL y CORS_ALLOWLIST (sin localhost ni desktop)", async () => {

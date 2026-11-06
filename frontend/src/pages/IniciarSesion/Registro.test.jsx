@@ -80,12 +80,31 @@ describe("Registro", () => {
         nombre_completo: "Ana Perez",
         email: "ana@correo.com",
         password: "secreta123",
+        acepta_terminos: true,
       },
     });
     expect(setCurrentUser).toHaveBeenCalledWith(usuario);
     expect(await screen.findByRole("heading", { name: "Inicio" })).toBeInTheDocument();
     // F4: el JWT nunca se persiste en localStorage.
     expect(localStorage.getItem("token")).toBeNull();
+  });
+
+  it("no envia la solicitud si no se aceptan los terminos (RF6)", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    renderRegistro();
+
+    // Act: se completa todo menos el checkbox
+    await user.type(screen.getByPlaceholderText("Nombre completo"), "Ana Perez");
+    await user.type(screen.getByPlaceholderText("Correo electrónico"), "ana@correo.com");
+    await user.type(screen.getByPlaceholderText("Contraseña"), "secreta123");
+    await user.click(screen.getByRole("button", { name: "Registrarse" }));
+
+    // Assert
+    expect(
+      await screen.findByText("Debes aceptar los términos y condiciones")
+    ).toBeInTheDocument();
+    expect(request).not.toHaveBeenCalled();
   });
 
   it("muestra el error del backend cuando el correo ya existe", async () => {

@@ -79,15 +79,33 @@ export const dejarDeSeguir = async (req, res, next) => {
 
 export const listarSiguiendo = async (req, res, next) => {
     try {
+        const { page: pagina, limit: limite } = req.query;
+        const offset = (pagina - 1) * limite;
+        const [[totalRow]] = await pool.query(
+            "SELECT COUNT(*) AS total FROM seguidores WHERE seguidor_id = ?",
+            [req.userId]
+        );
+        const total = Number(totalRow?.total || 0);
         const [filas] = await pool.query(
             `SELECT u.id, u.nombre_completo, u.foto_perfil, s.fecha_seguimiento
              FROM seguidores s
              JOIN usuarios u ON u.id = s.seguido_id
              WHERE s.seguidor_id = ?
-             ORDER BY s.fecha_seguimiento DESC`,
-            [req.userId]
+             ORDER BY s.fecha_seguimiento DESC
+             LIMIT ? OFFSET ?`,
+            [req.userId, limite, offset]
         );
-        return successResponse(res, "Usuarios que sigues.", filas);
+        return res.status(200).json({
+            success: true,
+            message: "Usuarios que sigues.",
+            data: filas,
+            paginacion: {
+                pagina,
+                por_pagina: limite,
+                total,
+                total_paginas: Math.max(1, Math.ceil(total / limite)),
+            },
+        });
     } catch (err) {
         next(err);
     }
@@ -95,15 +113,33 @@ export const listarSiguiendo = async (req, res, next) => {
 
 export const listarSeguidores = async (req, res, next) => {
     try {
+        const { page: pagina, limit: limite } = req.query;
+        const offset = (pagina - 1) * limite;
+        const [[totalRow]] = await pool.query(
+            "SELECT COUNT(*) AS total FROM seguidores WHERE seguido_id = ?",
+            [req.userId]
+        );
+        const total = Number(totalRow?.total || 0);
         const [filas] = await pool.query(
             `SELECT u.id, u.nombre_completo, u.foto_perfil, s.fecha_seguimiento
              FROM seguidores s
              JOIN usuarios u ON u.id = s.seguidor_id
              WHERE s.seguido_id = ?
-             ORDER BY s.fecha_seguimiento DESC`,
-            [req.userId]
+             ORDER BY s.fecha_seguimiento DESC
+             LIMIT ? OFFSET ?`,
+            [req.userId, limite, offset]
         );
-        return successResponse(res, "Usuarios que te siguen.", filas);
+        return res.status(200).json({
+            success: true,
+            message: "Usuarios que te siguen.",
+            data: filas,
+            paginacion: {
+                pagina,
+                por_pagina: limite,
+                total,
+                total_paginas: Math.max(1, Math.ceil(total / limite)),
+            },
+        });
     } catch (err) {
         next(err);
     }

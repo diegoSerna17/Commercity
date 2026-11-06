@@ -6,10 +6,13 @@ on:
       - "backend/**"
       - "frontend/**"
       - "apps/**"
+      - "tools/**"
+      - "VERSION"
       - "schema_commercity.sql"
       - "seed_commercity.sql"
       - "Dockerfile"
       - "docker-compose.yml"
+      - "docs/api/**"
       - ".github/workflows/ci.yml"
   push:
     branches: [PREVIEW, main]
@@ -17,11 +20,15 @@ on:
       - "backend/**"
       - "frontend/**"
       - "apps/**"
+      - "tools/**"
+      - "VERSION"
       - "schema_commercity.sql"
       - "seed_commercity.sql"
       - "Dockerfile"
       - "docker-compose.yml"
+      - "docs/api/**"
       - ".github/workflows/ci.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -69,7 +76,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Node 22
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -89,8 +96,34 @@ jobs:
       - name: Tests de integracion con MySQL real (si el lote los aporta)
         run: npm run test:integration --if-present
 
+  docs-api:
+    name: Docs (OpenAPI y entidades sin drift)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Instalar dependencias (lockfile)
+        run: npm ci
+      # El contrato es codigo generado: si el registro cambio y no se regenero,
+      # el diff falla. Evita publicar un openapi.json desincronizado.
+      - name: Regenerar OpenAPI y entidades
+        run: |
+          npm run docs:api
+          npm run docs:entidades
+      - name: Verificar que no hay drift
+        run: git diff --exit-code -- ../docs/api
+
   frontend:
-    name: Frontend (lint, tests, build)
+    name: Frontend (lint, tests, build, audit)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -99,7 +132,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Node 22
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -111,9 +144,31 @@ jobs:
       - name: Tests con cobertura
         # TASK-4.2: vite.config.js exige umbrales medidos menos 2 puntos
         # (Lines 93, Stmts 92, Funcs 89, Branches 82); este paso falla si bajan.
-        run: npm run test:coverage
+        # --maxWorkers=2 evita la tormenta de workers jsdom en el runner.
+        run: npm run test:coverage -- --pool=threads --maxWorkers=2
       - name: Build de produccion
         run: npm run build
+      - name: Auditoria de dependencias de produccion
+        run: npm audit --omit=dev
+
+  apps-estatico:
+    name: Apps (sintaxis JS y JSON)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Lint de sintaxis en apps/
+        run: |
+          find apps/escritorio apps/movil \
+            -type d -name node_modules -prune -o \
+            -type f -name "*.js" -print0 | xargs -0 -r -n1 node --check
+      - name: JSON validos de las apps
+        run: |
+          node -e "for (const f of ['apps/escritorio/package.json','apps/movil/package.json']) JSON.parse(require('fs').readFileSync(f,'utf8')); console.log('JSON OK')"
 
   escritorio:
     name: Escritorio (contrato OpenAPI)
@@ -122,11 +177,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Node 22
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.4.0
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Contrato contra OpenAPI (sin servidor)
         run: node apps/escritorio/tests/contrato.mjs
+
+  escritorio-build:
+    name: Escritorio (empaquetado Electron)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/escritorio
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/escritorio/package-lock.json
+      - name: Instalar dependencias (lockfile)
+        run: npm ci
+      # --dir valida el empaquetado sin instalador NSIS (que exige Windows).
+      - name: Empaquetar (sin instalador)
+        run: npx electron-builder --dir --publish never
+      - name: Subir paquete desempaquetado
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: commer-city-escritorio-dir
+          path: apps/escritorio/dist
+          if-no-files-found: error
 
   movil:
     name: Movil (contrato OpenAPI)
@@ -135,8 +217,46 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Node 22
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.4.0
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Contrato contra OpenAPI (sin servidor)
         run: node apps/movil/tests/contrato.mjs
+
+  android:
+    name: Android (assembleDebug)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/movil
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/movil/package-lock.json
+      # Capacitor 8 / AGP 8 exigen JDK 21. Se usa la etiqueta v4 a proposito:
+      # Dependabot (dependabot.yml) propone el SHA fijado en su primer PR.
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Instalar dependencias (lockfile)
+        run: npm ci
+      - name: Sincronizar assets web en Android
+        run: npx cap sync android
+      - name: Compilar APK debug
+        working-directory: apps/movil/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: Subir APK debug
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: commer-city-android-debug
+          path: apps/movil/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

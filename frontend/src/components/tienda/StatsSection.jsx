@@ -1,4 +1,5 @@
 import { ShoppingBag, DollarSign, Package, Percent, ArrowDownLeft } from "lucide-react";
+import { formatPriceRounded } from "../../utils/formatPrice.js";
 
 function StatCard({ label, value, icon }) {
   return (
@@ -18,7 +19,7 @@ function StatCard({ label, value, icon }) {
   );
 }
 
-const fmt = (n) => "$" + Math.round(Number(n) || 0).toLocaleString("es-CO");
+const fmt = formatPriceRounded;
 
 function formatearFecha(valor) {
   const fecha = new Date(valor);
