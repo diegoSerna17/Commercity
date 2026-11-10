@@ -8,6 +8,51 @@ La version nunca se edita a mano: la fuente es `VERSION` en la raiz y se
 propaga con `node tools/sync-version.mjs`; se comprueba con
 `node tools/verificar-version.mjs`.
 
+## [1.5.1] - 2026-11-10
+
+Fase 2 (parcial): validación de entrada uniforme en la capa de rutas.
+
+### Cambiado
+
+- Los `safeParse` que vivían dentro de los controladores se movieron al
+  middleware `validate()` de las rutas, reutilizando los esquemas existentes:
+  - `POST /api/calificaciones/vendedor` → `calificacionSchema`;
+  - `POST /api/chat/`, `GET /api/chat/conversaciones` y
+    `GET /api/chat/mensajes/:usuarioId` (params + query) → `chat.schema.js`;
+  - `GET /api/historial/compras` y `POST /api/historial/compras/:id/cancelar`
+    → `compras.schema.js`;
+  - `POST /api/pedidos/confirmar-pago` y `PATCH /api/pedidos/:id/estado`
+    (params + body) → `pedidos.schema.js`;
+  - `POST /api/seguidores/`, `DELETE /api/seguidores/:id` y
+    `GET /api/seguidores/:id/contadores` → `seguidores.schema.js`;
+  - `POST|PUT /api/tienda/mi-cuenta-bancaria`, `GET /api/tienda/ventas` y
+    `GET /api/tienda/ingresos` → `tienda.schema.js`.
+- Los controladores quedan en «validar en la ruta → consultar → responder» y
+  ya no importan esquemas Zod ni ejecutan `Number()` sobre la query.
+- La paginación de tienda conserva el truncado a entero y el clamp (R2) al
+  validarse en la ruta; `?estado` y `agrupar_por` siguen tolerando valores
+  desconocidos (sin filtro / transacción), igual que antes.
+- Los errores de validación de estos endpoints pasan a usar el contrato
+  uniforme de `validate()`: primer mensaje de Zod en `error.message` y
+  `error.details` con `{ campo, mensaje }`.
+
+### Agregado
+
+- `seguidorIdParamsSchema` en `seguidores.schema.js`: objeto `{ id }` para
+  `validate(..., "params")`. El alias escalar existente no servía para validar
+  el objeto completo de params.
+
+### Documentación
+
+- `docs/api/openapi.json` regenerado (64 paths / 76 operaciones / 43 esquemas).
+- Comentarios de los esquemas actualizados: ya no dicen «sin cablear
+  validate()».
+
+### Pruebas
+
+- Suite completa del backend en verde: 43 archivos / 608 pruebas; cobertura
+  97.23 % líneas y 88.37 % ramas (umbrales 97/96/88/99).
+
 ## [1.5.0] - 2026-11-10
 
 Fase 1 del plan de correccion 1.5.x (auditoria del 2026-11-10): cierre de las

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "CommerCity API",
-    "version": "1.5.0",
+    "version": "1.5.1",
     "description": "API REST de la plataforma CommerCity (comprador, vendedor, administrador). Contratos de entrada generados desde esquemas Zod; respuestas con envoltorio uniforme { success, data }."
   },
   "servers": [
@@ -2284,13 +2284,7 @@
             "required": false,
             "schema": {
               "description": "Filtra por estado (otro valor = sin filtro)",
-              "type": "string",
-              "enum": [
-                "Pendiente",
-                "En camino",
-                "Entregado",
-                "Cancelado"
-              ]
+              "type": "string"
             }
           },
           {
@@ -2326,9 +2320,7 @@
             "required": false,
             "schema": {
               "description": "Pagina base 1 (alias: page)",
-              "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
+              "type": "number"
             }
           },
           {
@@ -2337,9 +2329,25 @@
             "required": false,
             "schema": {
               "description": "Registros por pagina, max 100 (alias: limit)",
-              "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Alias de pagina",
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Alias de por_pagina",
+              "type": "number"
             }
           }
         ]
@@ -2417,13 +2425,8 @@
             "in": "query",
             "required": false,
             "schema": {
-              "default": "transaccion",
-              "description": "Agrupacion de ingresos (default transaccion)",
-              "type": "string",
-              "enum": [
-                "transaccion",
-                "dia"
-              ]
+              "description": "Agrupacion de ingresos: dia = por dia; otro valor = transaccion",
+              "type": "string"
             }
           },
           {
@@ -2432,9 +2435,7 @@
             "required": false,
             "schema": {
               "description": "Pagina base 1 (alias: page)",
-              "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
+              "type": "number"
             }
           },
           {
@@ -2443,9 +2444,25 @@
             "required": false,
             "schema": {
               "description": "Registros por pagina, max 100 (alias: limit)",
-              "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Alias de pagina",
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Alias de por_pagina",
+              "type": "number"
             }
           }
         ]
@@ -5912,13 +5929,7 @@
         "properties": {
           "estado": {
             "description": "Filtra por estado (otro valor = sin filtro)",
-            "type": "string",
-            "enum": [
-              "Pendiente",
-              "En camino",
-              "Entregado",
-              "Cancelado"
-            ]
+            "type": "string"
           },
           "fecha_desde": {
             "description": "Fecha inicial (YYYY-MM-DD)",
@@ -5934,26 +5945,23 @@
           },
           "pagina": {
             "description": "Pagina base 1 (alias: page)",
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "type": "number"
           },
           "por_pagina": {
             "description": "Registros por pagina, max 100 (alias: limit)",
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "type": "number"
+          },
+          "page": {
+            "description": "Alias de pagina",
+            "type": "number"
+          },
+          "limit": {
+            "description": "Alias de por_pagina",
+            "type": "number"
           }
         },
         "title": "HistorialVentasQuery",
-        "description": "Query de GET /api/tienda/ventas (filtros + paginacion del vendedor)",
-        "examples": [
-          {
-            "estado": "Pendiente",
-            "pagina": 1,
-            "por_pagina": 10
-          }
-        ]
+        "description": "Query de GET /api/tienda/ventas (filtros + paginacion del vendedor)"
       },
       "HistorialIngresosQuery": {
         "type": "object",
@@ -5967,36 +5975,28 @@
             "type": "string"
           },
           "agrupar_por": {
-            "default": "transaccion",
-            "description": "Agrupacion de ingresos (default transaccion)",
-            "type": "string",
-            "enum": [
-              "transaccion",
-              "dia"
-            ]
+            "description": "Agrupacion de ingresos: dia = por dia; otro valor = transaccion",
+            "type": "string"
           },
           "pagina": {
             "description": "Pagina base 1 (alias: page)",
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "type": "number"
           },
           "por_pagina": {
             "description": "Registros por pagina, max 100 (alias: limit)",
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "type": "number"
+          },
+          "page": {
+            "description": "Alias de pagina",
+            "type": "number"
+          },
+          "limit": {
+            "description": "Alias de por_pagina",
+            "type": "number"
           }
         },
         "title": "HistorialIngresosQuery",
-        "description": "Query de GET /api/tienda/ingresos (ingresos 90/10 agrupados)",
-        "examples": [
-          {
-            "agrupar_por": "dia",
-            "pagina": 1,
-            "por_pagina": 10
-          }
-        ]
+        "description": "Query de GET /api/tienda/ingresos (ingresos 90/10 agrupados)"
       },
       "HistorialComprasQuery": {
         "type": "object",

@@ -3,12 +3,11 @@ import { idParam } from "./common.schema.js";
 
 // ============================================================================
 // Contratos del modulo chat interno (RF101).
-// Espejan la validacion manual de chat.controllers.js:
+// Se aplican con validate() en chat.routes.js:
 //  - receptor_id numerico entero positivo, distinto del emisor;
 //  - mensaje: texto con trim, vacio = 400;
 //  - multipart rechazado en puerta (sin columna de persistencia);
 //  - :usuarioId y :id numericos enteros positivos.
-// Fuente documental (OpenAPI); sin cablear validate() todavia (Fase 1).
 // ============================================================================
 
 /** Body de POST /api/chat/ (mensaje de texto JSON). */

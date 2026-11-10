@@ -7,7 +7,6 @@ import {
   importeReembolsoLineas,
   reembolsarPago,
 } from "../utils/reembolsos.js";
-import { confirmarPagoSchema, estadoSchema, paramsIdSchema } from "../schemas/pedidos.schema.js";
 
 // ============================================================================
 // MODULO DE PEDIDOS Y PAGO (integrado desde AVANCES/SPRING 1/CARLOS VIDAL/Entrega)
@@ -22,9 +21,8 @@ import { confirmarPagoSchema, estadoSchema, paramsIdSchema } from "../schemas/pe
 //   3.11: redondeo round2 en todos los montos.
 // ============================================================================
 
-// Contratos de entrada: confirmarPagoSchema, estadoSchema, paramsIdSchema
-// (schemas/pedidos.schema.js). El helper parse() convierte el fallo de
-// safeParse en Error 400 VALIDATION_ERROR para el errorHandler central.
+// Contratos de entrada: confirmarPagoSchema, estadoSchema y paramsIdSchema
+// (schemas/pedidos.schema.js) se aplican con validate() en pedidos.routes.js.
 
 const ESTADO_NIVEL = { Pendiente: 0, "En camino": 1, Entregado: 2 };
 
@@ -114,7 +112,8 @@ export const getResumenCarrito = async (req, res, next) => {
 export const confirmarPago = async (req, res, next) => {
   const conn = await pool.getConnection();
   try {
-    const data = parse(confirmarPagoSchema, req.body);
+    // validate(confirmarPagoSchema) ya valido el body en la ruta.
+    const data = req.body;
     const compradorId = req.userId;
 
     // M-28 (TASK-5.5): la pasarela es simulada. El backend SOLO recibe los
@@ -592,8 +591,9 @@ async function notificarCambioEstado(conn, pedido, id, estado) {
 export const actualizarEstado = async (req, res, next) => {
   const conn = await pool.getConnection();
   try {
-    const { id } = parse(paramsIdSchema, req.params);
-    const { estado, detalle_id } = parse(estadoSchema, req.body);
+    // validate(paramsIdSchema, "params") + validate(estadoSchema) ya validaron.
+    const { id } = req.params;
+    const { estado, detalle_id } = req.body;
 
     await conn.beginTransaction();
 
@@ -684,18 +684,3 @@ export const actualizarEstado = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
-// paramsIdSchema vive en schemas/pedidos.schema.js (re-export de common).
-
-const parse = (schema, data) => {
-  const result = schema.safeParse(data);
-  if (!result.success) {
-    const message = result.error.issues
-      .map((i) => `${i.path.join(".")}: ${i.message}`)
-      .join("; ");
-    const err = new Error(message);
-    err.httpStatus = 400;
-    err.errorCode = "VALIDATION_ERROR";
-    throw err;
-  }
-  return result.data;
-};

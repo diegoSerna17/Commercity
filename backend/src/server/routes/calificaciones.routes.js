@@ -6,6 +6,7 @@ import {
 import { authRequired } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import {
+  calificacionSchema,
   calificacionesVendedorParamsSchema,
   calificacionesVendedorQuerySchema,
 } from "../schemas/calificaciones.schema.js";
@@ -17,7 +18,12 @@ const router = Router();
 // ============================================================================
 
 // Calificar a un vendedor de 1 a 5 estrellas despues de una compra.
-router.post("/vendedor", authRequired, calificarVendedor);
+router.post(
+  "/vendedor",
+  authRequired,
+  validate(calificacionSchema),
+  calificarVendedor
+);
 
 // RF51: calificaciones recibidas por un vendedor (publico, paginado).
 router.get(

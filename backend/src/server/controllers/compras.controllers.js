@@ -1,6 +1,5 @@
 import pool from "../config/db.js";
 import { round2 } from "../utils/finanzas.js";
-import { historialComprasQuerySchema } from "../schemas/compras.schema.js";
 import {
     estadoPagoVendedorTrasCancelacion,
     importeReembolsoLinea,
@@ -33,16 +32,9 @@ const NORMALIZAR_ESTADO = (e) => (e === "Cancelado" ? "Cancelado" : e || "Pendie
 export const getHistorialComprasComprador = async (req, res) => {
     const compradorId = req.userId;
 
-    // B-9: paginacion validada con Zod (default 20, max 100). ?estado sigue
-    // con allowlist manual: otro valor = sin filtro (RF30, no 400).
-    const parsed = historialComprasQuerySchema.safeParse(req.query ?? {});
-    if (!parsed.success) {
-        return res.status(400).json({
-            success: false,
-            error: { code: "VALIDATION_ERROR", message: "Parámetros de paginación inválidos" }
-        });
-    }
-    const { estado, pagina, por_pagina: porPagina } = parsed.data;
+    // B-9: paginacion validada en la ruta con validate() (default 20, max 100).
+    // ?estado sigue con allowlist manual: otro valor = sin filtro (RF30, no 400).
+    const { estado, pagina, por_pagina: porPagina } = req.query;
     const offset = (pagina - 1) * porPagina;
 
     // Filtro por estado (RF30). El ENUM de la BD usa: 'Pendiente', 'En camino', 'Entregado'
@@ -201,14 +193,8 @@ function estadoPredominante(items) {
  */
 export const cancelarPedidoComprador = async (req, res) => {
     const compradorId = req.userId;
+    // validate(cancelarPedidoParamsSchema) ya coacciono y valido :id.
     const detalleId = Number(req.params.id);
-
-    if (!Number.isInteger(detalleId) || detalleId <= 0) {
-        return res.status(400).json({
-            success: false,
-            error: { code: "VALIDATION_ERROR", message: "ID inválido" }
-        });
-    }
 
     const conn = await pool.getConnection();
     try {

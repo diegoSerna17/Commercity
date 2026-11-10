@@ -1,11 +1,5 @@
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-import { validarId } from "../utils/ids.js";
-import {
-    enviarMensajeSchema,
-    conversacionQuerySchema,
-    conversacionesQuerySchema,
-} from "../schemas/chat.schema.js";
 
 // ============================================================================
 // MODULO DE CHAT INTERNO (RF101)
@@ -27,13 +21,9 @@ import {
  */
 export const enviarMensaje = async (req, res, next) => {
     try {
-        // M-14 (TASK-4.7): contrato Zod con longitud maxima (2000) del mensaje.
-        const parsed = enviarMensajeSchema.safeParse(req.body ?? {});
-        if (!parsed.success) {
-            return errorResponse(res, "Datos del mensaje inválidos", 400, parsed.error.issues);
-        }
-        const receptorId = Number(parsed.data.receptor_id);
-        const texto = parsed.data.mensaje;
+        // M-14 (TASK-4.7): validate(enviarMensajeSchema) ya valido el body.
+        const receptorId = Number(req.body.receptor_id);
+        const texto = req.body.mensaje;
 
         if (receptorId === req.userId) {
             return errorResponse(res, "No puedes enviarte un mensaje a ti mismo", 400);
@@ -87,12 +77,8 @@ export const listarConversaciones = async (req, res, next) => {
     try {
         const usuarioId = req.userId;
 
-        // B-9: paginacion validada con Zod (default 50, max 100).
-        const parsedQuery = conversacionesQuerySchema.safeParse(req.query ?? {});
-        if (!parsedQuery.success) {
-            return errorResponse(res, "Parámetros de paginación inválidos", 400, parsedQuery.error.issues);
-        }
-        const { pagina, por_pagina: porPagina } = parsedQuery.data;
+        // B-9: paginacion validada en la ruta (default 50, max 100).
+        const { pagina, por_pagina: porPagina } = req.query;
         const offset = (pagina - 1) * porPagina;
 
         const [[totalRow]] = await pool.query(
@@ -185,11 +171,8 @@ export const listarConversaciones = async (req, res, next) => {
  */
 export const obtenerConversacion = async (req, res, next) => {
     try {
+        // validate(conversacionParamsSchema) ya coacciono y valido el id.
         const otroId = Number(req.params.usuarioId);
-
-        if (!validarId(otroId)) {
-            return errorResponse(res, "El id del usuario debe ser un entero positivo", 400);
-        }
 
         // M-15: mismo 404 para usuario inexistente o inactivo (no se enumeran cuentas).
         const [otro] = await pool.query(
@@ -200,12 +183,8 @@ export const obtenerConversacion = async (req, res, next) => {
             return errorResponse(res, "Usuario no encontrado", 404);
         }
 
-        // M-14: paginacion del historial (default 50 por pagina, max 100).
-        const parsedQuery = conversacionQuerySchema.safeParse(req.query ?? {});
-        if (!parsedQuery.success) {
-            return errorResponse(res, "Parámetros de paginación inválidos", 400, parsedQuery.error.issues);
-        }
-        const { pagina, por_pagina: porPagina } = parsedQuery.data;
+        // M-14: paginacion validada en la ruta (default 50, max 100).
+        const { pagina, por_pagina: porPagina } = req.query;
         const offset = (pagina - 1) * porPagina;
 
         const [totalRows] = await pool.query(
@@ -252,10 +231,6 @@ export const obtenerConversacion = async (req, res, next) => {
 export const marcarMensajeLeido = async (req, res, next) => {
     try {
         const mensajeId = Number(req.params.id);
-
-        if (!validarId(mensajeId)) {
-            return errorResponse(res, "El id del mensaje debe ser un entero positivo", 400);
-        }
 
         const [result] = await pool.query(
             "UPDATE mensajes_chat SET leido = 1 WHERE id = ? AND receptor_id = ?",

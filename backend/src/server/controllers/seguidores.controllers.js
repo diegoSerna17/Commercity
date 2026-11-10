@@ -1,6 +1,5 @@
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-import { seguirSchema, seguidorIdParamSchema as idParamSchema } from "../schemas/seguidores.schema.js";
 
 async function usuarioExiste(usuarioId) {
     const [filas] = await pool.query(
@@ -13,13 +12,8 @@ async function usuarioExiste(usuarioId) {
 export const seguirUsuario = async (req, res, next) => {
     try {
         const seguidorId = req.userId;
-        const parsed = seguirSchema.safeParse(req.body);
-
-        if (!parsed.success) {
-            return errorResponse(res, "Datos inválidos", 400, parsed.error.issues);
-        }
-
-        const { seguido_id: seguidoId } = parsed.data;
+        // validate(seguirSchema) ya valido el body y coacciono seguido_id.
+        const { seguido_id: seguidoId } = req.body;
 
         if (seguidoId === seguidorId) {
             return errorResponse(res, "No puedes seguirte a ti mismo", 400);
@@ -56,15 +50,12 @@ export const seguirUsuario = async (req, res, next) => {
 
 export const dejarDeSeguir = async (req, res, next) => {
     try {
-        const idParsed = idParamSchema.safeParse(req.params.id);
-
-        if (!idParsed.success) {
-            return errorResponse(res, "Id de usuario inválido", 400);
-        }
+        // validate(seguidorIdParamSchema, "params") ya valido y coacciono :id.
+        const seguidoId = req.params.id;
 
         const [result] = await pool.query(
             "DELETE FROM seguidores WHERE seguidor_id = ? AND seguido_id = ?",
-            [req.userId, idParsed.data]
+            [req.userId, seguidoId]
         );
 
         if (result.affectedRows === 0) {
@@ -151,13 +142,8 @@ export const listarSeguidores = async (req, res, next) => {
  */
 export const contarSeguidores = async (req, res, next) => {
     try {
-        const idParsed = idParamSchema.safeParse(req.params.id);
-
-        if (!idParsed.success) {
-            return errorResponse(res, "Id de usuario inválido", 400);
-        }
-
-        const usuarioId = idParsed.data;
+        // validate(seguidorIdParamsSchema, "params") ya valido y coacciono :id.
+        const usuarioId = req.params.id;
 
         if (!(await usuarioExiste(usuarioId))) {
             return errorResponse(res, "Usuario no encontrado", 404);

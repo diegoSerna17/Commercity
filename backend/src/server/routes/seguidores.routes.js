@@ -8,7 +8,7 @@ import {
 } from "../controllers/seguidores.controllers.js";
 import { authRequired } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
-import { seguidoresQuerySchema } from "../schemas/seguidores.schema.js";
+import { seguidoresQuerySchema, seguirSchema, seguidorIdParamsSchema } from "../schemas/seguidores.schema.js";
 
 const router = Router();
 
@@ -24,9 +24,18 @@ router.get(
     validate(seguidoresQuerySchema, "query"),
     listarSeguidores
 );
-router.post("/", authRequired, seguirUsuario);
-router.delete("/:id", authRequired, dejarDeSeguir);
+router.post("/", authRequired, validate(seguirSchema), seguirUsuario);
+router.delete(
+    "/:id",
+    authRequired,
+    validate(seguidorIdParamsSchema, "params"),
+    dejarDeSeguir
+);
 // Contadores publicos de un usuario (perfil publico del vendedor).
-router.get("/:id/contadores", contarSeguidores);
+router.get(
+    "/:id/contadores",
+    validate(seguidorIdParamsSchema, "params"),
+    contarSeguidores
+);
 
 export default router;

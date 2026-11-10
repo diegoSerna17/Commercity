@@ -3,10 +3,9 @@ import { paramsIdSchema } from "./common.schema.js";
 
 // ============================================================================
 // Contratos del modulo historial / compras del comprador (RF26-RF32, RF135).
-// Espejan la validacion manual de compras.controllers.js:
+// Se aplican con validate() en historial.routes.js:
 //  - ?estado solo filtra si es uno de los 4 validos (otro valor = sin filtro).
 //  - Cancelar exige :id entero positivo (Number.isInteger + > 0).
-// Fuente documental (OpenAPI); sin cablear validate() todavia (Fase 1).
 // ============================================================================
 
 /** Query de GET /api/historial/compras (?estado opcional RF30 + paginacion B-9). */

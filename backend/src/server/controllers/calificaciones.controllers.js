@@ -1,6 +1,5 @@
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-import { calificacionSchema } from "../schemas/calificaciones.schema.js";
 
 // ============================================================================
 // MODULO DE CALIFICACIONES DE VENDEDORES (RF107 del documento 20/08)
@@ -31,13 +30,8 @@ import { calificacionSchema } from "../schemas/calificaciones.schema.js";
 export const calificarVendedor = async (req, res, next) => {
   try {
     const compradorId = req.userId;
-    const parsed = calificacionSchema.safeParse(req.body);
-
-    if (!parsed.success) {
-      return errorResponse(res, "Datos de la calificacion invalidos", 400, parsed.error.issues);
-    }
-
-    const { pedido_id, vendedor_id, estrellas, comentario } = parsed.data;
+    // El body ya viene validado por validate(calificacionSchema) en la ruta.
+    const { pedido_id, vendedor_id, estrellas, comentario } = req.body;
 
     // M-5: un usuario no puede calificarse a si mismo.
     if (Number(vendedor_id) === Number(compradorId)) {

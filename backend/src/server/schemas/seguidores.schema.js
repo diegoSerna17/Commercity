@@ -34,3 +34,13 @@ export const seguirSchema = z
  * Alias del idParam comun (mismo objeto, misma meta): evita registrar dos
  * ids distintos para el mismo contrato en el generador OpenAPI. */
 export const seguidorIdParamSchema = idParam;
+
+/** Objeto de params { id } para validate(..., "params"). */
+export const seguidorIdParamsSchema = z
+  .object({ id: idParam })
+  .meta({
+    id: "SeguidorIdParams",
+    title: "SeguidorIdParams",
+    description: "Params :id de DELETE /api/seguidores/:id y GET /:id/contadores",
+    examples: [{ id: 7 }],
+  });

@@ -6,6 +6,14 @@ import {
     marcarMensajeLeido,
 } from "../controllers/chat.controllers.js";
 import { authRequired } from "../middleware/auth.middleware.js";
+import { validate } from "../middleware/validate.middleware.js";
+import {
+    conversacionParamsSchema,
+    conversacionQuerySchema,
+    conversacionesQuerySchema,
+    enviarMensajeSchema,
+    mensajeIdParamsSchema,
+} from "../schemas/chat.schema.js";
 import { errorResponse } from "../utils/response.js";
 
 const router = Router();
@@ -37,15 +45,37 @@ function rechazarMultipartChat(req, res, next) {
 }
 
 // Enviar mensaje de TEXTO (JSON). El multipart se rechaza en la puerta.
-router.post("/", authRequired, rechazarMultipartChat, enviarMensaje);
+router.post(
+    "/",
+    authRequired,
+    rechazarMultipartChat,
+    validate(enviarMensajeSchema),
+    enviarMensaje
+);
 
 // Listado de conversaciones del usuario autenticado.
-router.get("/conversaciones", authRequired, listarConversaciones);
+router.get(
+    "/conversaciones",
+    authRequired,
+    validate(conversacionesQuerySchema, "query"),
+    listarConversaciones
+);
 
 // Historial de mensajes entre el usuario autenticado y otro usuario.
-router.get("/mensajes/:usuarioId", authRequired, obtenerConversacion);
+router.get(
+    "/mensajes/:usuarioId",
+    authRequired,
+    validate(conversacionParamsSchema, "params"),
+    validate(conversacionQuerySchema, "query"),
+    obtenerConversacion
+);
 
 // Marcar un mensaje recibido como leido.
-router.patch("/mensajes/:id/leido", authRequired, marcarMensajeLeido);
+router.patch(
+    "/mensajes/:id/leido",
+    authRequired,
+    validate(mensajeIdParamsSchema, "params"),
+    marcarMensajeLeido
+);
 
 export default router;

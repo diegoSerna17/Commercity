@@ -1,7 +1,5 @@
-import { z } from "zod";
 import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-import { bancoSchema } from "../schemas/cuentaBancaria.schema.js";
 import { round2 } from "../utils/finanzas.js";
 import { importeReembolsoLinea } from "../utils/reembolsos.js";
 import {
@@ -66,7 +64,8 @@ export const getMiCuentaBancariaMasked = async (req, res, next) => {
 export const upsertMiCuentaBancaria = async (req, res, next) => {
   const conn = await pool.getConnection();
   try {
-    const data = bancoSchema.parse(req.body);
+    // validate(upsertCuentaBancariaSchema) ya valido y normalizo el body.
+    const data = req.body;
     const usuarioId = req.userId;
 
     // M-10: v2 con AAD = usuario_id.
@@ -121,10 +120,6 @@ export const upsertMiCuentaBancaria = async (req, res, next) => {
     );
   } catch (err) {
     await conn.rollback();
-    if (err instanceof z.ZodError) {
-      return errorResponse(res, "Datos de cuenta bancaria inválidos.", 400,
-        err.issues.map((i) => ({ campo: i.path.join("."), mensaje: i.message })));
-    }
     next(err);
   } finally {
     conn.release();

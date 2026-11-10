@@ -1,13 +1,28 @@
 import { Router } from "express";
 import { getHistorialComprasComprador, cancelarPedidoComprador } from "../controllers/compras.controllers.js";
 import { authRequired } from "../middleware/auth.middleware.js";
+import { validate } from "../middleware/validate.middleware.js";
+import {
+    cancelarPedidoParamsSchema,
+    historialComprasQuerySchema,
+} from "../schemas/compras.schema.js";
 
 const router = Router();
 
 // Historial de compras del comprador autenticado (protegido con JWT)
-router.get("/compras", authRequired, getHistorialComprasComprador);
+router.get(
+    "/compras",
+    authRequired,
+    validate(historialComprasQuerySchema, "query"),
+    getHistorialComprasComprador
+);
 
 // RF35/RF89: cancelar un pedido en estado Pendiente (restituye stock y reembolsa)
-router.post("/compras/:id/cancelar", authRequired, cancelarPedidoComprador);
+router.post(
+    "/compras/:id/cancelar",
+    authRequired,
+    validate(cancelarPedidoParamsSchema, "params"),
+    cancelarPedidoComprador
+);
 
 export default router;
