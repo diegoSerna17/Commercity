@@ -2,8 +2,8 @@
 /**
  * tools/sync-version.mjs (TASK-10.9, DEC-010, Fase 10)
  * VERSION (raiz) es la fuente. Sincroniza backend/package.json,
- * apps/escritorio/package.json, apps/movil/package.json, MARKETING_VERSION (iOS)
- * y versionName (Android). Nunca se edita la version a mano.
+ * apps/escritorio/package.json, apps/movil/package.json, frontend/package.json,
+ * MARKETING_VERSION (iOS) y versionName (Android). Nunca se edita la version a mano.
  * Uso: node tools/sync-version.mjs
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -36,6 +36,7 @@ function syncPackageJson(rel) {
 syncPackageJson("backend/package.json");
 syncPackageJson("apps/escritorio/package.json");
 syncPackageJson("apps/movil/package.json");
+syncPackageJson("frontend/package.json");
 
 // iOS MARKETING_VERSION en project.pbxproj
 const pbx = join(ROOT, "apps/movil/ios/App/App.xcodeproj/project.pbxproj");

@@ -69,6 +69,23 @@ describe("IniciarSesion", () => {
     expect(setCurrentUser).not.toHaveBeenCalled();
   });
 
+  it("muestra el aviso cuando el guard no pudo verificar la sesion", () => {
+    // Arrange
+    const aviso = "No pudimos verificar tu sesión. Inicia sesión de nuevo.";
+    render(
+      <MemoryRouter
+        initialEntries={[{ pathname: "/login", state: { aviso } }]}
+      >
+        <Routes>
+          <Route path="/login" element={<IniciarSesion />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Assert
+    expect(screen.getByRole("alert")).toHaveTextContent(aviso);
+  });
+
   it("alterna la visibilidad de la contrasena", async () => {
     // Arrange
     const user = userEvent.setup();

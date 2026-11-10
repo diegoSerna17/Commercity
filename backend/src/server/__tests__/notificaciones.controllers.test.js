@@ -153,6 +153,7 @@ describe("GET /api/notificaciones (RF100/RF101) - listado", () => {
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.message).toBe("Tipo de notificación inválido");
   });
 
   it("rechaza limite fuera de rango (400)", async () => {
@@ -161,6 +162,16 @@ describe("GET /api/notificaciones (RF100/RF101) - listado", () => {
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.message).toBe("El límite debe estar entre 1 y 50");
+  });
+
+  it("rechaza pagina no entera (400)", async () => {
+    const res = await request(app)
+      .get("/api/notificaciones?pagina=abc")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.message).toBe("La página debe ser un entero positivo");
   });
 
   it("calcula dias/hora relativo para notificaciones (RF101)", async () => {

@@ -14,7 +14,7 @@ const API_URL = (() => {
 })();
 async function apiRequest(path, options = {}) {
   if (!API_URL) throw { status: 0, code: "CONFIG", message: "API sin URL valida: define window.COMMERCITY_API_URL con HTTPS para builds de release." };
-  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  const headers = { "Content-Type": "application/json", "X-Client-Type": "escritorio", ...(options.headers || {}) };
   const token = localStorage.getItem("commercity_token");
   if (token) headers["Authorization"] = "Bearer " + token;
   if (options.isForm) delete headers["Content-Type"];

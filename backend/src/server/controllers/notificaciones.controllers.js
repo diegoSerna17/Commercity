@@ -2,16 +2,6 @@ import pool from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { validarId } from "../utils/ids.js";
 
-const TIPOS_VALIDOS = [
-    "compra",
-    "pedido enviado",
-    "en camino",
-    "entregado",
-    "devolucion",
-    "mensajes",
-    "reporte",
-];
-
 const LIMITE_MAXIMO = 50;
 
 const formatearDiasHoras = (fecha) => {
@@ -33,36 +23,18 @@ const formatearDiasHoras = (fecha) => {
 
 export const listarNotificaciones = async (req, res, next) => {
     try {
+        // La query ya viene validada y coercionada por validate() en la ruta
+        // (schemas/notificaciones.schema.js): aqui solo se aplican defaults.
+        const { tipo, limite = LIMITE_MAXIMO, pagina = 1 } = req.query ?? {};
+
         const condiciones = ["usuario_id = ?"];
         const params = [req.userId];
 
-        if (req.query.tipo !== undefined) {
-            if (typeof req.query.tipo !== "string" || !TIPOS_VALIDOS.includes(req.query.tipo)) {
-                return errorResponse(res, "Tipo de notificación inválido", 400);
-            }
+        if (tipo !== undefined) {
             condiciones.push("tipo = ?");
-            params.push(req.query.tipo);
+            params.push(tipo);
         }
 
-        let limite = LIMITE_MAXIMO;
-        if (req.query.limite !== undefined) {
-            const n = Number(req.query.limite);
-            if (!Number.isInteger(n) || n < 1 || n > LIMITE_MAXIMO) {
-                return errorResponse(res, "El límite debe estar entre 1 y 50", 400);
-            }
-            limite = n;
-        }
-
-        // B-7 (TASK-4.9): paginacion del listado (la respuesta suma campos, sin
-        // cambiar el contrato existente { total, notificaciones }).
-        let pagina = 1;
-        if (req.query.pagina !== undefined) {
-            const p = Number(req.query.pagina);
-            if (!Number.isInteger(p) || p < 1) {
-                return errorResponse(res, "La página debe ser un entero positivo", 400);
-            }
-            pagina = p;
-        }
         const offset = (pagina - 1) * limite;
 
         const [totalRows] = await pool.query(

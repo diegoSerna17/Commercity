@@ -45,6 +45,19 @@ describe("CORS por origen (web / escritorio / movil)", () => {
     expect([200, 204]).toContain(res.status);
     expect(res.headers["access-control-allow-origin"]).toBe("capacitor://localhost");
   });
+
+  it("declara X-Client-Type en el preflight del login nativo", async () => {
+    const res = await request(app)
+      .options("/api/usuarios/login")
+      .set("Origin", "capacitor://localhost")
+      .set("Access-Control-Request-Method", "POST")
+      .set("Access-Control-Request-Headers", "content-type,x-client-type");
+
+    expect([200, 204]).toContain(res.status);
+    expect(String(res.headers["access-control-allow-headers"]).toLowerCase()).toContain(
+      "x-client-type"
+    );
+  });
 });
 
 // H2 (P0): /uploads ya no es totalmente publico. Ejercita las lineas 63-64 de

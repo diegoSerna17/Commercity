@@ -2,12 +2,16 @@
 
 // JS Importaciones de hooks, Link e iconos para el formulario de login
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Mail, Lock, EyeOff, Check, ArrowRight } from "lucide-react";
 import { request, setCurrentUser } from "../../api/client.js";
 
 const Login = () => {
   const navigate = useNavigate();
+  // Aviso que deja RutaProtegidaRol cuando no pudo verificar la sesion
+  // (fail-closed): se muestra en el formulario de acceso.
+  const location = useLocation();
+  const aviso = location.state?.aviso;
   // RE Estado para controlar el checkbox Recordarme
   const [remember, setRemember] = useState(false);
   // RE Estado para alternar visibilidad de la contrasena
@@ -210,6 +214,13 @@ const Login = () => {
             {error && (
               <p className="text-report-red-text text-body-sm font-medium text-center">
                 {error}
+              </p>
+            )}
+
+            {/* TW Aviso de sesion no verificada (fail-closed) */}
+            {!error && aviso && (
+              <p role="alert" className="text-report-red-text text-body-sm font-medium text-center">
+                {aviso}
               </p>
             )}
 

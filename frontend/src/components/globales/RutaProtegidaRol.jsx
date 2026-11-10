@@ -40,15 +40,12 @@ export default function RutaProtegidaRol({ roles = [], children }) {
       } catch (err) {
         if (!activo) return;
 
-        if (err?.status === 401 || err?.status === 403) {
-          clearCurrentUser();
-          setVerificacion({ estado: "anonimo", usuario: null });
-          return;
-        }
-
-        // Sin conexion con el backend se mantiene la sesion local para no
-        // dejar inutil la interfaz; los datos reales se validan al consultarlos.
-        setVerificacion({ estado: "verificado", usuario: getCurrentUser() });
+        // Fail-closed (auditoria 2026-11-10): si no se puede confirmar el rol
+        // (red caida, 5xx) NO se deja pasar. Antes se conservaba la sesion
+        // local y la guarda permitia navegar sin verificar el rol vigente.
+        clearCurrentUser();
+        const sesionInvalida = err?.status === 401 || err?.status === 403;
+        setVerificacion({ estado: "anonimo", usuario: null, aviso: !sesionInvalida });
       }
     };
 
@@ -60,7 +57,17 @@ export default function RutaProtegidaRol({ roles = [], children }) {
   }, [verificacion.estado]);
 
   if (verificacion.estado === "anonimo") {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={
+          verificacion.aviso
+            ? { aviso: "No pudimos verificar tu sesión. Inicia sesión de nuevo." }
+            : undefined
+        }
+      />
+    );
   }
 
   if (verificacion.estado === "verificando") {

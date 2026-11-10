@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import pool from "../config/db.js";
 import pkg from "../../../package.json" with { type: "json" };
-import { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } from "../utils/config.js";
+import { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE, JWT_EXPIRES_IN, expiracionEnMs } from "../utils/config.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { enviarCorreoRecuperacion, enviarAvisoRegistroDuplicado } from "../utils/mailer.js";
 import { escapeLike } from "../utils/sql.js";
@@ -46,16 +46,29 @@ export const getUsuarios = (req, res) => {
 };
 
 // F4 (P1): cookie httpOnly + SameSite para el JWT (mitiga robo via XSS).
-// Se mantiene el token en el body por compatibilidad con movil/escritorio,
-// pero la web debe preferir la cookie (credenciales include).
+// El token viaja en el body SOLO para las apps nativas (ver tokenParaBody);
+// la web usa exclusivamente la cookie httpOnly.
 function emitirCookieSesion(res, token) {
     res.cookie("token", token, {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: expiracionEnMs(),
         path: "/",
     });
+}
+
+/**
+ * Decide si el JWT se devuelve en el body.
+ * La web recibe solo la cookie httpOnly; movil y escritorio, que no comparten
+ * dominio con la API, lo piden explicitamente con `X-Client-Type`.
+ * @param {import("express").Request} req
+ * @param {string} token JWT recien emitido.
+ * @returns {string|null} Token para el body o null.
+ */
+function tokenParaBody(req, token) {
+    const cliente = String(req.get("X-Client-Type") || "").trim().toLowerCase();
+    return cliente === "movil" || cliente === "escritorio" ? token : null;
 }
 
 // ============================ REGISTRO ============================
@@ -125,7 +138,7 @@ export const register = async (req, res) => {
                 JWT_SECRET,
                 {
                     algorithm: "HS256",
-                    expiresIn: "7d",
+                    expiresIn: JWT_EXPIRES_IN,
                     issuer: JWT_ISSUER,
                     audience: JWT_AUDIENCE,
                     // jti unico (UUID v4): dos registros en el mismo segundo no
@@ -137,7 +150,7 @@ export const register = async (req, res) => {
 
             emitirCookieSesion(res, token);
             return successResponse(res, "Usuario registrado correctamente", {
-                token,
+                token: tokenParaBody(req, token),
                 user: {
                     id: usuarioId,
                     email,
@@ -218,7 +231,7 @@ export const login = async (req, res) => {
             JWT_SECRET,
             {
                 algorithm: "HS256",
-                expiresIn: "7d",
+                expiresIn: JWT_EXPIRES_IN,
                 issuer: JWT_ISSUER,
                 audience: JWT_AUDIENCE,
                 // jti unico (UUID v4): dos logins en el mismo segundo no emiten
@@ -230,7 +243,7 @@ export const login = async (req, res) => {
 
         emitirCookieSesion(res, token);
         return successResponse(res, "Inicio de sesión exitoso", {
-            token,
+            token: tokenParaBody(req, token),
             user: {
                 id: usuario.id,
                 email: usuario.email,

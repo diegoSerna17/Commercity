@@ -77,6 +77,40 @@ function derivarClaveProposito(secreto, proposito) {
 export const JWT_ISSUER = process.env.JWT_ISSUER || "commercity-api";
 export const JWT_AUDIENCE = process.env.JWT_AUDIENCE || "commercity-clients";
 
+/**
+ * Expiracion del JWT (decision 2026-11-10). Formato de jsonwebtoken:
+ * "30m", "24h", "7d". Vale "24h" por defecto y se valida al arrancar para que
+ * un valor invalido no emita tokens sin expiracion.
+ */
+const PATRON_EXPIRACION = /^\d+[smhd]$/;
+
+/**
+ * Valida JWT_EXPIRES_IN y devuelve la expiracion efectiva.
+ * @param {string|undefined} valor Valor a validar (por defecto el del .env).
+ * @returns {string} Expiracion valida para jsonwebtoken.
+ */
+export const validarJWTExpiracion = (valor = process.env.JWT_EXPIRES_IN) => {
+    const expiracion = String(valor ?? "").trim() || "24h";
+    if (!PATRON_EXPIRACION.test(expiracion)) {
+        fatal(`JWT_EXPIRES_IN invalido ("${expiracion}"): use el formato de jsonwebtoken (30m, 24h, 7d).`);
+    }
+    return expiracion;
+};
+
+export const JWT_EXPIRES_IN = validarJWTExpiracion();
+
+/**
+ * Convierte una expiracion de jsonwebtoken a milisegundos.
+ * Se usa para que la cookie httpOnly caduque al mismo tiempo que el token.
+ * @param {string} [expiracion] Expiracion en formato jsonwebtoken.
+ * @returns {number} Duracion en milisegundos.
+ */
+export const expiracionEnMs = (expiracion = JWT_EXPIRES_IN) => {
+    const m = /^(\d+)([smhd])$/.exec(String(expiracion));
+    const unidadMs = { s: 1000, m: 60000, h: 3600000, d: 86400000 };
+    return m ? Number(m[1]) * unidadMs[m[2]] : 24 * 60 * 60 * 1000;
+};
+
 if (process.env.NODE_ENV === "production") {
     const claveCrypto = process.env.CRYPTO_SECRET_KEY;
     if (!claveCrypto) {

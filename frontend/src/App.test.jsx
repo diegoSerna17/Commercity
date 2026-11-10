@@ -180,6 +180,20 @@ describe("App", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("permite al administrador entrar a las rutas de vendedor", async () => {
+    // Arrange
+    setCurrentUser({ roles: ["administrador"] });
+    obtenerMiUsuario.mockResolvedValue({
+      data: { nombre_completo: "Admin", roles: ["administrador"] },
+    });
+
+    // Act
+    renderApp("/store");
+
+    // Assert
+    expect(await screen.findByText("Pagina Tienda")).toBeInTheDocument();
+  });
+
   it("redirige a login si la verificacion del rol da 401", async () => {
     // Arrange
     setCurrentUser({ roles: ["vendedor"] });
@@ -193,7 +207,7 @@ describe("App", () => {
     expect(screen.queryByText("Pagina Perfil Vendedor")).not.toBeInTheDocument();
   });
 
-  it("mantiene la sesion local si falla la red al verificar el rol", async () => {
+  it("niega el acceso si falla la red al verificar el rol (fail-closed)", async () => {
     // Arrange
     setCurrentUser({ roles: ["vendedor"] });
     obtenerMiUsuario.mockRejectedValue(new Error("sin conexion"));
@@ -202,8 +216,17 @@ describe("App", () => {
     renderApp("/PerfilVendedor");
 
     // Assert
+    expect(await screen.findByText("Pagina Login")).toBeInTheDocument();
     expect(
-      await screen.findByText("Pagina Perfil Vendedor")
+      screen.queryByText("Pagina Perfil Vendedor")
+    ).not.toBeInTheDocument();
+  });
+
+  it("muestra la pagina 404 en una ruta desconocida", async () => {
+    renderApp("/ruta-que-no-existe");
+
+    expect(
+      await screen.findByRole("heading", { name: "Página no encontrada" })
     ).toBeInTheDocument();
   });
 

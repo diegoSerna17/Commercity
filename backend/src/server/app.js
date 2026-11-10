@@ -73,6 +73,9 @@ app.use(cors({
     return callback(null, false);
   },
   credentials: true,
+  // X-Client-Type lo envian movil/escritorio para pedir el JWT en el body;
+  // sin declararlo, el preflight bloquea el login nativo.
+  allowedHeaders: ["Content-Type", "Authorization", "X-Client-Type"],
 }));
 
 // A-3 (CSRF en profundidad): valida Origin/Referer en POST/PUT/PATCH/DELETE

@@ -22,6 +22,7 @@ afterEach(() => {
     vi.resetModules();
     process.env.NODE_ENV = "test";
     delete process.env.CRYPTO_SECRET_KEY;
+    delete process.env.JWT_EXPIRES_IN;
     process.env.JWT_SECRET = "jwt-secret-solo-para-pruebas-vitest-000000000000";
 });
 
@@ -123,5 +124,45 @@ describe("utils/config.js - validacion de secretos (fix 3.1, TASK-2.6)", () => {
 
         expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("CRYPTO_SECRET_KEY"));
         expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+});
+
+describe("utils/config.js - expiracion del JWT (decision 2026-11-10)", () => {
+    it("usa 24h por defecto cuando JWT_EXPIRES_IN no esta definida", async () => {
+        delete process.env.JWT_EXPIRES_IN;
+        vi.resetModules();
+        const { JWT_EXPIRES_IN, validarJWTExpiracion } = await import("../utils/config.js");
+
+        expect(JWT_EXPIRES_IN).toBe("24h");
+        expect(validarJWTExpiracion()).toBe("24h");
+    });
+
+    it("respeta una expiracion valida del .env", async () => {
+        process.env.JWT_EXPIRES_IN = "7d";
+        vi.resetModules();
+        const { JWT_EXPIRES_IN } = await import("../utils/config.js");
+
+        expect(JWT_EXPIRES_IN).toBe("7d");
+    });
+
+    it("rechaza un valor invalido y termina el proceso (exit 1)", async () => {
+        const { exitSpy, errorSpy } = mockFatal();
+        process.env.JWT_EXPIRES_IN = "siempre";
+        vi.resetModules();
+        const { validarJWTExpiracion } = await import("../utils/config.js");
+
+        validarJWTExpiracion("siempre");
+
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("JWT_EXPIRES_IN"));
+        expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it("convierte la expiracion a milisegundos para maxAge de la cookie", async () => {
+        vi.resetModules();
+        const { expiracionEnMs } = await import("../utils/config.js");
+
+        expect(expiracionEnMs("24h")).toBe(86_400_000);
+        expect(expiracionEnMs("30m")).toBe(1_800_000);
+        expect(expiracionEnMs("invalida")).toBe(86_400_000);
     });
 });

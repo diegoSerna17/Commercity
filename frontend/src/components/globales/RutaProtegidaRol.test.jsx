@@ -21,7 +21,12 @@ vi.mock("../../services/usuarios.service.js", () => ({
 
 function LocationProbe() {
   const location = useLocation();
-  return <output data-testid="ruta-actual">{location.pathname}</output>;
+  return (
+    <>
+      <output data-testid="ruta-actual">{location.pathname}</output>
+      <output data-testid="aviso">{location.state?.aviso || ""}</output>
+    </>
+  );
 }
 
 function renderRuta(initialEntry = "/store") {
@@ -105,7 +110,7 @@ describe("RutaProtegidaRol", () => {
     expect(obtenerMiUsuario).not.toHaveBeenCalled();
   });
 
-  it("mantiene la sesion local si /me falla sin conexion (sin status 401)", async () => {
+  it("niega el acceso si /me falla por red (fail-closed) y avisa en /login", async () => {
     // Arrange
     obtenerMiUsuario.mockRejectedValue(new Error("Failed to fetch"));
 
@@ -113,7 +118,10 @@ describe("RutaProtegidaRol", () => {
     renderRuta();
 
     // Assert
-    expect(await screen.findByRole("heading", { name: "Tienda del vendedor" })).toBeInTheDocument();
-    expect(clearCurrentUser).not.toHaveBeenCalled();
+    expect(await screen.findByRole("heading", { name: "Inicio de sesion" })).toBeInTheDocument();
+    expect(screen.getByTestId("ruta-actual").textContent).toBe("/login");
+    expect(screen.getByTestId("aviso").textContent).toContain("No pudimos verificar tu sesión");
+    expect(clearCurrentUser).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("heading", { name: "Tienda del vendedor" })).not.toBeInTheDocument();
   });
 });

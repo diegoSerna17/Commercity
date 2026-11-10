@@ -66,6 +66,19 @@ describe("Navbar", () => {
     expect(screen.getByRole("button", { name: /Pedidos/ })).toBeInTheDocument();
   });
 
+  it("muestra las secciones de vendedor al administrador (desajuste admin/vendedor)", () => {
+    // Arrange
+    getCurrentUser.mockReturnValue({ id: 1, nombre_completo: "Admin", roles: ["administrador"] });
+
+    // Act
+    renderNavbar();
+
+    // Assert
+    expect(screen.getByRole("button", { name: /Perfil/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Tienda/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Pedidos/ })).toBeInTheDocument();
+  });
+
   it("navega al pulsar un item y cierra el sidebar", async () => {
     // Arrange
     const user = userEvent.setup();

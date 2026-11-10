@@ -2,11 +2,11 @@ import { z } from "zod";
 
 // ============================================================================
 // Contratos del modulo notificaciones.
-// Espejan la validacion manual de notificaciones.controllers.js:
+// La query de GET /api/notificaciones/ se valida en la ruta con validate():
 //  - ?tipo solo filtra si es uno de los 7 validos (otro valor = 400);
 //  - ?limite entero 1-50 (default 50, fuera de rango = 400);
 //  - ?pagina entero >= 1 (default 1; B-7 TASK-4.9).
-// Fuente documental (OpenAPI); sin cablear validate() todavia (Fase 1).
+// Fuente documental (OpenAPI) y de validacion en tiempo de ejecucion.
 // ============================================================================
 
 export const TIPOS_NOTIFICACION = [
@@ -24,18 +24,21 @@ export const LIMITE_NOTIFICACIONES_MAXIMO = 50;
 /** Query de GET /api/notificaciones/ (filtros opcionales). */
 export const listarNotificacionesQuerySchema = z
   .object({
-    tipo: z.enum(TIPOS_NOTIFICACION).optional().describe("Filtra por tipo de notificacion"),
+    tipo: z
+      .enum(TIPOS_NOTIFICACION, "Tipo de notificación inválido")
+      .optional()
+      .describe("Filtra por tipo de notificacion"),
     limite: z.coerce
-      .number()
-      .int()
+      .number({ message: "El límite debe estar entre 1 y 50" })
+      .int("El límite debe estar entre 1 y 50")
       .min(1, "El límite debe estar entre 1 y 50")
       .max(50, "El límite debe estar entre 1 y 50")
       .optional()
       .describe("Maximo de registros (default 50)"),
     pagina: z.coerce
-      .number()
-      .int()
-      .min(1)
+      .number({ message: "La página debe ser un entero positivo" })
+      .int("La página debe ser un entero positivo")
+      .min(1, "La página debe ser un entero positivo")
       .optional()
       .describe("Pagina, base 1 (default 1)")
   })

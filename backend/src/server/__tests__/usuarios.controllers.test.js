@@ -189,6 +189,7 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
 
     const res = await request(app)
       .post("/api/usuarios/register")
+      .set("X-Client-Type", "movil")
       .send({
         email: "nuevo@test.com",
         password: "SuperPass123",
@@ -329,7 +330,7 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
 });
 
 describe("POST /api/usuarios/login (RF2 - fix 3.1)", () => {
-  it("inicia sesion con credenciales validas y devuelve token + roles", async () => {
+  it("inicia sesion con credenciales validas y devuelve token a la app movil", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("FROM usuarios u WHERE u.email"))
         return [[{ id: 7, email: "compra@test.com", password: "$2b$10$x", nombre_completo: "Comprador", foto_perfil: null, activo: 1 }], undefined];
@@ -340,6 +341,7 @@ describe("POST /api/usuarios/login (RF2 - fix 3.1)", () => {
 
     const res = await request(app)
       .post("/api/usuarios/login")
+      .set("X-Client-Type", "movil")
       .send({ email: "compra@test.com", password: "SuperPass123" });
 
     expect(res.status).toBe(200);
@@ -370,6 +372,7 @@ describe("POST /api/usuarios/login (RF2 - fix 3.1)", () => {
 
     const res = await request(app)
       .post("/api/usuarios/login")
+      .set("X-Client-Type", "movil")
       .send({ email: "compra@test.com", password: "SuperPass123" });
 
     expect(res.status).toBe(200);
@@ -393,9 +396,11 @@ describe("POST /api/usuarios/login (RF2 - fix 3.1)", () => {
 
     const a = await request(app)
       .post("/api/usuarios/login")
+      .set("X-Client-Type", "movil")
       .send({ email: "compra@test.com", password: "SuperPass123" });
     const b = await request(app)
       .post("/api/usuarios/login")
+      .set("X-Client-Type", "movil")
       .send({ email: "compra@test.com", password: "SuperPass123" });
 
     expect(a.body.data.token).not.toBe(b.body.data.token);

@@ -8,10 +8,17 @@ import {
     eliminarTodas,
 } from "../controllers/notificaciones.controllers.js";
 import { authRequired } from "../middleware/auth.middleware.js";
+import { validate } from "../middleware/validate.middleware.js";
+import { listarNotificacionesQuerySchema } from "../schemas/notificaciones.schema.js";
 
 const router = Router();
 
-router.get("/", authRequired, listarNotificaciones);
+router.get(
+    "/",
+    authRequired,
+    validate(listarNotificacionesQuerySchema, "query"),
+    listarNotificaciones
+);
 router.get("/no-leidas", authRequired, contarNoLeidas);
 router.patch("/leidas", authRequired, marcarTodasLeidas);
 router.patch("/:id/leida", authRequired, marcarLeida);

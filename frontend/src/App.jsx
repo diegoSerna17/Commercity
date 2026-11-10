@@ -5,6 +5,8 @@ import Navbar from './components/globales/Navbar';
 import NotificacionesEnVivo from './components/globales/NotificacionesEnVivo';
 import RutaProtegida from './components/globales/RutaProtegida';
 import RutaProtegidaRol from './components/globales/RutaProtegidaRol';
+import ErrorBoundary from './components/globales/ErrorBoundary';
+import NoEncontrado from './components/globales/NoEncontrado';
 import { getCurrentUser } from './api/client.js';
 
 // Code-splitting: cada pagina se carga bajo demanda para reducir el chunk inicial.
@@ -77,110 +79,115 @@ function AppContent() {
       )}
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Suspense fallback={<CargandoPagina />}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<IniciarSesion />} />
-            <Route path="/register" element={<Registro />} />
-            <Route path="/recover" element={<Recuperar />} />
-            <Route path="/restore" element={<Restablecer />} />
-            <Route path="/vendedor/:id" element={<PerfilPublico />} />
+        <ErrorBoundary>
+          <Suspense fallback={<CargandoPagina />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<IniciarSesion />} />
+              <Route path="/register" element={<Registro />} />
+              <Route path="/recover" element={<Recuperar />} />
+              <Route path="/restore" element={<Restablecer />} />
+              <Route path="/vendedor/:id" element={<PerfilPublico />} />
 
-            {/* M-22: rutas de vendedor, confirmadas por rol contra /api/usuarios/me */}
-            <Route
-              path="/profile"
-              element={
-                <RutaProtegidaRol roles={ROLES_VENDEDOR}>
-                  <PerfilVendedor />
-                </RutaProtegidaRol>
-              }
-            />
-            <Route
-              path="/PerfilVendedor"
-              element={
-                <RutaProtegidaRol roles={ROLES_VENDEDOR}>
-                  <PerfilVendedor />
-                </RutaProtegidaRol>
-              }
-            />
-            <Route
-              path="/orders"
-              element={
-                <RutaProtegidaRol roles={ROLES_VENDEDOR}>
-                  <Pedidos />
-                </RutaProtegidaRol>
-              }
-            />
-            <Route
-              path="/store"
-              element={
-                <RutaProtegidaRol roles={ROLES_VENDEDOR}>
-                  <Tienda />
-                </RutaProtegidaRol>
-              }
-            />
+              {/* M-22: rutas de vendedor, confirmadas por rol contra /api/usuarios/me */}
+              <Route
+                path="/profile"
+                element={
+                  <RutaProtegidaRol roles={ROLES_VENDEDOR}>
+                    <PerfilVendedor />
+                  </RutaProtegidaRol>
+                }
+              />
+              <Route
+                path="/PerfilVendedor"
+                element={
+                  <RutaProtegidaRol roles={ROLES_VENDEDOR}>
+                    <PerfilVendedor />
+                  </RutaProtegidaRol>
+                }
+              />
+              <Route
+                path="/orders"
+                element={
+                  <RutaProtegidaRol roles={ROLES_VENDEDOR}>
+                    <Pedidos />
+                  </RutaProtegidaRol>
+                }
+              />
+              <Route
+                path="/store"
+                element={
+                  <RutaProtegidaRol roles={ROLES_VENDEDOR}>
+                    <Tienda />
+                  </RutaProtegidaRol>
+                }
+              />
 
-            {/* M-22: rutas que exigen sesion */}
-            <Route
-              path="/messages"
-              element={
-                <RutaProtegida>
-                  <Mensajes />
-                </RutaProtegida>
-              }
-            />
-            <Route
-              path="/messages/chat"
-              element={
-                <RutaProtegida>
-                  <Chats />
-                </RutaProtegida>
-              }
-            />
-            <Route
-              path="/cart"
-              element={
-                <RutaProtegida>
-                  <Carrito />
-                </RutaProtegida>
-              }
-            />
-            <Route
-              path="/history"
-              element={
-                <RutaProtegida>
-                  <HistorialDeCompras />
-                </RutaProtegida>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <RutaProtegida>
-                  <Ajustes />
-                </RutaProtegida>
-              }
-            />
+              {/* M-22: rutas que exigen sesion */}
+              <Route
+                path="/messages"
+                element={
+                  <RutaProtegida>
+                    <Mensajes />
+                  </RutaProtegida>
+                }
+              />
+              <Route
+                path="/messages/chat"
+                element={
+                  <RutaProtegida>
+                    <Chats />
+                  </RutaProtegida>
+                }
+              />
+              <Route
+                path="/cart"
+                element={
+                  <RutaProtegida>
+                    <Carrito />
+                  </RutaProtegida>
+                }
+              />
+              <Route
+                path="/history"
+                element={
+                  <RutaProtegida>
+                    <HistorialDeCompras />
+                  </RutaProtegida>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <RutaProtegida>
+                    <Ajustes />
+                  </RutaProtegida>
+                }
+              />
 
-            {/* M-22: panel de administracion, confirmado por rol */}
-            <Route
-              path="/admin/dashboard"
-              element={
-                <RutaProtegidaRol roles={['administrador']}>
-                  <PanelAdministrador />
-                </RutaProtegidaRol>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <RutaProtegidaRol roles={['administrador']}>
-                  <PanelAdministrador />
-                </RutaProtegidaRol>
-              }
-            />
-          </Routes>
-        </Suspense>
+              {/* M-22: panel de administracion, confirmado por rol */}
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <RutaProtegidaRol roles={['administrador']}>
+                    <PanelAdministrador />
+                  </RutaProtegidaRol>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <RutaProtegidaRol roles={['administrador']}>
+                    <PanelAdministrador />
+                  </RutaProtegidaRol>
+                }
+              />
+
+              {/* Cualquier URL desconocida muestra la pagina 404 de la SPA. */}
+              <Route path="*" element={<NoEncontrado />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </main>
 
       {/* A-5: las notificaciones en vivo solo se montan con sesion iniciada. */}

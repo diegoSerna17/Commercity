@@ -1,6 +1,6 @@
 # CommerCity
 
-**Estado:** Proyecto académico en etapa productiva | Backend: 596/596 pruebas unitarias OK (42 archivos) | Frontend: 493/493 pruebas OK (63 archivos) | Integración MySQL local: 4 archivos / 23 pruebas con TEST_DB_* (2026-11-05) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.27 % líneas; frontend: 96.85 % líneas reales (493 pruebas, medición 2026-10-31) | Última corrida registrada: backend y frontend 2026-11-05 (CHANGELOG)
+**Estado:** Proyecto académico en etapa productiva | Backend: 608/608 pruebas unitarias OK (43 archivos) | Frontend: 500/500 pruebas OK (65 archivos) | Integración MySQL local: 4 archivos / 23 pruebas con TEST_DB_* (2026-11-05) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.28 % líneas; frontend: 96.95 % líneas reales (500 pruebas, medición 2026-11-10) | Última corrida registrada: backend y frontend 2026-11-10 (CHANGELOG 1.5.0)
 
 CommerCity es una plataforma de comercio electrónico para mercados locales con roles de comprador, vendedor y administrador. Incluye catálogo de productos con imágenes, carrito de compras, pedidos, pasarela de pago simulada, tiendas de vendedores, chat, notificaciones, seguidores, calificaciones, reportes de contenido y panel de administración.
 
