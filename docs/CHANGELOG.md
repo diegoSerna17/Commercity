@@ -30,7 +30,12 @@ Fase 2 del plan de correccion 1.5.x: capa `services/` en el backend (ítem 7).
   categorías, vendedores, detalle público, validación de stock y la gestión del
   vendedor (crear, editar con reemplazo de imagen, pausar, eliminar). El
   contrato HTTP no cambia.
-- Dominio **admin**: pendiente.
+- Dominio **admin**: `admin.service.js` absorbe estadísticas, usuarios
+  (listado, baneo/reactivación con protección del último administrador),
+  productos (suspensión y restauración), reportes (listado, archivo y
+  resolución), buscador FULLTEXT con fallback LIKE y la cuenta bancaria de la
+  plataforma. `destinoPedidosVendedor` pasa a `pedidos.service.js` y se
+  re-exporta por su ruta histórica. El contrato HTTP no cambia.
 
 ### Pruebas
 

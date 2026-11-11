@@ -11,7 +11,7 @@ import jwt from "jsonwebtoken";
 import { enviarCorreoRecuperacion, enviarAvisoRegistroDuplicado } from "../utils/mailer.js";
 import { escapeLike } from "../utils/sql.js";
 import { borrarUploadPorUrl } from "../config/multer.js";
-import { destinoPedidosVendedor } from "../controllers/admin/pedidos.controllers.js";
+import { destinoPedidosVendedor } from "./pedidos.service.js";
 import { registrarAuditoria, ACCIONES } from "../utils/auditoria.js";
 
 // ============================================================================
