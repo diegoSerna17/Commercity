@@ -22,6 +22,12 @@ Fase 2 del plan de correccion 1.5.x: capa `services/` en el backend (ítem 7).
   cierre de sesiones, perfil, cambio de rol, recuperación de contraseña,
   perfil público, baja de cuenta, directorio y actualización de perfil. El
   contrato HTTP, los mensajes y los códigos de estado no cambian.
+- Dominio **pedidos**: `pedidos.service.js` absorbe el resumen del carrito, la
+  confirmación de pago (pedido + líneas + stock + pago en una transacción con
+  `FOR UPDATE`) y el cambio de estado (avance del vendedor y cancelación del
+  comprador con reembolso y notificaciones). El contrato HTTP no cambia.
+- Dominio **productos**: pendiente.
+- Dominio **admin**: pendiente.
 
 ### Pruebas
 
