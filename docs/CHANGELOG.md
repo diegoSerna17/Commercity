@@ -8,6 +8,23 @@ La version nunca se edita a mano: la fuente es `VERSION` en la raiz y se
 propaga con `node tools/sync-version.mjs`; se comprueba con
 `node tools/verificar-version.mjs`.
 
+## [1.5.4] - 2026-11-10
+
+Fase 2 del plan de correccion 1.5.x: cobertura de ramas (ítem 10).
+
+### Cambiado
+
+- `backend/vitest.config.js`: el umbral de `branches` sube de 88 % a 90 %.
+
+### Pruebas
+
+- `error.middleware.test.js`: tres casos nuevos para los caminos sin
+  `message`/`expose` (`status` 400, `status` 413 y `httpStatus` sin texto).
+- `historial.controllers.test.js`: página vacía sin consultar ítems y líneas
+  con campos nulos normalizados a 0 / «Pendiente».
+- Cobertura del backend: ramas 90.28 % (1125/1246), líneas 97.31 %,
+  sentencias 96.91 %, funciones 100 %. Suite: 43 archivos / 615 pruebas.
+
 ## [1.5.3] - 2026-11-10
 
 Fase 2 del plan de correccion 1.5.x: capa `services/` en el backend (ítem 7).

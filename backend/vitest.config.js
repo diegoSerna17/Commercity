@@ -19,10 +19,11 @@ export default defineConfig({
       // B-11: umbrales en la linea base medida (2026-10-12, 536 tests):
       // Lines 97.02 % (CON-004 exige >= 95.41 %). Pisos con una decima de
       // holgura para no bloquear por fluctuaciones minimas.
+      // 1.5.4: branches sube de 88 a 90 tras la cobertura de ramas (90.28 %).
       thresholds: {
         lines: 97,
         functions: 99,
-        branches: 88,
+        branches: 90,
         statements: 96,
       },
     },

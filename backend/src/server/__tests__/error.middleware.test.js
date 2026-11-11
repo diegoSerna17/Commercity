@@ -80,4 +80,39 @@ describe("errorHandler (middleware de error centralizado)", () => {
         expect(res.status).toBe(413);
         expect(res.body.error.code).toBe("PAYLOAD_TOO_LARGE");
     });
+
+    it("usa 'Solicitud inválida' si el error de cliente no trae mensaje ni expose", async () => {
+        const app = express();
+        app.get("/sin-mensaje", (_req, _res, next) => next({ status: 400 }));
+        app.use(errorHandler);
+
+        const res = await request(app).get("/sin-mensaje");
+
+        expect(res.status).toBe(400);
+        expect(res.body.error.code).toBe("VALIDATION_ERROR");
+        expect(res.body.error.message).toBe("Solicitud inválida");
+    });
+
+    it("responde 413 sin expose con el mensaje de cuerpo demasiado grande", async () => {
+        const app = express();
+        app.get("/grande", (_req, _res, next) => next({ status: 413 }));
+        app.use(errorHandler);
+
+        const res = await request(app).get("/grande");
+
+        expect(res.status).toBe(413);
+        expect(res.body.error.code).toBe("PAYLOAD_TOO_LARGE");
+        expect(res.body.error.message).toBe("El cuerpo de la petición es demasiado grande");
+    });
+
+    it("usa el mensaje generico si httpStatus llega sin message", async () => {
+        const app = express();
+        app.get("/sin-texto", (_req, _res, next) => next({ httpStatus: 400 }));
+        app.use(errorHandler);
+
+        const res = await request(app).get("/sin-texto");
+
+        expect(res.status).toBe(400);
+        expect(res.body.error.message).toBe("Solicitud inválida");
+    });
 });

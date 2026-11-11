@@ -220,6 +220,57 @@ describe("GET /api/historial/compras", () => {
         const llamadaIds = pool.query.mock.calls.find(([sql]) => sql.includes("SELECT p.id FROM pedidos"));
         expect(llamadaIds[1]).toEqual([7, 10, 10]);
     });
+    it("devuelve una pagina vacia sin consultar items cuando no hay pedidos", async () => {
+        pool.query.mockImplementation((sql) => {
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+            if (sql.includes("COUNT(DISTINCT p.id)")) return [[{}], undefined];
+            if (sql.includes("SELECT p.id FROM pedidos")) return [[], undefined];
+            return [[], undefined];
+        });
+
+        const res = await request(app)
+            .get("/api/historial/compras")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.data).toEqual([]);
+        expect(res.body.paginacion.total).toBe(0);
+        expect(res.body.paginacion.total_paginas).toBe(1);
+    });
+
+    it("normaliza los campos nulos de las lineas y usa 'Pendiente' por defecto", async () => {
+        pool.query.mockImplementation((sql) => {
+            if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+            if (sql.includes("COUNT(DISTINCT p.id)")) return [[{ total: 1 }], undefined];
+            if (sql.includes("SELECT p.id FROM pedidos")) return [[{ id: 1 }], undefined];
+            return [[{
+                pedido_id: 1,
+                fecha: null,
+                direccion: null,
+                detalle_id: 1,
+                estado: null,
+                cantidad: null,
+                precio_unitario: null,
+                descuento_aplicado: null,
+                subtotal: null,
+                producto: "Producto sin datos",
+                imagen: null,
+                vendedor: "Vendedor",
+            }]];
+        });
+
+        const res = await request(app)
+            .get("/api/historial/compras")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(200);
+        const item = res.body.data[0].items[0];
+        expect(item.estado).toBe("Pendiente");
+        expect(item.cantidad).toBe(0);
+        expect(item.precio_unitario).toBe(0);
+        expect(item.descuento_aplicado).toBe(0);
+        expect(item.subtotal).toBe(0);
+    });
 });
 
 describe("POST /api/historial/compras/:id/cancelar (RF135)", () => {
