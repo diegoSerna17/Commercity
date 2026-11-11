@@ -17,15 +17,15 @@ export const ESTADOS_VENTA = ["Pendiente", "En camino", "Entregado", "Cancelado"
 // R2: la paginacion de tienda trunca a entero y aplica clamp (nunca 400):
 // el controller ya dependia de ese comportamiento, se conserva al validar en
 // la ruta. Los alias ?page/?limit siguen disponibles.
-const paginaTiendaSchema = z.coerce
-  .number()
-  .optional()
+// Un valor no numerico (?pagina=abc) se descarta con .catch(undefined) y el
+// controller aplica su default (pagina 1, por_pagina 10), como antes de 1.5.1.
+const numeroTolerante = () => z.coerce.number().optional().catch(undefined);
+
+const paginaTiendaSchema = numeroTolerante()
   .transform((n) => (n === undefined ? undefined : Math.max(1, Math.trunc(n))))
   .describe("Pagina base 1 (alias: page)");
 
-const porPaginaTiendaSchema = z.coerce
-  .number()
-  .optional()
+const porPaginaTiendaSchema = numeroTolerante()
   .transform((n) =>
     n === undefined ? undefined : Math.min(100, Math.max(1, Math.trunc(n)))
   )
@@ -41,8 +41,8 @@ export const historialVentasQuerySchema = z
     q: z.string().optional().describe("Busca en producto, comprador o referencia de pago"),
     pagina: paginaTiendaSchema,
     por_pagina: porPaginaTiendaSchema,
-    page: z.coerce.number().optional().describe("Alias de pagina"),
-    limit: z.coerce.number().optional().describe("Alias de por_pagina"),
+    page: numeroTolerante().describe("Alias de pagina"),
+    limit: numeroTolerante().describe("Alias de por_pagina"),
   })
   .meta({
     id: "HistorialVentasQuery",
@@ -63,8 +63,8 @@ export const historialIngresosQuerySchema = z
       .describe("Agrupacion de ingresos: dia = por dia; otro valor = transaccion"),
     pagina: paginaTiendaSchema,
     por_pagina: porPaginaTiendaSchema,
-    page: z.coerce.number().optional().describe("Alias de pagina"),
-    limit: z.coerce.number().optional().describe("Alias de por_pagina"),
+    page: numeroTolerante().describe("Alias de pagina"),
+    limit: numeroTolerante().describe("Alias de por_pagina"),
   })
   .meta({
     id: "HistorialIngresosQuery",

@@ -8,6 +8,23 @@ La version nunca se edita a mano: la fuente es `VERSION` en la raiz y se
 propaga con `node tools/sync-version.mjs`; se comprueba con
 `node tools/verificar-version.mjs`.
 
+## [1.5.2] - 2026-11-10
+
+Corrección de la paginación de tienda introducida en 1.5.1.
+
+### Corregido
+
+- `GET /api/tienda/ventas` y `GET /api/tienda/ingresos` vuelven a tolerar
+  valores no numéricos en la paginación: los alias `?page` y `?limit` usan
+  `numeroTolerante()` igual que `pagina` y `por_pagina`, así que `?page=abc`
+  ya no responde 400 y el controlador aplica sus valores por defecto
+  (página 1, 10 registros por página).
+
+### Pruebas
+
+- Dos pruebas nuevas en `tienda.controllers.test.js`: paginación no numérica
+  en ventas (`pagina`/`por_pagina`) e ingresos (alias `page`/`limit`).
+
 ## [1.5.1] - 2026-11-10
 
 Fase 2 (parcial): validación de entrada uniforme en la capa de rutas.

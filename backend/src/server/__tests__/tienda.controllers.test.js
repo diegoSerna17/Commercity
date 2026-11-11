@@ -353,6 +353,46 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
     expect(sqlListado[1]).toEqual([3, 5, 5]); // vendedor_id + LIMIT 5 + OFFSET 5
   });
 
+  it("GET /api/tienda/ventas tolera paginacion no numerica y usa los defaults", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT COUNT(*)")) return [[{ total: 0 }], undefined];
+      if (sql.includes("SUM(dp.subtotal)")) return [[{ total_ventas: 0, total_bruto: 0, total_neto_vendedor: 0, total_comision_plataforma: 0 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/tienda/ventas?pagina=abc&por_pagina=xyz")
+      .set("Authorization", `Bearer ${tokenVendedor}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.pagina_actual).toBe(1);
+    expect(res.body.data.registros_por_pagina).toBe(10);
+    const sqlListado = pool.query.mock.calls.find(([sql]) => sql.includes("LIMIT ? OFFSET ?"));
+    expect(sqlListado[1]).toEqual([3, 10, 0]);
+  });
+
+  it("GET /api/tienda/ingresos tolera los alias page/limit no numericos", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT COUNT(*)")) return [[{ total: 0 }], undefined];
+      if (sql.includes("COUNT(dp.id) AS total_transacciones")) return [[{ total_transacciones: 0, total_bruto: 0, total_neto_vendedor: 0, total_comision_plataforma: 0 }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/tienda/ingresos?page=abc&limit=abc")
+      .set("Authorization", `Bearer ${tokenVendedor}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.pagina_actual).toBe(1);
+    expect(res.body.data.registros_por_pagina).toBe(10);
+  });
+
   it("GET /api/tienda/ventas aplica filtros por fecha y busqueda", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
