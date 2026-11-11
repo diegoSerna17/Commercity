@@ -1,11 +1,23 @@
-import pool from "../config/db.js";
-import { borrarArchivoSubido, borrarUploadPorUrl } from "../config/multer.js";
-import { escapeLike } from "../utils/sql.js";
+import { borrarArchivoSubido } from "../config/multer.js";
+import {
+  listarProductos,
+  listarCategorias,
+  listarVendedores,
+  obtenerDetalleProducto,
+  validarStock,
+  crearProducto,
+  editarProducto,
+  listarMisProductos,
+  cambiarEstadoProducto,
+  eliminarProducto,
+} from "../services/productos.service.js";
 
 /**
  * Panel Principal (RF87-RF94): catalogo de productos con busqueda, filtros
  * por categoria/vendedor y paginacion. Consultas parametrizadas contra el
  * esquema v3 (productos, categorias, usuarios).
+ * Desde 1.5.3 el SQL vive en services/productos.service.js; el controlador
+ * valida, llama al servicio y responde.
  */
 
 /**
@@ -15,131 +27,16 @@ import { escapeLike } from "../utils/sql.js";
  */
 export const getProductos = async (req, res, next) => {
   try {
-    const pagina = req.query.page;
-    const limite = req.query.limit;
-    const offset = (pagina - 1) * limite;
-
-    const nombre = String(req.query.nombre || "");
-    const categoria = String(req.query.categoria || "");
-    const vendedor = String(req.query.vendedor || "");
-    const vendedorId = req.query.vendedor_id;
-
-    const condicionesProducto = [];
-    const condicionesJoin = [];
-    const valoresProducto = [];
-    const valoresJoin = [];
-
-    // M-20 (TASK-5.4): filtro exacto por vendedor para el perfil publico.
-    if (vendedorId !== undefined) {
-      condicionesProducto.push("p.vendedor_id = ?");
-      valoresProducto.push(vendedorId);
-    }
-
-    // B-8 (TASK-4.9): comodines del usuario escapados (busqueda literal).
-    if (nombre.trim() !== "") {
-      condicionesProducto.push("p.nombre LIKE ?");
-      valoresProducto.push(escapeLike(nombre));
-    }
-
-    if (categoria.trim() !== "") {
-      condicionesJoin.push("c.nombre LIKE ?");
-      valoresJoin.push(escapeLike(categoria));
-    }
-
-    if (vendedor.trim() !== "") {
-      condicionesJoin.push("v.nombre_completo LIKE ?");
-      valoresJoin.push(escapeLike(vendedor));
-    }
-
-    const whereProducto = condicionesProducto.length
-      ? ` AND ${condicionesProducto.join(" AND ")}`
-      : "";
-    const whereJoin = condicionesJoin.length
-      ? ` AND ${condicionesJoin.join(" AND ")}`
-      : "";
-    const valores = [...valoresProducto, ...valoresJoin];
-
-    // Rendimiento (2026-11-06): el catalogo base no necesita los JOIN con
-    // categorias ni usuarios para contar. Solo se unen si el filtro usa sus
-    // columnas, y asi el COUNT se resuelve con el indice del catalogo.
-    const consultaTotal = condicionesJoin.length
-      ? `
-      SELECT COUNT(*) AS total
-      FROM productos p
-      INNER JOIN categorias c ON p.categoria_id = c.id
-      INNER JOIN usuarios v ON p.vendedor_id = v.id
-      WHERE 1 = 1
-        AND p.eliminado_por_admin = 0
-        AND p.eliminado_por_vendedor = 0
-        AND p.pausado = 0
-        AND p.estado = 'Disponible'
-        ${whereProducto}
-        ${whereJoin}
-    `
-      : `
-      SELECT COUNT(*) AS total
-      FROM productos p
-      WHERE 1 = 1
-        AND p.eliminado_por_admin = 0
-        AND p.eliminado_por_vendedor = 0
-        AND p.pausado = 0
-        AND p.estado = 'Disponible'
-        ${whereProducto}
-    `;
-    const valoresTotal = condicionesJoin.length ? valores : valoresProducto;
-
-    const [resultadoTotal] = await pool.query(consultaTotal, valoresTotal);
-
-    const totalProductos = Number(resultadoTotal[0]?.total || 0);
-    const totalPaginas = Math.max(Math.ceil(totalProductos / limite), 1);
-
-    const consultaProductos = `
-      SELECT
-        p.id,
-        p.vendedor_id,
-        p.nombre,
-        p.descripcion,
-        p.precio,
-        p.stock,
-        p.imagen_url AS imagen,
-        p.fecha_publicacion AS fecha_creacion,
-        p.descuento_porcentaje AS descuento_porcentaje,
-        c.nombre AS categoria,
-        v.id AS vendedor_id,
-        v.nombre_completo AS vendedor,
-        v.foto_perfil AS vendedor_foto
-      FROM productos p
-      INNER JOIN categorias c ON p.categoria_id = c.id
-      INNER JOIN usuarios v ON p.vendedor_id = v.id
-      WHERE 1 = 1
-        AND p.eliminado_por_admin = 0
-        AND p.eliminado_por_vendedor = 0
-        AND p.pausado = 0
-        AND p.estado = 'Disponible'
-        ${whereProducto}
-        ${whereJoin}
-      ORDER BY p.id DESC
-      LIMIT ? OFFSET ?
-    `;
-
-    const [productos] = await pool.query(consultaProductos, [
-      ...valores,
-      limite,
-      offset,
-    ]);
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        pagina,
-        limite,
-        totalProductos,
-        totalPaginas,
-        hayPaginaAnterior: pagina > 1,
-        hayPaginaSiguiente: pagina < totalPaginas,
-        productos,
-      },
+    const data = await listarProductos({
+      pagina: req.query.page,
+      limite: req.query.limit,
+      nombre: req.query.nombre,
+      categoria: req.query.categoria,
+      vendedor: req.query.vendedor,
+      vendedorId: req.query.vendedor_id,
     });
+
+    return res.status(200).json({ success: true, data });
   } catch (error) {
     next(error);
   }
@@ -150,13 +47,7 @@ export const getProductos = async (req, res, next) => {
  */
 export const getCategorias = async (_req, res, next) => {
   try {
-    const [categorias] = await pool.query(`
-      SELECT id, nombre
-      FROM categorias
-      WHERE activo = 1
-      ORDER BY nombre ASC
-    `);
-
+    const categorias = await listarCategorias();
     return res.json({ success: true, data: categorias });
   } catch (error) {
     next(error);
@@ -168,54 +59,15 @@ export const getCategorias = async (_req, res, next) => {
  */
 export const getVendedores = async (req, res, next) => {
   try {
-    const { page: pagina, limit: limite } = req.query;
-    const offset = (pagina - 1) * limite;
-    const [[totalRow]] = await pool.query(`
-      SELECT COUNT(*) AS total
-      FROM usuarios u
-      INNER JOIN usuario_roles ur ON u.id = ur.usuario_id
-      INNER JOIN roles r ON r.id = ur.rol_id
-      WHERE r.nombre = 'vendedor'
-        AND u.activo = 1
-        AND EXISTS (
-          SELECT 1 FROM productos p
-           WHERE p.vendedor_id = u.id
-             AND p.eliminado_por_admin = 0
-             AND p.eliminado_por_vendedor = 0
-             AND p.pausado = 0
-             AND p.estado = 'Disponible'
-        )
-    `);
-    const total = Number(totalRow?.total || 0);
-    const [vendedores] = await pool.query(
-      `SELECT u.id, u.nombre_completo AS nombre
-       FROM usuarios u
-       INNER JOIN usuario_roles ur ON u.id = ur.usuario_id
-       INNER JOIN roles r ON r.id = ur.rol_id
-       WHERE r.nombre = 'vendedor'
-         AND u.activo = 1
-         AND EXISTS (
-           SELECT 1 FROM productos p
-            WHERE p.vendedor_id = u.id
-              AND p.eliminado_por_admin = 0
-              AND p.eliminado_por_vendedor = 0
-              AND p.pausado = 0
-              AND p.estado = 'Disponible'
-         )
-       ORDER BY u.nombre_completo ASC
-       LIMIT ? OFFSET ?`,
-      [limite, offset]
-    );
+    const { vendedores, paginacion } = await listarVendedores({
+      pagina: req.query.page,
+      limite: req.query.limit,
+    });
 
     return res.json({
       success: true,
       data: vendedores,
-      paginacion: {
-        pagina,
-        por_pagina: limite,
-        total,
-        total_paginas: Math.max(1, Math.ceil(total / limite)),
-      },
+      paginacion,
     });
   } catch (error) {
     next(error);
@@ -232,11 +84,6 @@ export const getVendedores = async (req, res, next) => {
 //   4.3 el detalle excluye vendedores inactivos (RF74: u.activo = 1).
 // ============================================================================
 
-const avatarPorDefecto = (nombre) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    nombre || "Vendedor"
-  )}&background=1a1a26&color=fff&bold=true&size=80&rounded=true`;
-
 /**
  * GET /api/productos/:id (RF78/RF79)
  * Detalle publico de un producto con datos del vendedor y su calificacion (RF49).
@@ -245,63 +92,16 @@ const avatarPorDefecto = (nombre) =>
 export const getProductoDetalle = async (req, res, next) => {
   try {
     const productoId = Number(req.params.id);
+    const detalle = await obtenerDetalleProducto(productoId);
 
-    const [filas] = await pool.query(
-      `SELECT p.id, p.nombre, p.descripcion, p.imagen_url, p.precio,
-              p.descuento_porcentaje, p.stock, p.estado, p.fecha_publicacion,
-              c.id AS categoria_id, c.nombre AS categoria_nombre,
-              u.id AS vendedor_id, u.nombre_completo AS vendedor_nombre,
-              u.foto_perfil AS vendedor_foto
-         FROM productos p
-         JOIN categorias c ON c.id = p.categoria_id
-         JOIN usuarios  u ON u.id = p.vendedor_id
-        WHERE p.id = ?
-          AND p.eliminado_por_admin = 0
-          AND p.eliminado_por_vendedor = 0
-          AND p.pausado = 0
-          AND u.activo = 1
-        LIMIT 1`,
-      [productoId]
-    );
-
-    if (filas.length === 0) {
+    if (!detalle) {
       return res.status(404).json({
         success: false,
         error: { code: "NOT_FOUND", message: "Producto no encontrado" },
       });
     }
 
-    const fila = filas[0];
-    const [calificaciones] = await pool.query(
-      `SELECT AVG(estrellas) AS promedio, COUNT(*) AS total
-         FROM calificaciones_vendedores
-        WHERE vendedor_id = ?`,
-      [fila.vendedor_id]
-    );
-    const promedio = calificaciones[0]?.promedio;
-
-    return res.json({
-      success: true,
-      data: {
-        id: fila.id,
-        nombre: fila.nombre,
-        descripcion: fila.descripcion,
-        imagen_url: fila.imagen_url,
-        precio: Number(fila.precio),
-        descuento_porcentaje: Number(fila.descuento_porcentaje || 0),
-        stock: Number(fila.stock),
-        estado: fila.estado,
-        fecha_publicacion: fila.fecha_publicacion,
-        categoria: { id: fila.categoria_id, nombre: fila.categoria_nombre },
-        vendedor: {
-          id: fila.vendedor_id,
-          nombre: fila.vendedor_nombre,
-          foto: fila.vendedor_foto || avatarPorDefecto(fila.vendedor_nombre),
-          calificacion_promedio: promedio != null ? Number(Number(promedio).toFixed(1)) : null,
-          total_calificaciones: Number(calificaciones[0]?.total || 0),
-        },
-      },
-    });
+    return res.json({ success: true, data: detalle });
   } catch (error) {
     next(error);
   }
@@ -318,57 +118,16 @@ export const validarStockProducto = async (req, res, next) => {
     const productoId = Number(req.params.id);
     const cantidad = Number(req.query.cantidad);
 
-    const [filas] = await pool.query(
-      `SELECT stock, estado
-         FROM productos
-        WHERE id = ? AND eliminado_por_admin = 0
-          AND eliminado_por_vendedor = 0 AND pausado = 0
-        LIMIT 1`,
-      [productoId]
-    );
+    const resultado = await validarStock(productoId, cantidad);
 
-    if (filas.length === 0) {
+    if (!resultado) {
       return res.status(404).json({
         success: false,
         error: { code: "NOT_FOUND", message: "Producto no encontrado" },
       });
     }
 
-    const { stock, estado } = filas[0];
-
-    if (estado === "Agotado" || Number(stock) === 0) {
-      return res.json({
-        success: true,
-        data: {
-          valido: false,
-          stock_disponible: 0,
-          estado,
-          mensaje: "Este producto está agotado",
-        },
-      });
-    }
-
-    if (cantidad > Number(stock)) {
-      return res.json({
-        success: true,
-        data: {
-          valido: false,
-          stock_disponible: Number(stock),
-          estado,
-          mensaje: `Solo hay ${stock} unidad${Number(stock) === 1 ? "" : "es"} disponible${Number(stock) === 1 ? "" : "s"}`,
-        },
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: {
-        valido: true,
-        stock_disponible: Number(stock),
-        estado,
-        mensaje: "Stock disponible",
-      },
-    });
+    return res.json({ success: true, data: resultado });
   } catch (error) {
     next(error);
   }
@@ -383,30 +142,12 @@ export const validarStockProducto = async (req, res, next) => {
 // ============================================================================
 
 /**
- * Busca una categoria por nombre; si no existe, la crea automaticamente.
- * B2 (auditoria 2026-11-04): un solo INSERT ... ON DUPLICATE KEY UPDATE cierra
- * la carrera entre dos altas simultaneas de la misma categoria (nombre UNIQUE).
- * @param {string} nombreCategoria
- * @returns {Promise<number>} id de la categoria (existente o recien creada)
- */
-async function obtenerOCrearCategoria(nombreCategoria) {
-  const [resultado] = await pool.query(
-    `INSERT INTO categorias (nombre) VALUES (?)
-     ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`,
-    [nombreCategoria]
-  );
-  return resultado.insertId;
-}
-
-/**
  * POST /api/productos (RF45/RF46/RF48) - crear producto del vendedor autenticado.
  * Multipart: campo "imagen" obligatorio. El estado lo calcula la BD (GENERADA).
  * El formato y los rangos los valida crearProductoSchema (validate()).
  */
 export const crearProductoVendedor = async (req, res, next) => {
   try {
-    const { nombre, descripcion, precio, stock, descuento, categoria } = req.body;
-
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -414,28 +155,15 @@ export const crearProductoVendedor = async (req, res, next) => {
       });
     }
 
-    const categoriaId = await obtenerOCrearCategoria(categoria);
-    const imagenUrl = `/uploads/${req.file.filename}`;
-
-    const [resultado] = await pool.query(
-      `INSERT INTO productos
-         (vendedor_id, categoria_id, nombre, descripcion, imagen_url, precio, stock, descuento_porcentaje)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        req.userId,
-        categoriaId,
-        nombre,
-        descripcion,
-        imagenUrl,
-        precio,
-        stock,
-        descuento ?? 0,
-      ]
-    );
+    const id = await crearProducto({
+      vendedorId: req.userId,
+      datos: req.body,
+      archivo: req.file,
+    });
 
     return res.status(201).json({
       success: true,
-      data: { id: resultado.insertId, mensaje: "Producto creado exitosamente" },
+      data: { id, mensaje: "Producto creado exitosamente" },
     });
   } catch (error) {
     borrarArchivoSubido(req.file);
@@ -451,53 +179,20 @@ export const editarProductoVendedor = async (req, res, next) => {
   try {
     const productoId = Number(req.params.id);
 
-    const [productoExistente] = await pool.query(
-      `SELECT id, categoria_id, imagen_url, vendedor_id,
-              nombre, descripcion, precio, stock, descuento_porcentaje
-         FROM productos
-        WHERE id = ? AND vendedor_id = ?`,
-      [productoId, req.userId]
-    );
+    const resultado = await editarProducto({
+      vendedorId: req.userId,
+      productoId,
+      datos: req.body,
+      archivo: req.file,
+    });
 
-    if (productoExistente.length === 0) {
+    if (!resultado.ok) {
       borrarArchivoSubido(req.file);
       return res.status(404).json({
         success: false,
         error: { code: "NOT_FOUND", message: "Producto no encontrado" },
       });
     }
-
-    const producto = productoExistente[0];
-    const { nombre, descripcion, precio, stock, descuento, categoria } = req.body;
-
-    let categoriaId = producto.categoria_id;
-    if (categoria !== undefined) {
-      categoriaId = await obtenerOCrearCategoria(categoria);
-    }
-
-    const imagenUrl = req.file ? `/uploads/${req.file.filename}` : producto.imagen_url;
-    // TASK-4.6: al reemplazar la imagen, la anterior deja de estar referenciada.
-    if (req.file && producto.imagen_url && producto.imagen_url !== imagenUrl) {
-      borrarUploadPorUrl(producto.imagen_url);
-    }
-
-    await pool.query(
-      `UPDATE productos
-          SET nombre = ?, descripcion = ?, imagen_url = ?, precio = ?,
-              stock = ?, descuento_porcentaje = ?, categoria_id = ?
-        WHERE id = ? AND vendedor_id = ?`,
-      [
-        nombre ?? producto.nombre,
-        descripcion ?? producto.descripcion,
-        imagenUrl,
-        precio ?? producto.precio,
-        stock ?? producto.stock,
-        descuento ?? producto.descuento_porcentaje,
-        categoriaId,
-        productoId,
-        req.userId,
-      ]
-    );
 
     return res.json({
       success: true,
@@ -514,40 +209,16 @@ export const editarProductoVendedor = async (req, res, next) => {
  */
 export const getMisProductos = async (req, res, next) => {
   try {
-    const { page: pagina, limit: limite } = req.query;
-    const offset = (pagina - 1) * limite;
-    const [[totalRow]] = await pool.query(
-      "SELECT COUNT(*) AS total FROM productos WHERE vendedor_id = ?",
-      [req.userId]
-    );
-    const total = Number(totalRow?.total || 0);
-    const [productos] = await pool.query(
-      `SELECT p.id, p.nombre, p.descripcion, p.imagen_url, p.precio, p.stock,
-              p.estado, p.descuento_porcentaje, p.fecha_publicacion,
-              p.pausado, p.eliminado_por_vendedor,
-              c.id AS categoria_id, c.nombre AS categoria_nombre
-         FROM productos p
-         JOIN categorias c ON p.categoria_id = c.id
-        WHERE p.vendedor_id = ?
-        ORDER BY p.id DESC
-        LIMIT ? OFFSET ?`,
-      [req.userId, limite, offset]
-    );
+    const { productos, paginacion } = await listarMisProductos({
+      vendedorId: req.userId,
+      pagina: req.query.page,
+      limite: req.query.limit,
+    });
 
     return res.json({
       success: true,
-      data: productos.map((p) => ({
-        ...p,
-        precio: Number(p.precio),
-        stock: Number(p.stock),
-        descuento_porcentaje: Number(p.descuento_porcentaje || 0),
-      })),
-      paginacion: {
-        pagina,
-        por_pagina: limite,
-        total,
-        total_paginas: Math.max(1, Math.ceil(total / limite)),
-      },
+      data: productos,
+      paginacion,
     });
   } catch (error) {
     next(error);
@@ -564,34 +235,21 @@ export const cambiarEstadoProductoVendedor = async (req, res, next) => {
     const productoId = Number(req.params.id);
     const { estado } = req.body;
 
-    const [productos] = await pool.query(
-      "SELECT id, pausado, eliminado_por_vendedor FROM productos WHERE id = ? AND vendedor_id = ?",
-      [productoId, req.userId]
-    );
-    if (productos.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: { code: "NOT_FOUND", message: "Producto no encontrado" },
-      });
-    }
-    if (productos[0].eliminado_por_vendedor === 1) {
-      return res.status(409).json({
-        success: false,
-        error: { code: "CONFLICT", message: "El producto fue eliminado y no se puede reactivar" },
-      });
-    }
-
-    const pausado = estado === "pausado" ? 1 : 0;
-    await pool.query("UPDATE productos SET pausado = ? WHERE id = ? AND vendedor_id = ?", [
-      pausado,
+    const resultado = await cambiarEstadoProducto({
+      vendedorId: req.userId,
       productoId,
-      req.userId,
-    ]);
-
-    return res.json({
-      success: true,
-      data: { id: productoId, estado: pausado ? "pausado" : "activo" },
+      estado,
     });
+
+    if (!resultado.ok) {
+      const status = resultado.code === "CONFLICT" ? 409 : 404;
+      return res.status(status).json({
+        success: false,
+        error: { code: resultado.code, message: resultado.mensaje },
+      });
+    }
+
+    return res.json({ success: true, data: resultado.data });
   } catch (error) {
     next(error);
   }
@@ -604,18 +262,18 @@ export const cambiarEstadoProductoVendedor = async (req, res, next) => {
 export const eliminarProductoVendedor = async (req, res, next) => {
   try {
     const productoId = Number(req.params.id);
-    const [resultado] = await pool.query(
-      `UPDATE productos
-          SET eliminado_por_vendedor = 1, pausado = 1
-        WHERE id = ? AND vendedor_id = ? AND eliminado_por_vendedor = 0`,
-      [productoId, req.userId]
-    );
-    if (resultado.affectedRows === 0) {
+    const eliminado = await eliminarProducto({
+      vendedorId: req.userId,
+      productoId,
+    });
+
+    if (!eliminado) {
       return res.status(404).json({
         success: false,
         error: { code: "NOT_FOUND", message: "Producto no encontrado o ya eliminado" },
       });
     }
+
     return res.json({ success: true, data: { id: productoId, estado: "eliminado" } });
   } catch (error) {
     next(error);

@@ -26,7 +26,10 @@ Fase 2 del plan de correccion 1.5.x: capa `services/` en el backend (ítem 7).
   confirmación de pago (pedido + líneas + stock + pago en una transacción con
   `FOR UPDATE`) y el cambio de estado (avance del vendedor y cancelación del
   comprador con reembolso y notificaciones). El contrato HTTP no cambia.
-- Dominio **productos**: pendiente.
+- Dominio **productos**: `productos.service.js` absorbe el catálogo paginado,
+  categorías, vendedores, detalle público, validación de stock y la gestión del
+  vendedor (crear, editar con reemplazo de imagen, pausar, eliminar). El
+  contrato HTTP no cambia.
 - Dominio **admin**: pendiente.
 
 ### Pruebas
