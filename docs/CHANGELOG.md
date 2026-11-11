@@ -8,6 +8,59 @@ La version nunca se edita a mano: la fuente es `VERSION` en la raiz y se
 propaga con `node tools/sync-version.mjs`; se comprueba con
 `node tools/verificar-version.mjs`.
 
+## [1.5.5] - 2026-11-11
+
+Fase B del plan de corrección 1.5.x: cerrar los huecos que hacían que «verde»
+no significara «probado», más la verificación en ejecución disponible.
+
+### Agregado
+
+- `backend/scripts/verificar-entorno.mjs` y `npm run env:check`: revisan el
+  `.env` y reportan `presente`/`ausente`/`inválida` sin imprimir nunca un
+  valor. Aplican las mismas reglas que `utils/config.js` y `config/db.js`
+  (`JWT_SECRET` de 32 caracteres o más y distinto de los valores de ejemplo;
+  `DB_USER`/`DB_PASSWORD` distintos de root sin clave; `JWT_EXPIRES_IN` con
+  formato `30m`/`24h`/`7d`; `CRYPTO_SECRET_KEY` obligatoria en producción).
+  Con `--db` ejecuta `SELECT 1` con timeout y reporta `ok` o el código de
+  error, nunca la cadena de conexión.
+- Avisos de correo (P4): sin `RESEND_API_KEY` el envío es simulado; con
+  `RESEND_FROM` en `resend.dev`, Resend solo entrega al dueño de la cuenta.
+- `backend/src/server/utils/secretos.js`: `VALORES_DE_EJEMPLO` y
+  `LONGITUD_MINIMA_SECRET` compartidos por `config.js` y `env:check`, sin
+  efectos secundarios al importarlos.
+- `requisitos.integration.test.js`: con `REQUIRE_TEST_DB=true` falla si faltan
+  `TEST_DB_HOST`, `TEST_DB_USER` o `TEST_DB_NAME`; el job `backend` del CI
+  define la variable. Perder las credenciales de la BD efímera ahora deja el
+  pipeline en rojo en vez de saltar la integración en silencio.
+- `README.md`: sección «Entorno local de pruebas» (env:check, BD, migraciones,
+  unitarias/integración, `dev`, smoke, cuentas del seed, móvil, escritorio,
+  rate limits y Resend) y corrección de la nota móvil: `http://<IP-LAN>` se
+  rechaza por diseño (fail-closed); solo valen HTTPS o el loopback del
+  emulador.
+
+### Cambiado
+
+- `utils/config.js` importa las constantes desde `utils/secretos.js` (mismo
+  comportamiento, sin listas duplicadas).
+- Resultados del README actualizados a la corrida real del 2026-11-11:
+  backend 44 archivos / 628 pruebas y frontend 65 archivos / 500 pruebas;
+  cobertura backend 96.91 % sentencias, 90.28 % ramas, 100 % funciones y
+  97.31 % líneas.
+- `docs/api/entidades.md` regenerado (49 contratos) y `openapi.json` a 1.5.5.
+
+### Pruebas
+
+- Backend: 44 archivos / 628 pruebas en verde; cobertura sobre los umbrales
+  (96 / 90 / 99 / 97).
+- Frontend: 65 archivos / 500 pruebas en verde; `eslint .` sin errores.
+- Integración local sin `TEST_DB_*`: 5 archivos / 25 pruebas saltadas en verde
+  (comportamiento documentado). Con `REQUIRE_TEST_DB=true` y sin `TEST_DB_*`
+  falla como se espera (exit 1).
+- `env:check`: OK y sin valores; `env:check -- --db` reporta `ECONNREFUSED`
+  porque este equipo no tiene MySQL/Docker levantado. Queda pendiente la
+  corrida en vivo de `/health`, login con los tres roles y endpoints
+  protegidos contra la BD desechable.
+
 ## [1.5.4] - 2026-11-10
 
 Fase 2 del plan de correccion 1.5.x: cobertura de ramas (ítem 10).

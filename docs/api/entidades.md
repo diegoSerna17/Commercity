@@ -1,7 +1,7 @@
 # Contratos de datos — CommerCity
 
 > Generado con `npm run docs:api` + `npm run docs:entidades` desde `backend/src/server/schemas/`. No editar a mano.
-> 48 contratos documentados. Fuente de verdad: los esquemas Zod.
+> 49 contratos documentados. Fuente de verdad: los esquemas Zod.
 
 ## Indice
 
@@ -44,6 +44,7 @@
 - [CalificacionVendedor](#calificacionvendedor)
 - [CalificacionesVendedorParams](#calificacionesvendedorparams)
 - [CalificacionesVendedorQuery](#calificacionesvendedorquery)
+- [SeguidorIdParams](#seguidoridparams)
 - [SeguidoresQuery](#seguidoresquery)
 - [SeguirUsuario](#seguirusuario)
 - [CrearReporte](#crearreporte)
@@ -620,19 +621,11 @@
 |---|---|---|---|
 | `fecha_desde` | string | no | Fecha inicial (YYYY-MM-DD) |
 | `fecha_hasta` | string | no | Fecha final (YYYY-MM-DD) |
-| `agrupar_por` | enum: "transaccion" \| "dia" | no | Agrupacion de ingresos (default transaccion) |
-| `pagina` | integer [min -9007199254740991, max 9007199254740991] | no | Pagina base 1 (alias: page) |
-| `por_pagina` | integer [min -9007199254740991, max 9007199254740991] | no | Registros por pagina, max 100 (alias: limit) |
-
-**Ejemplo:**
-
-```json
-{
-  "agrupar_por": "dia",
-  "pagina": 1,
-  "por_pagina": 10
-}
-```
+| `agrupar_por` | string | no | Agrupacion de ingresos: dia = por dia; otro valor = transaccion |
+| `pagina` | number | no | Pagina base 1 (alias: page) |
+| `por_pagina` | number | no | Registros por pagina, max 100 (alias: limit) |
+| `page` | number | no | Alias de pagina |
+| `limit` | number | no | Alias de por_pagina |
 
 ## HistorialVentasQuery (`HistorialVentasQuery`)
 
@@ -643,22 +636,14 @@
 
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
-| `estado` | enum: "Pendiente" \| "En camino" \| "Entregado" \| "Cancelado" | no | Filtra por estado (otro valor = sin filtro) |
+| `estado` | string | no | Filtra por estado (otro valor = sin filtro) |
 | `fecha_desde` | string | no | Fecha inicial (YYYY-MM-DD) |
 | `fecha_hasta` | string | no | Fecha final (YYYY-MM-DD) |
 | `q` | string | no | Busca en producto, comprador o referencia de pago |
-| `pagina` | integer [min -9007199254740991, max 9007199254740991] | no | Pagina base 1 (alias: page) |
-| `por_pagina` | integer [min -9007199254740991, max 9007199254740991] | no | Registros por pagina, max 100 (alias: limit) |
-
-**Ejemplo:**
-
-```json
-{
-  "estado": "Pendiente",
-  "pagina": 1,
-  "por_pagina": 10
-}
-```
+| `pagina` | number | no | Pagina base 1 (alias: page) |
+| `por_pagina` | number | no | Registros por pagina, max 100 (alias: limit) |
+| `page` | number | no | Alias de pagina |
+| `limit` | number | no | Alias de por_pagina |
 
 ## HistorialComprasQuery (`HistorialComprasQuery`)
 
@@ -869,6 +854,25 @@
 {
   "page": 1,
   "limit": 10
+}
+```
+
+## SeguidorIdParams (`SeguidorIdParams`)
+
+> Params :id de DELETE /api/seguidores/:id y GET /:id/contadores
+
+- **Fuente:** `backend/src/server/schemas/seguidores.schema.js`
+- **Usado en:** envoltorio comun / base
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `id` | integer [max 9007199254740991, > 0] | si | Identificador entero positivo de ruta o cuerpo |
+
+**Ejemplo:**
+
+```json
+{
+  "id": 7
 }
 ```
 
