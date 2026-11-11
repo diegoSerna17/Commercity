@@ -1,6 +1,6 @@
 # CommerCity
 
-**Estado:** Proyecto académico en etapa productiva | Backend: 615/615 pruebas unitarias OK (43 archivos) | Frontend: 500/500 pruebas OK (65 archivos) | Integración MySQL local: 4 archivos / 23 pruebas con TEST_DB_* (2026-11-05) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.31 % líneas / 90.28 % ramas; frontend: 96.95 % líneas reales (500 pruebas, medición 2026-11-10) | Última corrida registrada: backend y frontend 2026-11-10 (CHANGELOG 1.5.4)
+**Estado:** Proyecto académico en etapa productiva | Backend: 628/628 pruebas unitarias OK (44 archivos) | Frontend: 500/500 pruebas OK (65 archivos) | Integración MySQL local: 4 archivos / 23 pruebas con TEST_DB_* (2026-11-05) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.31 % líneas / 90.28 % ramas; frontend: 96.95 % líneas reales (500 pruebas, medición 2026-11-10) | Última corrida registrada: backend y frontend 2026-11-11 (CHANGELOG 1.5.5)
 
 CommerCity es una plataforma de comercio electrónico para mercados locales con roles de comprador, vendedor y administrador. Incluye catálogo de productos con imágenes, carrito de compras, pedidos, pasarela de pago simulada, tiendas de vendedores, chat, notificaciones, seguidores, calificaciones, reportes de contenido y panel de administración.
 
@@ -753,7 +753,7 @@ npm start        # live-server en http://127.0.0.1:8080
 Abre **`http://127.0.0.1:8080/www/index.html`** (la raíz `/` muestra el listado de archivos porque la app vive en `www/`).
 
 > \[!IMPORTANT]
-> `apps/movil/www/api.js` apunta por defecto a `http://10.0.2.2:3000` (loopback del emulador Android). En el navegador de PC o en un dispositivo físico hay que definir `window.COMMERCITY_API_URL` antes de cargar `api.js` (por ejemplo `http://localhost:3000` en PC o la IP-LAN del equipo en un celular). La app de escritorio ya usa `http://localhost:3000`.
+> `apps/movil/www/api.js` apunta por defecto a `http://10.0.2.2:3000` (loopback del emulador Android). Solo acepta HTTPS o `http://10.0.2.2`/`localhost`/`127.0.0.1`: en un dispositivo físico `http://<IP-LAN>` se rechaza por diseño (fail-closed), así que usa el emulador o un origen HTTPS. La app de escritorio ya usa `http://localhost:3000`.
 
 ### App escritorio (Electron)
 
@@ -789,21 +789,55 @@ Resultados actuales:
 
 | Suite                           | Comando                   | Resultado                                 |
 | ------------------------------- | ------------------------- | ----------------------------------------- |
-| Backend (Vitest + supertest)    | `cd backend && npm test`  | 596 pruebas, todas pasando (última corrida registrada 2026-11-05) |
-| Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 493 pruebas en 63 archivos, todas pasando (última corrida registrada 2026-11-05) |
+| Backend (Vitest + supertest)    | `cd backend && npm test`  | 628 pruebas en 44 archivos, todas pasando (última corrida registrada 2026-11-11) |
+| Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 500 pruebas en 65 archivos, todas pasando (última corrida registrada 2026-11-11) |
 
-Cobertura del backend (`npm run test:coverage`, proveedor v8; medición 2026-10-30):
+Cobertura del backend (`npm run test:coverage`, proveedor v8; medición 2026-11-11):
 
 | Métrica    | Valor medido | Umbral configurado |
 | ---------- | ------------ | ------------------ |
-| Statements | 96.84%       | 96%                |
-| Branches   | 88.34%       | 88%                |
+| Statements | 96.91%       | 96%                |
+| Branches   | 90.28%       | 90%                |
 | Functions  | 100%         | 99%                |
-| Lines      | 97.27%       | 97%                |
+| Lines      | 97.31%       | 97%                |
 
 Cobertura del frontend: la cifra **75.31 %** del CHANGELOG 1.3.1 era una métrica histórica que solo medía los archivos con pruebas. La línea base real de todo `src/` era **41.30 % Lines (888/2150, medición 2026-10-15)**; tras el lote de pruebas del 2026-11-05 es **96.85 % Lines (493 pruebas)**, con umbrales en `frontend/vite.config.js` (Lines 93, Statements 92, Functions 89, Branches 82) y M-27 cerrado. Ver `plan/fix-frontend-pendientes-2026-10-15.md`.
 
 E2E con backend vivo (2026-09-28): runner de los endpoints de entonces (69) = **129/129** y capa de red de los `api.js` reales de móvil/escritorio = **102/102** (incluye RF4 recover/reset 12/12). Evidencia conservada por el equipo en `docs/AVANCES/PRUEBAS/` (local, fuera del repositorio) y en `docs/CHANGELOG.md`.
+
+### Entorno local de pruebas (API + web)
+
+Secuencia corta para preparar el entorno y probarlo de punta a punta:
+
+```powershell
+cd backend
+npm run env:check                 # revisa el .env: presente/ausente/inválida, sin valores
+npm run env:check -- --db         # opcional: además prueba SELECT 1 (timeout 5 s)
+npm run db:migrate                # solo si usas un MySQL local ya existente
+npm test                          # unitarias: no necesitan MySQL
+npm run test:coverage             # umbrales 97 / 99 / 90 / 96
+# con TEST_DB_* de una BD DESECHABLE en la sesión:
+npm run test:integration          # 4 suites; sin TEST_DB_* se saltan (el CI exige REQUIRE_TEST_DB=true)
+npm run dev                       # API en http://localhost:3000
+```
+
+En otra terminal:
+
+```powershell
+cd frontend
+npm test
+npm run lint
+npm run dev                       # http://localhost:5173
+```
+
+Smoke mínimo con la API viva: `GET /health` debe responder `{ status: "ok", db: "ok" }`; `GET /api/productos?page=1&limit=5`, `GET /api/categorias` y `GET /api/docs` son públicos; el resto exige `Authorization: Bearer <token>`.
+
+- **Base de datos:** `docker compose up -d db` crea `commercity_dev` con schema y seed la primera vez (el compose interpola `JWT_SECRET`, expórtalo en la sesión). La alternativa es un MySQL local y `npm run db:migrate`. La integración solo debe apuntar a una base desechable (`TEST_DB_*`), nunca a la compartida.
+- **Cuentas del seed:** están en `seed_commercity.sql` (20 usuarios: 1 administrador con los tres roles, 10 vendedores y 9 compradores). La contraseña no se versiona: se pide al líder por canal privado (R-1). Para una prueba rápida en una BD desechable también puedes registrar un usuario y asignarle el rol en `usuario_roles`.
+- **Móvil (P6):** `apps/movil/www/api.js` solo acepta HTTPS o `http://10.0.2.2:3000` / `localhost` / `127.0.0.1`. En un dispositivo físico, `http://<IP-LAN>` se rechaza por diseño (fail-closed): usa el emulador Android (`10.0.2.2`) o un origen HTTPS.
+- **Escritorio:** requiere `ALLOW_DESKTOP_ORIGINS=true` en `backend/.env` para aceptar los orígenes `null`/`file://` de Electron (nunca en producción).
+- **Rate limits (P7):** login/recover permiten 5 intentos por cuenta cada 15 min y 10 por IP por minuto. El store es en memoria: reiniciar la API los resetea.
+- **Correo (P4):** sin `RESEND_API_KEY` el mailer simula el envío (solo consola). Con la clave y `RESEND_FROM` en `resend.dev`, Resend solo entrega al dueño de la cuenta; para otros destinatarios hace falta un dominio verificado.
 
 ## Documentación de la API
 
@@ -828,7 +862,7 @@ Los 76 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`
 
 Los nombres exactos, verbos y cuerpos de cada endpoint están en los archivos de rutas del backend.
 
-> **Referencia generada desde Zod (ver `VERSION`):** interactiva en `http://localhost:3000/api/docs` (Scalar) y JSON en `/api/openapi.json` — ver `docs/api/openapi.json`, `docs/api/entidades.md` (43 contratos), `docs/api/inventario-endpoints.md`, `docs/bd/modelo-datos.md`, `docs/arquitectura.md` y `docs/guias/`. Se regenera con `npm run docs:api` y `npm run docs:entidades` desde `backend/`.
+> **Referencia generada desde Zod (ver `VERSION`):** interactiva en `http://localhost:3000/api/docs` (Scalar) y JSON en `/api/openapi.json` — ver `docs/api/openapi.json`, `docs/api/entidades.md` (49 contratos), `docs/api/inventario-endpoints.md`, `docs/bd/modelo-datos.md`, `docs/arquitectura.md` y `docs/guias/`. Se regenera con `npm run docs:api` y `npm run docs:entidades` desde `backend/`.
 
 ## Roles del sistema
 
