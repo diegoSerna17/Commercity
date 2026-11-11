@@ -1,22 +1,11 @@
 import crypto from "crypto";
 import dotenv from "dotenv";
+// C2 (1.5.5): las listas de secretos viven en utils/secretos.js para que
+// scripts/verificar-entorno.mjs las comparta sin importar este modulo, que
+// aborta el proceso al cargarse.
+import { VALORES_DE_EJEMPLO, LONGITUD_MINIMA_SECRET } from "./secretos.js";
 
 dotenv.config();
-
-/**
- * Valores de ejemplo/placeholder que jamas deben usarse como secreto real.
- * TASK-2.6 (auditoria 2026-10-11): el valor del viejo .env.example quedo
- * copiado en entornos reales; se rechaza explicitamente fuera de test.
- */
-const VALORES_DE_EJEMPLO = new Set([
-    "cambia_este_valor_por_uno_aleatorio_largo",
-    "cambia_este_valor",
-    "changeme",
-    "jwt_secret",
-    "secret",
-]);
-
-const LONGITUD_MINIMA_SECRET = 32;
 
 const fatal = (mensaje) => {
     console.error(`FATAL: ${mensaje}`);

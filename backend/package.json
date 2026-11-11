@@ -12,7 +12,8 @@
     "test:integration": "vitest run --config vitest.integration.config.js",
     "docs:api": "node scripts/gen-openapi.mjs",
     "docs:entidades": "node scripts/gen-entidades.mjs",
-    "db:migrate": "node scripts/aplicar-migraciones.mjs"
+    "db:migrate": "node scripts/aplicar-migraciones.mjs",
+    "env:check": "node scripts/verificar-entorno.mjs"
   },
   "keywords": [],
   "author": "",
