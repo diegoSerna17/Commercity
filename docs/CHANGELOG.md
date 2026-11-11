@@ -8,6 +8,26 @@ La version nunca se edita a mano: la fuente es `VERSION` en la raiz y se
 propaga con `node tools/sync-version.mjs`; se comprueba con
 `node tools/verificar-version.mjs`.
 
+## [1.5.3] - 2026-11-10
+
+Fase 2 del plan de correccion 1.5.x: capa `services/` en el backend (ítem 7).
+
+### Cambiado
+
+- Nuevo `backend/src/server/services/` con un archivo por dominio. El
+  controlador queda en tres pasos —validar en la ruta, llamar al servicio y
+  responder— y el servicio concentra el SQL y las reglas de negocio, tomando
+  el pool de `config/db.js` para que las pruebas con pool mockeado no cambien.
+- Dominio **usuarios**: `usuarios.service.js` absorbe registro, login, logout,
+  cierre de sesiones, perfil, cambio de rol, recuperación de contraseña,
+  perfil público, baja de cuenta, directorio y actualización de perfil. El
+  contrato HTTP, los mensajes y los códigos de estado no cambian.
+
+### Pruebas
+
+- Suite completa del backend en verde tras la extracción: 43 archivos /
+  610 pruebas.
+
 ## [1.5.2] - 2026-11-10
 
 Corrección de la paginación de tienda introducida en 1.5.1.

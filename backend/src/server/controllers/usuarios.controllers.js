@@ -1,15 +1,21 @@
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import crypto from "crypto";
-import pool from "../config/db.js";
 import pkg from "../../../package.json" with { type: "json" };
-import { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE, JWT_EXPIRES_IN, expiracionEnMs } from "../utils/config.js";
+import { expiracionEnMs } from "../utils/config.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-import { enviarCorreoRecuperacion, enviarAvisoRegistroDuplicado } from "../utils/mailer.js";
-import { escapeLike } from "../utils/sql.js";
-import { borrarUploadPorUrl } from "../config/multer.js";
-import { destinoPedidosVendedor } from "./admin/pedidos.controllers.js";
-import { registrarAuditoria, ACCIONES } from "../utils/auditoria.js";
+import {
+    firmarToken,
+    registrarUsuario,
+    autenticarUsuario,
+    revocarToken,
+    cerrarTodasLasSesiones as cerrarSesionesDelUsuario,
+    obtenerPerfil,
+    cambiarRolUsuario,
+    solicitarRecuperacion as emitirRecuperacion,
+    restablecerPassword as aplicarNuevaPassword,
+    obtenerPerfilPublico,
+    eliminarCuentaComprador as darDeBajaCuenta,
+    listarDirectorio,
+    actualizarPerfil as guardarPerfil,
+} from "../services/usuarios.service.js";
 
 // ============================================================================
 // MODULO DE AUTENTICACION (integrado desde AVANCES/SPRING 1/DIEGO SERNA/2)
@@ -18,6 +24,8 @@ import { registrarAuditoria, ACCIONES } from "../utils/auditoria.js";
 //   3.2 ALTA:    register con transaccion (usuario + rol nunca quedan a medias).
 //   3.3 MEDIO:   logout invalida el token en tokens_invalidados (RF2).
 //   3.4 MEDIO:   el correo dice "expira en 5 minutos" (RF4) en utils/mailer.js.
+// Desde 1.5.3 el SQL y las reglas viven en services/usuarios.service.js; aqui
+// solo se valida (middleware), se llama al servicio y se responde.
 // ============================================================================
 
 /**
@@ -78,169 +86,48 @@ export const register = async (req, res) => {
     const { email, password, nombre_completo } = req.body ?? {};
 
     try {
-        // M-15 (TASK-4.7): respuesta UNIFORME. Si el email ya existe NO se
-        // revela: se avisa al titular real por correo y se responde igual que
-        // un alta (sin token, porque la cuenta existente no se toca).
-        const [existente] = await pool.query(
-            "SELECT id FROM usuarios WHERE email = ?",
-            [email]
-        );
-        if (existente.length > 0) {
-            // B-6 (anti-enumeracion por tiempo): el alta nueva cuesta un
-            // bcrypt.hash; aqui se hace un hash ficticio descartable para que
-            // ambas respuestas tarden lo mismo y no se distingan por timing.
-            await bcrypt.hash(crypto.randomUUID(), 10);
-            try {
-                await enviarAvisoRegistroDuplicado(email);
-            } catch {
-                // fail-soft: la respuesta no cambia aunque falle el correo
-            }
+        const resultado = await registrarUsuario({ email, password, nombre_completo });
+
+        // M-15: email existente -> mismo contrato de alta, sin token.
+        if (resultado.duplicado) {
             return successResponse(res, "Usuario registrado correctamente", {
                 token: null,
-                user: { email, nombre_completo: nombre_completo || null, roles: [] },
-            }, 201);
-        }
-
-        const rolSolicitado = "comprador";
-        const passwordHash = await bcrypt.hash(password, 10);
-
-        // Fix 3.2: transaccion para que usuario + rol queden siempre consistentes.
-        const connection = await pool.getConnection();
-        try {
-            await connection.beginTransaction();
-
-            const [resultado] = await connection.query(
-                "INSERT INTO usuarios (email, password, nombre_completo, terminos_aceptados_en) VALUES (?, ?, ?, NOW())",
-                [email, passwordHash, nombre_completo || null]
-            );
-            const usuarioId = resultado.insertId;
-
-            // Asignar el rol por medio de la tabla puente usuario_roles
-            const [rolRow] = await connection.query(
-                "SELECT id FROM roles WHERE nombre = ?",
-                [rolSolicitado]
-            );
-            if (rolRow.length === 0) {
-                await connection.rollback();
-                return errorResponse(res, "Error interno del servidor", 500);
-            }
-            await connection.query(
-                "INSERT INTO usuario_roles (usuario_id, rol_id) VALUES (?, ?)",
-                [usuarioId, rolRow[0].id]
-            );
-
-            await connection.commit();
-
-            // Fix 3.1: secreto validado, nunca un fallback hardcodeado.
-            // M-8/B-4: HS256 + iss/aud + token_version (usuario nuevo -> 0).
-            const token = jwt.sign(
-                { id: usuarioId, email, token_version: 0 },
-                JWT_SECRET,
-                {
-                    algorithm: "HS256",
-                    expiresIn: JWT_EXPIRES_IN,
-                    issuer: JWT_ISSUER,
-                    audience: JWT_AUDIENCE,
-                    // jti unico (UUID v4): dos registros en el mismo segundo no
-                    // emiten el mismo token. No se valida en verify para no
-                    // rechazar los tokens emitidos antes de este cambio.
-                    jwtid: crypto.randomUUID(),
-                }
-            );
-
-            emitirCookieSesion(res, token);
-            return successResponse(res, "Usuario registrado correctamente", {
-                token: tokenParaBody(req, token),
                 user: {
-                    id: usuarioId,
-                    email,
-                    nombre_completo: nombre_completo || null,
-                    roles: [rolSolicitado]
-                }
+                    email: resultado.email,
+                    nombre_completo: resultado.nombre_completo,
+                    roles: [],
+                },
             }, 201);
-        } catch (err) {
-            await connection.rollback();
-            throw err;
-        } finally {
-            connection.release();
         }
-    } catch (error) {
-        // Duplicado de email a pesar del pre-check (race condition): M-15, misma
-        // respuesta uniforme (aviso al titular, sin token). B-6: hash ficticio
-        // tambien aqui para no distinguir el camino por timing.
-        if (error?.code === "ER_DUP_ENTRY") {
-            await bcrypt.hash(crypto.randomUUID(), 10);
-            try {
-                await enviarAvisoRegistroDuplicado(email);
-            } catch {
-                // fail-soft
+
+        const token = firmarToken(resultado);
+        emitirCookieSesion(res, token);
+        return successResponse(res, "Usuario registrado correctamente", {
+            token: tokenParaBody(req, token),
+            user: {
+                id: resultado.id,
+                email: resultado.email,
+                nombre_completo: resultado.nombre_completo,
+                roles: [resultado.rol]
             }
-            return successResponse(res, "Usuario registrado correctamente", {
-                token: null,
-                user: { email, nombre_completo: nombre_completo || null, roles: [] },
-            }, 201);
-        }
+        }, 201);
+    } catch (error) {
         console.error("Error en register:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
-
-// H5/H8 (TASK-4.8): hash bcrypt ficticio para igualar el TIEMPO de login entre
-// una cuenta existente y una inexistente (anti-enumeracion por timing). No
-// corresponde a ninguna contrasena real (se genero de un valor aleatorio).
-const HASH_FICTICIO = "$2b$10$f3bObWmLFI8EVveYGbAXP.4MwdtHCDDHnbQFA4.jGDg5c5RIg5IYS";
 
 // ============================= LOGIN =============================
 export const login = async (req, res) => {
     const { email, password } = req.body ?? {};
 
     try {
-        const [usuarios] = await pool.query(
-            `SELECT u.id, u.email, u.password, u.nombre_completo, u.foto_perfil, u.activo,
-                    u.token_version
-             FROM usuarios u WHERE u.email = ?`,
-            [email]
-        );
-
-        // H5: mismo trabajo criptografico exista o no la cuenta.
-        if (usuarios.length === 0) {
-            await bcrypt.compare(password ?? "", HASH_FICTICIO);
+        const usuario = await autenticarUsuario({ email, password });
+        if (!usuario) {
             return errorResponse(res, "Credenciales inválidas", 401);
         }
 
-        const usuario = usuarios[0];
-        const passwordValido = await bcrypt.compare(password ?? "", usuario.password);
-        // H5 anti-enumeracion: mensaje uniforme tambien para inactivos y el
-        // chequeo de estado va DESPUES del compare (mismo tiempo).
-        if (!usuario.activo || !passwordValido) {
-            return errorResponse(res, "Credenciales inválidas", 401);
-        }
-
-        // Roles
-        const [roles] = await pool.query(
-            `SELECT r.nombre FROM roles r
-             INNER JOIN usuario_roles ur ON r.id = ur.rol_id
-             WHERE ur.usuario_id = ?`,
-            [usuario.id]
-        );
-
-        // Fix 3.1: secreto validado, nunca un fallback hardcodeado.
-        // M-8/B-4: HS256 + iss/aud + token_version vigente del usuario.
-        const token = jwt.sign(
-            { id: usuario.id, email: usuario.email, token_version: Number(usuario.token_version || 0) },
-            JWT_SECRET,
-            {
-                algorithm: "HS256",
-                expiresIn: JWT_EXPIRES_IN,
-                issuer: JWT_ISSUER,
-                audience: JWT_AUDIENCE,
-                // jti unico (UUID v4): dos logins en el mismo segundo no emiten
-                // el mismo token. No se valida en verify: los tokens previos
-                // (sin jti) siguen validos hasta expirar.
-                jwtid: crypto.randomUUID(),
-            }
-        );
-
+        const token = firmarToken(usuario);
         emitirCookieSesion(res, token);
         return successResponse(res, "Inicio de sesión exitoso", {
             token: tokenParaBody(req, token),
@@ -249,7 +136,7 @@ export const login = async (req, res) => {
                 email: usuario.email,
                 nombre_completo: usuario.nombre_completo,
                 foto_perfil: usuario.foto_perfil,
-                roles: roles.map(r => r.nombre)
+                roles: usuario.roles
             }
         });
     } catch (error) {
@@ -271,16 +158,6 @@ function tokenDeLaPeticion(req) {
     return token;
 }
 
-/** Revoca un token en la lista negra (idempotente via INSERT IGNORE). */
-async function revocarToken(token) {
-    if (!token) return;
-    const hash = crypto.createHash("sha256").update(token).digest("hex");
-    await pool.query(
-        "INSERT IGNORE INTO tokens_invalidados (token_hash, expira_en) VALUES (?, DATE_ADD(NOW(), INTERVAL 7 DAY))",
-        [hash]
-    );
-}
-
 // Fix 3.3: revoca el JWT en la lista negra tokens_invalidados (la ruta exige
 // token via authRequired). INSERT IGNORE hace idempotente un doble logout.
 export const logout = async (req, res) => {
@@ -296,11 +173,7 @@ export const logout = async (req, res) => {
 // la cookie del navegador.
 export const cerrarTodasLasSesiones = async (req, res) => {
     try {
-        await pool.query(
-            "UPDATE usuarios SET token_version = token_version + 1 WHERE id = ?",
-            [req.userId]
-        );
-        await revocarToken(tokenDeLaPeticion(req));
+        await cerrarSesionesDelUsuario(req.userId, tokenDeLaPeticion(req));
         res.clearCookie("token", { httpOnly: true, sameSite: "lax", path: "/" });
         return successResponse(res, "Todas las sesiones fueron cerradas");
     } catch (error) {
@@ -312,27 +185,11 @@ export const cerrarTodasLasSesiones = async (req, res) => {
 // ===================== PERFIL (autenticado) =====================
 export const getPerfil = async (req, res) => {
     try {
-        const [usuarios] = await pool.query(
-            `SELECT u.id, u.email, u.nombre_completo, u.foto_perfil, u.descripcion_personal,
-                    u.direccion_envio, u.created_at, u.updated_at
-             FROM usuarios u WHERE u.id = ?`,
-            [req.userId]
-        );
-        if (usuarios.length === 0) {
+        const perfil = await obtenerPerfil(req.userId);
+        if (!perfil) {
             return errorResponse(res, "Usuario no encontrado", 404);
         }
-
-        const [roles] = await pool.query(
-            `SELECT r.nombre FROM roles r
-             INNER JOIN usuario_roles ur ON r.id = ur.rol_id
-             WHERE ur.usuario_id = ?`,
-            [req.userId]
-        );
-
-        return successResponse(res, "Perfil obtenido", {
-            ...usuarios[0],
-            roles: roles.map(r => r.nombre)
-        });
+        return successResponse(res, "Perfil obtenido", perfil);
     } catch (error) {
         console.error("Error en getPerfil:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
@@ -344,83 +201,16 @@ export const cambiarRol = async (req, res, next) => {
     const { rol } = req.body;
 
     try {
-        const [rolRow] = await pool.query(
-            "SELECT id FROM roles WHERE nombre = ?",
-            [rol]
-        );
-        if (rolRow.length === 0) {
-            return errorResponse(res, "Rol no encontrado", 404);
+        const resultado = await cambiarRolUsuario({
+            usuarioId: req.userId,
+            rol,
+            ip: req.ip,
+        });
+        if (!resultado.ok) {
+            return errorResponse(res, resultado.mensaje, resultado.status);
         }
-
-        const [rolesActuales] = await pool.query(
-            `SELECT r.nombre FROM roles r
-             INNER JOIN usuario_roles ur ON r.id = ur.rol_id
-             WHERE ur.usuario_id = ?`,
-            [req.userId]
-        );
-
-        if (rolesActuales.some(r => r.nombre === "administrador")) {
-            return errorResponse(res, "El rol administrador no puede autodegradarse", 403);
-        }
-
-        const connection = await pool.getConnection();
-        try {
-            await connection.beginTransaction();
-
-            // B2 (auditoria 2026-11-04): bajar a comprador con productos activos
-            // o pedidos abiertos dejaría ventas y compromisos sin responsable.
-            if (rol === "comprador") {
-                const [[compromisos]] = await connection.query(
-                    `SELECT
-                       (SELECT COUNT(*) FROM productos
-                         WHERE vendedor_id = ? AND eliminado_por_admin = 0) AS productos_activos,
-                       (SELECT COUNT(*) FROM detalle_pedidos
-                         WHERE vendedor_id = ? AND estado_envio IN ('Pendiente', 'En camino')) AS pedidos_abiertos`,
-                    [req.userId, req.userId]
-                );
-                if (Number(compromisos.productos_activos) > 0 || Number(compromisos.pedidos_abiertos) > 0) {
-                    await connection.rollback();
-                    return errorResponse(
-                        res,
-                        "No puedes cambiar a comprador con productos activos o pedidos abiertos",
-                        409
-                    );
-                }
-            }
-
-            await connection.query(
-                "DELETE FROM usuario_roles WHERE usuario_id = ?",
-                [req.userId]
-            );
-            await connection.query(
-                "INSERT INTO usuario_roles (usuario_id, rol_id) VALUES (?, ?)",
-                [req.userId, rolRow[0].id]
-            );
-
-            // M-11/B2: auditoria del cambio de rol (sin datos sensibles).
-            await registrarAuditoria({
-                actorId: req.userId,
-                accion: ACCIONES.USUARIO_ROL_CAMBIADO,
-                objetivoTipo: "usuario",
-                objetivoId: req.userId,
-                detalle: {
-                    roles_anteriores: rolesActuales.map((r) => r.nombre),
-                    rol_nuevo: rol,
-                },
-                ip: req.ip,
-                conn: connection,
-            });
-
-            await connection.commit();
-        } catch (err) {
-            await connection.rollback();
-            throw err;
-        } finally {
-            connection.release();
-        }
-
         return successResponse(res, "Rol actualizado correctamente", {
-            roles: [rol]
+            roles: resultado.roles
         });
     } catch (error) {
         return next(error);
@@ -432,47 +222,7 @@ export const solicitarRecuperacion = async (req, res) => {
     const { email } = req.body ?? {};
 
     try {
-        const [usuarios] = await pool.query(
-            "SELECT id, email, activo FROM usuarios WHERE email = ?",
-            [email]
-        );
-
-        // Anti-enumeracion: respuesta uniforme para email existente/inexistente
-        if (usuarios.length === 0 || !usuarios[0].activo) {
-            return successResponse(
-                res,
-                "Si el correo existe, recibirás un enlace para restablecer tu contraseña."
-            );
-        }
-
-        const usuario = usuarios[0];
-
-        // Token seguro (32 bytes hex = 64 caracteres). H3 (P2): solo se
-        // persiste el SHA-256 (nunca en claro); el valor real viaja por email.
-        const token = crypto.randomBytes(32).toString("hex");
-        const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-
-        // RF4: expira a los 5 minutos.
-        // M-9: cooldown por usuario: el UPDATE solo aplica si no hay un token
-        // emitido en el ultimo minuto (expiracion a 5 min -> umbral 4 min). Con
-        // affectedRows 0 no se reenvia correo; la respuesta sigue siendo
-        // uniforme para no filtrar la existencia de la cuenta.
-        const [resultado] = await pool.query(
-            "UPDATE usuarios SET token_recuperacion = ?, token_recuperacion_expiracion = DATE_ADD(NOW(), INTERVAL 5 MINUTE) WHERE id = ? AND (token_recuperacion_expiracion IS NULL OR token_recuperacion_expiracion < DATE_ADD(NOW(), INTERVAL 4 MINUTE))",
-            [tokenHash, usuario.id]
-        );
-        if (Number(resultado?.affectedRows) === 0) {
-            return successResponse(
-                res,
-                "Si el correo existe, recibirás un enlace para restablecer tu contraseña."
-            );
-        }
-
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        const resetUrl = `${frontendUrl}/restore?token=${token}`;
-
-        await enviarCorreoRecuperacion(usuario.email, resetUrl);
-
+        await emitirRecuperacion(email);
         return successResponse(
             res,
             "Si el correo existe, recibirás un enlace para restablecer tu contraseña."
@@ -488,25 +238,10 @@ export const restablecerPassword = async (req, res) => {
     const { token, password } = req.body ?? {};
 
     try {
-        // H3: se compara el hash (el token en claro jamas se guardo).
-        const tokenHash = typeof token === "string"
-            ? crypto.createHash("sha256").update(token).digest("hex")
-            : "";
-
-        const passwordHash = await bcrypt.hash(password, 10);
-
-        // B-* (TASK-4.9) + M-8: reset ATOMICO de un solo uso: la guarda del
-        // token vigente viaja en el WHERE, de modo que dos peticiones
-        // simultaneas no pueden reutilizarlo (affectedRows 0 = ya usado o
-        // expirado). Ademas revoca todas las sesiones previas.
-        const [resultado] = await pool.query(
-            "UPDATE usuarios SET password = ?, token_version = token_version + 1, password_changed_at = NOW(), token_recuperacion = NULL, token_recuperacion_expiracion = NULL WHERE token_recuperacion = ? AND token_recuperacion_expiracion > NOW()",
-            [passwordHash, tokenHash]
-        );
-        if (Number(resultado?.affectedRows) === 0) {
-            return errorResponse(res, "El enlace es inválido o ya fue utilizado", 400);
+        const resultado = await aplicarNuevaPassword({ token, password });
+        if (!resultado.ok) {
+            return errorResponse(res, resultado.mensaje, 400);
         }
-
         return successResponse(res, "Contraseña restablecida correctamente. Ya puedes iniciar sesión.");
     } catch (error) {
         console.error("Error en restablecerPassword:", error?.message);
@@ -538,37 +273,14 @@ export const getPerfilPublico = async (req, res) => {
     try {
         // Params ya validados por perfilPublicoParamsSchema (validate()).
         const idNumerico = Number(req.params.id);
+        const perfilPublico = await obtenerPerfilPublico(idNumerico);
 
-        // Busqueda del usuario activo en la BD (excluye datos sensibles)
-        const [rows] = await pool.query(
-            'SELECT id, nombre_completo, foto_perfil, descripcion_personal, activo FROM usuarios WHERE id = ?',
-            [idNumerico]
-        );
-
-        if (rows.length === 0) {
+        if (!perfilPublico) {
             return res.status(404).json({
                 success: false,
                 error: { code: "NOT_FOUND", message: "Usuario no encontrado" }
             });
         }
-
-        const usuarioBD = rows[0];
-
-        // Si el usuario esta baneado, no se muestra su perfil publico
-        if (!usuarioBD.activo) {
-            return res.status(404).json({
-                success: false,
-                error: { code: "NOT_FOUND", message: "Usuario no encontrado" }
-            });
-        }
-
-        // Mapeo de los campos reales de la BD a la estructura publica
-        const perfilPublico = {
-            id: usuarioBD.id,
-            nombre: usuarioBD.nombre_completo,
-            biografia: usuarioBD.descripcion_personal,
-            avatar: usuarioBD.foto_perfil || "https://via.placeholder.com/150"
-        };
 
         return res.status(200).json({ success: true, data: perfilPublico });
 
@@ -586,9 +298,7 @@ export const getPerfilPublico = async (req, res) => {
  * RF40 / B-R6 / M-7: el comprador elimina su cuenta desde ajustes (desactivacion logica).
  * - Exige la contrasena actual (step-up: la baja es irreversible).
  * - usuarios.activo = 0 (nunca DELETE fisico)
- * - Resuelve sus lineas abiertas como vendedor con la MISMA ruta del baneo
- *   (`destinoPedidosVendedor`: cancela Pendiente + stock + reembolso + aviso;
- *   'En camino' queda en revision del admin, DEC-004).
+ * - Resuelve sus lineas abiertas como vendedor con la MISMA ruta del baneo.
  * - Se vacia su carrito (dato transitorio)
  * - Si ademas es vendedor, sus productos se suspenden (RF54/RF74)
  * - Se conservan pedidos, calificaciones y reportes (historial intacto)
@@ -598,110 +308,25 @@ export const eliminarCuentaComprador = async (req, res, next) => {
     const compradorId = req.userId;
     const { password } = req.body ?? {};
 
-    const conn = await pool.getConnection();
     try {
-        await conn.beginTransaction();
-
-        // Verificar que la cuenta exista y este activa (FOR UPDATE: nadie mas
-        // la desactiva en paralelo mientras se resuelven sus pedidos).
-        const [usuarios] = await conn.query(
-            "SELECT id, password, activo FROM usuarios WHERE id = ? FOR UPDATE",
-            [compradorId]
-        );
-        if (usuarios.length === 0) {
-            await conn.rollback();
-            return res.status(404).json({
-                success: false,
-                error: { code: "NOT_FOUND", message: "Usuario no encontrado" }
-            });
-        }
-
-        // M-7: la baja exige la contrasena actual (step-up antes de una accion
-        // irreversible sobre la cuenta).
-        const passwordValida =
-            typeof password === "string" &&
-            password.length > 0 &&
-            (await bcrypt.compare(password, usuarios[0].password));
-        if (!passwordValida) {
-            await conn.rollback();
-            return res.status(403).json({
-                success: false,
-                error: { code: "FORBIDDEN", message: "Contraseña incorrecta" }
-            });
-        }
-
-        // B3 (auditoria 2026-11-04): un administrador puede darse de baja, pero
-        // la operacion no puede dejar la plataforma sin ningun admin activo.
-        // Se reutiliza la regla del ultimo administrador de validarObjetivoBaneable.
-        const [rolAdmin] = await conn.query(
-            `SELECT MAX(CASE WHEN r.nombre = 'administrador' THEN 1 ELSE 0 END) AS es_admin
-               FROM usuario_roles ur
-               JOIN roles r ON r.id = ur.rol_id
-              WHERE ur.usuario_id = ?`,
-            [compradorId]
-        );
-        if (Number(rolAdmin[0]?.es_admin) === 1) {
-            const [adminsActivos] = await conn.query(
-                `SELECT COUNT(DISTINCT u.id) AS total
-                   FROM usuarios u
-                   JOIN usuario_roles ur ON ur.usuario_id = u.id
-                   JOIN roles r ON r.id = ur.rol_id
-                  WHERE r.nombre = 'administrador' AND u.activo = 1`
-            );
-            if (Number(adminsActivos[0]?.total || 0) <= 1) {
-                await conn.rollback();
-                return res.status(409).json({
-                    success: false,
-                    error: {
-                        code: "CONFLICT",
-                        message: "No se puede eliminar la cuenta del último administrador activo"
-                    }
-                });
-            }
-        }
-
-        // Desactivacion logica de la cuenta. M-8: incrementa token_version
-        // (todas las sesiones del usuario quedan invalidas al instante).
-        await conn.query(
-            "UPDATE usuarios SET activo = 0, token_version = token_version + 1 WHERE id = ?",
-            [compradorId]
-        );
-        // Suspender sus productos publicados si es vendedor (RF54/RF74)
-        await conn.query(
-            "UPDATE productos SET eliminado_por_admin = 1 WHERE vendedor_id = ? AND eliminado_por_admin = 0",
-            [compradorId]
-        );
-        // M-7: resolver las lineas abiertas del usuario como VENDEDOR reutilizando
-        // la ruta del baneo (cancela Pendiente + reembolsa + notifica al comprador).
-        const pedidos = await destinoPedidosVendedor(conn, compradorId);
-        // Vaciar el carrito (dato transitorio, se puede borrar)
-        await conn.query(
-            "DELETE FROM carrito_items WHERE comprador_id = ?",
-            [compradorId]
-        );
-
-        // B3: dejar constancia de la baja en la auditoria, dentro de la misma
-        // transaccion. Fail-soft: un fallo de auditoria no revierte la baja.
-        await registrarAuditoria({
-            actorId: compradorId,
-            accion: ACCIONES.USUARIO_BAJA_CUENTA,
-            objetivoTipo: "usuario",
-            objetivoId: compradorId,
-            detalle: { pedidos },
+        const resultado = await darDeBajaCuenta({
+            usuarioId: compradorId,
+            password,
             ip: req.ip,
-            conn,
         });
+        if (!resultado.ok) {
+            return res.status(resultado.status).json({
+                success: false,
+                error: { code: resultado.code, message: resultado.mensaje }
+            });
+        }
 
-        await conn.commit();
         return res.status(200).json({
             success: true,
-            data: { id: compradorId, estado: "desactivado", pedidos }
+            data: { id: compradorId, estado: "desactivado", pedidos: resultado.pedidos }
         });
     } catch (error) {
-        await conn.rollback();
         next(error);
-    } finally {
-        conn.release();
     }
 };
 
@@ -712,23 +337,7 @@ export const eliminarCuentaComprador = async (req, res, next) => {
  */
 export const listarUsuarios = async (req, res, next) => {
     try {
-        const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
-
-        let sql = `SELECT id, nombre_completo, foto_perfil
-                   FROM usuarios
-                   WHERE activo = 1 AND id <> ?`;
-        const params = [req.userId];
-
-        if (q) {
-            // M-15: el directorio no filtra por email (no confirma correos);
-            // B-8: los comodines LIKE del usuario se escapan.
-            sql += " AND nombre_completo LIKE ?";
-            params.push(escapeLike(String(q)));
-        }
-
-        sql += " ORDER BY nombre_completo ASC LIMIT 50";
-
-        const [rows] = await pool.query(sql, params);
+        const rows = await listarDirectorio({ usuarioId: req.userId, q: req.query.q });
         return successResponse(res, "Usuarios obtenidos", rows);
     } catch (err) {
         next(err);
@@ -742,49 +351,12 @@ export const listarUsuarios = async (req, res, next) => {
 export const actualizarPerfil = async (req, res, next) => {
     try {
         // Body validado por actualizarPerfilSchema (validate()).
-        const { nombre_completo, descripcion_personal, direccion_envio } = req.body;
-
-        const [actual] = await pool.query(
-            "SELECT foto_perfil FROM usuarios WHERE id = ?",
-            [req.userId]
-        );
-
-        const campos = [];
-        const valores = [];
-
-        if (nombre_completo !== undefined) {
-            campos.push("nombre_completo = ?");
-            valores.push(nombre_completo);
-        }
-        if (descripcion_personal !== undefined) {
-            campos.push("descripcion_personal = ?");
-            valores.push(descripcion_personal);
-        }
-        if (direccion_envio !== undefined) {
-            campos.push("direccion_envio = ?");
-            valores.push(direccion_envio);
-        }
-        if (req.file) {
-            campos.push("foto_perfil = ?");
-            valores.push(`/uploads/${req.file.filename}`);
-        }
-
-        await pool.query(
-            `UPDATE usuarios SET ${campos.join(", ")} WHERE id = ?`,
-            [...valores, req.userId]
-        );
-
-        // Si se reemplazo el avatar, el archivo anterior deja de estar referenciado.
-        const fotoAnterior = actual[0]?.foto_perfil;
-        if (req.file && fotoAnterior) borrarUploadPorUrl(fotoAnterior);
-
-        const [rows] = await pool.query(
-            `SELECT id, email, nombre_completo, foto_perfil, descripcion_personal, direccion_envio
-               FROM usuarios WHERE id = ?`,
-            [req.userId]
-        );
-
-        return successResponse(res, "Perfil actualizado correctamente", rows[0]);
+        const actualizado = await guardarPerfil({
+            usuarioId: req.userId,
+            cambios: req.body,
+            archivo: req.file,
+        });
+        return successResponse(res, "Perfil actualizado correctamente", actualizado);
     } catch (err) {
         next(err);
     }
