@@ -69,6 +69,9 @@ jobs:
       TEST_DB_USER: root
       TEST_DB_PASSWORD: ci_solo_efimero_commercity
       TEST_DB_NAME: commercity_dev
+      # C1 (1.5.5): si el CI pierde TEST_DB_*, la integracion falla en vez de
+      # saltarse en silencio (requisitos.integration.test.js).
+      REQUIRE_TEST_DB: "true"
     defaults:
       run:
         working-directory: backend
