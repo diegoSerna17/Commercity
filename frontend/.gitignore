@@ -12,6 +12,7 @@ dist
 dist-ssr
 coverage
 .coverage-tmp
+.vitest
 *.local
 
 # Editor directories and files
