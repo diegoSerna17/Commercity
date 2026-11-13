@@ -26,13 +26,17 @@ export function calcularLinea(precio, descuentoPorcentaje, cantidad) {
   const subtotal = round2((precioFinal * cantidad) / (1 + IVA_RATE));
   const iva = round2(subtotal * IVA_RATE);
   const total = round2(subtotal + iva);
+  // Lote 3 (1.5.8): la comision se deriva del subtotal, no se redondea por
+  // separado. Con subtotales de centavos, 90% + 10% redondeados podian sumar
+  // un centavo de mas y romper la conciliacion 90/10.
+  const montoVendedor = round2(subtotal * COMISION_VENDEDOR);
   return {
     precioFinal,
     subtotal,
     iva,
     total,
-    montoVendedor: round2(subtotal * COMISION_VENDEDOR),
-    montoComision: round2(subtotal * COMISION_PLATAFORMA),
+    montoVendedor,
+    montoComision: round2(subtotal - montoVendedor),
   };
 }
 

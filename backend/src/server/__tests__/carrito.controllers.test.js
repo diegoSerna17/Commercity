@@ -101,6 +101,7 @@ function conexionSinItem() {
 describe("POST /api/carrito (agregarProducto)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pool.getConnection.mockResolvedValue(conn);
     conn.beginTransaction.mockResolvedValue();
     conn.commit.mockResolvedValue();
     conn.rollback.mockResolvedValue();
@@ -236,6 +237,43 @@ describe("POST /api/carrito (agregarProducto)", () => {
     expect(res.status).toBe(500);
     expect(res.body.error.code).toBe("SERVER_ERROR");
   });
+
+  it("A-1: resuelve producto y comprador antes de tomar la conexion del pool", async () => {
+    setupAgregar({ stock: 10, compradorActivo: true, itemExistente: null });
+    let lecturasPrevias = 0;
+    pool.getConnection.mockImplementation(async () => {
+      lecturasPrevias = pool.query.mock.calls.filter(([sql]) =>
+        String(sql).includes("SELECT stock") || String(sql).includes("SELECT 1 FROM usuarios")
+      ).length;
+      return conn;
+    });
+
+    const res = await request(app)
+      .post("/api/carrito")
+      .set(auth1)
+      .send({ producto_id: 1, cantidad: 2 });
+
+    expect(res.status).toBe(201);
+    // Ambas lecturas auxiliares ya se resolvieron cuando se pide la conexion:
+    // la peticion no retiene una conexion mientras espera otra del pool.
+    expect(lecturasPrevias).toBe(2);
+  });
+
+  it("A-1: si la cola del pool se llena en la pre-lectura responde 503", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return Promise.resolve([[], undefined]);
+      if (sql.includes("AS revocado")) return Promise.resolve([[{ activo: 1, token_version: 0, revocado: 0 }], undefined]);
+      return Promise.reject(new Error("Queue limit reached."));
+    });
+
+    const res = await request(app)
+      .post("/api/carrito")
+      .set(auth1)
+      .send({ producto_id: 1, cantidad: 2 });
+
+    expect(res.status).toBe(503);
+    expect(res.body.error.code).toBe("SERVICE_UNAVAILABLE");
+  });
 });
 
 describe("GET /api/carrito (listarCarrito)", () => {
@@ -255,6 +293,10 @@ describe("GET /api/carrito (listarCarrito)", () => {
         imagen_url: "https://ejemplo.com/img.png",
         vendedor_id: 2,
         vendedor_nombre: "Vendedor Prueba",
+        eliminado_por_admin: 0,
+        eliminado_por_vendedor: 0,
+        pausado: 0,
+        activo: 1,
       },
     ]);
     const res = await request(app).get("/api/carrito").set(auth1);
@@ -262,7 +304,37 @@ describe("GET /api/carrito (listarCarrito)", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.vendedores).toHaveLength(1);
     expect(res.body.data.vendedores[0].items[0].precio_final).toBe(90000);
+    expect(res.body.data.vendedores[0].items[0].disponible).toBe(true);
     expect(res.body.data.resumen.total).toBe(450000);
+  });
+
+  it("M-6: marca disponible por item y excluye los no disponibles de los totales", async () => {
+    listarItemsMock([
+      // Disponible: suma a los totales.
+      { producto_id: 1, cantidad: 2, producto_nombre: "Disponible", precio: 100000, descuento_porcentaje: 0, imagen_url: null, vendedor_id: 2, vendedor_nombre: "Vendedor A", eliminado_por_admin: 0, eliminado_por_vendedor: 0, pausado: 0, activo: 1 },
+      // No disponibles: siguen visibles, pero no suman.
+      { producto_id: 2, cantidad: 1, producto_nombre: "Pausado", precio: 50000, descuento_porcentaje: 0, imagen_url: null, vendedor_id: 2, vendedor_nombre: "Vendedor A", eliminado_por_admin: 0, eliminado_por_vendedor: 0, pausado: 1, activo: 1 },
+      { producto_id: 3, cantidad: 1, producto_nombre: "Baja vendedor", precio: 30000, descuento_porcentaje: 0, imagen_url: null, vendedor_id: 3, vendedor_nombre: "Vendedor B", eliminado_por_admin: 0, eliminado_por_vendedor: 1, pausado: 0, activo: 1 },
+      { producto_id: 4, cantidad: 1, producto_nombre: "Vendedor inactivo", precio: 20000, descuento_porcentaje: 0, imagen_url: null, vendedor_id: 4, vendedor_nombre: "Vendedor C", eliminado_por_admin: 0, eliminado_por_vendedor: 0, pausado: 0, activo: 0 },
+      { producto_id: 5, cantidad: 1, producto_nombre: "Eliminado admin", precio: 10000, descuento_porcentaje: 0, imagen_url: null, vendedor_id: 5, vendedor_nombre: "Vendedor D", eliminado_por_admin: 1, eliminado_por_vendedor: 0, pausado: 0, activo: 1 },
+    ]);
+
+    const res = await request(app).get("/api/carrito").set(auth1);
+
+    expect(res.status).toBe(200);
+    const items = res.body.data.vendedores.flatMap((vendedor) => vendedor.items);
+    expect(items).toHaveLength(5);
+    expect(items.find((item) => item.producto_id === 1).disponible).toBe(true);
+    for (const productoId of [2, 3, 4, 5]) {
+      expect(items.find((item) => item.producto_id === productoId).disponible).toBe(false);
+      expect(items.find((item) => item.producto_id === productoId).subtotal_linea).toBe(0);
+    }
+
+    // Solo el item disponible suma; el resumen cuenta lo comprable.
+    expect(res.body.data.resumen.subtotal_global).toBe(200000);
+    expect(res.body.data.resumen.total).toBe(200000);
+    expect(res.body.data.resumen.cantidad_items).toBe(1);
+    expect(res.body.data.resumen.cantidad_vendedores).toBe(1);
   });
 
   it("ignora comprador_id de query y usa el del JWT (regresion IDOR H1)", async () => {
@@ -286,6 +358,7 @@ describe("GET /api/carrito (listarCarrito)", () => {
 describe("PATCH /api/carrito/:productoId (modificarCantidad)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pool.getConnection.mockResolvedValue(conn);
     conn.beginTransaction.mockResolvedValue();
     conn.commit.mockResolvedValue();
     conn.rollback.mockResolvedValue();
@@ -360,6 +433,53 @@ describe("PATCH /api/carrito/:productoId (modificarCantidad)", () => {
     const updateCall = conn.query.mock.calls.find((c) => String(c[0]).includes("UPDATE carrito_items SET cantidad"));
     expect(updateCall).toBeDefined();
     expect(updateCall[1][1]).toBe(1);
+  });
+
+  it("A-1: lee el producto antes de tomar la conexion del pool", async () => {
+    soloStock(10);
+    conn.query.mockResolvedValue([[{ id: 1 }], undefined]);
+    let lecturasPrevias = 0;
+    pool.getConnection.mockImplementation(async () => {
+      lecturasPrevias = pool.query.mock.calls.filter(([sql]) =>
+        String(sql).includes("SELECT stock")
+      ).length;
+      return conn;
+    });
+
+    const res = await request(app)
+      .patch("/api/carrito/1")
+      .set(auth1)
+      .send({ cantidad: 4 });
+
+    expect(res.status).toBe(200);
+    expect(lecturasPrevias).toBe(1);
+  });
+
+  it("A-1: si la cola del pool se llena responde 503", async () => {
+    soloStock(10);
+    pool.getConnection.mockRejectedValue(new Error("Queue limit reached."));
+
+    const res = await request(app)
+      .patch("/api/carrito/1")
+      .set(auth1)
+      .send({ cantidad: 4 });
+
+    expect(res.status).toBe(503);
+    expect(res.body.error.code).toBe("SERVICE_UNAVAILABLE");
+  });
+
+  it("A-1: si falla la transaccion hace rollback y libera la conexion", async () => {
+    soloStock(10);
+    conn.query.mockRejectedValue(new Error("boom"));
+
+    const res = await request(app)
+      .patch("/api/carrito/1")
+      .set(auth1)
+      .send({ cantidad: 4 });
+
+    expect(res.status).toBe(500);
+    expect(conn.rollback).toHaveBeenCalled();
+    expect(conn.release).toHaveBeenCalled();
   });
 });
 

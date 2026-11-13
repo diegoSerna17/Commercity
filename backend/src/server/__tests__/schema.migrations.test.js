@@ -90,4 +90,15 @@ describe("schema_commercity.sql vs migraciones 015-019 (B1)", () => {
       expect(registrado, `${archivo}: ningun checksum del archivo coincide con schema_migrations`).toBe(true);
     }
   });
+
+  it("la migracion 021 agrega CHECK (stock >= 0) a productos", () => {
+    // Lote 3 (1.5.8): la BD debe rechazar stock negativo aunque un UPDATE
+    // manual o una carrera se salte la validacion de la aplicacion.
+    const sql = readFileSync(
+      join(dirMigraciones, "021_check_stock_no_negativo.sql"),
+      "utf8"
+    );
+    expect(sql).toMatch(/ALTER TABLE\s+productos/i);
+    expect(sql).toMatch(/CHECK\s*\(\s*stock\s*>=\s*0\s*\)/i);
+  });
 });

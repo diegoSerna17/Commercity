@@ -11,6 +11,7 @@ import {
 import { authRequired } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
+import { limiteStepUp } from "../middleware/rate-limit.middleware.js";
 import {
   historialIngresosQuerySchema,
   historialVentasQuerySchema,
@@ -28,12 +29,14 @@ router.get("/mi-cuenta-bancaria/masked", ...vendedor, getMiCuentaBancariaMasked)
 router.post(
   "/mi-cuenta-bancaria",
   ...vendedor,
+  limiteStepUp,
   validate(upsertCuentaBancariaSchema),
   upsertMiCuentaBancaria
 );
 router.put(
   "/mi-cuenta-bancaria",
   ...vendedor,
+  limiteStepUp,
   validate(upsertCuentaBancariaSchema),
   upsertMiCuentaBancaria
 );

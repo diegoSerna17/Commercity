@@ -1,4 +1,5 @@
 import { errorResponse } from "../utils/response.js";
+import { esPoolSaturado } from "../config/db.js";
 
 /**
  * Middleware de error centralizado: ultimo de la cadena Express.
@@ -12,6 +13,15 @@ import { errorResponse } from "../utils/response.js";
  */
 export const errorHandler = (err, _req, res, _next) => {
     console.error("Error no controlado:", err?.message || "error sin mensaje");
+    // A-1 (auditoria backend 1.5.5): pool agotado -> 503 (no 500). Cubre los
+    // errores de pool.getConnection/pool.query que nadie captura.
+    if (esPoolSaturado(err)) {
+        return errorResponse(
+            res,
+            "Servicio temporalmente saturado. Intenta de nuevo en unos segundos.",
+            503
+        );
+    }
     const status = err?.httpStatus || err?.status || err?.statusCode;
     if (Number.isInteger(status) && status >= 400 && status < 600 && status !== 500) {
         // Los errores propios (httpStatus) y los de cliente con `expose` llevan

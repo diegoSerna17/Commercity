@@ -18,6 +18,7 @@ import {
 import { authRequired } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
+import { limiteStepUp } from "../middleware/rate-limit.middleware.js";
 import { subirImagen } from "../config/multer.js";
 import {
     registerSchema,
@@ -52,8 +53,9 @@ router.get(
     listarUsuarios
 );
 
-// RF40: el comprador elimina su cuenta (desactivacion logica, usa req.userId del token)
-router.delete("/cuenta", authRequired, eliminarCuentaComprador);
+// RF40: el comprador elimina su cuenta (desactivacion logica, usa req.userId del token).
+// 1.5.9: step-up sensible; el limitador corre despues de authRequired.
+router.delete("/cuenta", authRequired, limiteStepUp, eliminarCuentaComprador);
 
 // ===== Autenticacion (publicas) =====
 router.post("/register", validate(registerSchema), register);

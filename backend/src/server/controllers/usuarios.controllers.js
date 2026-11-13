@@ -1,5 +1,6 @@
 import pkg from "../../../package.json" with { type: "json" };
 import { expiracionEnMs } from "../utils/config.js";
+import { esPoolSaturado } from "../config/db.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 import {
     firmarToken,
@@ -80,7 +81,7 @@ function tokenParaBody(req, token) {
 }
 
 // ============================ REGISTRO ============================
-export const register = async (req, res) => {
+export const register = async (req, res, next) => {
     // TASK-4.9: body puede faltar; el contrato Zod ya lo rechaza aguas arriba,
     // pero la desestructuracion no debe romper con 500.
     const { email, password, nombre_completo } = req.body ?? {};
@@ -88,37 +89,26 @@ export const register = async (req, res) => {
     try {
         const resultado = await registrarUsuario({ email, password, nombre_completo });
 
-        // M-15: email existente -> mismo contrato de alta, sin token.
-        if (resultado.duplicado) {
-            return successResponse(res, "Usuario registrado correctamente", {
-                token: null,
-                user: {
-                    email: resultado.email,
-                    nombre_completo: resultado.nombre_completo,
-                    roles: [],
-                },
-            }, 201);
-        }
-
-        const token = firmarToken(resultado);
-        emitirCookieSesion(res, token);
+        // M-3: la respuesta es IDENTICA exista o no el email: ni cookie, ni
+        // token, ni id, ni el rol asignado. Si se diferenciara, un atacante
+        // podria enumerar cuentas por el cuerpo de la respuesta. El cliente
+        // inicia sesion con POST /login despues del alta.
         return successResponse(res, "Usuario registrado correctamente", {
-            token: tokenParaBody(req, token),
             user: {
-                id: resultado.id,
                 email: resultado.email,
                 nombre_completo: resultado.nombre_completo,
-                roles: [resultado.rol]
-            }
+                roles: [],
+            },
         }, 201);
     } catch (error) {
+        if (esPoolSaturado(error)) return next(error);
         console.error("Error en register:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
 // ============================= LOGIN =============================
-export const login = async (req, res) => {
+export const login = async (req, res, next) => {
     const { email, password } = req.body ?? {};
 
     try {
@@ -140,6 +130,7 @@ export const login = async (req, res) => {
             }
         });
     } catch (error) {
+        if (esPoolSaturado(error)) return next(error);
         console.error("Error en login:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
@@ -171,19 +162,20 @@ export const logout = async (req, res) => {
 // Incrementa token_version: TODOS los JWT emitidos antes (Bearer o cookie)
 // quedan invalidos. Ademas revoca el token actual en la lista negra y limpia
 // la cookie del navegador.
-export const cerrarTodasLasSesiones = async (req, res) => {
+export const cerrarTodasLasSesiones = async (req, res, next) => {
     try {
         await cerrarSesionesDelUsuario(req.userId, tokenDeLaPeticion(req));
         res.clearCookie("token", { httpOnly: true, sameSite: "lax", path: "/" });
         return successResponse(res, "Todas las sesiones fueron cerradas");
     } catch (error) {
+        if (esPoolSaturado(error)) return next(error);
         console.error("Error en cerrarTodasLasSesiones:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
 // ===================== PERFIL (autenticado) =====================
-export const getPerfil = async (req, res) => {
+export const getPerfil = async (req, res, next) => {
     try {
         const perfil = await obtenerPerfil(req.userId);
         if (!perfil) {
@@ -191,6 +183,7 @@ export const getPerfil = async (req, res) => {
         }
         return successResponse(res, "Perfil obtenido", perfil);
     } catch (error) {
+        if (esPoolSaturado(error)) return next(error);
         console.error("Error en getPerfil:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
@@ -218,7 +211,7 @@ export const cambiarRol = async (req, res, next) => {
 };
 
 // ================ SOLICITAR RECUPERACION (RF4) =================
-export const solicitarRecuperacion = async (req, res) => {
+export const solicitarRecuperacion = async (req, res, next) => {
     const { email } = req.body ?? {};
 
     try {
@@ -228,13 +221,14 @@ export const solicitarRecuperacion = async (req, res) => {
             "Si el correo existe, recibirás un enlace para restablecer tu contraseña."
         );
     } catch (error) {
+        if (esPoolSaturado(error)) return next(error);
         console.error("Error en solicitarRecuperacion:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
 // ================ RESTABLECER CONTRASEÑA (RF4) =================
-export const restablecerPassword = async (req, res) => {
+export const restablecerPassword = async (req, res, next) => {
     const { token, password } = req.body ?? {};
 
     try {
@@ -244,13 +238,14 @@ export const restablecerPassword = async (req, res) => {
         }
         return successResponse(res, "Contraseña restablecida correctamente. Ya puedes iniciar sesión.");
     } catch (error) {
+        if (esPoolSaturado(error)) return next(error);
         console.error("Error en restablecerPassword:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
 };
 
 // ========================== ADMIN ==============================
-export const adminGetDatos = async (req, res) => {
+export const adminGetDatos = async (req, res, next) => {
     try {
         // Devuelve el rol detectado por requireRoles (inyectado en req.userRoles)
         return successResponse(res, "Acceso de administrador autorizado", {
@@ -258,6 +253,7 @@ export const adminGetDatos = async (req, res) => {
             roles: req.userRoles,
         });
     } catch (error) {
+        if (esPoolSaturado(error)) return next(error);
         console.error("Error en adminGetDatos:", error?.message);
         return errorResponse(res, "Error interno del servidor", 500);
     }
@@ -269,7 +265,7 @@ export const adminGetDatos = async (req, res) => {
  * @param {import("express").Request} req
  * @param {import("express").Response} res
  */
-export const getPerfilPublico = async (req, res) => {
+export const getPerfilPublico = async (req, res, next) => {
     try {
         // Params ya validados por perfilPublicoParamsSchema (validate()).
         const idNumerico = Number(req.params.id);
@@ -285,6 +281,7 @@ export const getPerfilPublico = async (req, res) => {
         return res.status(200).json({ success: true, data: perfilPublico });
 
     } catch (error) {
+        if (esPoolSaturado(error)) return next(error);
         // Log interno para depuracion; no se expone al cliente
         console.error("Error al obtener perfil publico:", error.message);
         return res.status(500).json({

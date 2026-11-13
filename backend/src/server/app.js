@@ -19,8 +19,10 @@ import seguidoresRouter from "./routes/seguidores.routes.js";
 import docsRouter from "./docs/docs.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { authRequired } from "./middleware/auth.middleware.js";
+import { limitePorVentana, MENSAJE_RATE_LIMIT } from "./middleware/rate-limit.middleware.js";
 import { validarOriginCookies } from "./middleware/origin.middleware.js";
 import pool from "./config/db.js";
+import { UPLOADS_DIR } from "./config/multer.js";
 
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -84,41 +86,53 @@ app.use(cors({
 app.use(validarOriginCookies);
 
 // H2 (P0): /uploads ya no es totalmente publico. Las imagenes de producto
-// (jpg/jpeg/png/webp/gif) de la raiz siguen publicas para el catalogo
+// (jpg/jpeg/png/webp/gif) de la RAIZ siguen publicas para el catalogo
 // (RF45/RF49); las evidencias de reportes viven en /uploads/reportes/ y son
 // privadas (B2, auditoria 2026-11-04). Cualquier otro archivo (pdf/doc/xls/zip
 // del chat, evidencias) exige JWT.
-const IMAGEN_PUBLICA = /\.(jpg|jpeg|png|webp|gif)$/i;
-const ES_EVIDENCIA_PRIVADA = (ruta) => ruta.startsWith("/reportes/");
+// M-2 (auditoria backend 1.5.5): el filtro DECODIFICA la ruta antes de
+// clasificarla (express.static la decodifica despues, asi que
+// /uploads/%72eportes/x.jpg llegaba como publica). Solo es publica una imagen
+// en la raiz de uploads (un unico segmento); una subcarpeta exige JWT.
+const IMAGEN_PUBLICA_EN_RAIZ = /^\/[^/\\]+\.(jpg|jpeg|png|webp|gif)$/i;
+
+/**
+ * Decodifica la ruta de la peticion como lo hara express.static.
+ * @param {string} ruta
+ * @returns {string|null} ruta decodificada, o null si es invalida
+ */
+function decodificarRutaUpload(ruta) {
+  try {
+    return decodeURIComponent(ruta);
+  } catch {
+    return null;
+  }
+}
+
 app.use(
   "/uploads",
   (req, res, next) => {
+    const ruta = decodificarRutaUpload(req.path);
+    if (ruta === null) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "INVALID_PATH", message: "Ruta de archivo inválida" },
+      });
+    }
     if (
-      req.method === "GET" &&
-      IMAGEN_PUBLICA.test(req.path) &&
-      !ES_EVIDENCIA_PRIVADA(req.path)
+      (req.method === "GET" || req.method === "HEAD") &&
+      IMAGEN_PUBLICA_EN_RAIZ.test(ruta)
     ) {
       return next();
     }
     return authRequired(req, res, next);
   },
-  express.static(path.join(__dirname, "uploads"), { dotfiles: "deny", index: false })
+  express.static(UPLOADS_DIR, { dotfiles: "deny", index: false })
 );
 
-// Rate limits (M-9/H7): por endpoint y por cuenta, ademas del general. Los
-// limitadores con `skip` se desactivan en NODE_ENV=test para no romper
-// Vitest/Supertest; el skip se evalua por peticion.
-const MENSAJE_RATE_LIMIT = { success: false, error: { code: "RATE_LIMIT", message: "Demasiadas peticiones." } };
-const limitePorVentana = ({ windowMs, max, keyGenerator, skip }) => rateLimit({
-    windowMs,
-    max,
-    keyGenerator,
-    message: MENSAJE_RATE_LIMIT,
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip: skip || (() => process.env.NODE_ENV === "test"),
-});
-
+// Rate limits (M-9/H7): por endpoint y por cuenta, ademas del general. La
+// fabrica vive en middleware/rate-limit.middleware.js para que las rutas
+// puedan montar el step-up despues de authRequired (1.5.9).
 // Anti fuerza bruta en login/recover: por IP (10/min) y ADEMAS por CUENTA
 // (5 / 15 min sobre el email normalizado; sin email cae al IP seguro).
 const opcionesRateLimit = {

@@ -33,6 +33,7 @@ export const mapearReporte = (r) => ({
   motivo: r.motivo || "",
   descripcion: r.motivo || "",
   evidencias: r.evidencia_url ? r.evidencia_url.split(",").filter(Boolean).length : 0,
+  evidencia_url: r.evidencia_url || null,
   respuesta: r.respuesta_admin || "",
 });
 

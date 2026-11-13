@@ -1,10 +1,6 @@
-import pool from "../config/db.js";
+import pool, { esPoolSaturado } from "../config/db.js";
 import { round2 } from "../utils/finanzas.js";
-import {
-    estadoPagoVendedorTrasCancelacion,
-    importeReembolsoLinea,
-    reembolsarPago,
-} from "../utils/reembolsos.js";
+import { cancelarLineaComprador } from "../services/pedidos.service.js";
 
 // ============================================================================
 // MODULO HISTORIAL DE COMPRAS (integrado desde AVANCES/SPRING 1/JARY)
@@ -29,7 +25,7 @@ const NORMALIZAR_ESTADO = (e) => (e === "Cancelado" ? "Cancelado" : e || "Pendie
  * unitario, IVA 19%, total e imagen.
  * Filtro opcional: ?estado=Pendiente|En camino|Entregado|Cancelado (RF30).
  */
-export const getHistorialComprasComprador = async (req, res) => {
+export const getHistorialComprasComprador = async (req, res, next) => {
     const compradorId = req.userId;
 
     // B-9: paginacion validada en la ruta con validate() (default 20, max 100).
@@ -159,6 +155,7 @@ export const getHistorialComprasComprador = async (req, res) => {
             paginacion: { pagina, por_pagina: porPagina, total, total_paginas: Math.max(1, Math.ceil(total / porPagina)) }
         });
     } catch (error) {
+        if (esPoolSaturado(error)) return next(error);
         console.error("Error al obtener el historial de compras:", error.message);
         return res.status(500).json({
             success: false,
@@ -191,83 +188,29 @@ function estadoPredominante(items) {
  * H2: si el pago no estaba Aprobado/Reembolsado, la linea se cancela igual pero
  * la respuesta reporta reembolsado=false (no se inventa dinero no registrado).
  */
-export const cancelarPedidoComprador = async (req, res) => {
+export const cancelarPedidoComprador = async (req, res, next) => {
     const compradorId = req.userId;
     // validate(cancelarPedidoParamsSchema) ya coacciono y valido :id.
     const detalleId = Number(req.params.id);
 
-    const conn = await pool.getConnection();
     try {
-        await conn.beginTransaction();
-
-        // 1. Bloquear la linea y validar propietario + estado Pendiente.
-        // comprador_id vive en pedidos, no en detalle_pedidos (fix RF135).
-        const [lineas] = await conn.query(
-            `SELECT dp.id, dp.producto_id, dp.cantidad, dp.pedido_id,
-                    dp.subtotal, dp.estado_pago_vendedor
-               FROM detalle_pedidos dp
-               JOIN pedidos p ON p.id = dp.pedido_id
-              WHERE dp.id = ? AND p.comprador_id = ? AND dp.estado_envio = 'Pendiente'
-              FOR UPDATE`,
-            [detalleId, compradorId]
-        );
-        if (lineas.length === 0) {
-            await conn.rollback();
-            return res.status(404).json({
+        // Lote 3 (1.5.8): una sola logica de cancelacion (la de pedidos.service),
+        // que ademas notifica al vendedor de la linea. Antes habia una copia
+        // aqui sin notificacion.
+        const resultado = await cancelarLineaComprador({ detalleId, compradorId });
+        if (!resultado.ok) {
+            return res.status(resultado.status).json({
                 success: false,
-                error: { code: "NOT_FOUND", message: "Pedido no encontrado o no cancelable" }
+                error: { code: "NOT_FOUND", message: resultado.mensaje }
             });
         }
-
-        const linea = lineas[0];
-
-        // 2. Cancelar la linea
-        await conn.query(
-            "UPDATE detalle_pedidos SET estado_envio = 'Cancelado' WHERE id = ?",
-            [detalleId]
-        );
-        // 3. Restituir stock al producto
-        await conn.query(
-            "UPDATE productos SET stock = stock + ? WHERE id = ?",
-            [linea.cantidad, linea.producto_id]
-        );
-        // 4. S1 (mig 013) + A-2: reembolso PROPORCIONAL por monto con la regla
-        // unica de utils/reembolsos.js: el estado se evalua ANTES de incrementar
-        // el acumulado, con tolerancia de redondeo (+-0.01, B-10) y el acumulado
-        // se acota al monto pagado. El guard de estado evita mutar pagos
-        // 'Rechazado'/'Pendiente'; sin early-return, sobre un pago ya marcado
-        // 'Reembolsado' por error previo la acumulacion sigue siendo valida.
-        const importeLinea = importeReembolsoLinea(linea.subtotal);
-        const { actualizado: pagoReembolsado } = await reembolsarPago(
-            conn,
-            linea.pedido_id,
-            importeLinea
-        );
-        // 5. S1: estado de pago del vendedor de la linea, misma regla que RF35
-        // (si ya se desembolso al vendedor se conserva; si no, 'Pendiente').
-        await conn.query(
-            "UPDATE detalle_pedidos SET estado_pago_vendedor = ? WHERE id = ?",
-            [estadoPagoVendedorTrasCancelacion(linea.estado_pago_vendedor), detalleId]
-        );
-
-        await conn.commit();
-        return res.status(200).json({
-            success: true,
-            data: {
-                id: detalleId,
-                estado: "Cancelado",
-                reembolsado: pagoReembolsado,
-                monto_reembolsado: pagoReembolsado ? importeLinea : 0,
-            }
-        });
+        return res.status(200).json({ success: true, data: resultado.data });
     } catch (error) {
-        await conn.rollback();
+        if (esPoolSaturado(error)) return next(error);
         console.error("Error al cancelar el pedido:", error.message);
         return res.status(500).json({
             success: false,
             error: { code: "INTERNAL_ERROR", message: "Error al cancelar el pedido" }
         });
-    } finally {
-        conn.release();
     }
 };

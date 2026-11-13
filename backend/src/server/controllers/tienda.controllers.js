@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import bcrypt from "bcrypt";
 import { successResponse, errorResponse } from "../utils/response.js";
 import { round2 } from "../utils/finanzas.js";
 import { importeReembolsoLinea } from "../utils/reembolsos.js";
@@ -62,31 +63,50 @@ export const getMiCuentaBancariaMasked = async (req, res, next) => {
 
 /** POST/PUT /api/tienda/mi-cuenta-bancaria (upsert transaccional) */
 export const upsertMiCuentaBancaria = async (req, res, next) => {
-  const conn = await pool.getConnection();
+  // A-1 (auditoria backend 1.5.5): el cifrado va antes de pedir la conexion y
+  // la relectura + auditoria despues del release. Antes, buscarCuentaBancaria y
+  // registrarAuditoria hacian pool.query() reteniendo la conexion de la
+  // transaccion: con concurrencia el pool se agotaba.
+  const data = req.body;
+  const usuarioId = req.userId;
+  let conexion;
+  let existing = [];
+
   try {
-    // validate(upsertCuentaBancariaSchema) ya valido y normalizo el body.
-    const data = req.body;
-    const usuarioId = req.userId;
+    // M-5 (auditoria backend 1.5.5): step-up obligatorio con la contrasena
+    // del vendedor; la cuenta bancaria mueve dinero. Se verifica ANTES de
+    // pedir conexion al pool (A-1): una contrasena incorrecta no retiene
+    // conexiones ni abre transaccion.
+    const [vendedorFila] = await pool.query(
+      "SELECT password FROM usuarios WHERE id = ? LIMIT 1",
+      [usuarioId]
+    );
+    const passwordValida =
+      vendedorFila.length > 0 && (await bcrypt.compare(data.password, vendedorFila[0].password));
+    if (!passwordValida) {
+      return errorResponse(res, "Contraseña incorrecta (operación sensible)", 403);
+    }
 
     // M-10: v2 con AAD = usuario_id.
     const encryptedTitular = cifrarCampo(data.titular_nombre, usuarioId);
     const encryptedNumero = cifrarCampo(data.numero_cuenta, usuarioId);
 
-    await conn.beginTransaction();
-    const [existing] = await conn.query(
+    conexion = await pool.getConnection();
+    await conexion.beginTransaction();
+    [existing] = await conexion.query(
       "SELECT id FROM datos_bancarios WHERE usuario_id = ? LIMIT 1",
       [usuarioId]
     );
 
     if (existing.length === 0) {
-      await conn.query(
+      await conexion.query(
         `INSERT INTO datos_bancarios
            (usuario_id, titular_nombre, banco, tipo_cuenta, numero_cuenta, es_commercity)
          VALUES (?, ?, ?, ?, ?, 0)`,
         [usuarioId, encryptedTitular, data.banco, data.tipo_cuenta, encryptedNumero]
       );
     } else {
-      await conn.query(
+      await conexion.query(
         `UPDATE datos_bancarios
             SET titular_nombre = ?, banco = ?, tipo_cuenta = ?, numero_cuenta = ?,
                 updated_at = CURRENT_TIMESTAMP
@@ -95,8 +115,16 @@ export const upsertMiCuentaBancaria = async (req, res, next) => {
       );
     }
 
-    await conn.commit();
+    await conexion.commit();
+  } catch (err) {
+    if (conexion) await conexion.rollback();
+    next(err);
+    return;
+  } finally {
+    if (conexion) conexion.release();
+  }
 
+  try {
     const fila = await buscarCuentaBancaria(usuarioId);
     // M-11: auditoria del cambio de cuenta bancaria del vendedor (sin datos sensibles).
     await registrarAuditoria({
@@ -119,10 +147,7 @@ export const upsertMiCuentaBancaria = async (req, res, next) => {
       existing.length === 0 ? 201 : 200
     );
   } catch (err) {
-    await conn.rollback();
     next(err);
-  } finally {
-    conn.release();
   }
 };
 
@@ -237,11 +262,41 @@ export const getHistorialVentas = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 // HISTORIAL DE INGRESOS 90% (RF121/RF123, RF122 sin datos bancarios)
 // ─────────────────────────────────────────────────────────────
+
+// Lote 3 (1.5.8): la agrupacion diaria agrega en SQL, pero se acota a un rango
+// maximo de 365 dias para no recorrer todo el historico en una sola consulta.
+const DIAS_MAX_AGRUPACION_DIARIA = 365;
+
+/**
+ * Devuelve la fecha_desde efectiva para agrupar por dia: nunca mas de 365 dias
+ * antes de fecha_hasta (o de hoy). Si el rango explicito es mayor, se recorta.
+ */
+function acotarRangoDiario(fechaDesde, fechaHasta) {
+  const hasta = fechaHasta ? new Date(`${fechaHasta}T00:00:00Z`) : new Date();
+  const hastaValida = Number.isNaN(hasta.getTime()) ? new Date() : hasta;
+  const minimo = new Date(hastaValida);
+  minimo.setUTCDate(minimo.getUTCDate() - DIAS_MAX_AGRUPACION_DIARIA);
+  const desde = fechaDesde ? new Date(`${fechaDesde}T00:00:00Z`) : minimo;
+  if (Number.isNaN(desde.getTime()) || desde.getTime() < minimo.getTime()) {
+    return minimo.toISOString().slice(0, 10);
+  }
+  return desde.toISOString().slice(0, 10);
+}
+
 export const getHistorialIngresos = async (req, res, next) => {
   try {
     const vendedorId = req.userId;
-    const { fecha_desde, fecha_hasta, agrupar_por = "transaccion" } = req.query;
+    let { fecha_desde, fecha_hasta, agrupar_por = "transaccion" } = req.query;
     const { pagina, porPagina } = parsePaginacion(req.query);
+
+    // 1.5.9: se informa si el rango diario se recorto (o se aplico el default
+    // de 365 dias) para que el cliente no crea que agoto todo el historico.
+    let rangoAcotado = false;
+    if (String(agrupar_por) === "dia") {
+      const fechaOriginal = fecha_desde;
+      fecha_desde = acotarRangoDiario(fecha_desde, fecha_hasta);
+      rangoAcotado = !fechaOriginal || fecha_desde !== fechaOriginal;
+    }
 
     // M-6: el historial de INGRESOS excluye las lineas canceladas (fueron
     // reembolsadas al comprador y no generan ingreso para el vendedor).
@@ -349,7 +404,13 @@ export const getHistorialIngresos = async (req, res, next) => {
         ganancia_neta: Number(d.ganancia_neta),
         comision: Number(d.comision),
       })),
-      filtros_aplicados: { fecha_desde, fecha_hasta, agrupar_por },
+      filtros_aplicados: {
+        fecha_desde,
+        fecha_desde_efectiva: fecha_desde,
+        fecha_hasta,
+        agrupar_por,
+        rango_acotado: rangoAcotado,
+      },
     });
   } catch (err) {
     next(err);
@@ -459,46 +520,52 @@ export const getValidacionTienda = async (req, res, next) => {
     const cuentaBancaria = validarCuentaBancaria(cuenta);
 
     // --- 2. Flujo 90/10 (RF136/RF139) ---
-    const [lineas] = await pool.query(
+    // Lote 3 (1.5.8): los totales se agregan en SQL. Al proceso solo llegan
+    // las lineas INCOHERENTES (las que incumplen la regla), no todo el
+    // historico de ventas del vendedor.
+    const [incoherentes] = await pool.query(
       `SELECT dp.id, dp.pedido_id, dp.producto_id, dp.cantidad, dp.subtotal,
               dp.monto_vendedor, dp.monto_comision, dp.estado_envio
          FROM detalle_pedidos dp
         WHERE dp.vendedor_id = ?
+          AND ABS(dp.subtotal - (dp.monto_vendedor + dp.monto_comision)) > ?
         ORDER BY dp.id`,
-      [vendedorId]
+      [vendedorId, TOLERANCIA_CENTAVOS]
     );
 
-    const incoherencias = [];
-    let lineasActivas = 0;
-    let subtotalActivo = 0;
-    let vendedorActivo = 0;
-    let comisionActivo = 0;
-
-    for (const l of lineas) {
+    const incoherencias = incoherentes.map((l) => {
       const subtotal = Number(l.subtotal || 0);
       const montoV = Number(l.monto_vendedor || 0);
       const montoC = Number(l.monto_comision || 0);
-      const diferencia = round2(Math.abs(subtotal - (montoV + montoC)));
+      return {
+        detalle_id: l.id,
+        pedido_id: l.pedido_id,
+        estado_envio: l.estado_envio,
+        subtotal,
+        monto_vendedor: montoV,
+        monto_comision: montoC,
+        diferencia: round2(Math.abs(subtotal - (montoV + montoC))),
+      };
+    });
 
-      if (l.estado_envio !== "Cancelado") {
-        lineasActivas += 1;
-        subtotalActivo = round2(subtotalActivo + subtotal);
-        vendedorActivo = round2(vendedorActivo + montoV);
-        comisionActivo = round2(comisionActivo + montoC);
-      }
+    const [resumenFlujoRows] = await pool.query(
+      `SELECT
+         COUNT(*) AS lineas_analizadas,
+         COALESCE(SUM(CASE WHEN dp.estado_envio <> 'Cancelado' THEN 1 ELSE 0 END), 0) AS lineas_activas,
+         COALESCE(SUM(CASE WHEN dp.estado_envio <> 'Cancelado' THEN dp.subtotal ELSE 0 END), 0) AS subtotal_activo,
+         COALESCE(SUM(CASE WHEN dp.estado_envio <> 'Cancelado' THEN dp.monto_vendedor ELSE 0 END), 0) AS vendedor_activo,
+         COALESCE(SUM(CASE WHEN dp.estado_envio <> 'Cancelado' THEN dp.monto_comision ELSE 0 END), 0) AS comision_activo
+       FROM detalle_pedidos dp
+       WHERE dp.vendedor_id = ?`,
+      [vendedorId]
+    );
 
-      if (diferencia > TOLERANCIA_CENTAVOS) {
-        incoherencias.push({
-          detalle_id: l.id,
-          pedido_id: l.pedido_id,
-          estado_envio: l.estado_envio,
-          subtotal,
-          monto_vendedor: montoV,
-          monto_comision: montoC,
-          diferencia,
-        });
-      }
-    }
+    const resumenFlujo = resumenFlujoRows[0] || {};
+    const lineasAnalizadas = Number(resumenFlujo.lineas_analizadas || 0);
+    const lineasActivas = Number(resumenFlujo.lineas_activas || 0);
+    const subtotalActivo = round2(Number(resumenFlujo.subtotal_activo || 0));
+    const vendedorActivo = round2(Number(resumenFlujo.vendedor_activo || 0));
+    const comisionActivo = round2(Number(resumenFlujo.comision_activo || 0));
 
     // Consistencia global: el acumulado 90/10 sobre el subtotal activo cuadra
     // dentro de una tolerancia de redondeo de 1 centavo por linea.
@@ -575,9 +642,9 @@ export const getValidacionTienda = async (req, res, next) => {
       vendedor_id: vendedorId,
       cuenta_bancaria: cuentaBancaria,
       flujo_90_10: {
-        lineas_analizadas: lineas.length,
+        lineas_analizadas: lineasAnalizadas,
         lineas_activas: lineasActivas,
-        lineas_validas: lineas.length - incoherencias.length,
+        lineas_validas: lineasAnalizadas - incoherencias.length,
         lineas_incoherentes: incoherencias.length,
         incoherencias,
         totales: {

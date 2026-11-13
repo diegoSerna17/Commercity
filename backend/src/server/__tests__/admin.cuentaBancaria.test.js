@@ -128,6 +128,9 @@ describe("GET /api/admin/mi-cuenta-bancaria (RF76)", () => {
     expect(res.body.data.datos.titular_nombre_enmascarado).toBeDefined();
     expect(res.body.data.datos.numero_cuenta).toBeUndefined();
     expect(res.body.data.datos.titular_nombre).toBeUndefined();
+    // M-5: la vista enmascarada no revela nada y no genera auditoria.
+    expect(pool.query.mock.calls.some(([sql]) =>
+      typeof sql === "string" && sql.includes("INSERT INTO auditoria_acciones"))).toBe(false);
   });
 
   it("B-7: ?revelar=completa devuelve la cuenta descifrada (formularios de edicion)", async () => {
@@ -145,6 +148,17 @@ describe("GET /api/admin/mi-cuenta-bancaria (RF76)", () => {
     expect(res.body.data.registrado).toBe(true);
     expect(res.body.data.datos.banco).toBe("Bancolombia");
     expect(res.body.data.datos.es_commercity).toBe(true);
+
+    // M-5: revelar la cuenta completa deja rastro en auditoria, sin datos
+    // sensibles en el detalle.
+    const auditoria = pool.query.mock.calls.find(([sql]) =>
+      typeof sql === "string" && sql.includes("INSERT INTO auditoria_acciones"));
+    expect(auditoria).toBeTruthy();
+    expect(auditoria[1][0]).toBe(471);
+    expect(auditoria[1][1]).toBe("cuenta_bancaria_plataforma.revelada");
+    const detalle = auditoria[1][4] == null ? "" : String(auditoria[1][4]);
+    expect(detalle).not.toContain("Bancolombia");
+    expect(detalle).not.toContain("1234567890");
   });
 
   it("devuelve la cuenta enmascarada en /masked", async () => {
@@ -166,6 +180,30 @@ describe("GET /api/admin/mi-cuenta-bancaria (RF76)", () => {
 });
 
 describe("POST /api/admin/mi-cuenta-bancaria (RF76 upsert)", () => {
+  it("1.5.9: una contrasena de 6 caracteres pasa el esquema (min 1, no min 8)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "administrador" }], undefined];
+      if (sql.includes("SELECT password FROM usuarios")) return [[{ password: HASH_ADMIN }], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .post("/api/admin/mi-cuenta-bancaria")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({
+        titular_nombre: "CommerCity SAS",
+        banco: "Bancolombia",
+        tipo_cuenta: "corriente",
+        numero_cuenta: "1234567890",
+        password: "corta1",
+      });
+
+    // Llega al step-up (403), no al validador Zod (400).
+    expect(res.status).toBe(403);
+    expect(res.body.error.message).toContain("Contraseña incorrecta");
+  });
+
   it("crea la cuenta de Commercity con es_commercity = 1 (201) y la audita", async () => {
     // SELECT de existencia -> vacio (INSERT)
     pool.query.mockImplementation((sql) => {

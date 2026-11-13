@@ -52,6 +52,9 @@ const { default: app } = await import("../app.js");
 // Controller importado directamente para provocar el catch de adminGetDatos
 // (lineas 391-394), que por ruta HTTP no es realizable.
 const { adminGetDatos } = await import("../controllers/usuarios.controllers.js");
+// Servicio importado directamente para probar revocarToken con un token ya
+// expirado (authRequired lo rechazaria antes de llegar al logout).
+const { revocarToken } = await import("../services/usuarios.service.js");
 
 // Token compartido para las rutas protegidas del modulo de autenticacion.
 const token = jwt.sign({ id: 7, email: "test@test.com" , token_version: 0},
@@ -130,7 +133,9 @@ describe("GET /api/usuarios/perfil-publico/:id", () => {
     const res = await request(app).get("/api/usuarios/perfil-publico/2");
 
     expect(res.status).toBe(200);
-    expect(res.body.data.avatar).toBe("https://via.placeholder.com/150");
+    // Lote 3: el backend no inventa una URL externa; null deja que el cliente
+    // use su avatar-placeholder.svg local.
+    expect(res.body.data.avatar).toBeNull();
   });
 
   it("devuelve 500 con respuesta generica si la BD falla", async () => {
@@ -184,7 +189,7 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
     });
   });
 
-  it("registra usuario nuevo con rol comprador y devuelve token (201)", async () => {
+  it("registra usuario nuevo y responde 201 uniforme (sin cookie, token ni id)", async () => {
     pool.query.mockResolvedValue([[], undefined]); // email no duplicado
 
     const res = await request(app)
@@ -198,17 +203,20 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
       });
 
     expect(res.status).toBe(201);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.token).toBeTruthy();
-    expect(res.body.data.user.email).toBe("nuevo@test.com");
-    expect(res.body.data.user.roles).toContain("comprador");
-
-    // RF1/RNF1: el token de registro tambien lleva un jti unico (UUID v4).
-    const payloadRegistro = jwt.decode(res.body.data.token);
-    expect(payloadRegistro.jti).toBeTruthy();
-    expect(payloadRegistro.jti).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    );
+    // M-3: la respuesta es identica exista o no el email: sin cookie, sin
+    // token y sin id. El cliente inicia sesion con POST /login despues.
+    expect(res.headers["set-cookie"]).toBeUndefined();
+    expect(res.body).toEqual({
+      success: true,
+      message: "Usuario registrado correctamente",
+      data: {
+        user: {
+          email: "nuevo@test.com",
+          nombre_completo: "Nuevo Usuario",
+          roles: [],
+        },
+      },
+    });
 
     // Fix 3.2: usuario + rol en la misma transaccion
     expect(conn.query).toHaveBeenCalledWith(
@@ -229,24 +237,52 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
     expect(conn.rollback).not.toHaveBeenCalled();
   });
 
-  it("M-15: email duplicado -> 201 uniforme sin token y aviso al titular", async () => {
+  it("M-15/M-3: email duplicado -> 201 con el MISMO contrato que un alta", async () => {
     pool.query.mockResolvedValue([[{ id: 5 }], undefined]);
 
     const res = await request(app)
       .post("/api/usuarios/register")
-      .send({ email: "duplicado@test.com", password: "SuperPass123", acepta_terminos: true });
+      .send({
+        email: "duplicado@test.com",
+        password: "SuperPass123",
+        nombre_completo: "Duplicado",
+        acepta_terminos: true,
+      });
 
     // Misma respuesta que un alta (no se revela que el email existe)
     expect(res.status).toBe(201);
-    expect(res.body.success).toBe(true);
-    // B-6: mismo mensaje que un alta nueva (comparar con el test de alta)
-    expect(res.body.message).toBe("Usuario registrado correctamente");
-    expect(res.body.data.token).toBeNull();
-    expect(res.body.data.user.email).toBe("duplicado@test.com");
+    expect(res.headers["set-cookie"]).toBeUndefined();
+    expect(res.body).toEqual({
+      success: true,
+      message: "Usuario registrado correctamente",
+      data: {
+        user: {
+          email: "duplicado@test.com",
+          nombre_completo: "Duplicado",
+          roles: [],
+        },
+      },
+    });
     // No se crea ninguna cuenta ni se toca la transaccion
     expect(pool.getConnection).not.toHaveBeenCalled();
     // Se avisa al titular real del intento (anti-enumeracion)
     expect(enviarAvisoRegistroDuplicado).toHaveBeenCalledWith("duplicado@test.com");
+  });
+
+  it("M-3: no espera el correo de aviso (la respuesta no depende del mailer)", async () => {
+    pool.query.mockResolvedValue([[{ id: 5 }], undefined]);
+    // Un mailer que nunca responde no debe bloquear el registro.
+    enviarAvisoRegistroDuplicado.mockImplementationOnce(() => new Promise(() => {}));
+
+    const resultado = await Promise.race([
+      request(app)
+        .post("/api/usuarios/register")
+        .send({ email: "lento@test.com", password: "SuperPass123", acepta_terminos: true }),
+      new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+    ]);
+
+    expect(resultado).not.toBe("timeout");
+    expect(resultado.status).toBe(201);
   });
 
   it("rechaza body con campo extra 'rol' (.strict())", async () => {
@@ -307,7 +343,9 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
       .send({ email: "race@test.com", password: "SuperPass123", acepta_terminos: true });
 
     expect(res.status).toBe(201);
-    expect(res.body.data.token).toBeNull();
+    expect(res.headers["set-cookie"]).toBeUndefined();
+    expect(res.body.data).not.toHaveProperty("token");
+    expect(res.body.data.user.roles).toEqual([]);
     expect(conn.rollback).toHaveBeenCalled();
     expect(enviarAvisoRegistroDuplicado).toHaveBeenCalledWith("race@test.com");
   });
@@ -326,6 +364,17 @@ describe("POST /api/usuarios/register (RF1 - fix 3.2 transaccion)", () => {
     expect(res.status).toBe(500);
     expect(conn.rollback).toHaveBeenCalled();
     expect(conn.commit).not.toHaveBeenCalled();
+  });
+
+  it("1.5.9: si el pool esta saturado responde 503 en register", async () => {
+    pool.query.mockRejectedValue(new Error("Queue limit reached."));
+
+    const res = await request(app)
+      .post("/api/usuarios/register")
+      .send({ email: "saturado@test.com", password: "SuperPass123", acepta_terminos: true });
+
+    expect(res.status).toBe(503);
+    expect(res.body.error.code).toBe("SERVICE_UNAVAILABLE");
   });
 });
 
@@ -549,6 +598,50 @@ describe("POST /api/usuarios/logout (RF2 - fix 3.3 revocacion de token)", () => 
     const insertCall = pool.query.mock.calls.find(([sql]) =>
       sql.includes("INSERT IGNORE INTO tokens_invalidados"));
     expect(insertCall).toBeTruthy();
+    // M-4/1.5.9: la entrada caduca con el `exp` real del JWT (1h), no con 7
+    // dias, y la conversion ocurre EN MySQL con FROM_UNIXTIME para que la
+    // comparacion con NOW() no dependa de la zona horaria de Node.
+    const exp = jwt.decode(token).exp;
+    expect(insertCall[0]).toContain("FROM_UNIXTIME(?)");
+    expect(insertCall[1][0]).toMatch(/^[0-9a-f]{64}$/);
+    expect(insertCall[1][1]).toBe(exp);
+  });
+
+  it("M-4: un token ya expirado no se inserta en la lista negra", async () => {
+    pool.query.mockResolvedValue([[], undefined]);
+    const expirado = jwt.sign(
+      { id: 7, email: "test@test.com", token_version: 0 },
+      process.env.JWT_SECRET,
+      {
+        issuer: "commercity-api",
+        audience: "commercity-clients",
+        expiresIn: -10,
+      }
+    );
+
+    await revocarToken(expirado);
+
+    const insertCall = pool.query.mock.calls.find(([sql]) =>
+      sql.includes("INSERT IGNORE INTO tokens_invalidados"));
+    expect(insertCall).toBeUndefined();
+  });
+
+  it("M-4: sin token no consulta la lista negra", async () => {
+    await revocarToken(null);
+
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  it("M-4: un token no decodificable conserva el respaldo de 7 dias", async () => {
+    pool.query.mockResolvedValue([[], undefined]);
+
+    await revocarToken("esto-no-es-un-jwt");
+
+    const insertCall = pool.query.mock.calls.find(([sql]) =>
+      sql.includes("INSERT IGNORE INTO tokens_invalidados"));
+    expect(insertCall).toBeTruthy();
+    expect(insertCall[0]).toContain("DATE_ADD(NOW(), INTERVAL 7 DAY)");
+    expect(insertCall[1]).toHaveLength(1);
   });
 
   // Nota: el caso "token ya revocado" se cubre en auth.middleware.test.js
@@ -575,11 +668,12 @@ describe("POST /api/usuarios/logout-todas (M-8 - cerrar todas las sesiones)", ()
       expect.stringContaining("UPDATE usuarios SET token_version = token_version + 1 WHERE id = ?"),
       [7]
     );
-    // Ademas revoca el token actual en la lista negra y limpia la cookie
-    expect(pool.query).toHaveBeenCalledWith(
-      expect.stringContaining("INSERT IGNORE INTO tokens_invalidados"),
-      [expect.any(String)]
-    );
+    // Ademas revoca el token actual en la lista negra (fecha calculada en MySQL)
+    const insert = pool.query.mock.calls.find(([sql]) =>
+      sql.includes("INSERT IGNORE INTO tokens_invalidados"));
+    expect(insert).toBeTruthy();
+    expect(insert[0]).toContain("FROM_UNIXTIME(?)");
+    expect(insert[1][1]).toBe(jwt.decode(token).exp);
     const cookies = res.headers["set-cookie"] || [];
     expect(cookies.some((c) => c.startsWith("token=;"))).toBe(true);
   });
@@ -811,6 +905,28 @@ describe("POST /api/usuarios/recover (RF4 - anti-enumeracion)", () => {
     const updateCall = pool.query.mock.calls.find(([sql]) =>
       sql.includes("INTERVAL 5 MINUTE"));
     expect(updateCall).toBeTruthy();
+  });
+
+  it("M-3: no espera el correo de recuperacion (respuesta uniforme)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("SELECT id, email, activo FROM usuarios WHERE email"))
+        return [[{ id: 7, email: "existe@test.com", activo: 1 }], undefined];
+      if (sql.includes("UPDATE usuarios SET token_recuperacion"))
+        return [{ affectedRows: 1 }, undefined];
+      return [[], undefined];
+    });
+    // Un mailer que nunca responde no debe bloquear la respuesta uniforme.
+    enviarCorreoRecuperacion.mockImplementationOnce(() => new Promise(() => {}));
+
+    const resultado = await Promise.race([
+      request(app)
+        .post("/api/usuarios/recover")
+        .send({ email: "existe@test.com" }),
+      new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+    ]);
+
+    expect(resultado).not.toBe("timeout");
+    expect(resultado.status).toBe(200);
   });
 
   it("M-9: cooldown por usuario: con token reciente no reenvia correo (respuesta uniforme)", async () => {

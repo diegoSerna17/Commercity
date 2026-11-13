@@ -38,8 +38,8 @@ export const bancoPlataformaSchema = bancoSchema
   .extend({
     password: z
       .string()
-      .min(8)
-      .max(72)
+      .min(1, "La contraseña es obligatoria")
+      .max(200, "La contraseña es demasiado larga")
       .describe("Contrasena del administrador (step-up obligatorio)"),
   })
   .meta({

@@ -578,7 +578,46 @@ describe("Gestion de productos del vendedor (RF44-RF49, RF54)", () => {
 
     expect(res.status).toBe(200);
     const update = pool.query.mock.calls.find(([sql]) => sql.includes("UPDATE productos"));
-    expect(update[1][2]).toMatch(/^\/uploads\/[0-9a-f]{32}\.png$/); // imagen nueva
+    expect(update[1][1]).toMatch(/^\/uploads\/[0-9a-f]{32}\.png$/); // imagen nueva
+  });
+
+  it("M-1: una edicion parcial no reescribe columnas no enviadas (stock)", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT id, categoria_id")) {
+        return [
+          [
+            {
+              id: 1,
+              categoria_id: 5,
+              imagen_url: "/uploads/vieja.jpg",
+              vendedor_id: 2,
+              nombre: "Original",
+              descripcion: "desc original",
+              precio: "1000.00",
+              stock: 3,
+              descuento_porcentaje: "0.00",
+            },
+          ],
+          undefined,
+        ];
+      }
+      if (sql.includes("UPDATE productos")) return [[], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .put("/api/productos/1")
+      .set("Authorization", `Bearer ${tokenVendedor}`)
+      .field("nombre", "Solo nombre");
+
+    expect(res.status).toBe(200);
+    const update = pool.query.mock.calls.find(([sql]) => sql.includes("UPDATE productos"));
+    // Solo se escribe la columna enviada: el stock leido al inicio no se pisa.
+    expect(update[0]).not.toContain("stock");
+    expect(update[0]).not.toContain("precio");
+    expect(update[1]).toEqual(["Solo nombre", 1, 2]);
   });
 
   it("devuelve 500 si la BD falla al editar", async () => {

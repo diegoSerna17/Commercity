@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import pool from "../config/db.js";
+import pool, { esPoolSaturado } from "../config/db.js";
 import { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } from "../utils/config.js";
 
 /**
@@ -124,7 +124,14 @@ export const authRequired = async (req, res, next) => {
                 error: { code: "UNAUTHORIZED", message: "Token inválido" }
             });
         }
-        // Error de BD en la consulta de la lista negra: fail-closed.
+        // Error de BD en la consulta de la lista negra: fail-closed. Si el pool
+        // esta saturado, 503 (reintentable) en vez de un 500 generico.
+        if (esPoolSaturado(error)) {
+            return res.status(503).json({
+                success: false,
+                error: { code: "SERVICE_UNAVAILABLE", message: "Servicio temporalmente no disponible" }
+            });
+        }
         return res.status(500).json({
             success: false,
             error: { code: "INTERNAL_ERROR", message: "Error interno del servidor" }

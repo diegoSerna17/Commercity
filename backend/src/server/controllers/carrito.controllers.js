@@ -1,4 +1,4 @@
-import pool from "../config/db.js";
+import pool, { esPoolSaturado } from "../config/db.js";
 
 /**
  * Redondea un monto a 2 decimales (precision monetaria).
@@ -16,6 +16,25 @@ function redondear2(numero) {
  */
 function esEnteroPositivo(valor) {
   return Number.isInteger(Number(valor)) && Number(valor) > 0;
+}
+
+/**
+ * Responde 503 cuando el pool esta saturado (cola llena); deja pasar el resto
+ * de errores para que el llamador responda 500.
+ * @param {import("express").Response} res
+ * @param {unknown} error
+ * @returns {boolean} true si ya respondio
+ */
+function responderPoolSaturado(res, error) {
+  if (!esPoolSaturado(error)) return false;
+  res.status(503).json({
+    success: false,
+    error: {
+      code: "SERVICE_UNAVAILABLE",
+      message: "Servicio temporalmente saturado. Intenta de nuevo en unos segundos.",
+    },
+  });
+  return true;
 }
 
 /**
@@ -57,13 +76,18 @@ async function compradorExiste(compradorId) {
  * @param {import("express").Response} res
  */
 export async function agregarProducto(req, res) {
-  const conexion = await pool.getConnection();
-  try {
-    // H1 (P0): el comprador se deriva del JWT (req.userId). Se ignora
-    // cualquier comprador_id enviado por el cliente para cerrar el IDOR.
-    const compradorId = Number(req.userId);
-    const { producto_id: productoId, cantidad = 1 } = req.body;
+  // A-1 (auditoria backend 1.5.5): las lecturas auxiliares se resuelven ANTES
+  // de tomar la conexion del pool. Antes, pool.query() esperaba una conexion
+  // libre mientras esta peticion retenia una; con trafico concurrente el pool
+  // se agotaba (y la cola era infinita). La validacion sigue dentro del try
+  // para conservar el contrato 500 SERVER_ERROR / 503 del controlador.
+  // H1 (P0): el comprador se deriva del JWT (req.userId). Se ignora
+  // cualquier comprador_id enviado por el cliente para cerrar el IDOR.
+  const compradorId = Number(req.userId);
+  const { producto_id: productoId, cantidad = 1 } = req.body;
+  let conexion;
 
+  try {
     if (!esEnteroPositivo(compradorId)) {
       return res.status(400).json({
         success: false,
@@ -94,6 +118,8 @@ export async function agregarProducto(req, res) {
         error: { code: "COMPRADOR_NOT_FOUND", message: "El comprador no existe o esta inactivo" },
       });
     }
+
+    conexion = await pool.getConnection();
 
     await conexion.beginTransaction();
 
@@ -130,14 +156,15 @@ export async function agregarProducto(req, res) {
       message: "Producto agregado al carrito",
     });
   } catch (error) {
-    await conexion.rollback();
+    if (conexion) await conexion.rollback();
+    if (responderPoolSaturado(res, error)) return;
     console.error("Error en agregarProducto:", error.message);
     return res.status(500).json({
       success: false,
       error: { code: "SERVER_ERROR", message: "Error interno del servidor" },
     });
   } finally {
-    conexion.release();
+    if (conexion) conexion.release();
   }
 }
 
@@ -173,6 +200,7 @@ export async function eliminarProducto(req, res) {
 
     return res.json({ success: true, message: "Producto eliminado del carrito" });
   } catch (error) {
+    if (responderPoolSaturado(res, error)) return;
     console.error("Error en eliminarProducto:", error.message);
     return res.status(500).json({
       success: false,
@@ -187,13 +215,16 @@ export async function eliminarProducto(req, res) {
  * @param {import("express").Response} res
  */
 export async function modificarCantidad(req, res) {
-  const conexion = await pool.getConnection();
-  try {
-    // H1 (P0): comprador desde JWT, nunca de query.
-    const compradorId = Number(req.userId);
-    const productoId = Number(req.params.productoId);
-    const { cantidad } = req.body;
+  // A-1 (auditoria backend 1.5.5): producto y validaciones antes de retener
+  // una conexion del pool (misma causa que en agregarProducto). La validacion
+  // vive dentro del try para conservar el contrato 500 SERVER_ERROR / 503.
+  // H1 (P0): comprador desde JWT, nunca de query.
+  const compradorId = Number(req.userId);
+  const productoId = Number(req.params.productoId);
+  const { cantidad } = req.body;
+  let conexion;
 
+  try {
     if (!esEnteroPositivo(compradorId)) {
       return res.status(400).json({
         success: false,
@@ -218,6 +249,7 @@ export async function modificarCantidad(req, res) {
       });
     }
 
+    conexion = await pool.getConnection();
     await conexion.beginTransaction();
 
     // Verifica existencia con bloqueo para no depender de affectedRows del UPDATE
@@ -241,14 +273,15 @@ export async function modificarCantidad(req, res) {
     await conexion.commit();
     return res.json({ success: true, message: "Cantidad actualizada" });
   } catch (error) {
-    await conexion.rollback();
+    if (conexion) await conexion.rollback();
+    if (responderPoolSaturado(res, error)) return;
     console.error("Error en modificarCantidad:", error.message);
     return res.status(500).json({
       success: false,
       error: { code: "SERVER_ERROR", message: "Error interno del servidor" },
     });
   } finally {
-    conexion.release();
+    if (conexion) conexion.release();
   }
 }
 
@@ -279,7 +312,11 @@ export async function listarCarrito(req, res) {
          p.descuento_porcentaje,
          p.imagen_url,
          p.vendedor_id,
-         u.nombre_completo      AS vendedor_nombre
+         u.nombre_completo      AS vendedor_nombre,
+         p.eliminado_por_admin,
+         p.eliminado_por_vendedor,
+         p.pausado,
+         u.activo
        FROM carrito_items ci
        JOIN productos  p ON p.id = ci.producto_id
        JOIN usuarios   u ON u.id = p.vendedor_id
@@ -287,6 +324,15 @@ export async function listarCarrito(req, res) {
        ORDER BY u.nombre_completo, p.nombre`,
       [compradorId]
     );
+
+    // M-6: el listado conserva TODOS los items (el comprador debe poder ver y
+    // quitar los que ya no se pueden comprar), pero solo los disponibles
+    // suman al subtotal y a los contadores del resumen.
+    const estaDisponible = (item) =>
+      Number(item.eliminado_por_admin) === 0 &&
+      Number(item.eliminado_por_vendedor) === 0 &&
+      Number(item.pausado) === 0 &&
+      Number(item.activo) === 1;
 
     // Agrupar por vendedor (RF109) y calcular resumen con precio final
     const agrupado = {};
@@ -301,10 +347,13 @@ export async function listarCarrito(req, res) {
         };
       }
 
+      const disponible = estaDisponible(item);
       const precioFinal = redondear2(
         Number(item.precio) * (1 - Number(item.descuento_porcentaje || 0) / 100)
       );
-      const precioLinea = redondear2(precioFinal * item.cantidad);
+      const precioLinea = disponible
+        ? redondear2(precioFinal * item.cantidad)
+        : 0;
 
       agrupado[vendedorId].subtotal = redondear2(agrupado[vendedorId].subtotal + precioLinea);
       agrupado[vendedorId].items.push({
@@ -316,25 +365,33 @@ export async function listarCarrito(req, res) {
         imagen_url: item.imagen_url,
         cantidad: item.cantidad,
         subtotal_linea: precioLinea,
+        disponible,
       });
     }
 
     const vendedores = Object.values(agrupado);
     const total = redondear2(vendedores.reduce((acc, v) => acc + v.subtotal, 0));
 
+    // Solo cuentan los items comprables y los vendedores con al menos uno.
+    const itemsDisponibles = items.filter(estaDisponible);
+    const vendedoresDisponibles = new Set(
+      itemsDisponibles.map((item) => item.vendedor_id)
+    ).size;
+
     return res.json({
       success: true,
       data: {
         vendedores,
         resumen: {
-          cantidad_vendedores: vendedores.length,
-          cantidad_items: items.length,
+          cantidad_vendedores: vendedoresDisponibles,
+          cantidad_items: itemsDisponibles.length,
           subtotal_global: total,
           total,
         },
       },
     });
   } catch (error) {
+    if (responderPoolSaturado(res, error)) return;
     console.error("Error en listarCarrito:", error.message);
     return res.status(500).json({
       success: false,

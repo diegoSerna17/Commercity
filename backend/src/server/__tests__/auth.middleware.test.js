@@ -14,7 +14,12 @@ vi.mock("../config/db.js", () => {
     query.mockImplementationOnce = (fn) => { queryInterna.mockImplementationOnce(fn); return query; };
     query.mockResolvedValue = (valor) => { queryInterna.mockResolvedValue(valor); return query; };
     query.mockRejectedValue = (error) => { queryInterna.mockRejectedValue(error); return query; };
-    return { default: { query } };
+    return {
+        default: { query },
+        esPoolSaturado: (error) =>
+            error?.code === "ER_CON_COUNT_ERROR" ||
+            /queue limit reached/i.test(String(error?.message || "")),
+    };
 });
 
 import pool from "../config/db.js";
@@ -285,5 +290,16 @@ describe("authRequired (JWT por header o cookie)", () => {
 
         expect(res.status).toBe(401);
         expect(res.body.error.message).toContain("revocado");
+    });
+
+    it("1.5.9: si el pool esta saturado responde 503, no 500", async () => {
+        pool.query.mockRejectedValue(new Error("Queue limit reached."));
+
+        const res = await request(app)
+            .get("/protegido")
+            .set("Authorization", `Bearer ${tokenValido}`);
+
+        expect(res.status).toBe(503);
+        expect(res.body.error.code).toBe("SERVICE_UNAVAILABLE");
     });
 });

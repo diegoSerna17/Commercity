@@ -1059,6 +1059,7 @@ describe("Reportes admin: filtros, errores e IDs (cobertura restante)", () => {
     expect(res.body.data.reportado).toBe("TV");
     expect(res.body.data.estado).toBe("resuelto");
     expect(res.body.data.evidencias).toBe(2);
+    expect(res.body.data.evidencia_url).toBe("a.jpg,b.jpg");
     expect(res.body.data.respuesta).toBe("ok");
   });
 

@@ -60,8 +60,8 @@ describe("GET /api/pedidos/resumen (RF113/RF114 + RF74)", () => {
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       return [
         [
-          { producto_id: 1, cantidad: 2, nombre: "Televisor", imagen_url: "tv.jpg", precio: 1190000, descuento_porcentaje: 0, vendedor_id: 3, vendedor_nombre: "Vendedor A", stock: 5, eliminado_por_admin: 0, activo: 1 },
-          { producto_id: 2, cantidad: 1, nombre: "Celular", imagen_url: "cel.jpg", precio: 238000, descuento_porcentaje: 10, vendedor_id: 4, vendedor_nombre: "Vendedor B", stock: 3, eliminado_por_admin: 0, activo: 1 },
+          { producto_id: 1, cantidad: 2, nombre: "Televisor", imagen_url: "tv.jpg", precio: 1190000, descuento_porcentaje: 0, vendedor_id: 3, vendedor_nombre: "Vendedor A", stock: 5, eliminado_por_admin: 0, eliminado_por_vendedor: 0, pausado: 0, activo: 1 },
+          { producto_id: 2, cantidad: 1, nombre: "Celular", imagen_url: "cel.jpg", precio: 238000, descuento_porcentaje: 10, vendedor_id: 4, vendedor_nombre: "Vendedor B", stock: 3, eliminado_por_admin: 0, eliminado_por_vendedor: 0, pausado: 0, activo: 1 },
         ],
         undefined,
       ];
@@ -86,8 +86,8 @@ describe("GET /api/pedidos/resumen (RF113/RF114 + RF74)", () => {
       if (sql.includes("FROM pagos_simulados")) return [[{ estado: "Aprobado", monto: 999999999, monto_reembolsado: 0 }], undefined];
       return [
         [
-          { producto_id: 1, cantidad: 1, nombre: "Bueno", precio: 119000, descuento_porcentaje: 0, vendedor_id: 3, vendedor_nombre: "A", stock: 5, eliminado_por_admin: 0, activo: 1 },
-          { producto_id: 2, cantidad: 1, nombre: "Suspendido", precio: 119000, descuento_porcentaje: 0, vendedor_id: 4, vendedor_nombre: "B", stock: 5, eliminado_por_admin: 1, activo: 1 },
+          { producto_id: 1, cantidad: 1, nombre: "Bueno", precio: 119000, descuento_porcentaje: 0, vendedor_id: 3, vendedor_nombre: "A", stock: 5, eliminado_por_admin: 0, eliminado_por_vendedor: 0, pausado: 0, activo: 1 },
+          { producto_id: 2, cantidad: 1, nombre: "Suspendido", precio: 119000, descuento_porcentaje: 0, vendedor_id: 4, vendedor_nombre: "B", stock: 5, eliminado_por_admin: 1, eliminado_por_vendedor: 0, pausado: 0, activo: 1 },
         ],
         undefined,
       ];
@@ -100,6 +100,36 @@ describe("GET /api/pedidos/resumen (RF113/RF114 + RF74)", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.por_vendedor).toHaveLength(1);
     expect(res.body.data.por_vendedor[0].items[0].nombre).toBe("Bueno");
+  });
+
+  it("M-6: excluye productos pausados y dados de baja por el vendedor", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("AS revocado")) return [[{ activo: 1, token_version: 0, revocado: 0 }], undefined];
+      return [
+        [
+          { producto_id: 1, cantidad: 1, nombre: "Disponible", precio: 119000, descuento_porcentaje: 0, vendedor_id: 3, vendedor_nombre: "A", stock: 5, eliminado_por_admin: 0, eliminado_por_vendedor: 0, pausado: 0, activo: 1 },
+          { producto_id: 2, cantidad: 1, nombre: "Pausado", precio: 50000, descuento_porcentaje: 0, vendedor_id: 3, vendedor_nombre: "A", stock: 5, eliminado_por_admin: 0, eliminado_por_vendedor: 0, pausado: 1, activo: 1 },
+          { producto_id: 3, cantidad: 1, nombre: "Baja vendedor", precio: 30000, descuento_porcentaje: 0, vendedor_id: 4, vendedor_nombre: "B", stock: 5, eliminado_por_admin: 0, eliminado_por_vendedor: 1, pausado: 0, activo: 1 },
+        ],
+        undefined,
+      ];
+    });
+
+    const res = await request(app)
+      .get("/api/pedidos/resumen")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.por_vendedor).toHaveLength(1);
+    expect(res.body.data.por_vendedor[0].items).toHaveLength(1);
+    expect(res.body.data.por_vendedor[0].items[0].nombre).toBe("Disponible");
+
+    // La consulta pide explicitamente los dos estados que antes no filtraba.
+    const selectCall = pool.query.mock.calls.find(([sql]) =>
+      typeof sql === "string" && sql.includes("FROM carrito_items"));
+    expect(selectCall[0]).toContain("pausado");
+    expect(selectCall[0]).toContain("eliminado_por_vendedor");
   });
 
   it("devuelve 500 con error estandar si la BD falla", async () => {

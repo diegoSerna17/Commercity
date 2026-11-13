@@ -10,7 +10,35 @@ import { bancoSchema } from "./cuentaBancaria.schema.js";
 // ============================================================================
 
 export { bancoSchema };
-export const upsertCuentaBancariaSchema = bancoSchema;
+
+/**
+ * M-5 (auditoria backend 1.5.5): cambiar la cuenta bancaria del vendedor mueve
+ * dinero (pagos y reembolsos), asi que exige step-up con su contrasena, igual
+ * que la cuenta de la plataforma (M-12). No se reutiliza
+ * `bancoPlataformaSchema` para no atar el contrato del vendedor al del admin.
+ */
+export const upsertCuentaBancariaSchema = bancoSchema
+  .extend({
+    password: z
+      .string()
+      .min(1, "La contraseña es obligatoria")
+      .max(200, "La contraseña es demasiado larga")
+      .describe("Contrasena del vendedor (step-up obligatorio)"),
+  })
+  .meta({
+    id: "CuentaBancariaVendedor",
+    title: "CuentaBancariaVendedor",
+    description: "Body de alta/actualizacion de la cuenta bancaria del vendedor (contrasena incluida)",
+    examples: [
+      {
+        titular_nombre: "Maria Fernanda Lopez",
+        banco: "Bancolombia",
+        tipo_cuenta: "ahorros",
+        numero_cuenta: "12345678901234",
+        password: "ClaveVendedor123",
+      },
+    ],
+  });
 
 export const ESTADOS_VENTA = ["Pendiente", "En camino", "Entregado", "Cancelado"];
 

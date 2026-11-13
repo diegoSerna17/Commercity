@@ -115,4 +115,32 @@ describe("errorHandler (middleware de error centralizado)", () => {
         expect(res.status).toBe(400);
         expect(res.body.error.message).toBe("Solicitud inválida");
     });
+
+    it("A-1: responde 503 SERVICE_UNAVAILABLE cuando la cola del pool se llena", async () => {
+        const app = express();
+        app.get("/saturado", (_req, _res, next) =>
+            next(new Error("Queue limit reached."))
+        );
+        app.use(errorHandler);
+
+        const res = await request(app).get("/saturado");
+
+        expect(res.status).toBe(503);
+        expect(res.body.error.code).toBe("SERVICE_UNAVAILABLE");
+    });
+
+    it("A-1: responde 503 cuando MySQL rechaza por limite de conexiones", async () => {
+        const app = express();
+        app.get("/sin-conexiones", (_req, _res, next) => {
+            const err = new Error("Too many connections");
+            err.code = "ER_CON_COUNT_ERROR";
+            next(err);
+        });
+        app.use(errorHandler);
+
+        const res = await request(app).get("/sin-conexiones");
+
+        expect(res.status).toBe(503);
+        expect(res.body.error.code).toBe("SERVICE_UNAVAILABLE");
+    });
 });

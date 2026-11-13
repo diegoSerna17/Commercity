@@ -25,6 +25,8 @@ export const getMiCuentaBancaria = async (req, res, next) => {
   try {
     const { mensaje, data } = await obtenerCuentaCommercity({
       revelarCompleta: req.query.revelar === "completa",
+      actorId: req.userId,
+      ip: req.ip,
     });
     return successResponse(res, mensaje, data);
   } catch (err) {

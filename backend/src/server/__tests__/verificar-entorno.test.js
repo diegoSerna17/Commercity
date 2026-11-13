@@ -127,6 +127,22 @@ describe("evaluarEntorno", () => {
     expect(estadoDe(resultado, "DB_NAME")).toBe("presente");
     expect(resultado.avisos.some((a) => a.includes("commercity_dev"))).toBe(true);
   });
+
+  it("M-7: NODE_ENV es obligatoria y falla si falta", () => {
+    const resultado = evaluarEntorno({ ...BASE, NODE_ENV: "" });
+
+    expect(estadoDe(resultado, "NODE_ENV")).toBe("ausente");
+    expect(resultado.errores).toContain("NODE_ENV");
+    expect(detalleDe(resultado, "NODE_ENV")).toContain("obligatoria");
+  });
+
+  it("M-7: NODE_ENV desconocido es invalida", () => {
+    const resultado = evaluarEntorno({ ...BASE, NODE_ENV: "staging" });
+
+    expect(estadoDe(resultado, "NODE_ENV")).toBe("inválida");
+    expect(resultado.errores).toContain("NODE_ENV");
+    expect(detalleDe(resultado, "NODE_ENV")).toContain("development");
+  });
 });
 
 describe("avisos de Resend (P4)", () => {

@@ -32,11 +32,11 @@ const HASH_FICTICIO = "$2b$10$f3bObWmLFI8EVveYGbAXP.4MwdtHCDDHnbQFA4.jGDg5c5RIg5
  */
 async function respuestaDuplicado(email, nombre_completo) {
     await bcrypt.hash(crypto.randomUUID(), 10);
-    try {
-        await enviarAvisoRegistroDuplicado(email);
-    } catch {
-        // fail-soft: la respuesta no cambia aunque falle el correo
-    }
+    // M-3: el aviso sale sin bloquear la respuesta. Si el SMTP tarda, el
+    // registro no tarda con el; un fallo solo queda en el log del servidor.
+    enviarAvisoRegistroDuplicado(email).catch((err) =>
+        console.error("No se pudo enviar el aviso de registro duplicado:", err?.message)
+    );
     return {
         duplicado: true,
         email,
@@ -186,10 +186,33 @@ export async function autenticarUsuario({ email, password }) {
     };
 }
 
-/** Revoca un token en la lista negra (idempotente via INSERT IGNORE). */
+/**
+ * Revoca un token en la lista negra (idempotente via INSERT IGNORE).
+ *
+ * M-4 (auditoria backend 1.5.5): la entrada caduca con el `exp` real del JWT,
+ * no con un plazo fijo de 7 dias. Con el plazo fijo, un token emitido con
+ * JWT_EXPIRES_IN mayor (p. ej. 30d) reaparecia como valido al cumplirse los 7
+ * dias (`authRequired` solo mira `expira_en > NOW()`). Si el token no se puede
+ * decodificar se conserva el respaldo de 7 dias. Un token ya expirado no se
+ * inserta, porque jwt.verify lo rechaza igual.
+ * @param {string} token JWT a revocar.
+ */
 export async function revocarToken(token) {
     if (!token) return;
     const hash = crypto.createHash("sha256").update(token).digest("hex");
+    const decodificado = jwt.decode(token);
+    const expNumerico = Number(decodificado?.exp);
+    if (Number.isFinite(expNumerico) && expNumerico > 0) {
+        if (expNumerico * 1000 <= Date.now()) return;
+        // 1.5.9: la fecha se calcula en MySQL (FROM_UNIXTIME) con el exp en
+        // segundos; asi la comparacion contra NOW() en authRequired usa el
+        // mismo reloj y la misma zona horaria del servidor de BD.
+        await pool.query(
+            "INSERT IGNORE INTO tokens_invalidados (token_hash, expira_en) VALUES (?, FROM_UNIXTIME(?))",
+            [hash, expNumerico]
+        );
+        return;
+    }
     await pool.query(
         "INSERT IGNORE INTO tokens_invalidados (token_hash, expira_en) VALUES (?, DATE_ADD(NOW(), INTERVAL 7 DAY))",
         [hash]
@@ -349,7 +372,12 @@ export async function solicitarRecuperacion(email) {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const resetUrl = `${frontendUrl}/restore?token=${token}`;
 
-    await enviarCorreoRecuperacion(usuario.email, resetUrl);
+    // M-3: fire-and-forget: la respuesta uniforme no espera al SMTP y el
+    // tiempo de respuesta no filtra si el correo existe. Un fallo de envio
+    // solo queda en el log del servidor.
+    enviarCorreoRecuperacion(usuario.email, resetUrl).catch((err) =>
+        console.error("No se pudo enviar el correo de recuperacion:", err?.message)
+    );
 }
 
 /**
@@ -396,7 +424,7 @@ export async function obtenerPerfilPublico(id) {
         id: usuarioBD.id,
         nombre: usuarioBD.nombre_completo,
         biografia: usuarioBD.descripcion_personal,
-        avatar: usuarioBD.foto_perfil || "https://via.placeholder.com/150",
+        avatar: usuarioBD.foto_perfil || null,
     };
 }
 

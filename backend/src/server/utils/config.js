@@ -13,6 +13,34 @@ const fatal = (mensaje) => {
 };
 
 /**
+ * Entornos admitidos. M-7 (auditoria backend 1.5.5): NODE_ENV es obligatorio.
+ * Antes, sin NODE_ENV el proceso arrancaba como si fuera desarrollo: CORS
+ * abierto a localhost, cookie sin `secure`, rate limits de desarrollo y sin
+ * exigir CRYPTO_SECRET_KEY propia. Un despliegue mal configurado quedaba
+ * silenciosamente inseguro, asi que ahora el arranque aborta.
+ */
+export const ENTORNOS_VALIDOS = Object.freeze(["development", "test", "production"]);
+
+/**
+ * Valida NODE_ENV y devuelve el entorno efectivo.
+ * @param {string|undefined} entorno Valor a validar (por defecto NODE_ENV).
+ * @returns {string} Entorno validado.
+ */
+export const validarEntorno = (entorno = process.env.NODE_ENV) => {
+    const valor = String(entorno ?? "").trim();
+    if (!valor) {
+        fatal("falta NODE_ENV. Defina development, test o production en el .env.");
+        return valor;
+    }
+    if (!ENTORNOS_VALIDOS.includes(valor)) {
+        fatal(`NODE_ENV invalido ("${valor}"): use development, test o production.`);
+    }
+    return valor;
+};
+
+export const NODE_ENV = validarEntorno();
+
+/**
  * Valida que JWT_SECRET exista y sea un secreto real (fix 3.1 + TASK-2.6).
  * Regla api-seguridad.md: JWT_SECRET SIEMPRE viene de .env; el servidor FALLA
  * al arrancar si no existe. NUNCA hay un valor hardcodeado de respaldo, porque

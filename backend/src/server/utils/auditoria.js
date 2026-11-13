@@ -19,6 +19,7 @@ export const ACCIONES = Object.freeze({
   PRODUCTO_RESTAURADO: "producto.restaurado",
   CUENTA_BANCARIA_CAMBIADA: "cuenta_bancaria.cambiada",
   CUENTA_PLATAFORMA_CAMBIADA: "cuenta_bancaria_plataforma.cambiada",
+  CUENTA_PLATAFORMA_REVELADA: "cuenta_bancaria_plataforma.revelada",
   REPORTE_CREADO: "reporte.creado",
   REPORTE_RESUELTO: "reporte.resuelto",
   REPORTE_ARCHIVADO: "reporte.archivado",

@@ -49,7 +49,7 @@ export async function obtenerResumenCarrito(compradorId) {
   const [items] = await pool.query(
     `SELECT ci.producto_id, ci.cantidad, p.nombre, p.imagen_url, p.precio,
             p.descuento_porcentaje, p.vendedor_id, u.nombre_completo AS vendedor_nombre,
-            p.stock, p.eliminado_por_admin, u.activo
+            p.stock, p.eliminado_por_admin, p.eliminado_por_vendedor, p.pausado, u.activo
        FROM carrito_items ci
        JOIN productos p ON p.id = ci.producto_id
        JOIN usuarios u ON u.id = p.vendedor_id
@@ -58,9 +58,15 @@ export async function obtenerResumenCarrito(compradorId) {
     [compradorId]
   );
 
-  // RF74: excluir productos suspendidos o de vendedores inactivos
+  // RF74/M-6: un item esta disponible solo si el producto no esta eliminado
+  // (ni por admin ni por su vendedor), no esta pausado y su vendedor sigue
+  // activo. La misma regla debe aplicar al resumen y al listado del carrito.
   const itemsValidos = items.filter(
-    (i) => Number(i.eliminado_por_admin) === 0 && Number(i.activo) === 1
+    (i) =>
+      Number(i.eliminado_por_admin) === 0 &&
+      Number(i.eliminado_por_vendedor) === 0 &&
+      Number(i.pausado) === 0 &&
+      Number(i.activo) === 1
   );
 
   const lineas = itemsValidos.map((i) => ({
@@ -658,6 +664,81 @@ export const destinoPedidosVendedor = async (conn, vendedorId) => {
 
   return { cancelados, enRevision };
 };
+
+/**
+ * RF135 (Lote 3, 1.5.8): cancela UNA linea del historial del comprador.
+ * Reutiliza la MISMA logica de PATCH /api/pedidos/:id/estado: cancelarUnaLinea
+ * (stock + estados), actualizarPagoTrasCancelacion (reembolso por monto) y
+ * notificarCancelacion (comprador + vendedor). Antes, compras.controllers tenia
+ * una copia propia que no notificaba al vendedor.
+ * @returns {Promise<{ ok: true, data: object } | { ok: false, status: number, mensaje: string }>}
+ */
+export async function cancelarLineaComprador({ detalleId, compradorId }) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 1.5.9: primero se bloquea pedidos y despues detalle_pedidos, igual que
+    // actualizarEstadoPedido. El look-up previo (sin lock) solo obtiene el
+    // pedido_id; el lock real del padre ocurre antes que el de la linea.
+    const [ubicacion] = await conn.query(
+      "SELECT pedido_id FROM detalle_pedidos WHERE id = ? LIMIT 1",
+      [detalleId]
+    );
+    if (ubicacion.length === 0) {
+      await conn.rollback();
+      return { ok: false, status: 404, mensaje: "Pedido no encontrado o no cancelable" };
+    }
+
+    const pedidoId = ubicacion[0].pedido_id;
+    const [pedidos] = await conn.query(
+      "SELECT id, comprador_id FROM pedidos WHERE id = ? FOR UPDATE",
+      [pedidoId]
+    );
+    if (
+      pedidos.length === 0 ||
+      Number(pedidos[0].comprador_id) !== Number(compradorId)
+    ) {
+      await conn.rollback();
+      return { ok: false, status: 404, mensaje: "Pedido no encontrado o no cancelable" };
+    }
+
+    const resultado = await cancelarUnaLinea(conn, pedidoId, detalleId);
+    if (resultado.error) {
+      await conn.rollback();
+      return { ok: false, status: 404, mensaje: "Pedido no encontrado o no cancelable" };
+    }
+
+    const pago = await actualizarPagoTrasCancelacion(
+      conn,
+      pedidoId,
+      resultado.lineasCanceladas
+    );
+    await notificarCancelacion(
+      conn,
+      { comprador_id: compradorId },
+      pedidoId,
+      resultado.lineasCanceladas,
+      pago.estado
+    );
+
+    await conn.commit();
+    return {
+      ok: true,
+      data: {
+        id: detalleId,
+        estado: "Cancelado",
+        reembolsado: pago.monto_reembolsado > 0,
+        monto_reembolsado: pago.monto_reembolsado,
+      },
+    };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
 
 /**
  * PATCH /api/pedidos/:id/estado

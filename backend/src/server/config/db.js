@@ -21,6 +21,16 @@ if (usandoDefaultsInseguros && process.env.NODE_ENV !== "test") {
   );
   process.exit(1);
 }
+/**
+ * A-1 (auditoria backend 1.5.5): la cola del pool es FINITA. Con queueLimit=0
+ * las peticiones esperaban indefinidamente y una fuga de conexiones (pool.query
+ * con una conexion retenida) terminaba en timeouts sin senal clara. Al llenarse
+ * la cola, mysql2 rechaza con "Queue limit reached." y la API responde 503.
+ * 1.5.9: el default sube a 100 (una cola de 20 cortaba rafagas legitimas).
+ */
+const LIMITE_COLA_DEFECTO = 100;
+const limiteColaConfigurado = Number(process.env.DB_QUEUE_LIMIT ?? LIMITE_COLA_DEFECTO);
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
   port: Number(process.env.DB_PORT) || 3306,
@@ -29,7 +39,22 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || "commercity_dev",
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
+  queueLimit:
+    Number.isFinite(limiteColaConfigurado) && limiteColaConfigurado > 0
+      ? limiteColaConfigurado
+      : LIMITE_COLA_DEFECTO,
 });
+
+/**
+ * Detecta el agotamiento del pool (cola llena o limite de conexiones del
+ * servidor MySQL). Permite responder 503 en vez de un 500 generico.
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+export function esPoolSaturado(error) {
+  const codigo = String(error?.code || "");
+  const mensaje = String(error?.message || "");
+  return codigo === "ER_CON_COUNT_ERROR" || /queue limit reached/i.test(mensaje);
+}
 
 export default pool;

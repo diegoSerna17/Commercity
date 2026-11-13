@@ -49,6 +49,15 @@ describe("calcularLinea (RF134)", () => {
     expect(r.subtotal).toBe(100000);
   });
 
+  it("la comision se deriva del subtotal: vendedor + comision suman exacto", () => {
+    // 119.18 / 1.19 = 100.15 (subtotal con centavos): 90% y 10% redondeados
+    // por separado darian 90.14 + 10.02 = 100.16, un centavo de mas.
+    const r = calcularLinea(119.18, 0, 1);
+    expect(r.subtotal).toBe(100.15);
+    expect(r.montoComision).toBe(round2(r.subtotal - r.montoVendedor));
+    expect(round2(r.montoVendedor + r.montoComision)).toBe(r.subtotal);
+  });
+
   it("constantes de reparto 90/10", () => {
     expect(IVA_RATE).toBe(0.19);
     expect(COMISION_VENDEDOR).toBe(0.9);

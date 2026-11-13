@@ -201,11 +201,6 @@ export async function listarVendedores({ pagina, limite }) {
   };
 }
 
-const avatarPorDefecto = (nombre) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    nombre || "Vendedor"
-  )}&background=1a1a26&color=fff&bold=true&size=80&rounded=true`;
-
 /**
  * Detalle publico de un producto con datos del vendedor y su calificacion (RF49).
  * Filtra productos suspendidos por el admin (RF72) y vendedores inactivos (RF74).
@@ -255,7 +250,7 @@ export async function obtenerDetalleProducto(productoId) {
     vendedor: {
       id: fila.vendedor_id,
       nombre: fila.vendedor_nombre,
-      foto: fila.vendedor_foto || avatarPorDefecto(fila.vendedor_nombre),
+      foto: fila.vendedor_foto || null,
       calificacion_promedio: promedio != null ? Number(Number(promedio).toFixed(1)) : null,
       total_calificaciones: Number(calificaciones[0]?.total || 0),
     },
@@ -376,34 +371,57 @@ export async function editarProducto({ vendedorId, productoId, datos, archivo })
   const producto = productoExistente[0];
   const { nombre, descripcion, precio, stock, descuento, categoria } = datos;
 
-  let categoriaId = producto.categoria_id;
+  // M-1 (auditoria backend 1.5.5): UPDATE dinamico SOLO con los campos
+  // enviados (mismo patron que actualizarPerfil). Antes se escribian todas las
+  // columnas con los valores leidos al inicio: una edicion de solo `nombre`
+  // volvia a escribir el `stock` leido y pisaba un cambio concurrente.
+  const campos = [];
+  const valores = [];
+
+  if (nombre !== undefined) {
+    campos.push("nombre = ?");
+    valores.push(nombre);
+  }
+  if (descripcion !== undefined) {
+    campos.push("descripcion = ?");
+    valores.push(descripcion);
+  }
+  if (precio !== undefined) {
+    campos.push("precio = ?");
+    valores.push(precio);
+  }
+  if (stock !== undefined) {
+    campos.push("stock = ?");
+    valores.push(stock);
+  }
+  if (descuento !== undefined) {
+    campos.push("descuento_porcentaje = ?");
+    valores.push(descuento);
+  }
   if (categoria !== undefined) {
-    categoriaId = await obtenerOCrearCategoria(categoria);
+    campos.push("categoria_id = ?");
+    valores.push(await obtenerOCrearCategoria(categoria));
   }
 
   const imagenUrl = archivo ? `/uploads/${archivo.filename}` : producto.imagen_url;
+  if (archivo) {
+    campos.push("imagen_url = ?");
+    valores.push(imagenUrl);
+  }
+
+  if (campos.length > 0) {
+    await pool.query(
+      `UPDATE productos SET ${campos.join(", ")} WHERE id = ? AND vendedor_id = ?`,
+      [...valores, productoId, vendedorId]
+    );
+  }
+
   // TASK-4.6: al reemplazar la imagen, la anterior deja de estar referenciada.
+  // M-1: el borrado ocurre DESPUES de que el UPDATE tenga exito; antes se
+  // borraba primero y un fallo del UPDATE dejaba el producto sin imagen.
   if (archivo && producto.imagen_url && producto.imagen_url !== imagenUrl) {
     borrarUploadPorUrl(producto.imagen_url);
   }
-
-  await pool.query(
-    `UPDATE productos
-        SET nombre = ?, descripcion = ?, imagen_url = ?, precio = ?,
-            stock = ?, descuento_porcentaje = ?, categoria_id = ?
-      WHERE id = ? AND vendedor_id = ?`,
-    [
-      nombre ?? producto.nombre,
-      descripcion ?? producto.descripcion,
-      imagenUrl,
-      precio ?? producto.precio,
-      stock ?? producto.stock,
-      descuento ?? producto.descuento_porcentaje,
-      categoriaId,
-      productoId,
-      vendedorId,
-    ]
-  );
 
   return { ok: true };
 }

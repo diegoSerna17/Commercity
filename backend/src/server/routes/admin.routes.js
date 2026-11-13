@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authRequired } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
+import { limiteStepUp } from "../middleware/rate-limit.middleware.js";
 import { paramsIdSchema } from "../schemas/common.schema.js";
 import {
   adminUsuariosQuerySchema,
@@ -83,11 +84,13 @@ router.get("/mi-cuenta-bancaria", getMiCuentaBancaria);
 router.get("/mi-cuenta-bancaria/masked", getMiCuentaBancariaMasked);
 router.post(
   "/mi-cuenta-bancaria",
+  limiteStepUp,
   validate(upsertCuentaBancariaAdminSchema),
   upsertMiCuentaBancaria
 );
 router.put(
   "/mi-cuenta-bancaria",
+  limiteStepUp,
   validate(upsertCuentaBancariaAdminSchema),
   upsertMiCuentaBancaria
 );

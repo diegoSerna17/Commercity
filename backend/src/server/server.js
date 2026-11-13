@@ -27,7 +27,7 @@ const server = app.listen(PORT, () => {
 // dejan de aceptar conexiones, se espera a las en curso y se cierra el pool
 // MySQL. El timeout evita que un keep-alive abierto bloquee el contenedor.
 let cerrando = false;
-const cerrar = (senal) => {
+const cerrar = (senal, codigo = 0) => {
     if (cerrando) return;
     cerrando = true;
     console.log(`[shutdown] ${senal}: cerrando servidor y pool MySQL...`);
@@ -37,7 +37,7 @@ const cerrar = (senal) => {
         } catch (err) {
             console.error(`[shutdown] error cerrando el pool: ${err.message}`);
         } finally {
-            process.exit(error ? 1 : 0);
+            process.exit(error ? 1 : codigo);
         }
     });
     setTimeout(() => {
@@ -55,4 +55,13 @@ process.on("unhandledRejection", (motivo) => {
     const mensaje = motivo instanceof Error ? motivo.message : String(motivo);
     console.error(`[unhandledRejection] ${mensaje}`);
     cerrar("unhandledRejection");
+});
+
+// Lote 3 (1.5.8): una excepcion no capturada deja el proceso en un estado
+// desconocido. Se registra sin datos sensibles y se cierra ordenadamente con
+// codigo 1 (igual que unhandledRejection/SIGTERM, pero marcando el fallo).
+process.on("uncaughtException", (error) => {
+    const mensaje = error instanceof Error ? error.message : String(error);
+    console.error(`[uncaughtException] ${mensaje}`);
+    cerrar("uncaughtException", 1);
 });

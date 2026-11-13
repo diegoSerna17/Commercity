@@ -31,4 +31,36 @@ describe("Privacidad de /uploads", () => {
     expect(res.status).toBe(404);
     expect(res.body.error?.code).not.toBe("UNAUTHORIZED");
   });
+
+  it("M-2: una ruta codificada a reportes no se cuela como publica (401)", async () => {
+    const res = await request(app).get("/uploads/%72eportes/evidencia.jpg");
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("UNAUTHORIZED");
+  });
+
+  it("M-2: una imagen en subcarpeta exige JWT (401)", async () => {
+    const res = await request(app).get("/uploads/otra-carpeta/foto.jpg");
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("UNAUTHORIZED");
+  });
+
+  it("M-2: una codificacion invalida responde 400 INVALID_PATH", async () => {
+    const res = await request(app).get("/uploads/%zz.jpg");
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("INVALID_PATH");
+  });
+
+  it("1.5.9: una barra invertida codificada no se cuela como imagen de la raiz (401)", async () => {
+    // En Windows, express.static interpreta "\" como separador: si el filtro lo
+    // dejara pasar, /uploads/reportes%5Cx.jpg leeria la evidencia privada.
+    const res = await request(app).get("/uploads/reportes%5Cevidencia.jpg");
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("UNAUTHORIZED");
+  });
+
+  it("M-2: HEAD sobre una imagen publica de la raiz no exige JWT", async () => {
+    const res = await request(app).head("/uploads/producto-inexistente.jpg");
+    expect(res.status).toBe(404);
+    expect(res.body.error?.code).not.toBe("UNAUTHORIZED");
+  });
 });

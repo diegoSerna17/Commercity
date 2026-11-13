@@ -55,6 +55,10 @@ export function evaluarEntorno(entorno = {}) {
   const dbUser = String(entorno.DB_USER ?? "");
   const dbPassword = String(entorno.DB_PASSWORD ?? "");
   const rootSinClave = (!dbUser || dbUser === "root") && !dbPassword;
+  // M-7 (auditoria backend 1.5.5): NODE_ENV es obligatorio y solo admite los
+  // tres entornos del proyecto; sin el, el servidor arranca como desarrollo.
+  const nodeEnv = String(entorno.NODE_ENV ?? "").trim();
+  const nodeEnvValido = ["development", "test", "production"].includes(nodeEnv);
 
   agregar("DB_HOST", hayValor(entorno.DB_HOST) ? "presente" : "ausente");
   agregar("DB_PORT", hayValor(entorno.DB_PORT) ? "presente" : "ausente");
@@ -156,9 +160,12 @@ export function evaluarEntorno(entorno = {}) {
 
   agregar(
     "NODE_ENV",
-    hayValor(entorno.NODE_ENV) ? "presente" : "ausente",
-    hayValor(entorno.NODE_ENV) ? "" : "se asume development",
-    false
+    !nodeEnv ? "ausente" : nodeEnvValido ? "presente" : "inválida",
+    !nodeEnv
+      ? "obligatoria: development, test o production"
+      : nodeEnvValido
+        ? ""
+        : "use development, test o production"
   );
 
   return { filas, avisos, errores };

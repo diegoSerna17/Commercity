@@ -166,3 +166,41 @@ describe("utils/config.js - expiracion del JWT (decision 2026-11-10)", () => {
         expect(expiracionEnMs("invalida")).toBe(86_400_000);
     });
 });
+
+describe("utils/config.js - NODE_ENV obligatorio (M-7)", () => {
+    it("exporta el entorno cuando es valido", async () => {
+        process.env.NODE_ENV = "test";
+        vi.resetModules();
+        const { NODE_ENV, ENTORNOS_VALIDOS, validarEntorno } = await import(
+            "../utils/config.js"
+        );
+
+        expect(NODE_ENV).toBe("test");
+        expect(ENTORNOS_VALIDOS).toEqual(["development", "test", "production"]);
+        expect(validarEntorno("production")).toBe("production");
+    });
+
+    it("si falta NODE_ENV, el modulo aborta al arrancar (exit 1)", async () => {
+        const { exitSpy, errorSpy } = mockFatal();
+        delete process.env.NODE_ENV;
+        vi.resetModules();
+
+        await import("../utils/config.js");
+
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("NODE_ENV"));
+        expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it("rechaza un NODE_ENV desconocido (exit 1)", async () => {
+        const { exitSpy, errorSpy } = mockFatal();
+        process.env.NODE_ENV = "staging";
+        vi.resetModules();
+        const { validarEntorno } = await import("../utils/config.js");
+
+        expect(validarEntorno("staging")).toBe("staging");
+        expect(errorSpy).toHaveBeenCalledWith(
+            expect.stringContaining("NODE_ENV invalido")
+        );
+        expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+});

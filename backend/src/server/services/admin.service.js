@@ -494,8 +494,10 @@ export async function buscarAdmin({ q, scope }) {
  * GET /api/admin/mi-cuenta-bancaria - Cuenta de Commercity ENMASCARADA por
  * defecto (B-7). El numero y el titular completos solo se devuelven con el
  * parametro explicito ?revelar=completa.
+ * M-5 (auditoria backend 1.5.5): revelar la cuenta completa es una accion
+ * sensible y queda auditada (sin datos bancarios en el detalle).
  */
-export async function obtenerCuentaCommercity({ revelarCompleta }) {
+export async function obtenerCuentaCommercity({ revelarCompleta, actorId = null, ip = null }) {
   const fila = await recifrarCuentaBancariaSiEsLegado(await buscarCuentaCommercity());
   if (!fila) {
     return {
@@ -504,6 +506,14 @@ export async function obtenerCuentaCommercity({ revelarCompleta }) {
     };
   }
   if (revelarCompleta) {
+    await registrarAuditoria({
+      actorId,
+      accion: ACCIONES.CUENTA_PLATAFORMA_REVELADA,
+      objetivoTipo: "datos_bancarios",
+      objetivoId: fila.id ?? null,
+      detalle: { revelada: true },
+      ip,
+    });
     return {
       mensaje: "Cuenta bancaria de Commercity obtenida",
       data: { registrado: true, datos: buildPrivateRecord(fila) },
@@ -521,26 +531,32 @@ export async function obtenerCuentaCommercity({ revelarCompleta }) {
  * @returns {Promise<{ ok: true, mensaje: string, data: object, status: number } | { ok: false, status: number, mensaje: string }>}
  */
 export async function guardarCuentaCommercity({ usuarioId, data, ip }) {
-  const conn = await pool.getConnection();
+  // A-1 (auditoria backend 1.5.5): el step-up con bcrypt y la validacion van
+  // ANTES de tomar una conexion del pool. Antes, pool.query() se ejecutaba
+  // mientras esta peticion ya retenia una conexion: con concurrencia el pool
+  // se agotaba. La relectura y la auditoria se hacen despues del release.
+  // M-12 (TASK-4.5): step-up obligatorio con la contrasena del administrador
+  // (la cuenta de la plataforma recibe la comision del 10%).
+  const [adminFila] = await pool.query(
+    "SELECT password FROM usuarios WHERE id = ? LIMIT 1",
+    [usuarioId]
+  );
+  const passwordValida =
+    adminFila.length > 0 && (await bcrypt.compare(data.password, adminFila[0].password));
+  if (!passwordValida) {
+    return { ok: false, status: 403, mensaje: "Contraseña incorrecta (operación sensible)" };
+  }
+
+  // M-10: v2 con AAD = usuario_id (el admin registrador).
+  const encryptedTitular = cifrarCampo(data.titular_nombre, usuarioId);
+  const encryptedNumero = cifrarCampo(data.numero_cuenta, usuarioId);
+
+  let existing = [];
+  let conn;
   try {
-    // M-12 (TASK-4.5): step-up obligatorio con la contrasena del administrador
-    // (la cuenta de la plataforma recibe la comision del 10%).
-    const [adminFila] = await pool.query(
-      "SELECT password FROM usuarios WHERE id = ? LIMIT 1",
-      [usuarioId]
-    );
-    const passwordValida =
-      adminFila.length > 0 && (await bcrypt.compare(data.password, adminFila[0].password));
-    if (!passwordValida) {
-      return { ok: false, status: 403, mensaje: "Contraseña incorrecta (operación sensible)" };
-    }
-
-    // M-10: v2 con AAD = usuario_id (el admin registrador).
-    const encryptedTitular = cifrarCampo(data.titular_nombre, usuarioId);
-    const encryptedNumero = cifrarCampo(data.numero_cuenta, usuarioId);
-
+    conn = await pool.getConnection();
     await conn.beginTransaction();
-    const [existing] = await conn.query(
+    [existing] = await conn.query(
       "SELECT id FROM datos_bancarios WHERE es_commercity = 1 LIMIT 1"
     );
 
@@ -562,35 +578,35 @@ export async function guardarCuentaCommercity({ usuarioId, data, ip }) {
     }
 
     await conn.commit();
-
-    const fila = await buscarCuentaCommercity();
-    // M-11: auditoria del cambio de la cuenta de la plataforma (sin datos sensibles).
-    await registrarAuditoria({
-      actorId: usuarioId,
-      accion: ACCIONES.CUENTA_PLATAFORMA_CAMBIADA,
-      objetivoTipo: "datos_bancarios",
-      objetivoId: fila?.id ?? existing[0]?.id ?? null,
-      detalle: {
-        banco: data.banco,
-        tipo_cuenta: data.tipo_cuenta,
-        es_actualizacion: existing.length > 0,
-      },
-      ip,
-    });
-
-    return {
-      ok: true,
-      mensaje:
-        existing.length === 0
-          ? "Cuenta bancaria de Commercity registrada correctamente."
-          : "Cuenta bancaria de Commercity actualizada correctamente.",
-      data: { registrado: true, es_actualizacion: existing.length > 0, datos: buildPrivateRecord(fila) },
-      status: existing.length === 0 ? 201 : 200,
-    };
   } catch (err) {
-    await conn.rollback();
+    if (conn) await conn.rollback();
     throw err;
   } finally {
-    conn.release();
+    if (conn) conn.release();
   }
+
+  const fila = await buscarCuentaCommercity();
+  // M-11: auditoria del cambio de la cuenta de la plataforma (sin datos sensibles).
+  await registrarAuditoria({
+    actorId: usuarioId,
+    accion: ACCIONES.CUENTA_PLATAFORMA_CAMBIADA,
+    objetivoTipo: "datos_bancarios",
+    objetivoId: fila?.id ?? existing[0]?.id ?? null,
+    detalle: {
+      banco: data.banco,
+      tipo_cuenta: data.tipo_cuenta,
+      es_actualizacion: existing.length > 0,
+    },
+    ip,
+  });
+
+  return {
+    ok: true,
+    mensaje:
+      existing.length === 0
+        ? "Cuenta bancaria de Commercity registrada correctamente."
+        : "Cuenta bancaria de Commercity actualizada correctamente.",
+    data: { registrado: true, es_actualizacion: existing.length > 0, datos: buildPrivateRecord(fila) },
+    status: existing.length === 0 ? 201 : 200,
+  };
 }

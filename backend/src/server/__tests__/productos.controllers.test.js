@@ -5,6 +5,8 @@ import express from "express";
 // Mock del pool para no depender de la BD real
 vi.mock("../config/db.js", () => ({
   default: { query: vi.fn() },
+  // A-1: el errorHandler importa esPoolSaturado desde el mismo modulo.
+  esPoolSaturado: vi.fn(() => false),
 }));
 
 import pool from "../config/db.js";
@@ -290,8 +292,9 @@ describe("GET /api/productos/:id (RF78/RF79)", () => {
     const res = await request(app).get("/api/productos/584");
 
     expect(res.status).toBe(200);
-    expect(res.body.data.vendedor.foto).toContain("ui-avatars.com");
-    expect(res.body.data.vendedor.foto).toContain("Vendedor");
+    // Lote 3: sin foto, el backend responde null (el cliente usa su SVG local),
+    // no una URL de ui-avatars.com.
+    expect(res.body.data.vendedor.foto).toBeNull();
     expect(res.body.data.vendedor.calificacion_promedio).toBeNull();
     expect(res.body.data.vendedor.total_calificaciones).toBe(0);
   });

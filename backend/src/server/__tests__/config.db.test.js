@@ -20,6 +20,7 @@ const ENTORNO_BASE = {
   DB_HOST: "",
   DB_PORT: "",
   DB_NAME: "",
+  DB_QUEUE_LIMIT: "",
 };
 
 async function importarDb(entorno) {
@@ -135,8 +136,40 @@ describe("config/db.js - credenciales y defaults de conexion (H5/H9)", () => {
       database: "commercity_dev",
       waitForConnections: true,
       connectionLimit: 10,
-      queueLimit: 0,
+      queueLimit: 100,
     });
+  });
+
+  it("A-1: DB_QUEUE_LIMIT configura la cola y un valor invalido usa 100", async () => {
+    espiarSalida();
+    const { createPool } = await importarDb({
+      NODE_ENV: "test",
+      DB_USER: "app_qa",
+      DB_PASSWORD: "clave-segura-123",
+      DB_QUEUE_LIMIT: "5",
+    });
+
+    expect(createPool).toHaveBeenCalledWith(expect.objectContaining({ queueLimit: 5 }));
+
+    const segundo = await importarDb({
+      NODE_ENV: "test",
+      DB_USER: "app_qa",
+      DB_PASSWORD: "clave-segura-123",
+      DB_QUEUE_LIMIT: "no-es-numero",
+    });
+    expect(segundo.createPool).toHaveBeenCalledWith(
+      expect.objectContaining({ queueLimit: 100 })
+    );
+  });
+
+  it("A-1: esPoolSaturado reconoce cola llena y limite de conexiones", async () => {
+    espiarSalida();
+    const { esPoolSaturado } = await import("../config/db.js");
+
+    expect(esPoolSaturado(new Error("Queue limit reached."))).toBe(true);
+    expect(esPoolSaturado({ code: "ER_CON_COUNT_ERROR" })).toBe(true);
+    expect(esPoolSaturado(new Error("conexion rechazada"))).toBe(false);
+    expect(esPoolSaturado(undefined)).toBe(false);
   });
 
   it("lee DB_HOST/DB_PORT/DB_NAME del entorno", async () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 import crypto from "node:crypto";
 import { encryptSensitive } from "../utils/crypto.js";
 import { CRYPTO_EFFECTIVE_KEY } from "../utils/config.js";
@@ -30,6 +31,15 @@ vi.mock("mysql2/promise", () => {
 });
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto_test";
+
+// M-5: el step-up bancario del vendedor compara la contrasena con bcrypt.
+vi.mock("bcrypt", () => ({
+  __esModule: true,
+  default: {
+    hash: vi.fn().mockResolvedValue("$2b$10$mock_hash"),
+    compare: vi.fn().mockResolvedValue(true),
+  },
+}));
 
 const { __pool: pool } = await import("mysql2/promise");
 const { default: app } = await import("../app.js");
@@ -203,6 +213,7 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
 
     beforeEach(() => {
       vi.clearAllMocks();
+      bcrypt.compare.mockResolvedValue(true);
       pool.getConnection.mockResolvedValue(conn);
       conn.beginTransaction.mockResolvedValue();
       conn.commit.mockResolvedValue();
@@ -211,6 +222,8 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
       pool.query.mockImplementation((sql) => {
         if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
         if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+        // M-5: step-up con la contrasena del vendedor.
+        if (sql.includes("SELECT password FROM usuarios")) return [[{ password: "$2b$10$hash" }], undefined];
         if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
         return [[], undefined];
       });
@@ -225,7 +238,7 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
       const res = await request(app)
         .post("/api/tienda/mi-cuenta-bancaria")
         .set("Authorization", `Bearer ${tokenVendedor}`)
-        .send({ titular_nombre: "Maria Fernanda Lopez", banco: "Bancolombia", tipo_cuenta: "ahorros", numero_cuenta: "12345678901234" });
+        .send({ titular_nombre: "Maria Fernanda Lopez", banco: "Bancolombia", tipo_cuenta: "ahorros", numero_cuenta: "12345678901234", password: "ClaveVendedor123" });
 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
@@ -257,7 +270,7 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
       const res = await request(app)
         .put("/api/tienda/mi-cuenta-bancaria")
         .set("Authorization", `Bearer ${tokenVendedor}`)
-        .send({ titular_nombre: "Maria Fernanda Lopez", banco: "Bancolombia", tipo_cuenta: "corriente", numero_cuenta: "9999888877776666" });
+        .send({ titular_nombre: "Maria Fernanda Lopez", banco: "Bancolombia", tipo_cuenta: "corriente", numero_cuenta: "9999888877776666", password: "ClaveVendedor123" });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -282,10 +295,65 @@ describe("Cuenta bancaria (RNF11 / RF121-RF123 / RF122)", () => {
       const res = await request(app)
         .post("/api/tienda/mi-cuenta-bancaria")
         .set("Authorization", `Bearer ${tokenVendedor}`)
-        .send({ titular_nombre: "Maria Fernanda Lopez", banco: "Bancolombia", tipo_cuenta: "ahorros", numero_cuenta: "12345678901234" });
+        .send({ titular_nombre: "Maria Fernanda Lopez", banco: "Bancolombia", tipo_cuenta: "ahorros", numero_cuenta: "12345678901234", password: "ClaveVendedor123" });
 
       expect(res.status).toBe(500);
       expect(conn.rollback).toHaveBeenCalled();
+    });
+
+    it("M-5: exige la contrasena de step-up (400 - zod)", async () => {
+      const res = await request(app)
+        .post("/api/tienda/mi-cuenta-bancaria")
+        .set("Authorization", `Bearer ${tokenVendedor}`)
+        .send({ titular_nombre: "Maria Fernanda Lopez", banco: "Bancolombia", tipo_cuenta: "ahorros", numero_cuenta: "12345678901234" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("VALIDATION_ERROR");
+      expect(pool.getConnection).not.toHaveBeenCalled();
+    });
+
+    it("1.5.9: una contrasena de 6 caracteres pasa el esquema (min 1, no min 8)", async () => {
+      bcrypt.compare.mockResolvedValueOnce(false);
+
+      const res = await request(app)
+        .post("/api/tienda/mi-cuenta-bancaria")
+        .set("Authorization", `Bearer ${tokenVendedor}`)
+        .send({ titular_nombre: "Maria Fernanda Lopez", banco: "Bancolombia", tipo_cuenta: "ahorros", numero_cuenta: "12345678901234", password: "corta1" });
+
+      // Llega al step-up (403), no al validador Zod (400).
+      expect(res.status).toBe(403);
+      expect(res.body.error.message).toContain("Contraseña incorrecta");
+    });
+
+    it("M-5: contrasena incorrecta -> 403 sin abrir transaccion", async () => {
+      bcrypt.compare.mockResolvedValueOnce(false);
+
+      const res = await request(app)
+        .post("/api/tienda/mi-cuenta-bancaria")
+        .set("Authorization", `Bearer ${tokenVendedor}`)
+        .send({ titular_nombre: "Maria Fernanda Lopez", banco: "Bancolombia", tipo_cuenta: "ahorros", numero_cuenta: "12345678901234", password: "Incorrecta999" });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe("FORBIDDEN");
+      expect(res.body.error.message).toContain("Contraseña incorrecta");
+      expect(pool.getConnection).not.toHaveBeenCalled();
+    });
+
+    it("M-5/A-1: verifica la contrasena antes de pedir la conexion", async () => {
+      conn.query.mockImplementation((sql) => {
+        if (sql.includes("SELECT id FROM datos_bancarios")) return [[{ id: 1 }], undefined];
+        if (sql.includes("UPDATE datos_bancarios")) return [{ affectedRows: 1 }, undefined];
+        return [[], undefined];
+      });
+
+      const res = await request(app)
+        .put("/api/tienda/mi-cuenta-bancaria")
+        .set("Authorization", `Bearer ${tokenVendedor}`)
+        .send({ titular_nombre: "Maria Fernanda Lopez", banco: "Bancolombia", tipo_cuenta: "corriente", numero_cuenta: "9999888877776666", password: "ClaveVendedor123" });
+
+      expect(res.status).toBe(200);
+      expect(bcrypt.compare.mock.invocationCallOrder[0])
+        .toBeLessThan(pool.getConnection.mock.invocationCallOrder[0]);
     });
   });
 });
@@ -453,6 +521,51 @@ describe("Historial de ventas, ingresos y dashboard (RF119-RF123)", () => {
     expect(res.body.data.periodo[0].fecha).toBe("2026-08-08");
   });
 
+  it("acota agrupar_por=dia a un rango maximo de 365 dias", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT COUNT(*)")) return [[{ total: 1 }], undefined];
+      if (sql.includes("COUNT(dp.id) AS total_transacciones")) return [[{ total_transacciones: 1, total_bruto: 2000000, total_neto_vendedor: 1800000, total_comision_plataforma: 200000 }], undefined];
+      if (sql.includes("GROUP BY DATE(p.fecha_pedido)")) return [[{ fecha: "2026-08-08", pedidos: 1, bruto: 2000000, ganancia_neta: 1800000, comision: 200000 }], undefined];
+      return [[filaVenta], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/tienda/ingresos?agrupar_por=dia")
+      .set("Authorization", `Bearer ${tokenVendedor}`);
+
+    expect(res.status).toBe(200);
+    const desde = res.body.data.filtros_aplicados.fecha_desde;
+    expect(desde).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(res.body.data.filtros_aplicados.fecha_desde_efectiva).toBe(desde);
+    expect(res.body.data.filtros_aplicados.rango_acotado).toBe(true);
+    const dias = (Date.now() - new Date(`${desde}T00:00:00Z`).getTime()) / 86400000;
+    expect(dias).toBeGreaterThanOrEqual(364);
+    expect(dias).toBeLessThanOrEqual(366);
+  });
+
+  it("acota un rango explicito mayor a 365 dias al agrupar por dia", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("SELECT COUNT(*)")) return [[{ total: 1 }], undefined];
+      if (sql.includes("COUNT(dp.id) AS total_transacciones")) return [[{ total_transacciones: 1, total_bruto: 2000000, total_neto_vendedor: 1800000, total_comision_plataforma: 200000 }], undefined];
+      if (sql.includes("GROUP BY DATE(p.fecha_pedido)")) return [[{ fecha: "2025-06-01", pedidos: 1, bruto: 2000000, ganancia_neta: 1800000, comision: 200000 }], undefined];
+      return [[filaVenta], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/tienda/ingresos?agrupar_por=dia&fecha_desde=2020-01-01&fecha_hasta=2026-01-01")
+      .set("Authorization", `Bearer ${tokenVendedor}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.filtros_aplicados.fecha_desde).toBe("2025-01-01");
+    expect(res.body.data.filtros_aplicados.fecha_desde_efectiva).toBe("2025-01-01");
+    expect(res.body.data.filtros_aplicados.rango_acotado).toBe(true);
+    expect(res.body.data.filtros_aplicados.fecha_hasta).toBe("2026-01-01");
+  });
+
   it("GET /api/tienda/dashboard/stats devuelve tarjetas, por estado y ultimos 6 meses", async () => {
     pool.query.mockImplementation((sql) => {
       if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
@@ -525,7 +638,8 @@ describe("Validacion de Mi Tienda (RF130-RF139)", () => {
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
       if (sql.includes("estado_envio = 'Cancelado'")) return [[], undefined];
-      if (sql.includes("FROM detalle_pedidos dp")) return [[filaLineaCoherente], undefined];
+      if (sql.includes("AS lineas_analizadas")) return [[{ lineas_analizadas: 1, lineas_activas: 1, subtotal_activo: "2000000.00", vendedor_activo: "1800000.00", comision_activo: "200000.00" }], undefined];
+      if (sql.includes("ABS(")) return [[], undefined];
       return [[], undefined];
     });
 
@@ -575,7 +689,8 @@ describe("Validacion de Mi Tienda (RF130-RF139)", () => {
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
       if (sql.includes("estado_envio = 'Cancelado'")) return [[], undefined];
-      if (sql.includes("FROM detalle_pedidos dp")) return [[filaLineaIncoherente], undefined];
+      if (sql.includes("AS lineas_analizadas")) return [[{ lineas_analizadas: 1, lineas_activas: 1, subtotal_activo: "1000.00", vendedor_activo: "0.00", comision_activo: "0.00" }], undefined];
+      if (sql.includes("ABS(")) return [[filaLineaIncoherente], undefined];
       return [[], undefined];
     });
 
@@ -598,7 +713,8 @@ describe("Validacion de Mi Tienda (RF130-RF139)", () => {
       if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
       if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
       if (sql.includes("estado_envio = 'Cancelado'")) return [[filaDevolucion], undefined];
-      if (sql.includes("FROM detalle_pedidos dp")) return [[filaLineaCoherente], undefined];
+      if (sql.includes("AS lineas_analizadas")) return [[{ lineas_analizadas: 1, lineas_activas: 1, subtotal_activo: "2000000.00", vendedor_activo: "1800000.00", comision_activo: "200000.00" }], undefined];
+      if (sql.includes("ABS(")) return [[], undefined];
       return [[], undefined];
     });
 
@@ -617,5 +733,47 @@ describe("Validacion de Mi Tienda (RF130-RF139)", () => {
     expect(data.devoluciones.validado).toBe(false);
     expect(data.validado).toBe(false);
     expect(data.observaciones.some((o) => o.includes("RF35"))).toBe(true);
+  });
+
+  it("valida el flujo 90/10 con agregados SQL, sin cargar todas las lineas", async () => {
+    pool.query.mockImplementation((sql) => {
+      if (sql.includes("tokens_invalidados") && !sql.includes("AS revocado")) return [[], undefined];
+      if (sql.includes("FROM usuario_roles")) return [[{ nombre: "vendedor" }], undefined];
+      if (sql.includes("FROM datos_bancarios")) return [[filaBancaria], undefined];
+      if (sql.includes("estado_envio = 'Cancelado'")) return [[], undefined];
+      if (sql.includes("AS lineas_analizadas")) return [[{
+        lineas_analizadas: 1,
+        lineas_activas: 1,
+        subtotal_activo: "2000000.00",
+        vendedor_activo: "1800000.00",
+        comision_activo: "200000.00",
+      }], undefined];
+      if (sql.includes("ABS(")) return [[], undefined];
+      return [[], undefined];
+    });
+
+    const res = await request(app)
+      .get("/api/tienda/validacion")
+      .set("Authorization", `Bearer ${tokenVendedor}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.flujo_90_10.lineas_analizadas).toBe(1);
+    expect(res.body.data.flujo_90_10.totales.subtotal).toBe(2000000);
+    expect(res.body.data.flujo_90_10.validado).toBe(true);
+
+    const agregado = pool.query.mock.calls.find(
+      ([sql]) => typeof sql === "string" && sql.includes("AS lineas_analizadas")
+    );
+    expect(agregado).toBeTruthy();
+    expect(agregado[0]).toContain("SUM(CASE WHEN");
+    expect(agregado[0]).toContain("COUNT(*)");
+
+    // Solo se traen al proceso las lineas INCOHERENTES (las que fallan la
+    // regla 90/10), nunca el historico completo.
+    const incoherencias = pool.query.mock.calls.find(
+      ([sql]) => typeof sql === "string" && sql.includes("ABS(")
+    );
+    expect(incoherencias).toBeTruthy();
+    expect(incoherencias[0]).toContain("WHERE dp.vendedor_id = ?");
   });
 });
