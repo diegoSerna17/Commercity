@@ -1,6 +1,6 @@
 # CommerCity
 
-**Estado:** Proyecto académico en etapa productiva | Backend: 628/628 pruebas unitarias OK (44 archivos) | Frontend: 500/500 pruebas OK (65 archivos) | Integración MySQL local: 4 archivos / 23 pruebas con TEST_DB_* (2026-11-05) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.31 % líneas / 90.28 % ramas; frontend: 96.95 % líneas reales (500 pruebas, medición 2026-11-10) | Última corrida registrada: backend y frontend 2026-11-11 (CHANGELOG 1.5.5)
+**Estado:** Proyecto académico en etapa productiva | Backend: 670/670 pruebas unitarias OK (46 archivos) | Frontend: 500/500 pruebas OK (65 archivos) | Integración MySQL local: 4 archivos / 23 pruebas con TEST_DB_* (2026-11-05) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.17 % líneas / 90.08 % ramas; frontend: 96.95 % líneas reales (500 pruebas, medición 2026-11-10) | Última corrida registrada: backend y frontend 2026-11-13 (CHANGELOG 1.5.9)
 
 CommerCity es una plataforma de comercio electrónico para mercados locales con roles de comprador, vendedor y administrador. Incluye catálogo de productos con imágenes, carrito de compras, pedidos, pasarela de pago simulada, tiendas de vendedores, chat, notificaciones, seguidores, calificaciones, reportes de contenido y panel de administración.
 
@@ -592,9 +592,9 @@ El backend vive en `backend/src/server/` y **no tiene carpeta `models`**: el acc
 | Necesitas | Dónde está |
 |---|---|
 | Conexión a MySQL | `backend/src/server/config/db.js` exporta el `pool` de `mysql2/promise` (10 conexiones, `waitForConnections`). Los controllers lo importan y ejecutan SQL parametrizado. |
-| Configuración y validación del entorno | `backend/src/server/utils/config.js` (aborta el arranque si falta `JWT_SECRET`). |
+| Configuración y validación del entorno | `backend/src/server/utils/config.js` (aborta el arranque si falta `JWT_SECRET` o `NODE_ENV`, o si son inválidos). |
 | Contratos de entrada | `backend/src/server/schemas/` (esquemas Zod) aplicados por `backend/src/server/middleware/validate.middleware.js`. |
-| Migraciones incrementales | `backend/src/server/db/` (000 y 008-019, idempotentes, con rollback en comentarios y checksum en `schema_migrations`). |
+| Migraciones incrementales | `backend/src/server/db/` (000 y 008-021, idempotentes, con rollback en comentarios y checksum en `schema_migrations`). |
 | Modelo de datos completo | `schema_commercity.sql` (DDL de las 16 tablas de negocio) y `seed_commercity.sql` (datos de prueba) en la raíz. |
 
 ### Variables de entorno
@@ -603,7 +603,7 @@ El backend vive en `backend/src/server/` y **no tiene carpeta `models`**: el acc
 Copy-Item backend\.env.example backend\.env     # desde la raíz del repositorio
 ```
 
-Variables que trae la plantilla (sin valores): `PORT`, `NODE_ENV`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET` (obligatoria), `CRYPTO_SECRET_KEY`, `FRONTEND_URL`, `CORS_ALLOWLIST`, `ALLOW_DESKTOP_ORIGINS`, `TRUST_PROXY`, `RESEND_API_KEY` y `RESEND_FROM`.
+Variables que trae la plantilla (sin valores): `PORT`, `NODE_ENV` (obligatoria), `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET` (obligatoria), `CRYPTO_SECRET_KEY`, `FRONTEND_URL`, `CORS_ALLOWLIST`, `ALLOW_DESKTOP_ORIGINS`, `TRUST_PROXY`, `RESEND_API_KEY` y `RESEND_FROM`.
 
 El `.env` **no se versiona** (está en `.gitignore` por diseño): los valores de la base compartida y la contraseña del seed los entrega el líder por canal privado. El detalle de cada variable está en [Configuración](#configuración).
 
@@ -692,7 +692,7 @@ Los datos de conexión a la base de datos compartida (`DB_HOST`, `DB_PORT`, `DB_
 | `JWT_SECRET`        | **Obligatoria.** El servidor no arranca sin ella. Genera una clave aleatoria, por ejemplo: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
 | `CRYPTO_SECRET_KEY` | Clave para cifrar datos sensibles (cuenta bancaria). Si se omite, se usa `JWT_SECRET` como respaldo.                                                                  |
 | `FRONTEND_URL`      | Origen web permitido por CORS y enlaces del correo. Por defecto `http://localhost:5173`.                                                                            |
-| `NODE_ENV`          | `production` activa gates estrictos (docs off salvo `DOCS_ENABLED=true`; CORS de escritorio cerrado).                                                               |
+| `NODE_ENV`          | **Obligatoria.** `development`, `test` o `production`. Sin ella (o con un valor desconocido) el servidor no arranca: evita que un despliegue mal configurado herede CORS y cookies de desarrollo. `production` activa gates estrictos (docs off salvo `DOCS_ENABLED=true`; CORS de escritorio cerrado). |
 | `ALLOW_DESKTOP_ORIGINS` | `true` acepta los orígenes `null`/`file://` del escritorio Electron (solo dev/entorno controlado).                                                             |
 | `RESEND_API_KEY`    | API key de Resend. Si se omite, el mailer entra en modo simulación.                                                                                                   |
 | `RESEND_FROM`       | Remitente del correo. Por defecto `CommerCity <onboarding@resend.dev>`.                                                                                               |
@@ -789,17 +789,17 @@ Resultados actuales:
 
 | Suite                           | Comando                   | Resultado                                 |
 | ------------------------------- | ------------------------- | ----------------------------------------- |
-| Backend (Vitest + supertest)    | `cd backend && npm test`  | 628 pruebas en 44 archivos, todas pasando (última corrida registrada 2026-11-11) |
-| Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 500 pruebas en 65 archivos, todas pasando (última corrida registrada 2026-11-11) |
+| Backend (Vitest + supertest)    | `cd backend && npm test`  | 670 pruebas en 46 archivos, todas pasando (última corrida registrada 2026-11-13) |
+| Frontend (Vitest + jsdom + RTL) | `cd frontend && npm test` | 500 pruebas en 65 archivos, todas pasando (última corrida registrada 2026-11-13) |
 
-Cobertura del backend (`npm run test:coverage`, proveedor v8; medición 2026-11-11):
+Cobertura del backend (`npm run test:coverage`, proveedor v8; medición 2026-11-13):
 
 | Métrica    | Valor medido | Umbral configurado |
 | ---------- | ------------ | ------------------ |
-| Statements | 96.91%       | 96%                |
-| Branches   | 90.28%       | 90%                |
-| Functions  | 100%         | 99%                |
-| Lines      | 97.31%       | 97%                |
+| Statements | 96.36%       | 96%                |
+| Branches   | 90.08%       | 90%                |
+| Functions  | 99.33%       | 99%                |
+| Lines      | 97.17%       | 97%                |
 
 Cobertura del frontend: la cifra **75.31 %** del CHANGELOG 1.3.1 era una métrica histórica que solo medía los archivos con pruebas. La línea base real de todo `src/` era **41.30 % Lines (888/2150, medición 2026-10-15)**; tras el lote de pruebas del 2026-11-05 es **96.85 % Lines (493 pruebas)**, con umbrales en `frontend/vite.config.js` (Lines 93, Statements 92, Functions 89, Branches 82) y M-27 cerrado. Ver `plan/fix-frontend-pendientes-2026-10-15.md`.
 
@@ -862,7 +862,7 @@ Los 76 endpoints se agrupan por módulo (detalle en `backend/src/server/routes/`
 
 Los nombres exactos, verbos y cuerpos de cada endpoint están en los archivos de rutas del backend.
 
-> **Referencia generada desde Zod (ver `VERSION`):** interactiva en `http://localhost:3000/api/docs` (Scalar) y JSON en `/api/openapi.json` — ver `docs/api/openapi.json`, `docs/api/entidades.md` (49 contratos), `docs/api/inventario-endpoints.md`, `docs/bd/modelo-datos.md`, `docs/arquitectura.md` y `docs/guias/`. Se regenera con `npm run docs:api` y `npm run docs:entidades` desde `backend/`.
+> **Referencia generada desde Zod (ver `VERSION`):** interactiva en `http://localhost:3000/api/docs` (Scalar) y JSON en `/api/openapi.json` — ver `docs/api/openapi.json`, `docs/api/entidades.md` (50 contratos), `docs/api/inventario-endpoints.md`, `docs/bd/modelo-datos.md`, `docs/arquitectura.md` y `docs/guias/`. Se regenera con `npm run docs:api` y `npm run docs:entidades` desde `backend/`.
 
 ## Roles del sistema
 

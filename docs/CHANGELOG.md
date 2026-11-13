@@ -8,6 +8,155 @@ La version nunca se edita a mano: la fuente es `VERSION` en la raiz y se
 propaga con `node tools/sync-version.mjs`; se comprueba con
 `node tools/verificar-version.mjs`.
 
+## [1.5.9] - 2026-11-13
+
+Lote de re-auditoría backend/API: dependencias, registro en apps, cuenta de la
+plataforma, caducidad de tokens, saturación del pool, step-up y `/uploads`.
+Cada punto se reprodujo con un test que fallaba antes de la corrección.
+
+### Corregido
+
+- **Dependencias**: `multer` 2.5.0 y `zod` 4.6.7 exactos; `body-parser` 2.4.0,
+  `qs` 6.17.1 e `ip-address` 10.7.6 fijados con `overrides`. `npm audit
+  --omit=dev` queda en cero. El lockfile se regeneró.
+- **Registro en escritorio/móvil**: `api.register` envía `acepta_terminos:
+  true` solo con la casilla marcada; escritorio incorpora `reg-terms` y valida
+  antes de llamar a la API.
+- **Cuenta de la plataforma**: los formularios de administrador de web,
+  escritorio y móvil piden `password`, la envían en el body y la vacían tras
+  guardar (step-up M-12).
+- **Tokens revocados**: la fecha se calcula en MySQL con
+  `FROM_UNIXTIME(exp)`; la comparación con `NOW()` ya no depende de la zona
+  horaria de Node.
+- **Saturación del pool**: `DB_QUEUE_LIMIT` sube a 100 por defecto; `authRequired`
+  responde 503 `SERVICE_UNAVAILABLE` cuando la cola está llena y los
+  controladores con catch propio delegan la saturación a `next(err)`.
+- **Step-up**: limitador por usuario de 5 fallos cada 15 minutos en las cuentas
+  bancarias (vendedor/admin) y en la baja de cuenta, montado en las rutas
+  después de `authRequired`. Las contraseñas de step-up aceptan min 1/max 200,
+  igual que el login.
+- **`/uploads` en Windows**: la imagen pública de la raíz excluye `\`, por lo
+  que `%5C` ya no puede alcanzar evidencias privadas sin JWT.
+- **Menores**: `ingresos?agrupar_por=dia` informa `fecha_desde_efectiva` y
+  `rango_acotado`; la cancelación por línea bloquea primero `pedidos` y luego
+  `detalle_pedidos`, igual que `actualizarEstadoPedido`.
+
+### Pruebas
+
+- Backend: 46 archivos / 670 pruebas en verde; cobertura 96.36 % sentencias,
+  90.08 % ramas, 99.33 % funciones y 97.17 % líneas.
+- Frontend: 65 archivos / 500 pruebas, `eslint .` y `vite build` en verde;
+  contratos de escritorio y móvil OK.
+- Integración con MySQL no ejecutada: no hay `TEST_DB_*`; la concurrencia real
+  del pool sigue pendiente de esa corrida.
+- `npm audit` completo conserva 6 avisos en dependencias de desarrollo
+  (Vite/Vitest); `npm audit --omit=dev` está en cero, que es el gate del CI.
+
+## [1.5.8] - 2026-11-13
+
+Lote 3 del plan de corrección de la auditoría backend/API 1.5.5: deuda técnica
+y hallazgos bajos. Todos reprodujeron con un test que fallaba antes de la
+corrección.
+
+### Corregido
+
+- **Comisión 90/10**: `monto_comision = subtotal - monto_vendedor`, de modo que
+  ambos montos suman siempre el subtotal (antes, dos redondeos independientes
+  podían desviarse un centavo).
+- **RF135**: la cancelación desde el historial de compras reutiliza la lógica de
+  `pedidos.service.js` (stock, reembolso por monto y notificación al vendedor);
+  se elimina la copia del controlador.
+- **`GET /api/tienda/validacion`**: los totales 90/10 se agregan en SQL y solo
+  se traen las líneas incoherentes, no todo el historial del vendedor.
+- **`GET /api/tienda/ingresos?agrupar_por=dia`**: el rango se acota a 365 días
+  (si el rango explícito es mayor, se recorta) para no agregar todo el
+  histórico en una sola consulta.
+- **Avatares**: sin foto, el backend responde `null` en vez de URLs de
+  `via.placeholder.com`/`ui-avatars.com`; el cliente usa su
+  `avatar-placeholder.svg`.
+- **`server.js`**: manejador `uncaughtException` con cierre ordenado del
+  servidor y del pool (código 1).
+- **Detalle de reporte admin**: incluye `evidencia_url` además del conteo.
+- **Migración `021_check_stock_no_negativo.sql`**: `CHECK (stock >= 0)` en
+  `productos`, idempotente; aplicar con `npm run db:migrate` solo en BD
+  local/desechable.
+- **`docs/api/inventario-endpoints.md`** verificado contra las rutas reales
+  (64 paths / 76 operaciones, sin altas ni bajas).
+
+### Pruebas
+
+- Backend: 45 archivos / 663 pruebas en verde; cobertura 96.78 % sentencias,
+  90.61 % ramas, 99.33 % funciones y 97.28 % líneas.
+- Integración no ejecutada: no hay `TEST_DB_*` en el entorno.
+
+## [1.5.7] - 2026-11-13
+
+Lote 2: cambios de contrato para cerrar la enumeración de cuentas, las
+operaciones bancarias sin step-up y un carrito que sumaba productos no
+comprables.
+
+### Cambiado (contrato)
+
+- **M-3 — registro uniforme**: `POST /api/usuarios/register` responde siempre
+  201 con `{ user: { email, nombre_completo, roles: [] } }`: sin cookie, sin
+  token y sin `id`, exista o no el email. Los clientes inician sesión con
+  `POST /api/usuarios/login` después del alta. El aviso al titular duplicado y
+  el correo de recuperación se envían sin bloquear la respuesta (fail-soft).
+- **M-5 — step-up bancario y auditoría de revelado**: el alta/edición de la
+  cuenta bancaria del vendedor exige `password` (bcrypt antes de abrir la
+  transacción). `GET /api/admin/mi-cuenta-bancaria?revelar=completa` deja una
+  entrada `cuenta_bancaria_plataforma.revelada` sin datos bancarios en el
+  detalle.
+- **M-6 — carrito coherente**: el resumen y el listado excluyen productos
+  pausados, eliminados por el vendedor o de vendedores inactivos; cada ítem
+  expone `disponible` y los no disponibles quedan visibles con
+  `subtotal_linea: 0` sin sumar a totales ni contadores.
+
+### Cambiado (clientes y docs)
+
+- Web: `Registro.jsx` navega al login tras el alta. Escritorio y móvil hacen
+  `register` + `login`; los formularios bancarios del vendedor envían la
+  contraseña de step-up.
+- `docs/api/openapi.json` y `docs/api/entidades.md` regenerados; contratos de
+  `apps/escritorio` y `apps/movil` verificados.
+
+### Pruebas
+
+- Backend: 44 archivos / 657 pruebas; cobertura 96.68 % sentencias, 90.38 %
+  ramas, 99.33 % funciones y 97.17 % líneas.
+- Frontend: 65 archivos / 500 pruebas, `eslint .` y `vite build` en verde.
+
+## [1.5.6] - 2026-11-13
+
+Lote 1 del plan de corrección de la auditoría backend/API 1.5.5: seguridad y
+estabilidad sin cambios de contrato. Los cinco hallazgos reprodujeron con un
+test que fallaba antes de la corrección.
+
+### Corregido
+
+- **A-1 (alto) — agotamiento del pool**: ninguna función ejecuta `pool.query`
+  mientras retiene una conexión. `agregarProducto`/`modificarCantidad` validan
+  producto y comprador antes de `pool.getConnection()`; las cuentas bancarias
+  hacen el cifrado/step-up antes de la transacción y la relectura/auditoría
+  después del `release`. `config/db.js` expone `esPoolSaturado` (cola
+  `DB_QUEUE_LIMIT`, por defecto 20) y las rutas responden
+  `503 SERVICE_UNAVAILABLE` en vez de 500.
+- **M-1 — stock sobrescrito**: la edición de producto actualiza solo los campos
+  enviados; ya no pisa el stock con un valor obsoleto.
+- **M-2 — evidencias públicas**: `/uploads` resuelve la ruta decodificada y
+  sirve los subdirectorios privados (`reportes`, `chat`) solo con JWT.
+- **M-4 — token revocado sin expiración**: la lista negra usa el claim `exp`
+  del JWT; un token ya expirado no se inserta y los indescifrables conservan el
+  respaldo de 7 días.
+- **M-7 — `NODE_ENV` ausente**: `utils/config.js` valida `NODE_ENV` al
+  importarse y aborta el arranque si falta o es desconocido;
+  `scripts/verificar-entorno.mjs`, README y `.env.example` reflejan la regla.
+
+### Pruebas
+
+- Backend: 44 archivos / 650 pruebas en verde; cobertura 96.75 % sentencias,
+  90.05 % ramas, 100 % funciones y 97.25 % líneas.
+
 ## [1.5.5] - 2026-11-11
 
 Fase B del plan de corrección 1.5.x: cerrar los huecos que hacían que «verde»

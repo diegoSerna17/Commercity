@@ -24,6 +24,11 @@
 > `PATCH /api/productos/:id/estado` y `DELETE /api/productos/:id` (RF55), y
 > `PATCH /api/usuarios/me` pasa a aceptar descripcion, direccion y avatar
 > multipart (RF14-RF17, RF39). Total vigente: **76 endpoints**.
+>
+> Addendum Lote 3 (auditoria backend 1.5.5, version 1.5.8): inventario
+> verificado contra `routes/*.js`, `app.js` y `openapi.json` (64 paths /
+> 76 operaciones). Sin altas ni bajas de endpoints; `GET /` sigue retirado y
+> la numeracion historica 1-76 se conserva.
 
 Leyenda de estado Zod:
 

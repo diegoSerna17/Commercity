@@ -1,7 +1,7 @@
 # Contratos de datos — CommerCity
 
 > Generado con `npm run docs:api` + `npm run docs:entidades` desde `backend/src/server/schemas/`. No editar a mano.
-> 49 contratos documentados. Fuente de verdad: los esquemas Zod.
+> 50 contratos documentados. Fuente de verdad: los esquemas Zod.
 
 ## Indice
 
@@ -34,6 +34,7 @@
 - [ModificarCantidadCarrito](#modificarcantidadcarrito)
 - [HistorialIngresosQuery](#historialingresosquery)
 - [HistorialVentasQuery](#historialventasquery)
+- [CuentaBancariaVendedor](#cuentabancariavendedor)
 - [HistorialComprasQuery](#historialcomprasquery)
 - [ConversacionParams](#conversacionparams)
 - [ConversacionQuery](#conversacionquery)
@@ -265,7 +266,7 @@
 | `banco` | string [longitud >= 3, longitud <= 50] | si | Nombre del banco |
 | `tipo_cuenta` | enum: "ahorros" \| "corriente" | si | Tipo de cuenta |
 | `numero_cuenta` | string [longitud >= 6, longitud <= 20] | si | Numero de cuenta (solo digitos, 6-20) |
-| `password` | string [longitud >= 8, longitud <= 72] | si | Contrasena del administrador (step-up obligatorio) |
+| `password` | string [longitud >= 1, longitud <= 200] | si | Contrasena del administrador (step-up obligatorio) |
 
 **Ejemplo:**
 
@@ -284,7 +285,7 @@
 > Body de alta/actualizacion de cuenta bancaria (vendedor y admin). RNF11: se cifra en BD.
 
 - **Fuente:** `backend/src/server/schemas/cuentaBancaria.schema.js`
-- **Usado en:** `POST /api/tienda/mi-cuenta-bancaria`, `PUT /api/tienda/mi-cuenta-bancaria`
+- **Usado en:** envoltorio comun / base
 
 | Campo | Tipo | Requerido | Descripcion |
 |---|---|---|---|
@@ -644,6 +645,33 @@
 | `por_pagina` | number | no | Registros por pagina, max 100 (alias: limit) |
 | `page` | number | no | Alias de pagina |
 | `limit` | number | no | Alias de por_pagina |
+
+## CuentaBancariaVendedor (`CuentaBancariaVendedor`)
+
+> Body de alta/actualizacion de la cuenta bancaria del vendedor (contrasena incluida)
+
+- **Fuente:** `backend/src/server/schemas/tienda.schema.js`
+- **Usado en:** `POST /api/tienda/mi-cuenta-bancaria`, `PUT /api/tienda/mi-cuenta-bancaria`
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---|---|---|
+| `titular_nombre` | string [longitud >= 3, longitud <= 100] | si | Nombre del titular (solo letras y espacios) |
+| `banco` | string [longitud >= 3, longitud <= 50] | si | Nombre del banco |
+| `tipo_cuenta` | enum: "ahorros" \| "corriente" | si | Tipo de cuenta |
+| `numero_cuenta` | string [longitud >= 6, longitud <= 20] | si | Numero de cuenta (solo digitos, 6-20) |
+| `password` | string [longitud >= 1, longitud <= 200] | si | Contrasena del vendedor (step-up obligatorio) |
+
+**Ejemplo:**
+
+```json
+{
+  "titular_nombre": "Maria Fernanda Lopez",
+  "banco": "Bancolombia",
+  "tipo_cuenta": "ahorros",
+  "numero_cuenta": "12345678901234",
+  "password": "ClaveVendedor123"
+}
+```
 
 ## HistorialComprasQuery (`HistorialComprasQuery`)
 
