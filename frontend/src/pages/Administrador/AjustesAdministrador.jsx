@@ -42,6 +42,7 @@ export default function AjustesAdministrador({ onClose }) {
   const [banco, setBanco] = useState("");
   const [tipo, setTipo] = useState("");
   const [numero, setNumero] = useState("");
+  const [password, setPassword] = useState("");
   const { toast, showToast } = useToast();
 
   useEffect(() => {
@@ -94,6 +95,12 @@ export default function AjustesAdministrador({ onClose }) {
       showToast("El número de cuenta debe tener entre 6 y 20 dígitos.", true);
       return false;
     }
+    // 1.5.9 (M-12): la cuenta de la plataforma mueve dinero; el backend exige
+    // step-up con la contraseña del administrador.
+    if (!password) {
+      showToast("Ingresa tu contraseña para confirmar la operación.", true);
+      return false;
+    }
     return true;
   }
 
@@ -108,10 +115,12 @@ export default function AjustesAdministrador({ onClose }) {
           banco,
           tipo_cuenta: tipo,
           numero_cuenta: numero.trim(),
+          password,
         },
         { actualizar: registrado }
       );
       setRegistrado(true);
+      setPassword("");
       showToast(res?.message || "Cuenta bancaria guardada correctamente.", false);
     } catch (err) {
       showToast(mensajeDeError(err), true);
@@ -250,6 +259,27 @@ export default function AjustesAdministrador({ onClose }) {
                 placeholder="Ej: 1234567890"
                 value={numero}
                 onChange={(e) => setNumero(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={cargando}
+                className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full disabled:opacity-60"
+                style={{
+                  backgroundColor: "var(--color-surface-container-high)",
+                  border: "1px solid var(--color-surface-container-high)",
+                  color: "var(--color-on-surface)",
+                }}
+              />
+            </div>
+
+            {/* Contraseña de step-up (M-12 / 1.5.9) */}
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <label className="font-sans font-medium text-sm" style={{ color: "var(--color-brand-muted-text)" }} htmlFor="password">Contraseña</label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="Tu contraseña actual"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={cargando}
                 className="rounded-xl px-4 h-12 text-sm font-sans outline-none w-full disabled:opacity-60"

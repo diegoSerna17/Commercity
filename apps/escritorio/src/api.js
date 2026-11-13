@@ -32,7 +32,7 @@ async function apiRequest(path, options = {}) {
 }
 const api = {
   login: (email, password) => apiRequest("/api/usuarios/login", { method: "POST", body: JSON.stringify({ email, password }) }),
-  register: (email, password, nombre_completo) => apiRequest("/api/usuarios/register", { method: "POST", body: JSON.stringify({ email, password, nombre_completo }) }),
+  register: (email, password, nombre_completo, acepta_terminos = false) => apiRequest("/api/usuarios/register", { method: "POST", body: JSON.stringify({ email, password, nombre_completo, ...(acepta_terminos ? { acepta_terminos: true } : {}) }) }),
   recover: (email) => apiRequest("/api/usuarios/recover", { method: "POST", body: JSON.stringify({ email }) }),
   resetPassword: (token, password) => apiRequest("/api/usuarios/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }),
   logout: () => apiRequest("/api/usuarios/logout", { method: "POST" }),

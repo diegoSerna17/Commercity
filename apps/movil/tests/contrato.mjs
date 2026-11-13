@@ -12,6 +12,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const openapiPath = join(ROOT, "docs", "api", "openapi.json");
 const apiJs = join(ROOT, "apps", "movil", "www", "api.js");
 const appJs = join(ROOT, "apps", "movil", "www", "app.js");
+const indexHtml = join(ROOT, "apps", "movil", "www", "index.html");
 
 const spec = JSON.parse(readFileSync(openapiPath, "utf8"));
 const rutas = new Set(Object.keys(spec.paths ?? {}));
@@ -50,6 +51,27 @@ if (/\bnumero_tarjeta\b|\bcard_number\b|\bnumeroTarjeta\b|\bcardNumber\b|["']pan
 }
 if (/nuevaPassword/.test(src)) {
   console.error("contrato-movil: reset-password no debe enviar la clave extra nuevaPassword (flujo RF4)");
+  errores += 1;
+}
+// 1.5.9: register exige acepta_terminos (RF6) y el cliente movil ya tiene la
+// casilla reg-terms; debe enviarla solo cuando esta marcada.
+const apiSrc = existsSync(apiJs) ? readFileSync(apiJs, "utf8") : "";
+if (!/acepta_terminos/.test(apiSrc)) {
+  console.error("contrato-movil: api.register debe enviar acepta_terminos (RF6)");
+  errores += 1;
+}
+if (!/reg-terms/.test(src) || !/acepta_terminos/.test(src)) {
+  console.error("contrato-movil: handleRegistro debe leer reg-terms y pasarla a api.register");
+  errores += 1;
+}
+const htmlSrc = existsSync(indexHtml) ? readFileSync(indexHtml, "utf8") : "";
+if (!/id="reg-terms"/.test(htmlSrc)) {
+  console.error("contrato-movil: falta la casilla de terminos id=reg-terms en registro");
+  errores += 1;
+}
+// 1.5.9: el guardado de la cuenta de la plataforma es step-up y exige password.
+if (!/admin-bank-password/.test(src) || !/admin-bank-password/.test(htmlSrc)) {
+  console.error("contrato-movil: el formulario admin debe pedir admin-bank-password y enviarla");
   errores += 1;
 }
 if (errores > 0) process.exit(1);

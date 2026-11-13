@@ -15,6 +15,7 @@ function renderRegistro() {
     <MemoryRouter initialEntries={["/register"]}>
       <Routes>
         <Route path="/register" element={<Registro />} />
+        <Route path="/login" element={<h1>Iniciar sesión</h1>} />
         <Route path="/" element={<h1>Inicio</h1>} />
       </Routes>
     </MemoryRouter>
@@ -62,11 +63,14 @@ describe("Registro", () => {
     expect(request).not.toHaveBeenCalled();
   });
 
-  it("registra la cuenta, guarda el usuario (no el token) y navega", async () => {
+  it("registra la cuenta y navega al login sin abrir sesion (M-3)", async () => {
     // Arrange
     const user = userEvent.setup();
-    const usuario = { id: 9, nombre_completo: "Ana Perez", roles: ["comprador"] };
-    request.mockResolvedValue({ success: true, data: { token: "jwt-secreto", user: usuario } });
+    request.mockResolvedValue({
+      success: true,
+      message: "Usuario registrado correctamente",
+      data: { user: { email: "ana@correo.com", nombre_completo: "Ana Perez", roles: [] } },
+    });
     renderRegistro();
 
     // Act
@@ -83,8 +87,9 @@ describe("Registro", () => {
         acepta_terminos: true,
       },
     });
-    expect(setCurrentUser).toHaveBeenCalledWith(usuario);
-    expect(await screen.findByRole("heading", { name: "Inicio" })).toBeInTheDocument();
+    // M-3: el alta no devuelve sesion; el usuario debe iniciar sesion.
+    expect(setCurrentUser).not.toHaveBeenCalled();
+    expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
     // F4: el JWT nunca se persiste en localStorage.
     expect(localStorage.getItem("token")).toBeNull();
   });

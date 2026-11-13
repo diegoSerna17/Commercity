@@ -39,6 +39,7 @@ async function llenarFormulario(
     banco = "bancolombia",
     tipo = "ahorros",
     numero = "1234567890",
+    password = "ClaveAdmin123",
   } = {}
 ) {
   const campoTitular = screen.getByLabelText("Nombre del titular");
@@ -49,6 +50,7 @@ async function llenarFormulario(
   const campoNumero = screen.getByLabelText("Número de cuenta");
   await usuario.clear(campoNumero);
   await usuario.type(campoNumero, numero);
+  await usuario.type(screen.getByLabelText("Contraseña"), password);
 }
 
 describe("AjustesAdministrador", () => {
@@ -251,13 +253,18 @@ describe("AjustesAdministrador", () => {
           banco: "bancolombia",
           tipo_cuenta: "ahorros",
           numero_cuenta: "1234567890",
+          password: "ClaveAdmin123",
         },
         { actualizar: false }
       )
     );
     expect(await screen.findByText("Cuenta creada")).toBeInTheDocument();
+    // 1.5.9: la contraseña de step-up nunca queda en el formulario.
+    expect(screen.getByLabelText("Contraseña")).toHaveValue("");
 
-    // Act
+    // Act: la contraseña se vacía tras guardar; se vuelve a escribir para la
+    // segunda operación (step-up).
+    await usuario.type(screen.getByLabelText("Contraseña"), "ClaveAdmin123");
     await usuario.click(
       screen.getByRole("button", { name: "Guardar cuenta bancaria" })
     );
@@ -287,6 +294,7 @@ describe("AjustesAdministrador", () => {
     // Act
     await usuario.clear(screen.getByLabelText("Número de cuenta"));
     await usuario.type(screen.getByLabelText("Número de cuenta"), "9876543210");
+    await usuario.type(screen.getByLabelText("Contraseña"), "ClaveAdmin123");
     await usuario.click(
       screen.getByRole("button", { name: "Guardar cuenta bancaria" })
     );

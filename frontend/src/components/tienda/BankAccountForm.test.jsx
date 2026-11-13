@@ -29,6 +29,7 @@ async function llenarFormulario(user) {
   await user.selectOptions(screen.getByLabelText("Banco"), "bancolombia");
   await user.selectOptions(screen.getByLabelText("Tipo de cuenta"), "ahorros");
   await user.type(screen.getByLabelText("Número de cuenta"), "1234567890");
+  await user.type(screen.getByLabelText("Contraseña"), "ClaveVendedor123");
 }
 
 describe("BankAccountForm", () => {
@@ -158,6 +159,7 @@ describe("BankAccountForm", () => {
         banco: "bancolombia",
         tipo_cuenta: "ahorros",
         numero_cuenta: "1234567890",
+        password: "ClaveVendedor123",
       })
     );
     expect(

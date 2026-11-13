@@ -65,7 +65,7 @@ export const obtenerMiCuentaBancaria = () =>
 /**
  * Registra o actualiza la cuenta bancaria (upsert transaccional, RNF11:
  * el backend cifra titular y numero).
- * @param {{ titular_nombre: string, banco: string, tipo_cuenta: "ahorros"|"corriente", numero_cuenta: string }} datos
+ * @param {{ titular_nombre: string, banco: string, tipo_cuenta: "ahorros"|"corriente", numero_cuenta: string, password: string }} datos
  */
 export const guardarMiCuentaBancaria = (datos) =>
   request("/api/tienda/mi-cuenta-bancaria", { method: "POST", body: datos });

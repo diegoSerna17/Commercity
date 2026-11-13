@@ -1,6 +1,6 @@
 {
   "name": "commercity-mobile",
-  "version": "1.5.5",
+  "version": "1.5.9",
   "private": true,
   "engines": {
     "node": ">=22"

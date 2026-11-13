@@ -16,7 +16,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { User, Mail, Lock, EyeOff, Eye, Check } from "lucide-react";
-import { request, setCurrentUser } from "../../api/client.js";
+import { request } from "../../api/client.js";
 
 // JS Validacion local simple del formato de correo antes de enviar al backend
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -64,7 +64,7 @@ const Register = () => {
     setError("");
     setLoading(true);
     try {
-      const res = await request("/api/usuarios/register", {
+      await request("/api/usuarios/register", {
         method: "POST",
         body: {
           nombre_completo: nombreLimpio,
@@ -73,10 +73,11 @@ const Register = () => {
           acepta_terminos: true,
         },
       });
-      // JS Mismo patron de sesion que la pantalla de inicio de sesion:
-      // F4: cookie httpOnly; solo se guardan datos no sensibles del usuario.
-      if (res.data.user) setCurrentUser(res.data.user);
-      navigate("/");
+      // M-3: el alta ya no emite sesion (no hay cookie, token ni id en la
+      // respuesta). El usuario inicia sesion explicitamente despues.
+      navigate("/login", {
+        state: { aviso: "Cuenta creada correctamente. Inicia sesión para continuar." },
+      });
     } catch (err) {
       // JS El backend responde con el mensaje legible (ej: correo ya registrado)
       setError(err.message || "No se pudo completar el registro");

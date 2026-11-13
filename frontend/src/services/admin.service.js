@@ -92,7 +92,7 @@ export const obtenerMiCuentaBancaria = ({ revelar = false } = {}) =>
 /**
  * Registra (POST) o actualiza (PUT) la cuenta bancaria de Commercity. El backend
  * valida con Zod y cifra titular y numero (RF75/RF76, RNF11).
- * @param {{titular_nombre: string, banco: string, tipo_cuenta: string, numero_cuenta: string}} datos
+ * @param {{titular_nombre: string, banco: string, tipo_cuenta: string, numero_cuenta: string, password: string}} datos
  * @param {{actualizar?: boolean}} [opciones] true para PUT cuando ya existe registro
  */
 export const guardarMiCuentaBancaria = (datos, { actualizar = false } = {}) =>

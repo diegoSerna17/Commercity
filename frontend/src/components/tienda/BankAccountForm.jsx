@@ -27,6 +27,12 @@ const BANK_VALIDATORS = {
     if (v.length < 6 || v.length > 20) return "El número de cuenta debe tener entre 6 y 20 dígitos.";
     return null;
   },
+  // M-5: el cambio de cuenta bancaria exige step-up con la contraseña.
+  password: (value) => {
+    if (!value) return "La contraseña es obligatoria.";
+    if (value.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
+    return null;
+  },
 };
 
 const BANK_OPTIONS = [
@@ -55,7 +61,7 @@ function fieldClasses(hasError) {
 }
 
 // ─── Campo de texto genérico con mensaje de error ────────────────────────────
-function TextField({ id, label, value, placeholder, error, onChange, onBlur, inputMode, maxLength }) {
+function TextField({ id, label, value, placeholder, error, onChange, onBlur, inputMode, maxLength, type = "text" }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="font-sans font-medium text-brand-muted-text text-sm">
@@ -64,7 +70,7 @@ function TextField({ id, label, value, placeholder, error, onChange, onBlur, inp
       <input
         id={id}
         name={id}
-        type="text"
+        type={type}
         inputMode={inputMode}
         maxLength={maxLength}
         placeholder={placeholder}
@@ -117,6 +123,7 @@ export default function BankAccountForm({ onGuardado }) {
     banco: "",
     tipoCuenta: "",
     numeroCuenta: "",
+    password: "",
   });
   const [errors, setErrors] = useState({});
   const [formMsg, setFormMsg] = useState(null);
@@ -191,7 +198,10 @@ export default function BankAccountForm({ onGuardado }) {
         banco: values.banco,
         tipo_cuenta: values.tipoCuenta,
         numero_cuenta: values.numeroCuenta.trim(),
+        password: values.password,
       });
+      // M-5: la contraseña de step-up no se conserva en el formulario.
+      setValues((prev) => ({ ...prev, password: "" }));
       setFormMsg({ text: "Cuenta bancaria guardada correctamente.", type: "success" });
       setTimeout(() => setFormMsg(null), 4000);
       onGuardado?.();
@@ -270,6 +280,17 @@ export default function BankAccountForm({ onGuardado }) {
             error={errors.numeroCuenta}
             onChange={handleChange("numeroCuenta")}
             onBlur={handleBlur("numeroCuenta")}
+          />
+
+          <TextField
+            id="password"
+            label="Contraseña"
+            type="password"
+            placeholder="Tu contraseña actual"
+            value={values.password}
+            error={errors.password}
+            onChange={handleChange("password")}
+            onBlur={handleBlur("password")}
           />
         </div>
 

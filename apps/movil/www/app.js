@@ -582,11 +582,16 @@ async function saveAdminBankAccount() {
   const bank = document.getElementById('admin-bank-select')?.value;
   const type = document.getElementById('admin-bank-type')?.value;
   const number = document.getElementById('admin-bank-number')?.value.trim();
+  const password = document.getElementById('admin-bank-password')?.value || '';
   if (!name || !bank || !type || !number) { toast('⚠️ Completa todos los campos'); return; }
-  const payload = { titular_nombre: name, banco: bank, tipo_cuenta: String(type).toLowerCase(), numero_cuenta: String(number).replace(/\D/g, '') };
+  // 1.5.9: la cuenta de la plataforma exige step-up con la contraseña del admin.
+  if (!password) { toast('⚠️ Ingresa tu contraseña para confirmar la operación'); return; }
+  const payload = { titular_nombre: name, banco: bank, tipo_cuenta: String(type).toLowerCase(), numero_cuenta: String(number).replace(/\D/g, ''), password };
   if (!/^\d+$/.test(payload.numero_cuenta)) { toast('⚠️ El número de cuenta solo admite dígitos'); return; }
   try {
     await api.adminGuardarCuentaBancaria(payload);
+    const passEl = document.getElementById('admin-bank-password');
+    if (passEl) passEl.value = '';
     toast('✅ Cuenta bancaria guardada');
   } catch (err) { toast('⚠️ ' + apiErrorMessage(err)); }
 }
@@ -862,7 +867,10 @@ async function handleRegistro() {
   if (!apiReady()) { toast('⚠️ API no disponible (falta api.js)'); return; }
 
   try {
-    const body = await api.register(e, p, u);
+    await api.register(e, p, u, acceptedTerms);
+    // M-3: el alta ya no emite sesion (sin cookie/token); se inicia sesion
+    // explicitamente despues con las mismas credenciales.
+    const body = await api.login(e, p);
     saveSessionFromAuth(body.data);
     if (wantToSell) {
       try {
@@ -1574,7 +1582,10 @@ async function saveBankAccount() {
   const bank   = document.getElementById('bank-select')?.value;
   const type   = document.getElementById('bank-type')?.value;
   const number = document.getElementById('bank-number')?.value.trim();
+  const password = document.getElementById('bank-password')?.value || '';
   if (!name || !bank || !type || !number) { toast('⚠️ Completa todos los campos'); return; }
+  // M-5: la cuenta bancaria mueve dinero; el backend exige step-up.
+  if (password.length < 8) { toast('⚠️ Ingresa tu contraseña (mínimo 8 caracteres)'); return; }
   // El backend exige z.enum(["ahorros","corriente"]): el placeholder del select
   // ("Selecciona tipo") u otro valor no válido deben rechazarse en cliente.
   const tipoCuenta = String(type).trim().toLowerCase();
@@ -1587,7 +1598,8 @@ async function saveBankAccount() {
     titular_nombre: name,
     banco: bank,
     tipo_cuenta: tipoCuenta,
-    numero_cuenta: String(number).replace(/\D/g, '')
+    numero_cuenta: String(number).replace(/\D/g, ''),
+    password
   };
   if (!/^\d+$/.test(payload.numero_cuenta)) { toast('⚠️ El número de cuenta solo admite dígitos'); return; }
   try {
@@ -1596,6 +1608,9 @@ async function saveBankAccount() {
     toast('⚠️ ' + apiErrorMessage(err));
     return;
   }
+  // M-5: la contraseña de step-up no se conserva en el formulario.
+  const passEl = document.getElementById('bank-password');
+  if (passEl) passEl.value = '';
   // F5 (P1): jamas persistir datos bancarios en el cliente (ni backup).
   // Se consultan de la API en cada sesion (cargarTienda los pre-rellena).
   try {

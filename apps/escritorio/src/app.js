@@ -495,14 +495,21 @@ async function doRegistro() {
   const confirmEl   = document.getElementById('reg-confirm');
   const confirm     = confirmEl ? confirmEl.value : pass;
   const esVend      = document.getElementById('reg-vendedor').checked;
+  const termsEl     = document.getElementById('reg-terms');
+  const aceptaTerminos = Boolean(termsEl && termsEl.checked);
 
   if (!email || !email.includes('@')) { showAuthError('reg-error', 'Ingresa un correo electrónico válido.'); return; }
   if (pass.length < 8) { showAuthError('reg-error', 'La contraseña debe tener al menos 8 caracteres.'); return; }
   if (pass !== confirm) { showAuthError('reg-error', 'Las contraseñas no coinciden.'); return; }
+  // RF6/1.5.9: el backend exige acepta_terminos; no se llama a la API sin la casilla.
+  if (!aceptaTerminos) { showAuthError('reg-error', 'Debes aceptar los términos y condiciones.'); return; }
   hideAuthError('reg-error');
 
   try {
-    const body = await api.register(email, pass, userOrEmail || email);
+    await api.register(email, pass, userOrEmail || email, aceptaTerminos);
+    // M-3: el alta ya no emite sesion (sin cookie/token); se inicia sesion
+    // explicitamente despues con las mismas credenciales.
+    const body = await api.login(email, pass);
     const u = saveSession(body);
     ['reg-user','reg-pass','reg-confirm'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
     const emailReg = document.getElementById('reg-email'); if (emailReg) emailReg.value = '';
@@ -2719,8 +2726,13 @@ function leerCuentaBancaria(prefijo) {
 
 async function guardarCuentaBancaria() {
   const datos = leerCuentaBancaria('bank');
+  const password = document.getElementById('bank-password')?.value || '';
   if (!datos.titular_nombre || !datos.banco || !datos.numero_cuenta) {
     showToast('⚠️ Completa titular, banco y número de cuenta.'); return;
+  }
+  // M-5: la cuenta bancaria mueve dinero; el backend exige step-up.
+  if (password.length < 8) {
+    showToast('⚠️ Ingresa tu contraseña (mínimo 8 caracteres) para guardar.'); return;
   }
   // El placeholder del select ("Seleccionar tipo") no es un valor válido:
   // el backend responde 400 por z.enum(["ahorros","corriente"]).
@@ -2728,7 +2740,9 @@ async function guardarCuentaBancaria() {
     showToast('⚠️ Selecciona el tipo de cuenta (Ahorros o Corriente).'); return;
   }
   try {
-    await api.guardarCuentaBancaria(datos);
+    await api.guardarCuentaBancaria({ ...datos, password });
+    const passEl = document.getElementById('bank-password');
+    if (passEl) passEl.value = '';
     showToast('✅ Cuenta bancaria guardada de forma segura.');
   } catch (e) {
     showToast('⚠️ ' + ((e && e.message) || 'No se pudo guardar la cuenta.'));
@@ -2738,15 +2752,22 @@ async function guardarCuentaBancaria() {
 
 async function guardarCuentaAdmin() {
   const datos = leerCuentaBancaria('admin-bank');
+  const password = document.getElementById('admin-bank-password')?.value || '';
   if (!datos.titular_nombre || !datos.banco || !datos.numero_cuenta) {
     showToast('⚠️ Completa titular, banco y número de cuenta.'); return;
+  }
+  // 1.5.9: la cuenta de la plataforma exige step-up con la contraseña del admin.
+  if (!password) {
+    showToast('⚠️ Ingresa tu contraseña para confirmar la operación.'); return;
   }
   // Mismo control que guardarCuentaBancaria: el placeholder no pasa el z.enum del backend.
   if (!/^(ahorros|corriente)$/.test(datos.tipo_cuenta || '')) {
     showToast('⚠️ Selecciona el tipo de cuenta (Ahorros o Corriente).'); return;
   }
   try {
-    await api.adminGuardarCuentaBancaria(datos);
+    await api.adminGuardarCuentaBancaria({ ...datos, password });
+    const passEl = document.getElementById('admin-bank-password');
+    if (passEl) passEl.value = '';
     showToast('✅ Cuenta de CommerCity guardada.');
   } catch (e) {
     showToast('⚠️ ' + ((e && e.message) || 'No se pudo guardar la cuenta.'));

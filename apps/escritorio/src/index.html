@@ -117,6 +117,7 @@
           </div>
         </div>
         <div class="field" style="margin-bottom:20px">
+          <label class="checkbox-row"><input type="checkbox" id="reg-terms"/> Acepto los <a class="link" data-action="navigate" data-arg="terminos">términos y condiciones</a></label>
           <label class="checkbox-row"><input type="checkbox" id="reg-vendedor"/> <a class="link" data-action="navigate" data-arg="terminos">Quiero vender en CommerCity</a></label>
         </div>
         <p id="reg-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px">Ese usuario ya existe. Elige otro nombre.</p>
@@ -642,6 +643,7 @@
         <div class="field-row">
           <div class="field"><label>Tipo de cuenta</label><select id="bank-tipo"><option>Seleccionar tipo</option><option>Ahorros</option><option>Corriente</option></select></div>
           <div class="field"><label>Número de cuenta</label><input id="bank-numero" value="Ej: 1234567890" type="text"/></div>
+          <div class="field"><label>Contraseña</label><input id="bank-password" type="password" placeholder="Tu contraseña actual"/></div>
         </div>
         <div style="display:flex;justify-content:flex-end">
           <button class="btn btn-orange" data-action="guardar-cuenta-bancaria">Guardar cuenta bancaria</button>
@@ -1317,6 +1319,7 @@
         <div class="field-row">
           <div class="field"><label>Tipo de cuenta</label><select id="admin-bank-tipo"><option>Selecciona tipo</option><option>Ahorros</option><option>Corriente</option></select></div>
           <div class="field"><label>Número de cuenta</label><input id="admin-bank-numero" type="text" placeholder="Ej. 1234567890"/></div>
+          <div class="field"><label>Contraseña</label><input id="admin-bank-password" type="password" placeholder="Tu contraseña actual"/></div>
         </div>
         <div style="display:flex;justify-content:flex-end">
           <button class="btn btn-orange" data-action="guardar-cuenta-admin">Guardar cuenta bancaria</button>
