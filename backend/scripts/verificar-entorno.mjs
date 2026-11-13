@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * C2 (plan 1.5.5): verificacion del entorno local SIN mostrar valores.
  *
