@@ -4,25 +4,25 @@
 - **Rama auditada:** `PREVIEW` @ `8439525` (versión 1.5.9)
 - **Alcance:** backend Express 5 + MySQL 8.4, API REST (76 operaciones), contrato OpenAPI, seguridad, datos, pruebas, CI y Docker.
 - **Entorno de la corrida:** Windows 11, Node 24.22.1 (el CI usa Node 22), Vitest 4.1.11, dependencias según `backend/package-lock.json`.
-- **Cambios de código:** ninguno. Este documento es el único cambio.
+- **Cambios de código:** una línea en `backend/scripts/verificar-entorno.mjs` (corrección de H1). Este documento registra la auditoría y esa corrección.
 
 ---
 
 ## 1. Resumen ejecutivo
 
-**Veredicto:** el backend está bien diseñado en seguridad y contratos, pero **la suite no queda en verde**: un archivo de pruebas no carga y por eso `npm run test:coverage` termina con error.
+**Veredicto:** el backend está bien diseñado en seguridad y contratos. La auditoría encontró un fallo que dejaba la suite en rojo (un archivo de pruebas no cargaba). Se corrigió con una línea y hoy la suite queda en verde.
 
 | Indicador | Resultado verificado hoy |
 |---|---|
-| Archivos de prueba | 45 de 46 ejecutan; 1 no carga (`verificar-entorno.test.js`) |
-| Casos de prueba | 655 pasan; 15 más no se ejecutan (total 670) |
-| Cobertura (sin la suite que no carga) | Líneas 97.17 % · Sentencias 96.36 % · Ramas 90.45 % · Funciones 99.33 % (cumple los umbrales 97 / 96 / 90 / 99) |
+| Archivos de prueba | 46 de 46 ejecutan (antes de corregir H1 eran 45 de 46) |
+| Casos de prueba | 670 pasan (antes de corregir H1 eran 655; los 15 de `verificar-entorno.test.js` vuelven a cargar) |
+| Cobertura | Líneas 97.17 % · Sentencias 96.36 % · Ramas 90.45 % · Funciones 99.33 % (cumple los umbrales 97 / 96 / 90 / 99) |
 | Vulnerabilidades en dependencias de producción | 0 (`npm audit --omit=dev`) |
 | Vulnerabilidades en dependencias de desarrollo | 6 (5 moderadas, 1 alta), reportadas por `npm ci` |
 | Versión | 1.5.9 sincronizada (`tools/verificar-version.mjs`: OK) |
-| Hallazgos | 1 de severidad media, 6 bajos y 2 informativos (sección 7) |
+| Hallazgos | 1 media (corregida), 6 bajos y 2 informativos (sección 7) |
 
-Los 670 casos que declara el CHANGELOG 1.5.9 son correctos: 655 pasan hoy y los 15 restantes pertenecen a la suite que no carga. **Ningún hallazgo se corrigió en esta reauditoría.**
+Los 670 casos que declara el CHANGELOG 1.5.9 son correctos y hoy pasan todos tras corregir H1. **Solo se corrigió H1; los demás hallazgos siguen abiertos.**
 
 ---
 
@@ -120,8 +120,8 @@ Inventario verificado contra `docs/api/openapi.json` (OpenAPI 3.1.0, versión 1.
 | Comando o control | Resultado |
 |---|---|
 | `npm ci` (backend, lockfile) | Correcto. Avisa que el script de instalación de `bcrypt` no está aprobado y reporta 6 vulnerabilidades en dependencias de desarrollo |
-| `npm run test:coverage` | **Falla**: 45 archivos y 655 casos pasan; `verificar-entorno.test.js` no carga |
-| `npm run test:coverage` excluyendo esa suite | Pasa. Líneas 97.17 %, sentencias 96.36 %, ramas 90.45 %, funciones 99.33 % |
+| `npm run test:coverage` (antes de corregir H1) | **Falla**: 45 archivos y 655 casos pasan; `verificar-entorno.test.js` no carga |
+| `npm run test:coverage` (después de corregir H1) | Pasa: 46 de 46 archivos y 670 de 670 casos. Líneas 97.17 %, sentencias 96.36 %, ramas 90.45 %, funciones 99.33 % |
 | `npm audit --omit=dev` | 0 vulnerabilidades |
 | `tools/verificar-version.mjs` | OK (1.5.9 sincronizada) |
 | `tools/ramas-estado.mjs --check` | Falla en este equipo: hay ramas de remotos adicionales sin integrar. En el CI solo existe `origin`, así que no se reproduce allí |
@@ -133,7 +133,7 @@ Inventario verificado contra `docs/api/openapi.json` (OpenAPI 3.1.0, versión 1.
 
 | ID | Severidad | Hallazgo | Evidencia | Recomendación |
 |---|---|---|---|---|
-| **H1** | **Media** | La suite `verificar-entorno.test.js` no carga. El script `backend/scripts/verificar-entorno.mjs` empieza con un shebang (`#!/usr/bin/env node`) y Vitest falla al importarlo (`SyntaxError: Invalid or unexpected token`). `node --check` sí lo acepta. Por eso el comando de cobertura termina con código 1. | Reproducido dos veces | Quitar la línea `#!` (el script se ejecuta con `node` desde `npm run env:check`) o ajustar la transformación. Luego confirmar 46/46 archivos. |
+| **H1** | **Media (corregida)** | La suite `verificar-entorno.test.js` no carga. El script `backend/scripts/verificar-entorno.mjs` empieza con un shebang (`#!/usr/bin/env node`) y Vitest falla al importarlo (`SyntaxError: Invalid or unexpected token`). `node --check` sí lo acepta. Por eso el comando de cobertura termina con código 1. | Reproducido dos veces | **Corregido:** se quitó la línea `#!` (el script se ejecuta con `node` desde `npm run env:check`). Resultado: 46/46 archivos y 670/670 casos. |
 | H2 | Baja (riesgo teórico) | En `confirmarPago`, la notificación se inserta dentro de la transacción con un `try/catch` vacío. Si ese INSERT provoca un deadlock, MySQL revierte toda la transacción, pero el código sigue, hace `COMMIT` sin efecto y responde éxito con un `pedido_id` que no quedó guardado. | Lectura del código; no reproducido | Mover la notificación después del `commit`, o aislarla con `SAVEPOINT`. Añadir una prueba de integración. |
 | H3 | Baja | En `server.js`, el manejador de `unhandledRejection` cierra el proceso con código 0 aunque es un error. | `cerrar("unhandledRejection")` sin código | Pasar código `1`, igual que `uncaughtException`. |
 | H4 | Baja | Los límites de uso (rate limit y cupo de subidas por usuario) viven en memoria del proceso. Con varias instancias, cada una cuenta por separado. | Almacén por defecto de `express-rate-limit`; `config/multer.js` lo documenta | Si se escala a más de una instancia, usar un almacén compartido (p. ej. Redis). |
@@ -157,7 +157,7 @@ Inventario verificado contra `docs/api/openapi.json` (OpenAPI 3.1.0, versión 1.
 
 ## 9. Próximos pasos recomendados
 
-1. **H1:** quitar el shebang o ajustar la transformación. Confirmar 46/46 archivos y 670 casos en verde.
+1. **H1:** corregido. Confirmados 46/46 archivos y 670 casos en verde.
 2. **H3 y H2:** escribir primero una prueba que falle, luego corregir.
 3. **H5 y H6:** consistencia de documentación y validación.
 4. **H7:** extraer servicios por etapas, separado de las correcciones de seguridad.
