@@ -2,8 +2,11 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import swaggerUi from "swagger-ui-express";
 import path from "path";
 import { fileURLToPath } from "url";
+
+import openapi from "../../../docs/api/openapi.json" with { type: "json" };
 
 import carritoRouter from "./routes/carrito.routes.js";import usuariosRouter from "./routes/usuarios.routes.js";
 import historialRouter from "./routes/historial.routes.js";
@@ -236,6 +239,8 @@ app.use("/api/seguidores", seguidoresRouter);
 // Documentacion OpenAPI (Fase 3 docs-api): /api/openapi.json + /api/docs.
 // Gate DOCS_ENABLED dentro del router; no toca helmet/CSP/CORS.
 app.use("/api", docsRouter);
+// Swagger UI: documentacion interactiva en /api/swagger (sirve openapi.json existente).
+app.use("/api/swagger", swaggerUi.serve, swaggerUi.setup(openapi, { explorer: true }));
 app.use("/api", productosRouter);
 
 // Catch-all 404: cualquier ruta que no coincida con los routers anteriores
