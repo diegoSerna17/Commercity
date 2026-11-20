@@ -1,6 +1,6 @@
 # CommerCity
 
-**Estado:** Proyecto académico en etapa productiva | Backend: 670/670 pruebas unitarias OK (46 archivos) | Frontend: 500/500 pruebas OK (65 archivos) | Integración MySQL local: 4 archivos / 23 pruebas con TEST_DB_* (2026-11-05) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.17 % líneas / 90.08 % ramas; frontend: 96.95 % líneas reales (500 pruebas, medición 2026-11-10) | Última corrida registrada: backend y frontend 2026-11-13 (CHANGELOG 1.5.9)
+**Estado:** Proyecto académico en etapa productiva | Backend: 670/670 pruebas unitarias OK (46 archivos) | Frontend: 500/500 pruebas OK (65 archivos) | Integración MySQL local: 5 archivos / 23 pruebas con TEST_DB_* (2026-11-05) | Móvil (Capacitor) y Escritorio (Electron): cableados a la API, contratos OK | Cobertura backend: 97.17 % líneas / 90.08 % ramas; frontend: 96.95 % líneas reales (500 pruebas, medición 2026-11-10) | Última corrida registrada: backend y frontend 2026-11-13 (CHANGELOG 1.5.9)
 
 CommerCity es una plataforma de comercio electrónico para mercados locales con roles de comprador, vendedor y administrador. Incluye catálogo de productos con imágenes, carrito de compras, pedidos, pasarela de pago simulada, tiendas de vendedores, chat, notificaciones, seguidores, calificaciones, reportes de contenido y panel de administración.
 
@@ -430,7 +430,7 @@ sequenceDiagram
 
 ### 9. Base de datos (MySQL 8)
 
-El esquema vigente tiene 16 tablas de negocio más el ledger
+El esquema vigente tiene 17 tablas de negocio más el ledger
 `schema_migrations`; el detalle de columnas y el diagrama entidad-relación
 están en `docs/bd/modelo-datos.md`.
 
@@ -446,7 +446,7 @@ sequenceDiagram
     MIG->>MIG: DB_NAME (default commercity_dev) + guarda A-6/SEC-003
     MIG->>DB: crea schema_migrations si no existe
     MIG->>DB: SELECT id, checksum
-    loop Migraciones en orden (000 y 008-018)
+    loop Migraciones en orden (000 y 008-021)
         MIG->>MIG: SHA-256 del archivo
         alt Ya aplicada con el mismo checksum
             MIG->>MIG: SKIP
@@ -546,10 +546,10 @@ interactiva en `http://localhost:3000/api/docs` con el backend en ejecución.
 COMMER CITY/
 ├── backend/
 │   └── src/server/
-│       ├── __tests__/      # 38 archivos de pruebas: 36 unitarios y 2 de integración (Vitest + supertest)
+│       ├── __tests__/      # 51 archivos de pruebas: 46 unitarios y 5 de integración (Vitest + supertest)
 │       ├── config/         # db.js, multer.js
 │       ├── controllers/    # Controladores por módulo (incluye subcarpeta admin/)
-│       ├── db/             # Migraciones SQL incrementales (000 y 008-018, idempotentes, con rollback en comentarios)
+│       ├── db/             # Migraciones SQL incrementales (000 y 008-021, idempotentes, con rollback en comentarios)
 │       ├── middleware/     # auth, error, role, validate
 │       ├── routes/         # 12 archivos de rutas por módulo
 │       ├── schemas/        # Esquemas Zod de autenticación
@@ -570,7 +570,7 @@ COMMER CITY/
 │   ├── .nvmrc              # Node 22.23.2
 │   └── package.json
 ├── apps/
-│   ├── movil/              # Snapshot versionado de la app Capacitor (www/ con api.js de los 74 endpoints)
+│   ├── movil/              # Snapshot versionado de la app Capacitor (www/ con api.js de los 76 endpoints)
 │   ├── escritorio/         # Snapshot versionado de la app Electron (src/ con api.js)
 │   └── README.md           # Builds (APK/EXE), exclusiones y notas de firma (keystore)
 ├── docs/                   # Requerimientos, entregas, informes y evidencias
@@ -595,7 +595,7 @@ El backend vive en `backend/src/server/` y **no tiene carpeta `models`**: el acc
 | Configuración y validación del entorno | `backend/src/server/utils/config.js` (aborta el arranque si falta `JWT_SECRET` o `NODE_ENV`, o si son inválidos). |
 | Contratos de entrada | `backend/src/server/schemas/` (esquemas Zod) aplicados por `backend/src/server/middleware/validate.middleware.js`. |
 | Migraciones incrementales | `backend/src/server/db/` (000 y 008-021, idempotentes, con rollback en comentarios y checksum en `schema_migrations`). |
-| Modelo de datos completo | `schema_commercity.sql` (DDL de las 16 tablas de negocio) y `seed_commercity.sql` (datos de prueba) en la raíz. |
+| Modelo de datos completo | `schema_commercity.sql` (DDL de las 17 tablas de negocio) y `seed_commercity.sql` (datos de prueba) en la raíz. |
 
 ### Variables de entorno
 
@@ -716,7 +716,7 @@ Get-Content .\schema_commercity.sql -Raw | mysql -u root -p --default-character-
 Get-Content .\seed_commercity.sql -Raw | mysql -u root -p --default-character-set=utf8mb4     # datos de prueba
 ```
 
-**Migraciones incrementales:** viven en `backend/src/server/db/` (`000` y `008`-`018`, idempotentes, con rollback en comentarios) y se aplican en orden con `npm run db:migrate` desde `backend/` (registra cada archivo en `schema_migrations` con checksum; se niega a tocar una base compartida sin `--permitir-compartida`). Una base local creada con `schema_commercity.sql` ya trae el esquema vigente **incluidas las migraciones 015-018** (columnas `token_version`/`password_changed_at`, tabla `auditoria_acciones`, longitudes bancarias y UNIQUE `(pedido_id, vendedor_id)`), y esas cuatro quedan registradas en `schema_migrations` con su checksum: `db:migrate` las omite y solo aplica las anteriores. Contra la **base compartida del equipo** el líder aplica las migraciones pendientes **antes** de arrancar el backend.
+**Migraciones incrementales:** viven en `backend/src/server/db/` (`000` y `008`-`021`, idempotentes, con rollback en comentarios) y se aplican en orden con `npm run db:migrate` desde `backend/` (registra cada archivo en `schema_migrations` con checksum; se niega a tocar una base compartida sin `--permitir-compartida`). Una base local creada con `schema_commercity.sql` ya trae el esquema vigente **incluidas las migraciones 015-021** (columnas `token_version`/`password_changed_at`, tabla `auditoria_acciones`, longitudes bancarias, UNIQUE `(pedido_id, vendedor_id)`, perfil/términos y pausa de productos, índices de rendimiento y `CHECK (stock >= 0)`), y esas siete quedan registradas en `schema_migrations` con su checksum: `db:migrate` las omite y solo aplica las anteriores. Contra la **base compartida del equipo** el líder aplica las migraciones pendientes **antes** de arrancar el backend.
 
 **Eventos programados:** el esquema define `limpiar_carritos_inactivos` (RF109) y `purgar_tokens_invalidados`; ambos requieren `event_scheduler = ON` en el servidor MySQL (ver `docs/guias/despliegue.md`).
 
@@ -801,7 +801,7 @@ Cobertura del backend (`npm run test:coverage`, proveedor v8; medición 2026-11-
 | Functions  | 99.33%       | 99%                |
 | Lines      | 97.17%       | 97%                |
 
-Cobertura del frontend: la cifra **75.31 %** del CHANGELOG 1.3.1 era una métrica histórica que solo medía los archivos con pruebas. La línea base real de todo `src/` era **41.30 % Lines (888/2150, medición 2026-10-15)**; tras el lote de pruebas del 2026-11-05 es **96.85 % Lines (493 pruebas)**, con umbrales en `frontend/vite.config.js` (Lines 93, Statements 92, Functions 89, Branches 82) y M-27 cerrado. Ver `plan/fix-frontend-pendientes-2026-10-15.md`.
+Cobertura del frontend: la cifra **75.31 %** del CHANGELOG 1.3.1 era una métrica histórica que solo medía los archivos con pruebas. La línea base real de todo `src/` era **41.30 % Lines (888/2150, medición 2026-10-15)**; tras el lote de pruebas de 2026-11 es **96.95 % Lines (500 pruebas, medición 2026-11-10)**, con umbrales en `frontend/vite.config.js` (Lines 93, Statements 92, Functions 89, Branches 82) y M-27 cerrado. Ver `docs/guias/pruebas.md`.
 
 E2E con backend vivo (2026-09-28): runner de los endpoints de entonces (69) = **129/129** y capa de red de los `api.js` reales de móvil/escritorio = **102/102** (incluye RF4 recover/reset 12/12). Evidencia conservada por el equipo en `docs/AVANCES/PRUEBAS/` (local, fuera del repositorio) y en `docs/CHANGELOG.md`.
 

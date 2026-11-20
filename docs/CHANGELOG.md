@@ -52,6 +52,15 @@ Cada punto se reprodujo con un test que fallaba antes de la corrección.
 - `npm audit` completo conserva 6 avisos en dependencias de desarrollo
   (Vite/Vitest); `npm audit --omit=dev` está en cero, que es el gate del CI.
 
+### Documentación (2026-11-20)
+
+- Restaurados en `PREVIEW` los documentos que faltaban: arquitectura, modelo de
+  datos, guías operativas (`docs/guias/`), matriz RF, informe final SENA,
+  `CONTRIBUTING.md` y `SECURITY.md`. Las cifras se actualizaron a 1.5.9
+  (76 operaciones, 18 tablas, 15 migraciones, 670 pruebas de backend y 500 de
+  frontend). No se incluyeron los planes de trabajo ni los informes de
+  auditoría históricos.
+
 ## [1.5.8] - 2026-11-13
 
 Lote 3 del plan de corrección de la auditoría backend/API 1.5.5: deuda técnica
